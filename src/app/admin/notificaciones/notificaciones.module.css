@@ -1,0 +1,361 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-bottom: 3rem;
+}
+
+.header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1.5rem;
+}
+
+.header h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.topLayout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .topLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 1.75rem;
+  box-shadow: var(--box-shadow);
+}
+
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: var(--color-gold);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* WhatsApp Panel Specifics */
+.wppStatusBox {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statusText {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badgeConnected {
+  background-color: var(--status-senado-bg);
+  color: #81c784;
+}
+
+.badgeDisconnected {
+  background-color: var(--status-cancelado-bg);
+  color: #e57373;
+}
+
+.badgeInitializing {
+  background-color: var(--status-reprogramado-bg);
+  color: #ffb74d;
+}
+
+.badgeQr {
+  background-color: var(--status-pendiente-aut-bg);
+  color: #ffd54f;
+}
+
+.qrWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background-color: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+}
+
+.qrImage {
+  display: block;
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+}
+
+.qrInstructions {
+  font-size: 0.8rem;
+  color: var(--bg-primary);
+  text-align: center;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* Reminders Panel & Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+  gap: 0.5rem;
+}
+
+.tab {
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-family: var(--font-title);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+
+.massActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.selectAllWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-gold);
+  cursor: pointer;
+}
+
+/* Table */
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.th {
+  background-color: var(--bg-primary);
+  padding: 0.9rem 1rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: var(--transition);
+}
+
+.tr:last-child {
+  border-bottom: none;
+}
+
+.tr:hover {
+  background-color: var(--bg-primary);
+}
+
+.td {
+  padding: 1rem;
+  vertical-align: middle;
+}
+
+.clientInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.clientName {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.clientWtsp {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.datetime {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.date {
+  font-weight: 500;
+}
+
+.time {
+  font-size: 0.8rem;
+  color: var(--color-gold);
+}
+
+.notificationStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.statusLabel {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.statusNone {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+.statusSent {
+  background-color: var(--status-senado-bg);
+  color: #81c784;
+}
+
+.statusFailed {
+  background-color: var(--status-cancelado-bg);
+  color: #e57373;
+}
+
+.lastSentText {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.actionCell {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btnAction {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.btnPreview {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btnPreview:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+/* Logging Results */
+.logContainer {
+  margin-top: 1.5rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.logHeader {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+}
+
+.logItem {
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  background-color: var(--bg-card);
+  border-left: 3px solid transparent;
+}
+
+.logSuccess {
+  border-left-color: #81c784;
+  color: #a5d6a7;
+}
+
+.logFailed {
+  border-left-color: #e57373;
+  color: #ef9a9a;
+}

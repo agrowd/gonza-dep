@@ -1,0 +1,218 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.searchBar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.searchInput {
+  flex: 1;
+}
+
+.filterSelect {
+  width: 200px;
+}
+
+/* Clients list table/cards */
+.clientsTable {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.clientsTable th, .clientsTable td {
+  padding: 1rem 1.25rem;
+  text-align: left;
+}
+
+.clientsTable th {
+  background-color: var(--bg-card);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.clientsTable tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: var(--transition);
+}
+
+.clientsTable tr:last-child {
+  border-bottom: none;
+}
+
+.clientsTable tr:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.clientName {
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.clientName:hover {
+  color: var(--color-gold);
+}
+
+.metaText {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Ficha modal details styling */
+.ficheContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ficheHeader {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.ficheTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .grid2 {
+    grid-template-columns: 1fr 1.5fr;
+  }
+}
+
+.cardSection {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.cardSectionTitle {
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-gold);
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+/* Paper card style history list */
+.paperList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.paperItem {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--color-gold);
+  border-radius: 6px;
+  padding: 1rem;
+  position: relative;
+}
+
+.paperItemCanceled {
+  border-left-color: var(--status-cancelado);
+  opacity: 0.7;
+}
+
+.paperItemHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.paperDate {
+  font-family: var(--font-title);
+  color: var(--text-primary);
+}
+
+.paperStatus {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.paperZonas {
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.paperMeta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.paperNotes {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  border-top: 1px dashed var(--border-color);
+  padding-top: 0.25rem;
+}
+
+/* Tabs selectors inside profile modal */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.tabBtn {
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+
+.tabBtnActive {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+
+.tabBtn:hover {
+  color: var(--text-primary);
+}

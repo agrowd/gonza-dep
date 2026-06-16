@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  usuario   String   @unique
+  password  String
+  nombre    String
+  rol       String   @default("ADMIN") // "ADMIN", "READONLY"
+  createdAt DateTime @default(now())
+}
+
+model Cliente {
+  id               String         @id @default(uuid())
+  nombreCompleto   String
+  whatsapp         String
+  email            String
+  fechaAlta        DateTime       @default(now())
+  canalAdquisicion String         @default("ORGANICO") // "ORGANICO", "PUBLICIDAD_IG", "PUBLICIDAD_FB", "OTRO"
+  estado           String         @default("ACTIVO") // "ACTIVO", "INACTIVO"
+  frecuencia       Int            @default(4) // Frecuencia en semanas
+  observaciones    String?
+  notasGonzalo     String?
+  turnos           Turno[]
+  notificaciones   Notificacion[]
+}
+
+model Turno {
+  id               String   @id @default(uuid())
+  clienteId        String
+  cliente          Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  fecha            DateTime
+  horaInicio       String   // "10:10"
+  horaFin          String   // "10:40"
+  duracionMinutos  Int
+  zonas            String   // JSON stringified array of zones: '[{"nombre":"Espalda","precio":28000,"duracion":30}]'
+  valorTotal       Float
+  valorSeña        Float
+  saldoPendiente   Float
+  estado           String   @default("PENDIENTE_PAGO") // "SEÑADO", "REALIZADO", "CANCELADO", "REPROGRAMADO", "NO_ASISTIO", "PENDIENTE_AUTORIZACION", "PENDIENTE_PAGO"
+  observaciones    String?
+  createdAt        DateTime @default(now())
+}
+
+model Zona {
+  id              String @id @default(uuid())
+  nombre          String @unique
+  precioBase      Float
+  duracionMinutos Int
+  señaBase        Float
+}
+
+model Notificacion {
+  id         String   @id @default(uuid())
+  clienteId  String
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  fechaEnvio DateTime @default(now())
+  canal      String   // "WHATSAPP", "EMAIL"
+  mensaje    String
+  estado     String   // "ENVIADO", "FALLIDO"
+}
+
+model Configuracion {
+  key   String @id
+  value String
+}

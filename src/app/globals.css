@@ -1,0 +1,232 @@
+/* Custom CSS variables for premium brand styling */
+:root {
+  /* Colors */
+  --bg-primary: #121212;
+  --bg-secondary: #1a1a1a;
+  --bg-card: #202020;
+  --bg-card-hover: #262626;
+  
+  --color-gold: #d4a54d;
+  --color-gold-light: #e6be75;
+  --color-gold-dark: #b88d3a;
+  --color-gold-rgb: 212, 165, 77;
+
+  --text-primary: #ffffff;
+  --text-secondary: #a6a6a6;
+  --text-muted: #666666;
+  
+  --border-color: #2c2c2c;
+  --border-gold: rgba(var(--color-gold-rgb), 0.25);
+  
+  /* Status Colors */
+  --status-senado: #2e7d32;
+  --status-senado-bg: rgba(46, 125, 50, 0.15);
+  --status-realizado: #1565c0;
+  --status-realizado-bg: rgba(21, 101, 192, 0.15);
+  --status-cancelado: #c62828;
+  --status-cancelado-bg: rgba(198, 40, 40, 0.15);
+  --status-reprogramado: #ef6c00;
+  --status-reprogramado-bg: rgba(239, 108, 0, 0.15);
+  --status-no-asistio: #78909c;
+  --status-no-asistio-bg: rgba(120, 144, 156, 0.15);
+  --status-pendiente-aut: #fbc02d;
+  --status-pendiente-aut-bg: rgba(251, 192, 45, 0.15);
+  --status-pendiente-pago: #8e24aa;
+  --status-pendiente-pago-bg: rgba(142, 36, 170, 0.15);
+
+  /* Fonts */
+  --font-title: var(--font-montserrat), 'Montserrat', sans-serif;
+  --font-body: var(--font-inter), 'Inter', sans-serif;
+
+  /* Card styling & glassmorphism */
+  --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass-bg: rgba(32, 32, 32, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --border-radius: 12px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-dark);
+}
+
+/* Typography settings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+a {
+  color: var(--color-gold);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a:hover {
+  color: var(--color-gold-light);
+}
+
+/* Generic Form Inputs */
+input, select, textarea {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  transition: var(--transition);
+  width: 100%;
+  outline: none;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 2px rgba(var(--color-gold-rgb), 0.15);
+  background-color: var(--bg-card);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Premium Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.btn-primary {
+  background-color: var(--color-gold);
+  color: #000000;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-gold-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(var(--color-gold-rgb), 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.btn-outline-gold {
+  background-color: transparent;
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold);
+}
+
+.btn-outline-gold:hover {
+  background-color: rgba(var(--color-gold-rgb), 0.1);
+  box-shadow: 0 0 10px rgba(var(--color-gold-rgb), 0.2);
+}
+
+.btn-disabled {
+  background-color: var(--border-color);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-gold {
+  0% { box-shadow: 0 0 0 0 rgba(var(--color-gold-rgb), 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(var(--color-gold-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--color-gold-rgb), 0); }
+}
+
+/* Glassmorphism Card helper class */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--box-shadow);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+}
+
+.premium-border {
+  border: 1px solid rgba(var(--color-gold-rgb), 0.2);
+  position: relative;
+}
+
+.premium-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+}

@@ -1,0 +1,67 @@
+# Historial de Chat - AppWeb Agenda
+
+## Mensaje del Usuario (2026-06-12 09:14:55-03:00)
+> Analizar el domcumento que me armaron que esta en la raiz de la carpeta el cual se llama AppWeb Agenda.docx, ahi esta la estructura que quiere el cliente del proyecto, vamos a utilizar una base de datos propia en el servirdor, se va a subir al servidor y se va a subir a gitub para luego hacer deploy al servidor de siempre
+
+## Respuesta del Asistente
+- Extracción del contenido de `AppWeb Agenda.docx` a `AppWeb_Agenda_extracted.md` para facilitar su lectura.
+- Inicialización del motor Ariadne (`.synapse/` con sus 9 archivos).
+- Presentación del Plan de Implementación (`implementation_plan.md`) para aprobación.
+
+## Mensaje del Usuario (2026-06-12 10:05:11-03:00)
+> Analiza nuevamente el documento, la imagen que contiene, las estructuras que pretenden que se haga, el orden planteado etc, por el cliente, confirmame que hayas entendido absolutamente todo lo del documento
+
+## Respuesta del Asistente
+- Extracción del logotipo embebido `image1.png` de `AppWeb Agenda.docx` para confirmar la identidad de marca (Gonzalo Depilación para Hombres).
+- Creación de un análisis detallado de requerimientos en [analysis_results.md](file:///C:/Users/Try%20Hard/.gemini/antigravity/brain/01478f61-fff4-40e9-b3b8-fb734b8f792d/analysis_results.md) que plasma todo el diseño visual (paleta de colores, tipografía, logo), estructura del sistema, algoritmo matemático de duración de turnos, y flujos operacionales.
+- Confirmación absoluta de entendimiento de todos los aspectos del documento del cliente.
+
+## Mensaje del Usuario (2026-06-16 09:20:48-03:00)
+> Pasarela de pago para la reserva online: ¿Configuramos una integración real con MercadoPago o hacemos un simulador/mock del pago (un botón de "simular pago exitoso") para la aprobación administrativa posterior?: No entendi esta pregunta.
+> Seguridad / Login: ¿Es necesario un sistema de login con usuario y contraseña (ej. NextAuth) para el panel interno de Gonzalo y Luciano?: Si.
+> Envío de WhatsApp: ¿Usamos la funcionalidad de abrir un chat de WhatsApp Web con el mensaje pre-cargado (gratuito) o requieren integración automática por API (ej. Twilio, con costo adicional por mensaje)?: Usamos whatsapp web js
+
+## Respuesta del Asistente
+- Aclaración de la diferencia entre pago simulado y pago real de MercadoPago.
+- Actualización de `implementation_plan.md` reflejando las decisiones de Login y automatización de WhatsApp vía `whatsapp-web.js` con código QR en la configuración.
+
+## Mensaje del Usuario (2026-06-16 09:28:54-03:00)
+> vamos a subirlo a un vps de donweb con debian
+
+## Respuesta del Asistente
+- Registro de requerimientos del sistema operativo Debian (instalación de dependencias del sistema para ejecutar Puppeteer/Chrome headless) en [env_manager.md](file:///.synapse/env_manager.md) y de la decisión en [decisions.md](file:///.synapse/decisions.md).
+
+## Mensaje del Usuario (2026-06-16 09:31:15-03:00)
+> Mercadopago es la señana
+
+## Respuesta del Asistente
+- Confirmación de la integración real con la API de MercadoPago.
+- Actualización final del plan de implementación en [implementation_plan.md](file:///C:/Users/Try%20Hard/.gemini/antigravity/brain/01478f61-fff4-40e9-b3b8-fb734b8f792d/implementation_plan.md).
+
+## Mensaje del Usuario (2026-06-16 09:35:20-03:00)
+> Pasa el docx a md con toda la misma estructura y analizalo nuevamente
+
+## Respuesta del Asistente
+- Creación de un script en Python (`convert_docx_to_md.py`) para parsear el DOCX con toda su estructura de negritas, listas y elementos y guardarlo directamente en el archivo raíz [AppWeb_Agenda.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/AppWeb_Agenda.md).
+- Re-análisis del documento estructurado.
+
+## Mensaje del Usuario (2026-06-16 10:35:38-03:00)
+> Comenza con el paso siguiente
+
+## Respuesta del Asistente
+- Implementación de la infraestructura de Autenticación de administración: helper `auth.js` y API routes `/api/auth/login`, `/api/auth/logout`, `/api/auth/session`.
+- Implementación del servicio de WhatsApp con `whatsapp-web.js` en `whatsapp.js` y API routes `/api/whatsapp/status` y `/api/whatsapp/logout`.
+- Configuración de MercadoPago v2 SDK en `mercadopago.js` y desarrollo del Webhook `/api/webhooks/mercadopago` para registrar pagos de seña aprobados y actualizar el estado de los turnos en la base de datos de manera automatizada.
+- Migración total del proyecto a ES Modules (`type: module` en `package.json`).
+
+## Mensaje del Usuario (2026-06-16 11:27:34-03:00)
+> procede
+
+## Respuesta del Asistente
+- Desarrollo del Módulo de Estadísticas (`/admin/estadisticas` y `/api/admin/estadisticas`) para control de ganancias, inasistencias y pérdidas mensuales.
+- Desarrollo del Módulo de Notificaciones (`/admin/notificaciones`, `/api/admin/notificaciones`, y `/api/whatsapp/qr-image`) para vinculación de WhatsApp Web QR, previsualización de plantillas semanales y despacho por lotes.
+- Desarrollo del Módulo de Configuración (`/admin/configuracion`, `/api/admin/configuracion` y ABM de `/api/zonas`) para gestionar zonas, horarios comerciales dinámicos y textos de plantilla.
+- Integración de horarios de atención dinámicos en la API pública de disponibilidad.
+- Resolución de conflictos de compilación en Next.js (Turbopack) agregando `pg` y `@prisma/adapter-pg` a dependencias locales y configurando `serverExternalPackages` en `next.config.mjs`.
+- Limpieza de directorios temporales y realización de una build de producción (`npm run build`) 100% exitosa.
+- Escritura del manual detallado de instalación en Debian Linux en [DEPLOYMENT.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/DEPLOYMENT.md) y de la bitácora en [walkthrough.md](file:///C:/Users/Try%20Hard/.gemini/antigravity/brain/01478f61-fff4-40e9-b3b8-fb734b8f792d/walkthrough.md).

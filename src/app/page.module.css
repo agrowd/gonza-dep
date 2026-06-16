@@ -1,0 +1,441 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+}
+
+.header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.5rem 1rem;
+  background-color: var(--bg-secondary);
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logoTitle {
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.logoSubtitle {
+  color: var(--color-gold);
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: block;
+}
+
+.main {
+  flex: 1;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.footer {
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.footerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.footerLinks {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footerLink {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footerLink:hover {
+  color: var(--color-gold);
+}
+
+.mapsEmbed {
+  width: 100%;
+  max-width: 450px;
+  height: 200px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+/* Wizard Steps Indicator */
+.stepsContainer {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 3rem;
+}
+
+.stepsContainer::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--border-color);
+  z-index: 1;
+  transform: translateY(-50%);
+}
+
+.progressBar {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  background-color: var(--color-gold);
+  z-index: 1;
+  transform: translateY(-50%);
+  transition: var(--transition);
+}
+
+.stepDot {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  font-family: var(--font-title);
+  font-weight: 700;
+  transition: var(--transition);
+  color: var(--text-secondary);
+}
+
+.stepDotActive {
+  border-color: var(--color-gold);
+  background-color: var(--bg-primary);
+  color: var(--color-gold);
+  box-shadow: 0 0 15px rgba(var(--color-gold-rgb), 0.3);
+}
+
+.stepDotCompleted {
+  border-color: var(--color-gold);
+  background-color: var(--color-gold);
+  color: #000;
+}
+
+/* Form Styles */
+.formSection {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.sectionTitle {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.sectionSubtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.inputGroup {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inputLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Zone Selection Grid */
+.zonesGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 600px) {
+  .zonesGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.zoneCard {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.zoneCard:hover {
+  border-color: rgba(var(--color-gold-rgb), 0.5);
+  background-color: var(--bg-card);
+}
+
+.zoneCardActive {
+  border-color: var(--color-gold);
+  background-color: rgba(var(--color-gold-rgb), 0.05);
+  box-shadow: inset 0 0 10px rgba(var(--color-gold-rgb), 0.05);
+}
+
+.zoneInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.zoneName {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.zoneMeta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 0.75rem;
+}
+
+.zoneMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.zonePrice {
+  color: var(--color-gold);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 4px;
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.checkboxActive {
+  border-color: var(--color-gold);
+  background-color: var(--color-gold);
+  color: #000;
+}
+
+/* Date Selection list */
+.datesContainer {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  margin-bottom: 2rem;
+}
+
+.dateButton {
+  flex: 0 0 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.dateButton:hover {
+  border-color: var(--color-gold);
+  background-color: var(--bg-card);
+}
+
+.dateButtonActive {
+  background-color: var(--color-gold);
+  border-color: var(--color-gold);
+  color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(var(--color-gold-rgb), 0.3);
+}
+
+.dateDayName {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.dateDayNumber {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.25rem 0;
+}
+
+.dateMonthName {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Slots Selection Grid */
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.slotButton {
+  padding: 0.75rem 0.5rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.slotButton:hover {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.slotButtonActive {
+  background-color: var(--color-gold);
+  border-color: var(--color-gold);
+  color: #000;
+}
+
+/* Instructions card */
+.instructionsCard {
+  background-color: rgba(var(--color-gold-rgb), 0.03);
+  border: 1px dashed var(--color-gold);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.instructionsTitle {
+  color: var(--color-gold);
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.instructionsList {
+  list-style-type: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.instructionsList li {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.instructionsList li::before {
+  content: '✓';
+  color: var(--color-gold);
+  font-weight: bold;
+}
+
+/* Checkout summary layout */
+.summaryContainer {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 2rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.summaryRowTotal {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.summaryRowSeña {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-gold);
+}
+
+/* Bottom Actions buttons bar */
+.actionsBar {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  gap: 1rem;
+}
+
+.emptyState {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 3rem 0;
+  font-size: 1.1rem;
+}

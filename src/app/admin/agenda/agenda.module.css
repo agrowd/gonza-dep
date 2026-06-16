@@ -1,0 +1,367 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.titleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navBtn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.navBtn:hover {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  background-color: var(--bg-card);
+}
+
+.currentWeek {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+/* Calendar Layout Grid */
+.calendarContainer {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  min-height: 550px;
+}
+
+.gridHeader {
+  display: grid;
+  grid-template-columns: 80px repeat(6, 1fr);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  text-align: center;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.9rem;
+  z-index: 10;
+}
+
+.headerCell {
+  padding: 1rem 0.5rem;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.headerCell:last-child {
+  border-right: none;
+}
+
+.dayName {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.dayNumber {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.dayNumberToday {
+  background-color: var(--color-gold);
+  color: #000;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(var(--color-gold-rgb), 0.3);
+}
+
+.timeColHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+/* Scrollable Calendar Body */
+.gridBody {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  display: grid;
+  grid-template-columns: 80px repeat(6, 1fr);
+}
+
+.timeColumn {
+  border-right: 1px solid var(--border-color);
+  position: relative;
+}
+
+.timeLabel {
+  height: 100px; /* 1 hour = 100px */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.03);
+}
+
+.dayColumn {
+  border-right: 1px solid var(--border-color);
+  position: relative;
+  height: 1000px; /* 10 hours * 100px = 1000px total height */
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100px; /* 1 row per hour */
+}
+
+.dayColumn:last-child {
+  border-right: none;
+}
+
+/* Hour grid background lines helper */
+.gridLines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.gridLineRow {
+  height: 100px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Empty interactive time slot */
+.emptySlotTrigger {
+  position: absolute;
+  left: 0;
+  right: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.emptySlotTrigger:hover {
+  background-color: rgba(var(--color-gold-rgb), 0.04);
+}
+
+/* Appointment block */
+.appointmentBlock {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 2;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  border-left: 3px solid transparent;
+}
+
+.appointmentBlock:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+  filter: brightness(1.1);
+  z-index: 5;
+}
+
+.appTitle {
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appTime {
+  font-size: 0.7rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+/* Appointment color coding states */
+.stateSenado {
+  background-color: var(--status-senado-bg);
+  color: #a5d6a7;
+  border-left-color: var(--status-senado);
+}
+.stateRealizado {
+  background-color: var(--status-realizado-bg);
+  color: #90caf9;
+  border-left-color: var(--status-realizado);
+}
+.stateCancelado {
+  background-color: var(--status-cancelado-bg);
+  color: #ef9a9a;
+  border-left-color: var(--status-cancelado);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.stateReprogramado {
+  background-color: var(--status-reprogramado-bg);
+  color: #ffcc80;
+  border-left-color: var(--status-reprogramado);
+}
+.stateNoAsistio {
+  background-color: var(--status-no-asistio-bg);
+  color: #b0bec5;
+  border-left-color: var(--status-no-asistio);
+}
+.statePendienteAut {
+  background-color: var(--status-pendiente-aut-bg);
+  color: #fff59d;
+  border-left-color: var(--status-pendiente-aut);
+  animation: pulse-gold 2s infinite;
+}
+.statePendientePago {
+  background-color: var(--status-pendiente-pago-bg);
+  color: #e1bee7;
+  border-left-color: var(--status-pendiente-pago);
+  opacity: 0.85;
+}
+
+/* Modal Overlay & Card styling */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modalContent {
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+/* Details fields grid inside modal */
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 480px) {
+  .detailGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detailLabel {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.detailValue {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Status Pill badge style */
+.statusPill {
+  display: inline-flex;
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.badgeSenado { background-color: var(--status-senado-bg); color: #81c784; }
+.badgeRealizado { background-color: var(--status-realizado-bg); color: #64b5f6; }
+.badgeCancelado { background-color: var(--status-cancelado-bg); color: #e57373; }
+.badgeReprogramado { background-color: var(--status-reprogramado-bg); color: #ffb74d; }
+.badgeNoAsistio { background-color: var(--status-no-asistio-bg); color: #b0bec5; }
+.badgePendienteAut { background-color: var(--status-pendiente-aut-bg); color: #fff176; }
+.badgePendientePago { background-color: var(--status-pendiente-pago-bg); color: #ba68c8; }
