@@ -65,3 +65,11 @@
 - Resolución de conflictos de compilación en Next.js (Turbopack) agregando `pg` y `@prisma/adapter-pg` a dependencias locales y configurando `serverExternalPackages` en `next.config.mjs`.
 - Limpieza de directorios temporales y realización de una build de producción (`npm run build`) 100% exitosa.
 - Escritura del manual detallado de instalación en Debian Linux en [DEPLOYMENT.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/DEPLOYMENT.md) y de la bitácora en [walkthrough.md](file:///C:/Users/Try%20Hard/.gemini/antigravity/brain/01478f61-fff4-40e9-b3b8-fb734b8f792d/walkthrough.md).
+
+## Mensaje del Usuario (2026-06-16 13:08:13-03:00)
+> el puerto 3000 ya esta en uso, fijate en el brain, usa otro
+
+## Respuesta del Asistente
+- Modificación del puerto por defecto para el despliegue de `3000` a `3005` (actualizando [DEPLOYMENT.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/DEPLOYMENT.md) en los bloques de Nginx y comandos PM2, y el archivo [.synapse/env_manager.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/.synapse/env_manager.md)).
+- Modificación local de `NEXT_PUBLIC_APP_URL` en [.env](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/.env) a `http://localhost:3005`.
+- Confirmación de cambios y git push exitoso a la rama `main` de GitHub.
