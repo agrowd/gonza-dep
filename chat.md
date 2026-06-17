@@ -73,3 +73,11 @@
 - Modificación del puerto por defecto para el despliegue de `3000` a `3005` (actualizando [DEPLOYMENT.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/DEPLOYMENT.md) en los bloques de Nginx y comandos PM2, y el archivo [.synapse/env_manager.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/.synapse/env_manager.md)).
 - Modificación local de `NEXT_PUBLIC_APP_URL` en [.env](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/.env) a `http://localhost:3005`.
 - Confirmación de cambios y git push exitoso a la rama `main` de GitHub.
+
+## Mensaje del Usuario (2026-06-17 17:28:29-03:00)
+> hace todo lo que puedas vos y solo pasame lo que tengo que hacer
+
+## Respuesta del Asistente
+- Creación de un script bash automatizado (`deploy.sh`) en la raíz del proyecto para simplificar al máximo el proceso de clonado/actualización en el VPS.
+- Sincronización en GitHub con un push a `main` que incluye el script.
+- Envío de las instrucciones reducidas y limpias para el usuario.
