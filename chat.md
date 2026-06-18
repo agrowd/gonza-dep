@@ -81,3 +81,11 @@
 - Creación de un script bash automatizado (`deploy.sh`) en la raíz del proyecto para simplificar al máximo el proceso de clonado/actualización en el VPS.
 - Sincronización en GitHub con un push a `main` que incluye el script.
 - Envío de las instrucciones reducidas y limpias para el usuario.
+
+## Mensaje del Usuario (2026-06-18 09:21:24-03:00)
+> no hice nada. Hace todo lo que puedas del env segun sus requerimientos y lo que falte, como por ejemplo los datos de mercadopago o de otra cosa que se necesite si o si, decime
+
+## Respuesta del Asistente
+- Creación de `.env.template` en la raíz del proyecto preconfigurado con una clave secreta segura, URL de dominio de producción y valores por defecto para conectarse localmente a la base de datos PostgreSQL en el VPS.
+- Modificación de `.gitignore` para admitir y sincronizar `.env.template` en GitHub.
+- Envío de las instrucciones de base de datos automatizadas de modo que coincidan exactamente con la plantilla.
