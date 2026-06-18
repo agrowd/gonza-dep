@@ -28,6 +28,7 @@ echo -e "\n${GREEN}[2/5] Actualizando estructura de base de datos...${NC}"
 # Adapt schema.prisma dynamically from SQLite to PostgreSQL for production VPS
 sed -i 's/provider = "sqlite"/provider = "postgresql"/g' prisma/schema.prisma
 npx prisma db push
+npx prisma generate
 if [ $? -ne 0 ]; then
     echo -e "${RED}Error al sincronizar la base de datos.${NC}"
     exit 1
