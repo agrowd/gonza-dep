@@ -105,3 +105,11 @@
 - Adición de `npx prisma generate` en `deploy.sh` después del comando `db push` para asegurar que los archivos y tipos de Prisma Client se generen en el servidor.
 - Sincronización en GitHub con un push a `main`.
 - Instrucción para que el usuario corra `git checkout deploy.sh`, `git pull` y vuelva a ejecutar `./deploy.sh` en su VPS.
+
+## Mensaje del Usuario (2026-06-18 09:48:12-03:00)
+> (Falla de ejecución de prisma/seed.js debido a falta de carga de variables de entorno .env al ejecutar node directamente).
+
+## Respuesta del Asistente
+- Reemplazo de `node prisma/seed.js` por `npx prisma db seed` en el archivo `deploy.sh` para delegar la carga de variables `.env` a la CLI de Prisma de forma nativa.
+- Push a `main` de GitHub.
+- Instrucción al usuario para actualizar el repositorio (`git checkout deploy.sh`, `git pull`) y volver a ejecutar `./deploy.sh`.
