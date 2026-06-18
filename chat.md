@@ -109,7 +109,16 @@
 ## Mensaje del Usuario (2026-06-18 09:48:12-03:00)
 > (Falla de ejecución de prisma/seed.js debido a falta de carga de variables de entorno .env al ejecutar node directamente).
 
-## Respuesta del Asistente
 - Reemplazo de `node prisma/seed.js` por `npx prisma db seed` en el archivo `deploy.sh` para delegar la carga de variables `.env` a la CLI de Prisma de forma nativa.
 - Push a `main` de GitHub.
 - Instrucción al usuario para actualizar el repositorio (`git checkout deploy.sh`, `git pull`) y volver a ejecutar `./deploy.sh`.
+
+## Mensaje del Usuario (2026-06-18 10:22:03-03:00)
+> (Screenshot que muestra que gonzalo.nextemarketing.com carga el sitio de Nexte Marketing en lugar de la agenda).
+
+## Respuesta del Asistente
+- Identificación de colisión de puertos: el sitio web principal de Nexte en el VPS ya está utilizando el puerto 3005.
+- Modificación en el repositorio del puerto por defecto de la agenda a `3006` (en `deploy.sh`, `DEPLOYMENT.md`, y `.synapse/env_manager.md`).
+- Corrección de `deploy.sh` para borrar el proceso previo en PM2 antes de recrearlo en el nuevo puerto 3006.
+- Push a `main` de GitHub.
+- Envío de comandos para actualizar el VPS, reescribir la configuración de Nginx y reiniciar los servicios.
