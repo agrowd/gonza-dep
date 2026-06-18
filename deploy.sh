@@ -36,7 +36,7 @@ fi
 
 # 4. Database Seed
 echo -e "\n${GREEN}[3/5] Ejecutando poblamiento de base de datos (Seed)...${NC}"
-node prisma/seed.js
+npx prisma db seed
 if [ $? -ne 0 ]; then
     echo -e "${YELLOW}Advertencia: El script de seed podría haber fallado o el usuario ya existía.${NC}"
 fi
