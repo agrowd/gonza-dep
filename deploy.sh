@@ -52,15 +52,15 @@ fi
 # 6. PM2 Management
 echo -e "\n${GREEN}[5/5] Iniciando/Reiniciando proceso en PM2...${NC}"
 if pm2 list | grep -q "gonzalo-agenda"; then
-    echo -e "${YELLOW}Reiniciando proceso existente 'gonzalo-agenda'...${NC}"
-    pm2 restart gonzalo-agenda
-else
-    echo -e "${YELLOW}Iniciando nuevo proceso 'gonzalo-agenda' en puerto 3005...${NC}"
-    pm2 start npm --name "gonzalo-agenda" -- run start -- -p 3005
+    echo -e "${YELLOW}Deteniendo y eliminando proceso existente 'gonzalo-agenda'...${NC}"
+    pm2 delete gonzalo-agenda
 fi
+
+echo -e "${YELLOW}Iniciando nuevo proceso 'gonzalo-agenda' en puerto 3006...${NC}"
+pm2 start npm --name "gonzalo-agenda" -- run start -- -p 3006
 
 # Save PM2 state
 pm2 save
 
 echo -e "\n${GREEN}=== ¡Despliegue finalizado con éxito! ===${NC}"
-echo -e "La aplicación está corriendo en http://localhost:3005"
+echo -e "La aplicación está corriendo en http://localhost:3006"

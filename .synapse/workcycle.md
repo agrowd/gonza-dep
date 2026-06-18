@@ -39,3 +39,12 @@
   - Se añade un comando automático en `deploy.sh` para reescribir dinámicamente el provider de Prisma de SQLite a PostgreSQL en producción, solucionando el error de tipo de conexión P1013.
   - Se agrega el paso explícito `npx prisma generate` en `deploy.sh` para compilar los bindings del cliente de base de datos antes de la ejecución de Next.js y el seed.
   - Se modifica el comando de seed en `deploy.sh` a `npx prisma db seed` para garantizar la carga correcta del archivo `.env` en producción.
+
+## 📅 Sesión: 18 de Junio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [ ] Resolver el ruteo de subdominio de Nginx (`gonzalo.nextemarketing.com`).
+- [ ] Generar certificado SSL con Certbot.
+
+### 📝 Notas / Bitácora
+- **18 de Junio (10:22 AM)**: Se retoma el trabajo tras una compactación. El usuario reporta que al acceder a `gonzalo.nextemarketing.com` se muestra la landing de Nexte en lugar de la agenda. Iniciamos diagnóstico de Nginx. La prueba de SSH local determinó que se requiere contraseña (no hay llaves autorizadas), por lo que se solicita al usuario imprimir las configuraciones de Nginx en el VPS para corregir el ruteo.

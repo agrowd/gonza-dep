@@ -94,7 +94,7 @@ npm run build
 Instala PM2 de forma global para mantener el servidor web levantado y auto-reiniciar en caso de caídas:
 ```bash
 sudo npm install -y -g pm2
-pm2 start npm --name "gonzalo-agenda" -- run start -- -p 3005
+pm2 start npm --name "gonzalo-agenda" -- run start -- -p 3006
 pm2 save
 pm2 startup
 ```
@@ -122,7 +122,7 @@ server {
     client_max_body_size 10M;
 
     location / {
-        proxy_pass http://localhost:3005;
+        proxy_pass http://localhost:3006;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

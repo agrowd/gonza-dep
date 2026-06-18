@@ -1,19 +1,19 @@
 # env_manager.md - Configuración de Entornos
 
 ## 💻 [L] Local Development
-- **Puerto de desarrollo**: `http://localhost:3005`
+- **Puerto de desarrollo**: `http://localhost:3006`
 - **Base de datos local**: SQLite (`file:./dev.db` para facilitar desarrollo sin instalar bases de datos en la máquina local).
 - **Variables de Entorno (.env)**:
   ```env
   DATABASE_URL="file:./dev.db"
   NEXTAUTH_SECRET="secret-local-key"
-  NEXT_PUBLIC_APP_URL="http://localhost:3005"
+  NEXT_PUBLIC_APP_URL="http://localhost:3006"
   ```
 
 ## 🌐 [P] Producción VPS (DonWeb Debian)
 - **Sistema Operativo**: Debian Linux (DonWeb VPS).
 - **Base de Datos**: PostgreSQL (base de datos propia del servidor).
-- **Servidor Web**: Nginx (como Proxy Inverso apuntando a `http://localhost:3005`).
+- **Servidor Web**: Nginx (como Proxy Inverso apuntando a `http://localhost:3006`).
 - **Administrador de Procesos**: PM2 para mantener viva la aplicación Next.js.
 - **Dependencias de Sistema para WhatsApp (whatsapp-web.js / Puppeteer)**:
   Dado que Debian en VPS viene sin interfaz gráfica, Puppeteer (Chromium headless) requiere instalar las siguientes librerías del sistema:
