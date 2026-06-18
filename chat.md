@@ -97,3 +97,11 @@
 - Modificación de `deploy.sh` inyectando un comando de reemplazo `sed` automático que modifica el proveedor de base de datos de `'sqlite'` a `'postgresql'` en `schema.prisma` antes de realizar el comando `npx prisma db push` en producción.
 - Push exitoso a `main` de GitHub.
 - Instrucción para que el usuario actualice el código en el VPS (`git pull`) y reintente la ejecución.
+
+## Mensaje del Usuario (2026-06-18 09:45:39-03:00)
+> (Falla de compilación de Next.js y script de seed debido a que falta compilar los archivos del cliente de Prisma en producción).
+
+## Respuesta del Asistente
+- Adición de `npx prisma generate` en `deploy.sh` después del comando `db push` para asegurar que los archivos y tipos de Prisma Client se generen en el servidor.
+- Sincronización en GitHub con un push a `main`.
+- Instrucción para que el usuario corra `git checkout deploy.sh`, `git pull` y vuelva a ejecutar `./deploy.sh` en su VPS.
