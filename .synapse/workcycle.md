@@ -36,3 +36,4 @@
   - Se cambia el puerto por defecto de desarrollo y producción de 3000 a 3005 para evitar colisiones con otros servicios activos en el VPS.
   - Se crea y publica el script `deploy.sh` para automatizar completamente la instalación y recarga del panel en el servidor.
   - Se agrega `.env.template` preconfigurado con valores de base de datos y clave secreta para acelerar la puesta en marcha.
+  - Se añade un comando automático en `deploy.sh` para reescribir dinámicamente el provider de Prisma de SQLite a PostgreSQL en producción, solucionando el error de tipo de conexión P1013.

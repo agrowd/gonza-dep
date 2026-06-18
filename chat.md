@@ -89,3 +89,11 @@
 - Creación de `.env.template` en la raíz del proyecto preconfigurado con una clave secreta segura, URL de dominio de producción y valores por defecto para conectarse localmente a la base de datos PostgreSQL en el VPS.
 - Modificación de `.gitignore` para admitir y sincronizar `.env.template` en GitHub.
 - Envío de las instrucciones de base de datos automatizadas de modo que coincidan exactamente con la plantilla.
+
+## Mensaje del Usuario (2026-06-18 09:37:48-03:00)
+> (Intento fallido de ./deploy.sh debido a que Prisma esperaba el esquema de base de datos local 'sqlite' y recibió la URL de 'postgresql').
+
+## Respuesta del Asistente
+- Modificación de `deploy.sh` inyectando un comando de reemplazo `sed` automático que modifica el proveedor de base de datos de `'sqlite'` a `'postgresql'` en `schema.prisma` antes de realizar el comando `npx prisma db push` en producción.
+- Push exitoso a `main` de GitHub.
+- Instrucción para que el usuario actualice el código en el VPS (`git pull`) y reintente la ejecución.
