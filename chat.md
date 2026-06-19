@@ -122,3 +122,23 @@
 - Corrección de `deploy.sh` para borrar el proceso previo en PM2 antes de recrearlo en el nuevo puerto 3006.
 - Push a `main` de GitHub.
 - Envío de comandos para actualizar el VPS, reescribir la configuración de Nginx y reiniciar los servicios.
+
+## Mensaje del Usuario (2026-06-19 09:11:44-03:00)
+> procede
+
+## Respuesta del Asistente
+- Implementación de encadenamiento opcional `?.` en `src/app/admin/agenda/page.js` para evitar caídas en el calendario si no hay cliente asociado.
+- Carga e integración dinámica del horario de la agenda comercial a partir del endpoint `/api/admin/configuracion` (`work_start` y `work_end`), ajustando de forma automatizada las alturas, filas y eventos del calendario semanal.
+- Creación de la funcionalidad de alta de clientes manual desde `/admin/clientes` con formulario modal y validación en base de datos.
+- Implementación de un buscador predictivo (autocomplete) en el agendado manual de `/admin/agenda` para buscar y autocompletar WhatsApp, Email e ID a partir de la lista de clientes registrados.
+- Modificación del backend de notificaciones para soportar el parámetro `week=2days`, filtrando turnos de forma exacta a `hoy + 2 días`, y adición del botón de preselección en `/admin/notificaciones`.
+- Creación del helper de correos `src/lib/email.js` con Nodemailer y plantilla HTML premium adaptada a la marca.
+- Activación de envío automático de correos de inasistencia al cambiar el estado de un turno a `NO_ASISTIO` en la base de datos.
+- Ejecución y verificación exitosa de compilación del bundle de producción (`npm run build`).
+
+## Mensaje del Usuario (2026-06-19 10:30:20-03:00)
+> Hace lo que tenes que hacer y decime que necesitas de mi
+
+## Respuesta del Asistente
+- Commiteado y pusheado automático de todas las modificaciones y del archivo `src/lib/email.js` a la rama `main` de GitHub.
+- Envío de las instrucciones detalladas del despliegue en producción en el VPS Debian, indicando los comandos exactos y la necesidad de configurar las credenciales SMTP de correo.
