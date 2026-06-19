@@ -26,12 +26,30 @@ function timeToMinutes(timeStr) {
   return hours * 60 + minutes;
 }
 
+// Helper: Add minutes to time string HH:MM
+function addMinutesToTime(timeStr, minsToAdd) {
+  if (!timeStr) return '';
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const total = hours * 60 + minutes + minsToAdd;
+  const newH = Math.floor(total / 60) % 24;
+  const newM = total % 60;
+  return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
+}
+
 export default function AgendaPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Autocomplete and config states
+  const [allClients, setAllClients] = useState([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [config, setConfig] = useState({
+    work_start: '10:00',
+    work_end: '20:00'
+  });
 
   // Modals state
   const [selectedTurno, setSelectedTurno] = useState(null);
@@ -50,14 +68,41 @@ export default function AgendaPage() {
     valorTotal: '',
     valorSeña: '',
     estado: 'SEÑADO',
-    observaciones: ''
+    observaciones: '',
+    clienteId: null
   });
 
-  // 1. Initialize dates on mount
+  // 1. Initialize dates and configurations on mount
   useEffect(() => {
     const monday = getStartOfWeek(new Date());
     setCurrentWeekStart(monday);
+
+    fetch('/api/admin/configuracion')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          setConfig({
+            work_start: data.work_start || '10:00',
+            work_end: data.work_end || '20:00'
+          });
+        }
+      })
+      .catch(err => console.error('Error fetching config:', err));
   }, []);
+
+  // Fetch all clients when modal is opened for autocomplete
+  useEffect(() => {
+    if (isNewOpen) {
+      fetch('/api/admin/clientes')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setAllClients(data);
+          }
+        })
+        .catch(err => console.error('Error fetching clients for autocomplete:', err));
+    }
+  }, [isNewOpen]);
 
   // 2. Generate the 6 dates of the week (Mon to Sat) when currentWeekStart changes
   useEffect(() => {
@@ -120,15 +165,12 @@ export default function AgendaPage() {
   };
 
   // Helper: Get layout styling for appointment block
-  // Timeline: 10:00 to 20:00 (10 hours = 600 minutes total)
-  // Height: 1 hour = 100px. Height of timeline container is 1000px.
-  // Scale factor: 100px / 60min = 1.6667px per min
   const getBlockStyle = (horaInicio, horaFin) => {
     const startMin = timeToMinutes(horaInicio);
     const endMin = timeToMinutes(horaFin);
     const duration = endMin - startMin;
 
-    const WORK_START = 600; // 10:00 in minutes
+    const WORK_START = timeToMinutes(config.work_start);
     
     const top = Math.max(0, (startMin - WORK_START) * (100 / 60));
     const height = Math.max(20, duration * (100 / 60)); // minimum 20px
@@ -194,7 +236,8 @@ export default function AgendaPage() {
       valorTotal: '',
       valorSeña: '',
       estado: 'SEÑADO',
-      observaciones: ''
+      observaciones: '',
+      clienteId: null
     });
     setIsNewOpen(true);
   };
@@ -287,9 +330,15 @@ export default function AgendaPage() {
     }
   };
 
-  // Generate hourly labels for time column (10:00 to 20:00)
+  // Generate hourly labels for time column dynamically
+  const startHour = parseInt(config.work_start.split(':')[0]) || 10;
+  const endHour = parseInt(config.work_end.split(':')[0]) || 20;
+  const WORK_START = startHour * 60;
+  const totalHalfHours = (endHour - startHour) * 2;
+  const dayColumnHeight = (endHour - startHour) * 100;
+
   const timeLabels = [];
-  for (let i = 10; i <= 20; i++) {
+  for (let i = startHour; i <= endHour; i++) {
     timeLabels.push(`${i.toString().padStart(2, '0')}:00`);
   }
 
@@ -319,13 +368,14 @@ export default function AgendaPage() {
               whatsapp: '',
               email: '',
               fechaStr: new Date().toISOString().split('T')[0],
-              horaInicio: '10:00',
-              horaFin: '10:30',
+              horaInicio: config.work_start,
+              horaFin: addMinutesToTime(config.work_start, 30),
               selectedZoneIds: [],
               valorTotal: '',
               valorSeña: '',
               estado: 'SEÑADO',
-              observaciones: ''
+              observaciones: '',
+              clienteId: null
             });
             setIsNewOpen(true);
           }} className="btn btn-primary">+ Nuevo Turno</button>
@@ -367,7 +417,7 @@ export default function AgendaPage() {
             });
 
             return (
-              <div key={dayIdx} className={styles.dayColumn}>
+              <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
                 {/* Background grid lines for hours */}
                 <div className={styles.gridLines}>
                   {timeLabels.map((_, idx) => (
@@ -376,8 +426,8 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Empty slot clicks handlers - lets click every 30 minutes for convenience */}
-                {Array.from({ length: 20 }).map((_, idx) => {
-                  const startMin = 600 + idx * 30; // starts at 10:00 (600min) up to 20:00 (1200min)
+                {Array.from({ length: totalHalfHours }).map((_, idx) => {
+                  const startMin = WORK_START + idx * 30;
                   const top = idx * 50; // 30 mins = 50px height
                   return (
                     <div
@@ -394,10 +444,10 @@ export default function AgendaPage() {
                   const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
                   let zonesText = '';
                   try {
-                    const parsed = JSON.parse(app.zonas);
-                    zonasText = parsed.map(z => z.nombre).join(', ');
+                    const zonesArray = JSON.parse(app.zonas);
+                    zonesText = zonesArray.map(z => z.nombre).join(', ');
                   } catch (e) {
-                    zonasText = app.zonas;
+                    zonesText = app.zonas;
                   }
 
                   return (
@@ -410,7 +460,7 @@ export default function AgendaPage() {
                         setIsDetailsOpen(true);
                       }}
                     >
-                      <span className={styles.appTitle}>{app.cliente.nombreCompleto}</span>
+                      <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
                       <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
                       <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
                     </div>
@@ -435,7 +485,7 @@ export default function AgendaPage() {
               <div className={styles.detailItem}>
                 <span className={styles.detailLabel}>Cliente</span>
                 <span className={styles.detailValue} style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-                  {selectedTurno.cliente.nombreCompleto}
+                  {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
                 </span>
               </div>
               <div className={styles.detailItem}>
@@ -472,7 +522,7 @@ export default function AgendaPage() {
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.detailLabel}>WhatsApp</span>
-                <span className={styles.detailValue}>{selectedTurno.cliente.whatsapp}</span>
+                <span className={styles.detailValue}>{selectedTurno.cliente?.whatsapp || 'N/A'}</span>
               </div>
               <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
                 <span className={styles.detailLabel}>Observaciones</span>
@@ -504,7 +554,7 @@ export default function AgendaPage() {
                     Re-activar Turno
                   </button>
                 )}
-                <a href={`https://wa.me/${selectedTurno.cliente.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', borderColor: '#25D366', color: '#25D366' }}>
+                <a href={`https://wa.me/${(selectedTurno.cliente?.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', borderColor: '#25D366', color: '#25D366' }}>
                   💬 Chatear por WhatsApp
                 </a>
                 <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
@@ -528,15 +578,74 @@ export default function AgendaPage() {
             <form onSubmit={handleCreateTurno}>
               <div className={styles.detailGrid}>
                 {/* Personal Info */}
-                <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.inputGroup} style={{ gridColumn: 'span 2', position: 'relative' }}>
                   <label className={styles.inputLabel}>Nombre del Cliente *</label>
                   <input
                     type="text"
                     value={newTurno.nombreCompleto}
-                    onChange={(e) => setNewTurno({ ...newTurno, nombreCompleto: e.target.value })}
+                    onChange={(e) => {
+                      setNewTurno({ ...newTurno, nombreCompleto: e.target.value, clienteId: null });
+                      setShowAutocomplete(true);
+                    }}
+                    onFocus={() => setShowAutocomplete(true)}
+                    onBlur={() => {
+                      setTimeout(() => setShowAutocomplete(false), 250);
+                    }}
                     required
                     placeholder="Ej. Juan Pérez"
+                    autoComplete="off"
                   />
+                  {showAutocomplete && newTurno.nombreCompleto && allClients.filter(c =>
+                    c.nombreCompleto.toLowerCase().includes(newTurno.nombreCompleto.toLowerCase())
+                  ).length > 0 && (
+                    <ul style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      backgroundColor: '#1d1d1d',
+                      border: '1px solid #7a1e1e',
+                      borderRadius: '4px',
+                      zIndex: 1000,
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      listStyle: 'none',
+                      margin: 0,
+                      padding: 0,
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    }}>
+                      {allClients
+                        .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombreCompleto.toLowerCase()))
+                        .map(client => (
+                          <li
+                            key={client.id}
+                            style={{
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #282a2b',
+                              fontSize: '0.9rem',
+                              color: '#fff',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                            onMouseDown={() => {
+                              setNewTurno(prev => ({
+                                ...prev,
+                                nombreCompleto: client.nombreCompleto,
+                                whatsapp: client.whatsapp,
+                                email: client.email,
+                                clienteId: client.id
+                              }));
+                              setShowAutocomplete(false);
+                            }}
+                          >
+                            <span>{client.nombreCompleto}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>{client.whatsapp}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </div>
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>WhatsApp *</label>

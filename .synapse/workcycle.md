@@ -48,3 +48,18 @@
 
 ### 📝 Notas / Bitácora
 - **18 de Junio (10:22 AM)**: Se retoma el trabajo tras una compactación. El usuario reporta que al acceder a `gonzalo.nextemarketing.com` se muestra la landing de Nexte en lugar de la agenda. Iniciamos diagnóstico de Nginx. Se descubrió que el sitio web principal `nextemarketing.com` ya estaba utilizando el puerto 3005. Se procedió a actualizar el puerto de la agenda a `3006` en el repositorio, modificar `deploy.sh` para recargar el puerto en PM2 de manera limpia, y empujar los cambios. Se proporcionan instrucciones detalladas al usuario para actualizar el VPS y reescribir Nginx.
+
+- **19 de Junio (09:12 AM)**: El plan de mejoras y correcciones fue aprobado por el usuario. Iniciando la Fase 1: instalación de `nodemailer` y configuración de variables SMTP locales y en producción.
+- **19 de Junio (12:20 PM)**:
+  - Se completó la Fase 3:
+    - Se aplicó encadenamiento opcional (`?.`) en todas las referencias a `app.cliente` y `selectedTurno.cliente` en `src/app/admin/agenda/page.js` para evitar fallos si no hay cliente asociado.
+    - Se implementó la grilla horaria dinámica en `src/app/admin/agenda/page.js` cargando `work_start` y `work_end` desde `/api/admin/configuracion` y re-calculando las franjas horarias y la altura del contenedor `.dayColumn` correspondientemente.
+  - Se completó la Fase 4:
+    - Se integró el botón "+ Crear Nuevo Cliente" y el modal interactivo en `src/app/admin/clientes/page.js` conectado a `POST /api/admin/clientes`.
+    - Se implementó el buscador predictivo (autocomplete) en el modal de agendado manual de `src/app/admin/agenda/page.js` conectado a la lista de clientes, autocompletando WhatsApp, Email e ID.
+  - Se completó la Fase 5:
+    - Se actualizó el endpoint de notificaciones `/api/admin/notificaciones` para soportar `week=2days`, filtrando exactamente el día `hoy + 2 días`.
+    - Se agregó el botón "Turnos en 2 Días" en la botonera de `src/app/admin/notificaciones/page.js`.
+    - Se creó el módulo de correo `src/lib/email.js` implementando una plantilla HTML premium con los colores de la marca para inasistencias.
+    - Se interceptó el cambio de estado a `NO_ASISTIO` en `src/app/api/admin/turnos/[id]/route.js` para enviar automáticamente el correo SMTP de inasistencia.
+  - Se verificó la compilación local mediante `npm run build` para garantizar cero fallos de SSR o ruteo en producción.

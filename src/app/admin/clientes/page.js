@@ -9,6 +9,19 @@ const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="n
 const TrashIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const EditIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 
+const getStatusLabelClass = (status) => {
+  switch (status) {
+    case 'SEÑADO': return agendaStyles.badgeSenado;
+    case 'REALIZADO': return agendaStyles.badgeRealizado;
+    case 'CANCELADO': return agendaStyles.badgeCancelado;
+    case 'REPROGRAMADO': return agendaStyles.badgeReprogramado;
+    case 'NO_ASISTIO': return agendaStyles.badgeNoAsistio;
+    case 'PENDIENTE_AUTORIZACION': return agendaStyles.badgePendienteAut;
+    case 'PENDIENTE_PAGO': return agendaStyles.badgePendientePago;
+    default: return '';
+  }
+};
+
 export default function ClientesPage() {
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
@@ -19,6 +32,18 @@ export default function ClientesPage() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('history');
+
+  // Create client modal states
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newClient, setNewClient] = useState({
+    nombreCompleto: '',
+    whatsapp: '',
+    email: '',
+    frecuencia: 4,
+    observaciones: '',
+    notasGonzalo: '',
+    canalAdquisicion: 'MANUAL'
+  });
 
   // Edit notes state
   const [editNotes, setEditNotes] = useState({
@@ -45,6 +70,36 @@ export default function ClientesPage() {
   useEffect(() => {
     fetchClients();
   }, [filter]);
+
+  const handleCreateClient = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/admin/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newClient)
+      });
+      if (res.ok) {
+        setIsCreateOpen(false);
+        setNewClient({
+          nombreCompleto: '',
+          whatsapp: '',
+          email: '',
+          frecuencia: 4,
+          observaciones: '',
+          notasGonzalo: '',
+          canalAdquisicion: 'MANUAL'
+        });
+        fetchClients();
+      } else {
+        const errData = await res.json();
+        alert(`Error al crear cliente: ${errData.error || 'error desconocido'}`);
+      }
+    } catch (err) {
+      console.error('Error creating client:', err);
+      alert('Error de red al crear cliente.');
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -159,11 +214,14 @@ export default function ClientesPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className={styles.header}>
+      <div className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           <h2>Directorio de Clientes</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Busca, filtra y revisa las fichas digitales de tus clientes.</p>
         </div>
+        <button onClick={() => setIsCreateOpen(true)} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: '8px' }}>
+          + Crear Nuevo Cliente
+        </button>
       </div>
 
       {/* Search & Filters */}
@@ -435,6 +493,108 @@ export default function ClientesPage() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {/* CREATE CLIENT MODAL */}
+      {isCreateOpen && (
+        <div className={agendaStyles.modalOverlay}>
+          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '550px' }}>
+            <div className={agendaStyles.modalHeader}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>Crear Nuevo Cliente</h3>
+              <button onClick={() => setIsCreateOpen(false)} className={agendaStyles.closeBtn}>&times;</button>
+            </div>
+
+            <form onSubmit={handleCreateClient}>
+              <div className={agendaStyles.detailGrid} style={{ gridTemplateColumns: '1fr' }}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Nombre Completo *</label>
+                  <input
+                    type="text"
+                    value={newClient.nombreCompleto}
+                    onChange={(e) => setNewClient({ ...newClient, nombreCompleto: e.target.value })}
+                    required
+                    placeholder="Ej. Juan Pérez"
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>WhatsApp *</label>
+                  <input
+                    type="tel"
+                    value={newClient.whatsapp}
+                    onChange={(e) => setNewClient({ ...newClient, whatsapp: e.target.value })}
+                    required
+                    placeholder="Ej. 54911223344"
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Email *</label>
+                  <input
+                    type="email"
+                    value={newClient.email}
+                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                    required
+                    placeholder="Ej. cliente@correo.com"
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Canal de Adquisición *</label>
+                  <select
+                    value={newClient.canalAdquisicion}
+                    onChange={(e) => setNewClient({ ...newClient, canalAdquisicion: e.target.value })}
+                    required
+                    className={styles.filterSelect}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="MANUAL">Manual</option>
+                    <option value="ORGANICO">Orgánico (Web)</option>
+                    <option value="RECOMENDADO">Recomendado</option>
+                    <option value="REDES_SOCIALES">Redes Sociales</option>
+                  </select>
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Frecuencia Estimada (Semanas) *</label>
+                  <input
+                    type="number"
+                    value={newClient.frecuencia}
+                    onChange={(e) => setNewClient({ ...newClient, frecuencia: Number(e.target.value) })}
+                    required
+                    min="1"
+                    max="24"
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Observaciones Administrativas</label>
+                  <textarea
+                    value={newClient.observaciones}
+                    onChange={(e) => setNewClient({ ...newClient, observaciones: e.target.value })}
+                    placeholder="Detalles sobre el cliente..."
+                    rows="3"
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>Observaciones Exclusivas para Gonzalo</label>
+                  <textarea
+                    value={newClient.notasGonzalo}
+                    onChange={(e) => setNewClient({ ...newClient, notasGonzalo: e.target.value })}
+                    placeholder="Observaciones de seguridad clínica..."
+                    rows="3"
+                    style={{ borderColor: 'rgba(var(--color-gold-rgb), 0.3)' }}
+                  />
+                </div>
+              </div>
+
+              <div className={agendaStyles.modalFooter} style={{ marginTop: '1.5rem' }}>
+                <button type="button" onClick={() => setIsCreateOpen(false)} className="btn btn-secondary">Cancelar</button>
+                <button type="submit" className="btn btn-primary">Crear Cliente</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

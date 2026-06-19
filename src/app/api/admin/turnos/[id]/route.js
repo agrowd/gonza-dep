@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { sendWhatsAppMessage } from '@/lib/whatsapp.js';
+import { sendNoShowEmail } from '@/lib/email.js';
 
 // Helper to format date
 function formatDate(date) {
@@ -119,6 +120,45 @@ export async function PUT(request, { params }) {
             clienteId: updatedTurno.clienteId,
             canal: 'WHATSAPP',
             mensaje: `Error al enviar confirmación automática: ${err.message}`,
+            estado: 'FALLIDO'
+          }
+        });
+      }
+    }
+
+    // Email Notification Trigger:
+    // If state changes to "NO_ASISTIO" and old state was not "NO_ASISTIO"
+    if (estado === 'NO_ASISTIO' && oldTurn.estado !== 'NO_ASISTIO') {
+      try {
+        await sendNoShowEmail(
+          updatedTurno.cliente.email,
+          updatedTurno.cliente.nombreCompleto,
+          {
+            fecha: updatedTurno.fecha,
+            horaInicio: updatedTurno.horaInicio,
+            zonas: updatedTurno.zonas,
+            valorSeña: updatedTurno.valorSeña
+          }
+        );
+
+        // Log in database
+        await prisma.notificacion.create({
+          data: {
+            clienteId: updatedTurno.clienteId,
+            canal: 'EMAIL',
+            mensaje: `Correo enviado por inasistencia al turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+            estado: 'ENVIADO'
+          }
+        });
+        console.log(`Email no-show notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+      } catch (err) {
+        console.error('Failed to send automatic no-show email:', err);
+        // Log failure in database
+        await prisma.notificacion.create({
+          data: {
+            clienteId: updatedTurno.clienteId,
+            canal: 'EMAIL',
+            mensaje: `Error al enviar correo por inasistencia: ${err.message}`,
             estado: 'FALLIDO'
           }
         });

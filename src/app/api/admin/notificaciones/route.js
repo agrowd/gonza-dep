@@ -44,24 +44,39 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const weekType = searchParams.get('week') || 'current'; // 'current' or 'next'
+    const weekType = searchParams.get('week') || 'current'; // 'current', 'next' or '2days'
 
-    const now = new Date();
-    
-    // Calculate Monday of current week
-    const currentDay = now.getDay();
-    const diffToMonday = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
-    
-    const startOfWeek = new Date(now.setDate(diffToMonday));
-    startOfWeek.setHours(0, 0, 0, 0);
+    let startRange, endRange;
 
-    if (weekType === 'next') {
-      startOfWeek.setDate(startOfWeek.getDate() + 7);
+    if (weekType === '2days') {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + 2);
+      
+      startRange = new Date(targetDate);
+      startRange.setHours(0, 0, 0, 0);
+
+      endRange = new Date(targetDate);
+      endRange.setHours(23, 59, 59, 999);
+    } else {
+      const now = new Date();
+      
+      // Calculate Monday of current week
+      const currentDay = now.getDay();
+      const diffToMonday = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+      
+      const startOfWeek = new Date(now.setDate(diffToMonday));
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      if (weekType === 'next') {
+        startOfWeek.setDate(startOfWeek.getDate() + 7);
+      }
+
+      startRange = new Date(startOfWeek);
+
+      endRange = new Date(startOfWeek);
+      endRange.setDate(startOfWeek.getDate() + 6); // Up to Sunday
+      endRange.setHours(23, 59, 59, 999);
     }
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Up to Sunday
-    endOfWeek.setHours(23, 59, 59, 999);
 
     // Fetch template configs
     const reminderConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_reminder_template' } });
@@ -74,8 +89,8 @@ export async function GET(request) {
     const turnos = await prisma.turno.findMany({
       where: {
         fecha: {
-          gte: startOfWeek,
-          lte: endOfWeek
+          gte: startRange,
+          lte: endRange
         },
         estado: {
           in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO'] // Only remind upcoming active ones

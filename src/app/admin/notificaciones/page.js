@@ -285,6 +285,12 @@ export default function NotificacionesPage() {
             >
               Próxima Semana
             </button>
+            <button 
+              className={`${styles.tab} ${week === '2days' ? styles.tabActive : ''}`} 
+              onClick={() => setWeek('2days')}
+            >
+              Turnos en 2 Días
+            </button>
           </div>
 
           {/* Bulk Actions Panel */}

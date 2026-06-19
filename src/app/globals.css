@@ -1,21 +1,29 @@
 /* Custom CSS variables for premium brand styling */
 :root {
   /* Colors */
-  --bg-primary: #121212;
-  --bg-secondary: #1a1a1a;
+  --bg-primary: #1d1d1d;     /* Charcoal from official web */
+  --bg-secondary: #282a2b;   /* Lighter charcoal from official web */
   --bg-card: #202020;
   --bg-card-hover: #262626;
   
+  --color-primary: #7a1e1e;       /* Burgundy Wine brand color */
+  --color-primary-light: #9c2828;
+  --color-primary-dark: #5c1414;
+  --color-primary-rgb: 122, 30, 30;
+
   --color-gold: #d4a54d;
   --color-gold-light: #e6be75;
   --color-gold-dark: #b88d3a;
   --color-gold-rgb: 212, 165, 77;
 
+  --color-available: #00d084;     /* Green for availability */
+  --color-available-rgb: 0, 208, 132;
+
   --text-primary: #ffffff;
   --text-secondary: #a6a6a6;
   --text-muted: #666666;
   
-  --border-color: #2c2c2c;
+  --border-color: #3a3c3e;
   --border-gold: rgba(var(--color-gold-rgb), 0.25);
   
   /* Status Colors */
@@ -40,7 +48,7 @@
 
   /* Card styling & glassmorphism */
   --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --glass-bg: rgba(32, 32, 32, 0.6);
+  --glass-bg: rgba(40, 42, 43, 0.6);
   --glass-border: rgba(255, 255, 255, 0.08);
   --border-radius: 12px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -149,14 +157,14 @@ input::placeholder, textarea::placeholder {
 }
 
 .btn-primary {
-  background-color: var(--color-gold);
-  color: #000000;
+  background-color: var(--color-primary);
+  color: #ffffff;
 }
 
 .btn-primary:hover {
-  background-color: var(--color-gold-light);
+  background-color: var(--color-primary-light);
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(var(--color-gold-rgb), 0.4);
+  box-shadow: 0 4px 15px rgba(var(--color-primary-rgb), 0.4);
 }
 
 .btn-primary:active {

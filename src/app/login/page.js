@@ -113,8 +113,8 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2rem' }}>
-          ¿Sos cliente? <a href="/">Reservá tu turno online aquí</a>
+        <p style={{ textAlign: 'center', fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: '2.5rem' }}>
+          ¿Sos cliente? <a href="/" style={{ fontWeight: '700', textDecoration: 'underline' }}>Reservá tu turno online aquí</a>
         </p>
       </main>
     </div>

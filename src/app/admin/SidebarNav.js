@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import styles from './layout.module.css';
@@ -32,6 +33,7 @@ const LogOutIcon = () => (
 export default function SidebarNav({ user }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -51,41 +53,73 @@ export default function SidebarNav({ user }) {
   ];
 
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.sidebarHeader}>
-        <div className={styles.logoIcon}>G</div>
-        <div className={styles.logoText}>
-          <span className={styles.logoTitle}>Gonzalo</span>
-          <span className={styles.logoSubtitle}>Admin Panel</span>
-        </div>
-      </div>
+    <>
+      {/* Mobile Hamburger Toggle Button */}
+      <button 
+        onClick={() => setIsOpen(!isOpen)} 
+        className={styles.mobileToggleBtn}
+        aria-label="Abrir menú"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {isOpen ? (
+            <>
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </>
+          ) : (
+            <>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </>
+          )}
+        </svg>
+      </button>
 
-      <nav className={styles.nav}>
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.path);
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
-            >
-              {item.icon}
-              <span>{item.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Backdrop overlay for mobile */}
+      {isOpen && <div className={styles.mobileBackdrop} onClick={() => setIsOpen(false)}></div>}
 
-      <div className={styles.sidebarFooter}>
-        <div className={styles.userInfo}>
-          <span className={styles.userName}>{user?.nombre || 'Administrador'}</span>
-          <span className={styles.userRole}>{user?.rol === 'ADMIN' ? 'Administrador' : 'Solo Lectura'}</span>
+      <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
+        <div className={styles.sidebarHeader}>
+          <div className={styles.logoIcon}>G</div>
+          <div className={styles.logoText}>
+            <span className={styles.logoTitle}>Gonzalo</span>
+            <span className={styles.logoSubtitle}>Admin Panel</span>
+          </div>
+          {/* Close button for mobile inside sidebar */}
+          <button onClick={() => setIsOpen(false)} className={styles.mobileCloseBtn} aria-label="Cerrar menú">
+            &times;
+          </button>
         </div>
-        <button onClick={handleLogout} className={styles.logoutBtn}>
-          <LogOutIcon />
-          <span>Cerrar Sesión</span>
-        </button>
-      </div>
-    </aside>
+
+        <nav className={styles.nav}>
+          {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.path);
+            return (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
+                onClick={() => setIsOpen(false)}
+              >
+                {item.icon}
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className={styles.sidebarFooter}>
+          <div className={styles.userInfo}>
+            <span className={styles.userName}>{user?.nombre || 'Administrador'}</span>
+            <span className={styles.userRole}>{user?.rol === 'ADMIN' ? 'Administrador' : 'Solo Lectura'}</span>
+          </div>
+          <button onClick={handleLogout} className={styles.logoutBtn}>
+            <LogOutIcon />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
