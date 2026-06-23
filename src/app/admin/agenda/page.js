@@ -442,12 +442,12 @@ export default function AgendaPage() {
                 {/* Appointments blocks absolute positioning */}
                 {dayAppointments.map((app) => {
                   const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
-                  let zonesText = '';
+                  let zonasText = '';
                   try {
                     const zonesArray = JSON.parse(app.zonas);
-                    zonesText = zonesArray.map(z => z.nombre).join(', ');
+                    zonasText = zonesArray.map(z => z.nombre).join(', ');
                   } catch (e) {
-                    zonesText = app.zonas;
+                    zonasText = app.zonas;
                   }
 
                   return (

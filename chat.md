@@ -253,4 +253,22 @@
 - Identificación de que la llamada a `pathname.startsWith()` en `src/app/admin/SidebarNav.js` arrojaba un error de tipo `TypeError` si `usePathname()` devolvía `null` durante la hidratación inicial.
 - Implementación de un control condicional en `SidebarNav.js` para evitar el fallo.
 - Subida de la corrección al VPS vía SCP y ejecución exitosa del script de despliegue `./deploy.sh` en el servidor.
+## Mensaje del Usuario (2026-06-23 19:27:40-03:00)
+> Me muestra el contenido y luego me dice esto (con captura de la pantalla "This page couldn't load" después de haber cargado el contenido inicialmente)
+
+## Respuesta del Asistente
+- Subida del componente Error Boundary `src/app/admin/error.js` al VPS mediante SCP.
+- Compilación y despliegue del nuevo build en el VPS ejecutando `./deploy.sh`.
+- Solicitud al usuario de recargar la página `/admin/agenda` para capturar y visualizar la traza detallada del error de React a través del Error Boundary.
+
+## Mensaje del Usuario (2026-06-23 19:32:55-03:00)
+> Me dice esto:
+> Error: zonasText is not defined
+> ReferenceError: zonasText is not defined
+>     at https://agenda.depilacionparahombres.com/_next/static/chunks/2fmsuyd7fhyph.js:1:10796
+
+## Respuesta del Asistente
+- Identificación de un error tipográfico en `src/app/admin/agenda/page.js` donde se declaró `zonesText` pero se leyó `{zonasText}`.
+- Corrección de la variable tipográfica de `zonesText` a `zonasText`.
+- Carga de la corrección al VPS mediante SCP y recompilación del build de producción Next.js usando `./deploy.sh`.
 

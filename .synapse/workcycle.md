@@ -108,3 +108,16 @@
   - Se identificó que la llamada a `pathname.startsWith()` en `src/app/admin/SidebarNav.js` fallaba con `TypeError` porque `usePathname()` de Next.js retorna `null` durante la fase inicial de hidratación/SSR.
   - Se implementó un control condicional en `SidebarNav.js` (`pathname ? pathname.startsWith(...) : false`) para prevenir la excepción.
   - Se subió el archivo modificado por SCP y se ejecutó `./deploy.sh` en el VPS, finalizando el despliegue con éxito.
+
+- **23 de Junio (7:28 PM - 7:35 PM)**:
+  - Se subió el archivo `src/app/admin/error.js` al VPS mediante SCP.
+  - Se ejecutó el despliegue (`deploy.sh`) exitosamente en el servidor, reiniciando el servicio de PM2 `gonzalo-agenda` en el puerto 3006.
+  - Se solicitó al usuario recargar la página `/admin/agenda` para capturar la traza del error en el cliente a través del nuevo Error Boundary.
+
+- **23 de Junio (7:36 PM - 7:42 PM)**:
+  - El usuario compartió la traza de error arrojada por el Error Boundary: `ReferenceError: zonasText is not defined` en `src/app/admin/agenda/page.js`.
+  - Se identificó un error tipográfico en `src/app/admin/agenda/page.js` donde se declaró `zonesText` pero se intentó renderizar `zonasText`.
+  - Se corrigió el typo renombrando `zonesText` a `zonasText` para mantener la consistencia.
+  - Se subió `src/app/admin/agenda/page.js` al VPS vía SCP y se ejecutó `./deploy.sh` de forma exitosa en producción.
+
+
