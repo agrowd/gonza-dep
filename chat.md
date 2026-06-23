@@ -210,3 +210,24 @@
 - Ejecución y configuración del certificado SSL HTTPS gratuito de Let's Encrypt mediante Certbot, habilitando redirección automática de tráfico inseguro (HTTP) a seguro (HTTPS).
 - Verificación de respuesta exitosa (HTTP 200 OK) a través de HTTPS.
 
+## Mensaje del Usuario (2026-06-23 13:39:19-03:00)
+> ahora como hago lo del mail
+
+## Respuesta del Asistente
+- Explicación de los requisitos de SMTP para el envío de correos (Hostinger corporativo o Gmail personal con contraseña de aplicación de 16 dígitos).
+
+## Mensaje del Usuario (2026-06-23 13:50:01-03:00)
+> Usa este logo para la agenda (con imagen del nuevo logo circular rojo)
+
+## Respuesta del Asistente
+- Descarga e integración del nuevo logo circular rojo en `public/logo.png` del proyecto.
+- Carga del logo al servidor a través de SCP.
+
+## Mensaje del Usuario (2026-06-23 13:50:26-03:00)
+> Y ponelo como favicon tambien
+
+## Respuesta del Asistente
+- Copia del nuevo logo como `src/app/favicon.ico`.
+- Carga del favicon al servidor mediante SCP.
+- Ejecución del script de despliegue `./deploy.sh` en el VPS para compilar el nuevo build de producción Next.js que integra el nuevo logo y favicon de forma estática en la caché del navegador.
+

@@ -90,3 +90,9 @@
   - Se modificó la configuración de Nginx en `/etc/nginx/sites-available/default` en el VPS para asignar `server_name agenda.depilacionparahombres.com;` y se recargó Nginx.
   - Se corrió Certbot (`certbot --nginx -d agenda.depilacionparahombres.com`) para registrar y desplegar el certificado SSL (HTTPS) de Let's Encrypt y habilitar redirección HTTP -> HTTPS de forma automática.
   - Se validó el correcto funcionamiento de HTTPS respondiendo con HTTP 200 OK.
+
+- **23 de Junio (1:50 PM - 1:55 PM)**:
+  - El usuario suministró un nuevo logotipo oficial circular con diseño de color rojo y la letra "G" en gris.
+  - Se sobreescribió el archivo de logo (`public/logo.png`) y el favicon (`src/app/favicon.ico`) en el repositorio local.
+  - Se transfirieron ambos recursos directamente al VPS a través de SCP.
+  - Se completó con éxito la recompilación del proyecto Next.js en el servidor a través de `./deploy.sh`, empaquetando el nuevo favicon y logo de forma definitiva y reiniciando el servicio bajo PM2.
