@@ -142,3 +142,18 @@
 ## Respuesta del Asistente
 - Commiteado y pusheado automático de todas las modificaciones y del archivo `src/lib/email.js` a la rama `main` de GitHub.
 - Envío de las instrucciones detalladas del despliegue en producción en el VPS Debian, indicando los comandos exactos y la necesidad de configurar las credenciales SMTP de correo.
+
+## Mensaje del Usuario (2026-06-22 19:44:06-03:00)
+> Hay alguna diferencia entre el vps con debian de donweb en donde esta ahora que donde van a contratar para subirlo? Algo que deba aclararle?
+
+## Respuesta del Asistente
+- Explicación de los requisitos del nuevo VPS (elegir Debian/Ubuntu, evitar paneles como Plesk/cPanel, prever la migración de datos y apuntar los DNS a la nueva IP).
+
+## Mensaje del Usuario (2026-06-23 10:14:24-03:00)
+> Me pasaron otro vps, hay que instalar todo lo necesario ya que es uno que no tiene nada, aca ssh root@187.127.9.216 contraseña: eI+e3()6bflOG3Yq
+
+## Respuesta del Asistente
+- Autorización de claves públicas SSH locales en el nuevo VPS Ubuntu 24.04 (`187.127.9.216`).
+- Creación y ejecución de un script de instalación completo (`setup_vps.sh`) en el VPS que instaló Node.js v20, PostgreSQL (con base de datos y usuario creados), Nginx, Certbot, PM2 y las librerías compartidas de Puppeteer/Chromium.
+- Clonación del repositorio Git, subida de la configuración de variables de entorno `.env` de producción y ejecución exitosa del script `./deploy.sh` (instalando dependencias, compilando el proyecto de Next.js, sincronizando y sembrando la base de datos de PostgreSQL y configurando el proceso PM2 `gonzalo-agenda` en el puerto 3006).
+- Reemplazo y recarga de la configuración del proxy de Nginx para exponer la aplicación en el puerto 80 del VPS, lo que permite el acceso web inmediato a través de `http://187.127.9.216/`.

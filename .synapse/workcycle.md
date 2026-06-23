@@ -63,3 +63,15 @@
     - Se creó el módulo de correo `src/lib/email.js` implementando una plantilla HTML premium con los colores de la marca para inasistencias.
     - Se interceptó el cambio de estado a `NO_ASISTIO` en `src/app/api/admin/turnos/[id]/route.js` para enviar automáticamente el correo SMTP de inasistencia.
   - Se verificó la compilación local mediante `npm run build` para garantizar cero fallos de SSR o ruteo en producción.
+
+- **23 de Junio (10:15 AM)**:
+  - El usuario proporciona las credenciales de un nuevo VPS en Hostinger (IP: `187.127.9.216`, SO: Ubuntu 24.04).
+  - Se instaló la librería `ssh2` localmente para automatizar la configuración del servidor.
+  - Se copiaron las claves públicas SSH locales al archivo `authorized_keys` del VPS para autorizar el acceso sin contraseña.
+  - Se creó y ejecutó el script `setup_vps.sh` en el VPS, el cual instaló Node.js v20, Nginx, Certbot, PostgreSQL, dependencias del sistema de Puppeteer para WhatsApp Web JS, y PM2.
+  - Se configuró la base de datos PostgreSQL creando el usuario `gonzalo_admin` y la base de datos `agenda_db`.
+  - Se clonó el repositorio en `/srv/gonzalo-dep` en el VPS.
+  - Se subió y configuró el archivo de variables de entorno `.env` en producción.
+  - Se ejecutó con éxito el script `./deploy.sh` que instaló dependencias, sincronizó el esquema Prisma, ejecutó el seed, compiló el bundle Next.js de producción y levantó el proceso en PM2 (`gonzalo-agenda`).
+  - Se reescribió la configuración predeterminada de Nginx en `/etc/nginx/sites-available/default` para actuar como proxy inverso desde el puerto 80 al puerto local 3006 de la aplicación.
+  - Se verificó mediante un `curl` de prueba que el sitio responde correctamente con un código de estado HTTP 200 OK.
