@@ -50,17 +50,16 @@ export default function LoginPage() {
         
         {/* Logo and title */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
-            background: 'radial-gradient(circle, #4a1515 0%, #170505 100%)',
-            width: 70, height: 70, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '2px solid var(--color-gold)',
-            color: '#fff', fontSize: '2rem', fontFamily: 'var(--font-title)', fontWeight: 800,
-            marginBottom: '1rem',
-            boxShadow: '0 0 20px rgba(212, 165, 77, 0.2)'
-          }}>G</div>
-          <h1 style={{ fontSize: '1.6rem', textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: 'center' }}>GONZALO</h1>
-          <span style={{ color: 'var(--color-gold)', fontSize: '0.85rem', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Depilación para Hombres</span>
+          <img 
+            src="/logo.png" 
+            alt="Gonzalo Depilación para Hombres" 
+            style={{ 
+              width: '180px', 
+              height: 'auto', 
+              marginBottom: '1rem',
+              filter: 'drop-shadow(0 0 20px rgba(212, 165, 77, 0.2))'
+            }} 
+          />
         </div>
 
         {/* Login form */}

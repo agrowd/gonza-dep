@@ -210,20 +210,7 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.logoContainer}>
-            <div style={{ position: 'relative', width: 45, height: 45 }}>
-              {/* Fallback avatar style for logo */}
-              <div style={{
-                background: 'radial-gradient(circle, #4a1515 0%, #170505 100%)',
-                width: '100%', height: '100%', borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid var(--color-gold)',
-                color: '#fff', fontSize: '1.25rem', fontFamily: 'var(--font-title)', fontWeight: 800
-              }}>G</div>
-            </div>
-            <div>
-              <span className={styles.logoTitle}>Gonzalo</span>
-              <span className={styles.logoSubtitle}>Depilación Definitiva Masculina</span>
-            </div>
+            <img src="/logo.png" alt="Gonzalo Depilación para Hombres" style={{ width: '150px', height: 'auto' }} />
           </div>
           <a href="/login" className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
             Acceso Interno
@@ -500,9 +487,9 @@ export default function Home() {
                 ⚠️ Indicaciones Previas Importantes
               </h3>
               <ul className={styles.instructionsList}>
-                <li>Tenés que venir **afeitado al ras** con maquinita de afeitar (24hs antes) en las zonas a depilar. No uses cera ni pinza de depilar.</li>
-                <li>Por favor, asiste con puntualidad. Al ser turnos cortos y precisos, la tolerancia de demora es de solo **5 minutos**.</li>
-                <li>Dirección del estudio: **Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)**.</li>
+                <li>Tenés que venir <strong>afeitado al ras</strong> con maquinita de afeitar (24hs antes) en las zonas a depilar. No uses cera ni pinza de depilar.</li>
+                <li>Por favor, asiste con puntualidad. Al ser turnos cortos y precisos, la tolerancia de demora es de solo <strong>5 minutos</strong>.</li>
+                <li>Dirección del estudio: <strong>Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong>.</li>
               </ul>
             </div>
 

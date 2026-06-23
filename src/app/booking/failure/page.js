@@ -17,17 +17,7 @@ function FailureContent() {
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.logoContainer}>
-            <div style={{
-              background: 'radial-gradient(circle, #4a1515 0%, #170505 100%)',
-              width: 45, height: 45, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '2px solid var(--color-gold)',
-              color: '#fff', fontSize: '1.25rem', fontFamily: 'var(--font-title)', fontWeight: 800
-            }}>G</div>
-            <div>
-              <span className={styles.logoTitle}>Gonzalo</span>
-              <span className={styles.logoSubtitle}>Depilación Definitiva Masculina</span>
-            </div>
+            <img src="/logo.png" alt="Gonzalo Depilación para Hombres" style={{ width: '150px', height: 'auto' }} />
           </div>
         </div>
       </header>
