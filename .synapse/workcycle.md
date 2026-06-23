@@ -75,3 +75,9 @@
   - Se ejecutó con éxito el script `./deploy.sh` que instaló dependencias, sincronizó el esquema Prisma, ejecutó el seed, compiló el bundle Next.js de producción y levantó el proceso en PM2 (`gonzalo-agenda`).
   - Se reescribió la configuración predeterminada de Nginx en `/etc/nginx/sites-available/default` para actuar como proxy inverso desde el puerto 80 al puerto local 3006 de la aplicación.
   - Se verificó mediante un `curl` de prueba que el sitio responde correctamente con un código de estado HTTP 200 OK.
+
+- **23 de Junio (11:06 AM)**:
+  - Se detecta que el logo de marca (`public/logo.png`) estaba subido pero NO integrado en ninguna vista del frontend. Todas las páginas seguían mostrando la letra "G" en un círculo como placeholder.
+  - Se reemplazó el placeholder "G" por la imagen real `/logo.png` en 5 archivos: login, sidebar, booking, success y failure.
+  - Se corrigió el renderizado de las Indicaciones Previas en la reserva online: los asteriscos `**` de markdown crudo se reemplazaron por etiquetas `<strong>` HTML.
+  - Build de producción exitoso (28/28 páginas). Commit y push a GitHub.

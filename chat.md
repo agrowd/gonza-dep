@@ -157,3 +157,30 @@
 - Creación y ejecución de un script de instalación completo (`setup_vps.sh`) en el VPS que instaló Node.js v20, PostgreSQL (con base de datos y usuario creados), Nginx, Certbot, PM2 y las librerías compartidas de Puppeteer/Chromium.
 - Clonación del repositorio Git, subida de la configuración de variables de entorno `.env` de producción y ejecución exitosa del script `./deploy.sh` (instalando dependencias, compilando el proyecto de Next.js, sincronizando y sembrando la base de datos de PostgreSQL y configurando el proceso PM2 `gonzalo-agenda` en el puerto 3006).
 - Reemplazo y recarga de la configuración del proxy de Nginx para exponer la aplicación en el puerto 80 del VPS, lo que permite el acceso web inmediato a través de `http://187.127.9.216/`.
+
+## Mensaje del Usuario (2026-06-23 10:27:36-03:00)
+> Lo de mercadopago esta bien configurado?
+
+## Respuesta del Asistente
+- Confirmación de que el Access Token de MercadoPago de producción ya está configurado en el `.env` del VPS (`MP_ACCESS_TOKEN=APP_USR-5867691693757311-...`).
+
+## Mensaje del Usuario (2026-06-23 10:55:36-03:00)
+> Ya me pasaron lo de mercadopago, no te acordas? (re-envío de las credenciales de MercadoPago)
+
+## Respuesta del Asistente
+- Confirmación de que las credenciales de MercadoPago ya estaban configuradas correctamente en el `.env` del VPS desde la sesión anterior.
+
+## Mensaje del Usuario (2026-06-23 10:59:12-03:00)
+> Entonces faltaria esto ultimo que me pedis, el mail y el dominio no?
+
+## Respuesta del Asistente
+- Confirmación de que quedan pendientes las credenciales SMTP del mail y el apuntado del dominio DNS a la IP del VPS.
+
+## Mensaje del Usuario (2026-06-23 11:00:42-03:00)
+> Agregaste los cambios que me habian solicitado por ultima vez? Sin mentirme, busca en el chat, memoria etc, sino pedimelo y te lo paso de nuevo. Lo principal es el logo
+
+## Respuesta del Asistente
+- Detección honesta de que el logo real (`public/logo.png`) no estaba integrado en ninguna vista — todas las páginas seguían mostrando la letra "G" en un círculo.
+- Integración del logo de marca en 5 archivos: login (`180px`), sidebar admin (`120px`), booking público (`150px`), success (`150px`) y failure (`150px`).
+- Corrección de las indicaciones previas en la reserva: asteriscos `**` de markdown reemplazados por etiquetas `<strong>` HTML.
+- Build de producción exitoso (28/28 páginas). Commit y push a GitHub.

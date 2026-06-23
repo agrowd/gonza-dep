@@ -26,3 +26,11 @@
 - Grilla del calendario semanal y disparadores interactivos dinámicos según los horarios laborales configurados.
 - Soporte para filtro "Turnos en 2 Días" en la sección de notificaciones y API backend.
 - Modificaciones de robustez en React utilizando optional chaining `?.` para prevenir caídas de UI por datos de cliente nulos.
+
+## [0.4.0] - 2026-06-23
+### Added
+- Integración del logo oficial de marca (`/logo.png`) en todas las vistas: login, sidebar admin, booking público, success y failure.
+- Despliegue completo en nuevo VPS Ubuntu 24.04 (`187.127.9.216`) con PostgreSQL, Nginx, PM2 y credenciales de MercadoPago en producción.
+
+### Fixed
+- Indicaciones previas en la reserva online: asteriscos `**` de markdown crudo reemplazados por etiquetas `<strong>` HTML para renderizado correcto de negritas.
