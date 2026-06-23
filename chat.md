@@ -271,4 +271,11 @@
 - Identificación de un error tipográfico en `src/app/admin/agenda/page.js` donde se declaró `zonesText` pero se leyó `{zonasText}`.
 - Corrección de la variable tipográfica de `zonesText` a `zonasText`.
 - Carga de la corrección al VPS mediante SCP y recompilación del build de producción Next.js usando `./deploy.sh`.
+## Mensaje del Usuario (2026-06-23 19:53:44-03:00)
+> Ya entre, el cliente me dice esto (con capturas del panel administrativo cargado con éxito, y una conversación de WhatsApp donde se reporta que al reservar un turno, el botón de MercadoPago no responde)
 
+## Respuesta del Asistente
+- Revisión de logs en el VPS para diagnosticar el error de MercadoPago: se encontró un error de validación `auto_return invalid. back_url.success must be defined`.
+- Identificación de que MercadoPago exige URLs de retorno bajo protocolo HTTPS público y válido para credenciales de producción.
+- Modificación de la variable `NEXT_PUBLIC_APP_URL` en el archivo `.env` del VPS, reemplazando la IP interna `http://187.127.9.216:3006` por el dominio seguro `https://agenda.depilacionparahombres.com`.
+- Recompilación y despliegue del proyecto Next.js en el VPS mediante `./deploy.sh` para impactar el cambio.

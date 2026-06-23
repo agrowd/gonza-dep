@@ -17,4 +17,8 @@
 **Root Cause:** Typo en `src/app/admin/agenda/page.js`, la variable se declaró como `zonesText` pero se renderizó como `zonasText`.
 **Solución:** Se renombraron las referencias de declaración a `zonasText` para coincidir con el llamado del render.
 **Estado:** ✅ FIXED
-
+## ERR-04: Fallo en creación de preferencia de MercadoPago por auto_return (2026-06-23)
+**Síntoma:** Al finalizar el proceso de reserva en la landing, el botón de MercadoPago no abría la pasarela de pagos.
+**Root Cause:** La API de MercadoPago rechaza la creación de preferencias con `auto_return: 'approved'` si los `back_urls` no son dominios HTTPS válidos (nuestro `.env` tenía configurado el IP local `http://187.127.9.216:3006`).
+**Solución:** Se actualizó `NEXT_PUBLIC_APP_URL` en el archivo `.env` del VPS a `https://agenda.depilacionparahombres.com` y se recompiló la aplicación en producción.
+**Estado:** ✅ FIXED

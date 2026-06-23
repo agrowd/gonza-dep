@@ -119,5 +119,9 @@
   - Se identificó un error tipográfico en `src/app/admin/agenda/page.js` donde se declaró `zonesText` pero se intentó renderizar `zonasText`.
   - Se corrigió el typo renombrando `zonesText` a `zonasText` para mantener la consistencia.
   - Se subió `src/app/admin/agenda/page.js` al VPS vía SCP y se ejecutó `./deploy.sh` de forma exitosa en producción.
-
-
+- **23 de Junio (7:45 PM - 7:57 PM)**:
+  - El usuario reportó que al intentar reservar un turno como cliente, al llegar al paso de Mercado Pago, este no se abría.
+  - Se revisaron los logs de PM2 en el VPS (`gonzalo-agenda-error.log`), encontrando que la API `/api/reservas/crear` fallaba con: `auto_return invalid. back_url.success must be defined`.
+  - Esto ocurría porque Mercado Pago requiere URLs de retorno HTTPS públicas y válidas cuando `auto_return` está habilitado. En el `.env` del VPS, `NEXT_PUBLIC_APP_URL` apuntaba a `http://187.127.9.216:3006`.
+  - Se modificó localmente `scratch/.env.production` asignando `NEXT_PUBLIC_APP_URL="https://agenda.depilacionparahombres.com"`.
+  - Se transfirió el archivo al VPS por SCP a la ruta `/srv/gonzalo-dep/.env` y se ejecutó `./deploy.sh` para reconstruir el bundle de producción y reiniciar PM2.
