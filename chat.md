@@ -239,3 +239,9 @@
 - Subida de ambos archivos actualizados al VPS vía SCP.
 - Ejecución de `./deploy.sh` en el VPS para compilar el build de producción final e iniciar la aplicación en PM2.
 
+## Mensaje del Usuario (2026-06-23 14:18:06-03:00)
+> como se inicia sesion como admin
+
+## Respuesta del Asistente
+- Explicación de cómo acceder a la ruta `/login` (o usando el botón "Acceso Interno" de la página principal) e indicación de las credenciales de administrador configuradas por defecto en el seed de la base de datos (`admin` / `admin123`).
+
