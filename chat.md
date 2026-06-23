@@ -183,4 +183,14 @@
 - Detección honesta de que el logo real (`public/logo.png`) no estaba integrado en ninguna vista — todas las páginas seguían mostrando la letra "G" en un círculo.
 - Integración del logo de marca en 5 archivos: login (`180px`), sidebar admin (`120px`), booking público (`150px`), success (`150px`) y failure (`150px`).
 - Corrección de las indicaciones previas en la reserva: asteriscos `**` de markdown reemplazados por etiquetas `<strong>` HTML.
-- Build de producción exitoso (28/28 páginas). Commit y push a GitHub.
+- Build de producción exitoso (28/28 páginas). Commit y push local.
+
+## Mensaje del Usuario (2026-06-23 13:03:53-03:00)
+> Segui
+
+## Respuesta del Asistente
+- Identificación de que el push de GitHub se encontraba bloqueado de forma interactiva esperando credenciales HTTPS en background.
+- Transferencia directa mediante `scp` de los archivos modificados a `/srv/gonzalo-dep` en el VPS Hostinger.
+- Ejecución del comando `./deploy.sh` en el VPS a través de SSH para reinstalar dependencias, sincronizar la base de datos PostgreSQL, ejecutar el seed y compilar el build de producción Next.js (28/28 páginas compiladas correctamente).
+- Reinicio automático del proceso `gonzalo-agenda` en PM2 y confirmación de que responde con código de estado HTTP 200 OK mediante comandos `curl` locales en el puerto 3006 y externos por el puerto 80 a través del Proxy Inverso de Nginx.
+

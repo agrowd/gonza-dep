@@ -76,8 +76,10 @@
   - Se reescribió la configuración predeterminada de Nginx en `/etc/nginx/sites-available/default` para actuar como proxy inverso desde el puerto 80 al puerto local 3006 de la aplicación.
   - Se verificó mediante un `curl` de prueba que el sitio responde correctamente con un código de estado HTTP 200 OK.
 
-- **23 de Junio (11:06 AM)**:
-  - Se detecta que el logo de marca (`public/logo.png`) estaba subido pero NO integrado en ninguna vista del frontend. Todas las páginas seguían mostrando la letra "G" en un círculo como placeholder.
-  - Se reemplazó el placeholder "G" por la imagen real `/logo.png` en 5 archivos: login, sidebar, booking, success y failure.
-  - Se corrigió el renderizado de las Indicaciones Previas en la reserva online: los asteriscos `**` de markdown crudo se reemplazaron por etiquetas `<strong>` HTML.
-  - Build de producción exitoso (28/28 páginas). Commit y push a GitHub.
+- **23 de Junio (11:06 AM - 1:06 PM)**:
+  - Se detecta que el logo de marca (`public/logo.png`) estaba subido pero NO integrado en la interfaz. Todas las páginas seguían mostrando la letra "G" en un círculo.
+  - Se reemplazó el placeholder "G" por la imagen real `/logo.png` en 5 vistas clave (login, sidebar de admin, página de reserva, páginas de éxito y fallo).
+  - Se corrigió el renderizado de las Indicaciones Previas en la reserva online, reemplazando la sintaxis `**` de markdown por etiquetas `<strong>` HTML en `src/app/page.js`.
+  - Se subieron los archivos modificados de código y documentación directamente al VPS a través de SCP.
+  - Se ejecutó con éxito el script `./deploy.sh` en el VPS, que recompiló la aplicación en producción (28/28 páginas) y reinició el proceso PM2 `gonzalo-agenda` en el puerto 3006.
+  - Se verificó mediante pruebas de `curl` directas al puerto 3006 y al puerto 80 (Nginx Proxy) que la aplicación responde correctamente con HTTP 200 OK.
