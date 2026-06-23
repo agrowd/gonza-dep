@@ -231,3 +231,11 @@
 - Carga del favicon al servidor mediante SCP.
 - Ejecución del script de despliegue `./deploy.sh` en el VPS para compilar el nuevo build de producción Next.js que integra el nuevo logo y favicon de forma estática en la caché del navegador.
 
+## Mensaje del Usuario (2026-06-23 14:06:03-03:00)
+> Pone este logo que tiene fondo transparente (con imagen del nuevo logo con transparencia)
+
+## Respuesta del Asistente
+- Descarga e integración del logo con fondo transparente en `public/logo.png` y `src/app/favicon.ico`.
+- Subida de ambos archivos actualizados al VPS vía SCP.
+- Ejecución de `./deploy.sh` en el VPS para compilar el build de producción final e iniciar la aplicación en PM2.
+

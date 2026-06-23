@@ -96,3 +96,8 @@
   - Se sobreescribió el archivo de logo (`public/logo.png`) y el favicon (`src/app/favicon.ico`) en el repositorio local.
   - Se transfirieron ambos recursos directamente al VPS a través de SCP.
   - Se completó con éxito la recompilación del proyecto Next.js en el servidor a través de `./deploy.sh`, empaquetando el nuevo favicon y logo de forma definitiva y reiniciando el servicio bajo PM2.
+
+- **23 de Junio (2:06 PM - 2:10 PM)**:
+  - El usuario suministró una nueva versión del logotipo circular con fondo transparente.
+  - Se sobreescribió el logo (`public/logo.png`) y el favicon (`src/app/favicon.ico`) locales y se subieron al VPS mediante SCP.
+  - Se completó con éxito la recompilación del proyecto Next.js en el servidor a través de `./deploy.sh`, integrando el favicon y logo transparentes y reiniciando el servicio bajo PM2.
