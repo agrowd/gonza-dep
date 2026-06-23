@@ -194,3 +194,19 @@
 - Ejecución del comando `./deploy.sh` en el VPS a través de SSH para reinstalar dependencias, sincronizar la base de datos PostgreSQL, ejecutar el seed y compilar el build de producción Next.js (28/28 páginas compiladas correctamente).
 - Reinicio automático del proceso `gonzalo-agenda` en PM2 y confirmación de que responde con código de estado HTTP 200 OK mediante comandos `curl` locales en el puerto 3006 y externos por el puerto 80 a través del Proxy Inverso de Nginx.
 
+## Mensaje del Usuario (2026-06-23 13:11:33-03:00)
+> como hago lo del subdominio (con captura del panel de Hostinger)
+
+## Respuesta del Asistente
+- Explicación detallada de cómo crear un registro DNS tipo A para el subdominio `agenda` apuntando a `187.127.9.216`.
+
+## Mensaje del Usuario (2026-06-23 13:14:39-03:00)
+> Asi? (con captura del registro DNS creado con éxito en Hostinger)
+
+## Respuesta del Asistente
+- Confirmación de que el registro DNS se agregó correctamente.
+- Verificación de la propagación del DNS usando el resolvedor público de Google `8.8.8.8`.
+- Modificación de la directiva `server_name` en la configuración de Nginx en el VPS para asignar `agenda.depilacionparahombres.com;`.
+- Ejecución y configuración del certificado SSL HTTPS gratuito de Let's Encrypt mediante Certbot, habilitando redirección automática de tráfico inseguro (HTTP) a seguro (HTTPS).
+- Verificación de respuesta exitosa (HTTP 200 OK) a través de HTTPS.
+

@@ -83,3 +83,10 @@
   - Se subieron los archivos modificados de código y documentación directamente al VPS a través de SCP.
   - Se ejecutó con éxito el script `./deploy.sh` en el VPS, que recompiló la aplicación en producción (28/28 páginas) y reinició el proceso PM2 `gonzalo-agenda` en el puerto 3006.
   - Se verificó mediante pruebas de `curl` directas al puerto 3006 y al puerto 80 (Nginx Proxy) que la aplicación responde correctamente con HTTP 200 OK.
+
+- **23 de Junio (1:11 PM - 1:16 PM)**:
+  - El usuario agregó exitosamente el registro DNS tipo A para el subdominio `agenda` apuntando a `187.127.9.216` en su panel de Hostinger.
+  - Se constató la propagación de DNS consultando contra el servidor público `8.8.8.8`.
+  - Se modificó la configuración de Nginx en `/etc/nginx/sites-available/default` en el VPS para asignar `server_name agenda.depilacionparahombres.com;` y se recargó Nginx.
+  - Se corrió Certbot (`certbot --nginx -d agenda.depilacionparahombres.com`) para registrar y desplegar el certificado SSL (HTTPS) de Let's Encrypt y habilitar redirección HTTP -> HTTPS de forma automática.
+  - Se validó el correcto funcionamiento de HTTPS respondiendo con HTTP 200 OK.
