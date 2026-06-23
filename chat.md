@@ -245,3 +245,12 @@
 ## Respuesta del Asistente
 - Explicación de cómo acceder a la ruta `/login` (o usando el botón "Acceso Interno" de la página principal) e indicación de las credenciales de administrador configuradas por defecto en el seed de la base de datos (`admin` / `admin123`).
 
+## Mensaje del Usuario (2026-06-23 19:14:43-03:00)
+> Cuando quiero iniciar sesion como administrador me dice esto que te dejo en la captura, solucionalo (con captura del error "This page couldn't load" en la ruta /admin/agenda)
+
+## Respuesta del Asistente
+- Diagnóstico del error del lado del cliente analizando logs de PM2 y Nginx en el VPS.
+- Identificación de que la llamada a `pathname.startsWith()` en `src/app/admin/SidebarNav.js` arrojaba un error de tipo `TypeError` si `usePathname()` devolvía `null` durante la hidratación inicial.
+- Implementación de un control condicional en `SidebarNav.js` para evitar el fallo.
+- Subida de la corrección al VPS vía SCP y ejecución exitosa del script de despliegue `./deploy.sh` en el servidor.
+

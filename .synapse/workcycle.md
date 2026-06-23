@@ -101,3 +101,10 @@
   - El usuario suministró una nueva versión del logotipo circular con fondo transparente.
   - Se sobreescribió el logo (`public/logo.png`) y el favicon (`src/app/favicon.ico`) locales y se subieron al VPS mediante SCP.
   - Se completó con éxito la recompilación del proyecto Next.js en el servidor a través de `./deploy.sh`, integrando el favicon y logo transparentes y reiniciando el servicio bajo PM2.
+
+- **23 de Junio (7:14 PM - 7:24 PM)**:
+  - El usuario reportó que la página `/admin/agenda` crasheaba con la pantalla de error "This page couldn't load" después de iniciar sesión.
+  - Se revisaron los registros de Nginx y PM2, constatando que la consulta HTTP 200 era exitosa pero el navegador de los clientes crasheaba en renderizado de React.
+  - Se identificó que la llamada a `pathname.startsWith()` en `src/app/admin/SidebarNav.js` fallaba con `TypeError` porque `usePathname()` de Next.js retorna `null` durante la fase inicial de hidratación/SSR.
+  - Se implementó un control condicional en `SidebarNav.js` (`pathname ? pathname.startsWith(...) : false`) para prevenir la excepción.
+  - Se subió el archivo modificado por SCP y se ejecutó `./deploy.sh` en el VPS, finalizando el despliegue con éxito.

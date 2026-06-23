@@ -91,7 +91,7 @@ export default function SidebarNav({ user }) {
 
         <nav className={styles.nav}>
           {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.path);
+            const isActive = pathname ? pathname.startsWith(item.path) : false;
             return (
               <Link
                 key={item.path}
