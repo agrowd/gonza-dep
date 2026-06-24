@@ -10,6 +10,14 @@ function formatDate(date) {
   return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long' });
 }
 
+// Convert HH:MM to minutes from midnight
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+
 // PUT: Update appointment (actions: reprogram, cancel, mark completed, approve)
 export async function PUT(request, { params }) {
   try {
@@ -55,6 +63,16 @@ export async function PUT(request, { params }) {
     const finalTotal = valorTotal !== undefined ? valorTotal : oldTurn.valorTotal;
     const finalSeña = valorSeña !== undefined ? valorSeña : oldTurn.valorSeña;
     updateData.saldoPendiente = Math.max(0, finalTotal - finalSeña);
+
+    // Recalculate duration if hours are updated
+    if (horaInicio || horaFin) {
+      const start = horaInicio || oldTurn.horaInicio;
+      const end = horaFin || oldTurn.horaFin;
+      const startMin = timeToMinutes(start);
+      const endMin = timeToMinutes(end);
+      updateData.duracionMinutos = Math.max(10, endMin - startMin);
+    }
+
 
     // Perform database update
     const updatedTurno = await prisma.turno.update({

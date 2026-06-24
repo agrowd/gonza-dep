@@ -125,3 +125,10 @@
   - Esto ocurría porque Mercado Pago requiere URLs de retorno HTTPS públicas y válidas cuando `auto_return` está habilitado. En el `.env` del VPS, `NEXT_PUBLIC_APP_URL` apuntaba a `http://187.127.9.216:3006`.
   - Se modificó localmente `scratch/.env.production` asignando `NEXT_PUBLIC_APP_URL="https://agenda.depilacionparahombres.com"`.
   - Se transfirió el archivo al VPS por SCP a la ruta `/srv/gonzalo-dep/.env` y se ejecutó `./deploy.sh` para reconstruir el bundle de producción y reiniciar PM2.
+
+- **23 de Junio (8:10 PM - 8:28 PM)**:
+  - El usuario reportó que al intentar crear un bloqueo de día completo de `10:00` a `22:00`, la operación fallaba.
+  - Se revisaron los logs de errores de PM2 (`gonzalo-agenda-error.log`), detectando un `ReferenceError: timeToMinutes is not defined` en `src/app/api/admin/turnos/route.js`.
+  - Se agregó la definición de la función `timeToMinutes` al inicio de `src/app/api/admin/turnos/route.js` y de `src/app/api/admin/turnos/[id]/route.js` (para la lógica de actualización/PUT).
+  - Se subieron los archivos al VPS vía SCP y se ejecutó `./deploy.sh` exitosamente.
+

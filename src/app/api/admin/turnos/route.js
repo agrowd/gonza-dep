@@ -4,6 +4,14 @@ import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 
+// Convert HH:MM to minutes from midnight
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+
 // GET: List turnos in range
 export async function GET(request) {
   try {

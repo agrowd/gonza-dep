@@ -28,3 +28,9 @@
 **Root Cause:** En el endpoint de la API `src/app/api/admin/notificaciones/route.js`, el JSON devuelto intentaba acceder a `startOfWeek` y `endOfWeek`, variables que no estaban declaradas en todos los scopes del método GET.
 **Solución:** Se reemplazaron las variables devueltas por `startRange` y `endRange`, las cuales están siempre definidas en la firma del método.
 **Estado:** ✅ FIXED
+
+## ERR-06: ReferenceError: timeToMinutes is not defined en creación/edición de turnos (2026-06-23)
+**Síntoma:** Al intentar guardar un bloqueo manual o reprogramar un turno, la petición devuelve error 500 y no guarda los datos.
+**Root Cause:** En `src/app/api/admin/turnos/route.js` y `src/app/api/admin/turnos/[id]/route.js` se utilizó la función auxiliar `timeToMinutes` para calcular la duración, pero la función no estaba declarada ni importada en ninguno de los dos archivos.
+**Solución:** Se declaró el helper `timeToMinutes` al inicio de ambos archivos de ruta.
+**Estado:** ✅ FIXED

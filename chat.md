@@ -279,3 +279,12 @@
 - Identificación de que MercadoPago exige URLs de retorno bajo protocolo HTTPS público y válido para credenciales de producción.
 - Modificación de la variable `NEXT_PUBLIC_APP_URL` en el archivo `.env` del VPS, reemplazando la IP interna `http://187.127.9.216:3006` por el dominio seguro `https://agenda.depilacionparahombres.com`.
 - Recompilación y despliegue del proyecto Next.js en el VPS mediante `./deploy.sh` para impactar el cambio.
+
+## Mensaje del Usuario (2026-06-23 21:25:27-03:00)
+> Mi cliente me dice esto (con captura de WhatsApp donde el cliente indica que no puede guardar bloqueos de día completo de 10:00 a 22:00)
+
+## Respuesta del Asistente
+- Diagnóstico de error en el servidor tailando logs de PM2: se detectó `ReferenceError: timeToMinutes is not defined` en el controlador de creación manual `/api/admin/turnos`.
+- Identificación de que la función auxiliar `timeToMinutes` no estaba definida en `route.js` ni en `[id]/route.js`.
+- Incorporación del helper `timeToMinutes` en ambos archivos de rutas de API.
+- Carga de archivos corregidos al VPS mediante SCP y recompilación del build de producción con `./deploy.sh`.
