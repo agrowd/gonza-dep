@@ -132,3 +132,11 @@
   - Se agregó la definición de la función `timeToMinutes` al inicio de `src/app/api/admin/turnos/route.js` y de `src/app/api/admin/turnos/[id]/route.js` (para la lógica de actualización/PUT).
   - Se subieron los archivos al VPS vía SCP y se ejecutó `./deploy.sh` exitosamente.
 
+- **24 de Junio (10:15 AM - 10:20 AM)**:
+  - Se cargaron y aplicaron las variables de entorno de Hostinger SMTP (`turnos@depilacionparahombres.com` a través del puerto 465 SSL) en el VPS.
+  - Se creó un script de verificación `scratch/test_smtp.js` y se ejecutó con éxito en el servidor de producción, validando la autenticación y el envío del correo de prueba.
+  - Se identificó y resolvió el error `No LID for user` en el envío de notificaciones de WhatsApp. El problema residía en que los números telefónicos en la base de datos se almacenan en formato local de 10 dígitos (ej: `1171244149`), mientras que WhatsApp Web JS requiere el formato internacional con el código de país (`549`).
+  - Se implementó la función de normalización robusta `formatArgentinaPhone` en `src/lib/whatsapp.js` para realizar esta traducción automáticamente en caliente al momento del envío.
+  - Se corrigió el cálculo de rangos de fecha en `/api/admin/notificaciones` aplicando un ajuste de zona horaria específico para Argentina (GMT-3) para evitar desfases temporales debido a la hora UTC del servidor de producción.
+  - Se subieron los archivos modificados al VPS y se ejecutó `./deploy.sh` para reconstruir la compilación Next.js y reiniciar los procesos PM2 con los cambios aplicados.
+

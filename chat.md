@@ -285,6 +285,16 @@
 
 ## Respuesta del Asistente
 - Diagnóstico de error en el servidor tailando logs de PM2: se detectó `ReferenceError: timeToMinutes is not defined` en el controlador de creación manual `/api/admin/turnos`.
-- Identificación de que la función auxiliar `timeToMinutes` no estaba definida en `route.js` ni en `[id]/route.js`.
 - Incorporación del helper `timeToMinutes` en ambos archivos de rutas de API.
 - Carga de archivos corregidos al VPS mediante SCP y recompilación del build de producción con `./deploy.sh`.
+
+## Mensaje del Usuario (2026-06-24 10:08:18-03:00)
+> Continue
+
+## Respuesta del Asistente
+- Carga y configuración de las credenciales del servidor de correos SMTP corporativo de Hostinger (`turnos@depilacionparahombres.com`) a través de SSL en el puerto 465 en el archivo `.env` de producción.
+- Creación y ejecución de un script de prueba de correo (`scratch/test_smtp.js`) directamente en el servidor de producción VPS, validando la autenticación SMTP y el envío exitoso de correos.
+- Diagnóstico del error de WhatsApp `No LID for user` analizando registros PM2 del servidor.
+- Implementación de la función `formatArgentinaPhone` en `src/lib/whatsapp.js` para traducir de forma automática números locales de 10 dígitos (ej: `1171244149`) al formato internacional requerido por WhatsApp Web (`5491171244149@c.us`).
+- Corrección de la lógica de filtros de fecha en la API `/api/admin/notificaciones` aplicando desfase de zona horaria local de Argentina (GMT-3) para evitar desplazamientos de fecha por la hora UTC del servidor de producción.
+- Recompilación y despliegue del proyecto Next.js en el VPS de producción ejecutando `./deploy.sh`.

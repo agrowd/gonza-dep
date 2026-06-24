@@ -34,3 +34,9 @@
 
 ### Fixed
 - Indicaciones previas en la reserva online: asteriscos `**` de markdown crudo reemplazados por etiquetas `<strong>` HTML para renderizado correcto de negritas.
+
+## [0.5.0] - 2026-06-24
+### Added
+- Configuración de correo SMTP corporativo con Hostinger (`turnos@depilacionparahombres.com`) y test de conexión exitoso vía puerto 465 SSL.
+- Función de formateo robusto `formatArgentinaPhone` en `src/lib/whatsapp.js` para corregir números locales de 10 dígitos (ej. `1171244149`) al formato internacional requerido por WhatsApp Web (`5491171244149@c.us`), resolviendo el error `No LID for user`.
+- Filtro de zona horaria de Argentina (GMT-3) en `/api/admin/notificaciones` para evitar desfases de fechas y garantizar que los turnos aparezcan correctamente según la hora local.

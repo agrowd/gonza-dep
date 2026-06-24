@@ -46,36 +46,44 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const weekType = searchParams.get('week') || 'current'; // 'current', 'next' or '2days'
 
+    // Helper to get Argentina (GMT-3) calendar date components
+    const getArgentinaDate = () => {
+      const now = new Date();
+      const argOffset = -3;
+      return new Date(now.getTime() + argOffset * 60 * 60 * 1000);
+    };
+
     let startRange, endRange;
 
     if (weekType === '2days') {
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() + 2);
+      const argToday = getArgentinaDate();
+      const targetDate = new Date(Date.UTC(argToday.getUTCFullYear(), argToday.getUTCMonth(), argToday.getUTCDate()));
+      targetDate.setUTCDate(targetDate.getUTCDate() + 2);
       
       startRange = new Date(targetDate);
-      startRange.setHours(0, 0, 0, 0);
+      startRange.setUTCHours(0, 0, 0, 0);
 
       endRange = new Date(targetDate);
-      endRange.setHours(23, 59, 59, 999);
+      endRange.setUTCHours(23, 59, 59, 999);
     } else {
-      const now = new Date();
+      const argToday = getArgentinaDate();
       
       // Calculate Monday of current week
-      const currentDay = now.getDay();
-      const diffToMonday = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+      const currentDay = argToday.getUTCDay(); // 0 is Sunday, 1 is Monday...
+      const diffToMonday = argToday.getUTCDate() - currentDay + (currentDay === 0 ? -6 : 1);
       
-      const startOfWeek = new Date(now.setDate(diffToMonday));
-      startOfWeek.setHours(0, 0, 0, 0);
+      const startOfWeek = new Date(Date.UTC(argToday.getUTCFullYear(), argToday.getUTCMonth(), diffToMonday));
+      startOfWeek.setUTCHours(0, 0, 0, 0);
 
       if (weekType === 'next') {
-        startOfWeek.setDate(startOfWeek.getDate() + 7);
+        startOfWeek.setUTCDate(startOfWeek.getUTCDate() + 7);
       }
 
       startRange = new Date(startOfWeek);
 
       endRange = new Date(startOfWeek);
-      endRange.setDate(startOfWeek.getDate() + 6); // Up to Sunday
-      endRange.setHours(23, 59, 59, 999);
+      endRange.setUTCDate(startOfWeek.getUTCDate() + 6); // Up to Sunday
+      endRange.setUTCHours(23, 59, 59, 999);
     }
 
     // Fetch template configs
