@@ -259,6 +259,19 @@
   border-left-color: var(--status-pendiente-pago);
   opacity: 0.85;
 }
+.stateBloqueado {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255,255,255,0.03),
+    rgba(255,255,255,0.03) 10px,
+    rgba(255,255,255,0.08) 10px,
+    rgba(255,255,255,0.08) 20px
+  ), #1a1a1a;
+  color: #8c8c8c;
+  border-left-color: #555555;
+  opacity: 0.8;
+}
+
 
 /* Modal Overlay & Card styling */
 .modalOverlay {
@@ -365,3 +378,5 @@
 .badgeNoAsistio { background-color: var(--status-no-asistio-bg); color: #b0bec5; }
 .badgePendienteAut { background-color: var(--status-pendiente-aut-bg); color: #fff176; }
 .badgePendientePago { background-color: var(--status-pendiente-pago-bg); color: #ba68c8; }
+.badgeBloqueado { background-color: #333333; color: #9e9e9e; }
+

@@ -55,6 +55,17 @@ export default function AgendaPage() {
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTurno, setEditTurno] = useState({
+    fechaStr: '',
+    horaInicio: '',
+    horaFin: '',
+    estado: '',
+    valorTotal: '',
+    valorSeña: '',
+    observaciones: ''
+  });
+
 
   // Form states for manual scheduling
   const [newTurno, setNewTurno] = useState({
@@ -214,6 +225,34 @@ export default function AgendaPage() {
     }
   };
 
+  // Save edited Turno
+  const handleSaveEditTurno = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fechaStr: editTurno.fechaStr,
+          horaInicio: editTurno.horaInicio,
+          horaFin: editTurno.horaFin,
+          estado: editTurno.estado,
+          valorTotal: Number(editTurno.valorTotal),
+          valorSeña: Number(editTurno.valorSeña),
+          observaciones: editTurno.observaciones
+        })
+      });
+      if (res.ok) {
+        setIsEditing(false);
+        setIsDetailsOpen(false);
+        fetchAppointments();
+      }
+    } catch (err) {
+      console.error('Error saving edited appointment:', err);
+    }
+  };
+
+
   // Open creation modal for a specific day and start hour
   const handleEmptySlotClick = (date, startMin) => {
     const startHour = Math.floor(startMin / 60);
@@ -313,6 +352,7 @@ export default function AgendaPage() {
       case 'NO_ASISTIO': return styles.badgeNoAsistio;
       case 'PENDIENTE_AUTORIZACION': return styles.badgePendienteAut;
       case 'PENDIENTE_PAGO': return styles.badgePendientePago;
+      case 'BLOQUEADO': return styles.badgeBloqueado;
       default: return '';
     }
   };
@@ -326,6 +366,7 @@ export default function AgendaPage() {
       case 'NO_ASISTIO': return styles.stateNoAsistio;
       case 'PENDIENTE_AUTORIZACION': return styles.statePendienteAut;
       case 'PENDIENTE_PAGO': return styles.statePendientePago;
+      case 'BLOQUEADO': return styles.stateBloqueado;
       default: return '';
     }
   };
@@ -477,91 +518,215 @@ export default function AgendaPage() {
         <div className={styles.modalOverlay}>
           <div className={`glass-card premium-border ${styles.modalContent}`}>
             <div className={styles.modalHeader}>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>Detalle del Turno</h3>
-              <button onClick={() => setIsDetailsOpen(false)} className={styles.closeBtn}>&times;</button>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
+                {isEditing ? 'Editar / Reprogramar Turno' : 'Detalle del Turno'}
+              </h3>
+              <button onClick={() => { setIsDetailsOpen(false); setIsEditing(false); }} className={styles.closeBtn}>&times;</button>
             </div>
 
-            <div className={styles.detailGrid}>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Cliente</span>
-                <span className={styles.detailValue} style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-                  {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
-                </span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Estado</span>
-                <span className={`${styles.statusPill} ${getStatusLabelClass(selectedTurno.estado)}`}>
-                  {selectedTurno.estado}
-                </span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Día</span>
-                <span className={styles.detailValue}>{new Date(selectedTurno.fecha).toLocaleDateString('es-ES', { dateStyle: 'long' })}</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Horario</span>
-                <span className={styles.detailValue}>{selectedTurno.horaInicio} a {selectedTurno.horaFin} ({selectedTurno.duracionMinutos} min)</span>
-              </div>
-              <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
-                <span className={styles.detailLabel}>Zonas a depilar</span>
-                <span className={styles.detailValue}>
-                  {JSON.parse(selectedTurno.zonas).map(z => z.nombre).join(', ')}
-                </span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Valor Total</span>
-                <span className={styles.detailValue}>${selectedTurno.valorTotal.toLocaleString()}</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Seña Cobrada</span>
-                <span className={styles.detailValue} style={{ color: '#81c784' }}>${selectedTurno.valorSeña.toLocaleString()}</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Saldo Pendiente</span>
-                <span className={styles.detailValue}>${selectedTurno.saldoPendiente.toLocaleString()}</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>WhatsApp</span>
-                <span className={styles.detailValue}>{selectedTurno.cliente?.whatsapp || 'N/A'}</span>
-              </div>
-              <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
-                <span className={styles.detailLabel}>Observaciones</span>
-                <span className={styles.detailValue}>{selectedTurno.observaciones || 'Sin observaciones'}</span>
-              </div>
-            </div>
+            {isEditing ? (
+              <form onSubmit={handleSaveEditTurno}>
+                <div className={styles.detailGrid}>
+                  <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                    <span className={styles.detailLabel}>Cliente</span>
+                    <span className={styles.detailValue} style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                      {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
+                    </span>
+                  </div>
+                  
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Fecha del Turno</label>
+                    <input
+                      type="date"
+                      value={editTurno.fechaStr}
+                      onChange={(e) => setEditTurno({ ...editTurno, fechaStr: e.target.value })}
+                      required
+                    />
+                  </div>
 
-            {/* Actions Panel */}
-            <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-              <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.75rem' }}>Acciones Rápidas</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && (
-                  <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-primary" style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff' }}>
-                    Aprobar y Confirmar
-                  </button>
-                )}
-                {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && (
-                  <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#1565c0', color: '#64b5f6' }}>
-                    Marcar como Realizado
-                  </button>
-                )}
-                {selectedTurno.estado !== 'CANCELADO' && (
-                  <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
-                    Cancelar Turno
-                  </button>
-                )}
-                {selectedTurno.estado === 'CANCELADO' && (
-                  <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-secondary" style={{ flex: '1 0 45%' }}>
-                    Re-activar Turno
-                  </button>
-                )}
-                <a href={`https://wa.me/${(selectedTurno.cliente?.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', borderColor: '#25D366', color: '#25D366' }}>
-                  💬 Chatear por WhatsApp
-                </a>
-                <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
-                  🗑️ Eliminar Registro
-                </button>
-              </div>
-            </div>
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Estado</label>
+                    <select
+                      value={editTurno.estado}
+                      onChange={(e) => setEditTurno({ ...editTurno, estado: e.target.value })}
+                    >
+                      <option value="SEÑADO">Señado / Confirmado</option>
+                      <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
+                      <option value="PENDIENTE_AUTORIZACION">Pendiente de Autorización</option>
+                      <option value="REALIZADO">Realizado</option>
+                      <option value="CANCELADO">Cancelado</option>
+                      <option value="REPROGRAMADO">Reprogramado</option>
+                      <option value="NO_ASISTIO">No asistió</option>
+                      <option value="BLOQUEADO">🔒 BLOQUEADO (Bloqueo)</option>
+                    </select>
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Hora Inicio</label>
+                    <input
+                      type="time"
+                      value={editTurno.horaInicio}
+                      onChange={(e) => setEditTurno({ ...editTurno, horaInicio: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Hora Fin</label>
+                    <input
+                      type="time"
+                      value={editTurno.horaFin}
+                      onChange={(e) => setEditTurno({ ...editTurno, horaFin: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Valor Total ($)</label>
+                    <input
+                      type="number"
+                      value={editTurno.valorTotal}
+                      onChange={(e) => setEditTurno({ ...editTurno, valorTotal: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Seña Recibida ($)</label>
+                    <input
+                      type="number"
+                      value={editTurno.valorSeña}
+                      onChange={(e) => setEditTurno({ ...editTurno, valorSeña: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                    <label className={styles.inputLabel}>Observaciones</label>
+                    <textarea
+                      value={editTurno.observaciones}
+                      onChange={(e) => setEditTurno({ ...editTurno, observaciones: e.target.value })}
+                      rows="2"
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.modalFooter}>
+                  <button type="button" onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancelar</button>
+                  <button type="submit" className="btn btn-primary">Guardar Cambios</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className={styles.detailGrid}>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Cliente</span>
+                    <span className={styles.detailValue} style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                      {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
+                    </span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Estado</span>
+                    <span className={`${styles.statusPill} ${getStatusLabelClass(selectedTurno.estado)}`}>
+                      {selectedTurno.estado}
+                    </span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Día</span>
+                    <span className={styles.detailValue}>{new Date(selectedTurno.fecha).toLocaleDateString('es-ES', { dateStyle: 'long' })}</span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Horario</span>
+                    <span className={styles.detailValue}>{selectedTurno.horaInicio} a {selectedTurno.horaFin} ({selectedTurno.duracionMinutos} min)</span>
+                  </div>
+                  <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                    <span className={styles.detailLabel}>Zonas a depilar</span>
+                    <span className={styles.detailValue}>
+                      {(() => {
+                        try {
+                          return JSON.parse(selectedTurno.zonas).map(z => z.nombre).join(', ') || 'Ninguna (Bloqueo)';
+                        } catch(e) {
+                          return selectedTurno.zonas || 'Ninguna (Bloqueo)';
+                        }
+                      })()}
+                    </span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Valor Total</span>
+                    <span className={styles.detailValue}>${selectedTurno.valorTotal.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Seña Cobrada</span>
+                    <span className={styles.detailValue} style={{ color: '#81c784' }}>${selectedTurno.valorSeña.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Saldo Pendiente</span>
+                    <span className={styles.detailValue}>${selectedTurno.saldoPendiente.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>WhatsApp</span>
+                    <span className={styles.detailValue}>{selectedTurno.cliente?.whatsapp || 'N/A'}</span>
+                  </div>
+                  <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                    <span className={styles.detailLabel}>Observaciones</span>
+                    <span className={styles.detailValue}>{selectedTurno.observaciones || 'Sin observaciones'}</span>
+                  </div>
+                </div>
+
+                {/* Actions Panel */}
+                <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                  <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.75rem' }}>Acciones Rápidas</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => {
+                        setEditTurno({
+                          fechaStr: new Date(selectedTurno.fecha).toISOString().split('T')[0],
+                          horaInicio: selectedTurno.horaInicio,
+                          horaFin: selectedTurno.horaFin,
+                          estado: selectedTurno.estado,
+                          valorTotal: selectedTurno.valorTotal,
+                          valorSeña: selectedTurno.valorSeña,
+                          observaciones: selectedTurno.observaciones || ''
+                        });
+                        setIsEditing(true);
+                      }}
+                      className="btn btn-primary"
+                      style={{ flex: '1 0 45%', backgroundColor: '#d4a54d', color: '#000' }}
+                    >
+                      ✏️ Editar / Reprogramar
+                    </button>
+                    {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-primary" style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff' }}>
+                        Aprobar y Confirmar
+                      </button>
+                    )}
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#1565c0', color: '#64b5f6' }}>
+                        Marcar como Realizado
+                      </button>
+                    )}
+                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
+                        Cancelar Turno
+                      </button>
+                    )}
+                    {selectedTurno.estado === 'CANCELADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-secondary" style={{ flex: '1 0 45%' }}>
+                        Re-activar Turno
+                      </button>
+                    )}
+                    {selectedTurno.estado !== 'BLOQUEADO' && (
+                      <a href={`https://wa.me/${(selectedTurno.cliente?.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', borderColor: '#25D366', color: '#25D366' }}>
+                        💬 Chatear por WhatsApp
+                      </a>
+                    )}
+                    <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
+                      🗑️ Eliminar Registro
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -691,7 +856,7 @@ export default function AgendaPage() {
                 {/* Zones Checkboxes */}
                 <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
                   <label className={styles.inputLabel}>Seleccionar Zonas *</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', opacity: newTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: newTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
                     {zones.map(z => {
                       const isChecked = newTurno.selectedZoneIds.includes(z.id);
                       return (
@@ -737,11 +902,36 @@ export default function AgendaPage() {
                   <label className={styles.inputLabel}>Estado Inicial</label>
                   <select
                     value={newTurno.estado}
-                    onChange={(e) => setNewTurno({ ...newTurno, estado: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'BLOQUEADO') {
+                        setNewTurno(prev => ({
+                          ...prev,
+                          estado: val,
+                          nombreCompleto: '🔒 BLOQUEO (Horario bloqueado)',
+                          whatsapp: '0000000000',
+                          email: 'bloqueo@depilacionparahombres.com',
+                          valorTotal: '0',
+                          valorSeña: '0',
+                          selectedZoneIds: []
+                        }));
+                      } else {
+                        setNewTurno(prev => ({
+                          ...prev,
+                          estado: val,
+                          nombreCompleto: prev.nombreCompleto === '🔒 BLOQUEO (Horario bloqueado)' ? '' : prev.nombreCompleto,
+                          whatsapp: prev.whatsapp === '0000000000' ? '' : prev.whatsapp,
+                          email: prev.email === 'bloqueo@depilacionparahombres.com' ? '' : prev.email,
+                          valorTotal: prev.valorTotal === '0' ? '' : prev.valorTotal,
+                          valorSeña: prev.valorSeña === '0' ? '' : prev.valorSeña
+                        }));
+                      }
+                    }}
                   >
                     <option value="SEÑADO">Señado / Confirmado</option>
                     <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
                     <option value="PENDIENTE_AUTORIZACION">Pendiente de Autorización</option>
+                    <option value="BLOQUEADO">🔒 BLOQUEADO (Bloqueo)</option>
                   </select>
                 </div>
 
@@ -758,7 +948,7 @@ export default function AgendaPage() {
 
               <div className={styles.modalFooter}>
                 <button type="button" onClick={() => setIsNewOpen(false)} className="btn btn-secondary">Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={newTurno.selectedZoneIds.length === 0}>Guardar Turno</button>
+                <button type="submit" className="btn btn-primary" disabled={newTurno.estado !== 'BLOQUEADO' && newTurno.selectedZoneIds.length === 0}>Guardar Turno</button>
               </div>
             </form>
           </div>

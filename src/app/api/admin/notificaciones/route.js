@@ -136,8 +136,8 @@ export async function GET(request) {
     });
 
     return NextResponse.json({
-      weekStart: startOfWeek.toISOString().split('T')[0],
-      weekEnd: endOfWeek.toISOString().split('T')[0],
+      weekStart: startRange.toISOString().split('T')[0],
+      weekEnd: endRange.toISOString().split('T')[0],
       turnos: formattedTurnos,
       template: reminderTemplate
     });

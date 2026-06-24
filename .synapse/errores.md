@@ -22,3 +22,9 @@
 **Root Cause:** La API de MercadoPago rechaza la creación de preferencias con `auto_return: 'approved'` si los `back_urls` no son dominios HTTPS válidos (nuestro `.env` tenía configurado el IP local `http://187.127.9.216:3006`).
 **Solución:** Se actualizó `NEXT_PUBLIC_APP_URL` en el archivo `.env` del VPS a `https://agenda.depilacionparahombres.com` y se recompiló la aplicación en producción.
 **Estado:** ✅ FIXED
+
+## ERR-05: ReferenceError: endOfWeek is not defined en notificaciones (2026-06-23)
+**Síntoma:** Al ingresar a la sección de notificaciones, la lista de turnos para enviar recordatorios aparece vacía.
+**Root Cause:** En el endpoint de la API `src/app/api/admin/notificaciones/route.js`, el JSON devuelto intentaba acceder a `startOfWeek` y `endOfWeek`, variables que no estaban declaradas en todos los scopes del método GET.
+**Solución:** Se reemplazaron las variables devueltas por `startRange` y `endRange`, las cuales están siempre definidas en la firma del método.
+**Estado:** ✅ FIXED

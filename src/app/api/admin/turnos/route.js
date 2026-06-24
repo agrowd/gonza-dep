@@ -71,8 +71,12 @@ export async function POST(request) {
       observaciones
     } = body;
 
-    if (!fechaStr || !horaInicio || !horaFin || !selectedZoneIds || selectedZoneIds.length === 0) {
+    if (estado !== 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin || !selectedZoneIds || selectedZoneIds.length === 0)) {
       return NextResponse.json({ error: 'Campos requeridos incompletos' }, { status: 400 });
+    }
+
+    if (estado === 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin)) {
+      return NextResponse.json({ error: 'Fecha y horarios son requeridos para bloquear' }, { status: 400 });
     }
 
     let finalClienteId = clienteId;
@@ -107,15 +111,30 @@ export async function POST(request) {
       finalClienteId = client.id;
     }
 
-    // 2. Fetch zones to serialize
-    const dbZones = await prisma.zona.findMany({
-      where: { id: { in: selectedZoneIds } }
-    });
+    // 2. Compute details (bypass zones if BLOQUEADO)
+    let computedDuration = 30;
+    let zonasJson = '[]';
+    let finalValorTotal = valorTotal !== undefined && valorTotal !== '' ? Number(valorTotal) : 0;
+    let finalValorSeña = valorSeña !== undefined && valorSeña !== '' ? Number(valorSeña) : 0;
 
-    // 3. Compute duration
-    const clientRecord = await prisma.cliente.findUnique({ where: { id: finalClienteId }, include: { turnos: true } });
-    const isNew = clientRecord.turnos.length === 0;
-    const coreDetails = calculateTurnDetails(dbZones, isNew);
+    if (estado === 'BLOQUEADO') {
+      const startMin = timeToMinutes(horaInicio);
+      const endMin = timeToMinutes(horaFin);
+      computedDuration = Math.max(10, endMin - startMin);
+    } else {
+      const dbZones = await prisma.zona.findMany({
+        where: { id: { in: selectedZoneIds } }
+      });
+      zonasJson = JSON.stringify(dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precioBase, duracion: z.duracionMinutos })));
+      
+      const clientRecord = await prisma.cliente.findUnique({ where: { id: finalClienteId }, include: { turnos: true } });
+      const isNew = clientRecord.turnos.length === 0;
+      const coreDetails = calculateTurnDetails(dbZones, isNew);
+      
+      computedDuration = coreDetails.duracionMinutos;
+      if (valorTotal === undefined || valorTotal === '') finalValorTotal = coreDetails.valorTotal;
+      if (valorSeña === undefined || valorSeña === '') finalValorSeña = coreDetails.valorSeña;
+    }
 
     const targetDate = new Date(fechaStr + 'T00:00:00');
 
@@ -126,11 +145,11 @@ export async function POST(request) {
         fecha: targetDate,
         horaInicio,
         horaFin,
-        duracionMinutos: coreDetails.duracionMinutos,
-        zonas: JSON.stringify(dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precioBase, duracion: z.duracionMinutos }))),
-        valorTotal: valorTotal !== undefined ? valorTotal : coreDetails.valorTotal,
-        valorSeña: valorSeña !== undefined ? valorSeña : coreDetails.valorSeña,
-        saldoPendiente: (valorTotal !== undefined ? valorTotal : coreDetails.valorTotal) - (valorSeña !== undefined ? valorSeña : coreDetails.valorSeña),
+        duracionMinutos: computedDuration,
+        zonas: zonasJson,
+        valorTotal: finalValorTotal,
+        valorSeña: finalValorSeña,
+        saldoPendiente: Math.max(0, finalValorTotal - finalValorSeña),
         estado: estado || 'SEÑADO',
         observaciones
       },
