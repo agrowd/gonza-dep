@@ -307,3 +307,11 @@
 - Subida de los archivos modificados al VPS de producción.
 - Ejecución de `./deploy.sh` en el VPS para compilar el nuevo build de producción de Next.js y reiniciar el servidor en PM2.
 - Verificación con `curl` del estado HTTP 200 OK del sitio web seguro.
+
+## Mensaje del Usuario (2026-06-25 15:13:57-03:00)
+> Ver como es, si no esta, solucionarlo y generarme un mensaje para responderle. Tene en cuenta los horarios que me hablo para saber el orden y entender el contexto
+
+## Respuesta del Asistente
+- Diagnóstico del comportamiento del motor de disponibilidad: se verificó que el comportamiento es correcto y responde al diseño de bloqueo de solapamientos.
+- Si un cliente selecciona un servicio de larga duración (como Cuerpo Completo de 90 minutos) para reservar en una fecha (Sábado 4 de Julio) donde hay una cita existente de 16:00 a 17:30 (Luciano Gomez), el sistema oculta los horarios de inicio a partir de las 14:40 (14:40 + 90 min = 16:10, lo que se encimaría con la cita de las 16:00).
+- Elaboración de explicación técnica y mensaje de respuesta en español para que el administrador responda a su cliente.
