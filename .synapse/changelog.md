@@ -46,3 +46,16 @@
 - Reemplazo del logotipo principal de la aplicación (`public/logo.png`) por la versión blanca (`Logo-Gonzalo-Depilacion-para-hombres-Blanco.png`).
 - Conservación del favicon (`src/app/favicon.ico`) con el logotipo circular original.
 - Despliegue en el VPS de producción de Hostinger, compilación de Next.js y reinicio del servidor de PM2.
+
+## [0.7.0] - 2026-06-25
+### Added
+- Nueva vista diaria ("Día") con toggle e input selector de fechas rápido en `/admin/agenda`.
+- Detección de ancho de pantalla móvil (<768px) para seleccionar vista diaria automáticamente por defecto.
+- Lógica de autocompletado y redirección de calendario basada en la última cita y frecuencia del cliente seleccionado en agendados manuales.
+- Cron en background en `src/lib/whatsapp.js` que se ejecuta cada 15 minutos y dispara recordatorios a las 48 horas en la ventana horaria de 10:00 a 11:00 AM (hora de Argentina).
+- Ordenamiento alfabético ascendente en `/api/zonas`.
+
+### Changed
+- Reemplazo del indicador "Señas Cobradas" por "Total Bonificaciones" en el panel y API de estadísticas.
+- Ocultamiento de la información secundaria en el calendario para bloques de turnos de 30 minutos o menos.
+- Registro del `turnoId` al almacenar notificaciones en la base de datos para evitar envíos duplicados automáticos.

@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { sendWhatsAppMessage } from '@/lib/whatsapp.js';
-import { sendNoShowEmail } from '@/lib/email.js';
+import { sendNoShowEmail, sendCancellationEmail } from '@/lib/email.js';
 
 // Helper to format date
 function formatDate(date) {
@@ -36,6 +36,7 @@ export async function PUT(request, { params }) {
       estado,
       valorTotal,
       valorSeña,
+      bonificacion,
       observaciones
     } = body;
 
@@ -57,6 +58,7 @@ export async function PUT(request, { params }) {
     if (estado) updateData.estado = estado;
     if (valorTotal !== undefined) updateData.valorTotal = valorTotal;
     if (valorSeña !== undefined) updateData.valorSeña = valorSeña;
+    if (bonificacion !== undefined) updateData.bonificacion = Number(bonificacion);
     if (observaciones !== undefined) updateData.observaciones = observaciones;
 
     // Recalculate remaining balance
@@ -163,6 +165,7 @@ export async function PUT(request, { params }) {
         await prisma.notificacion.create({
           data: {
             clienteId: updatedTurno.clienteId,
+            turnoId: updatedTurno.id,
             canal: 'EMAIL',
             mensaje: `Correo enviado por inasistencia al turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
             estado: 'ENVIADO'
@@ -175,8 +178,49 @@ export async function PUT(request, { params }) {
         await prisma.notificacion.create({
           data: {
             clienteId: updatedTurno.clienteId,
+            turnoId: updatedTurno.id,
             canal: 'EMAIL',
             mensaje: `Error al enviar correo por inasistencia: ${err.message}`,
+            estado: 'FALLIDO'
+          }
+        });
+      }
+    }
+
+    // Email Notification Trigger for Cancellation:
+    // If state changes to "CANCELADO" and old state was not "CANCELADO"
+    if (estado === 'CANCELADO' && oldTurn.estado !== 'CANCELADO') {
+      try {
+        await sendCancellationEmail(
+          updatedTurno.cliente.email,
+          updatedTurno.cliente.nombreCompleto,
+          {
+            fecha: updatedTurno.fecha,
+            horaInicio: updatedTurno.horaInicio,
+            zonas: updatedTurno.zonas
+          }
+        );
+
+        // Log in database
+        await prisma.notificacion.create({
+          data: {
+            clienteId: updatedTurno.clienteId,
+            turnoId: updatedTurno.id,
+            canal: 'EMAIL',
+            mensaje: `Correo enviado por cancelación de turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+            estado: 'ENVIADO'
+          }
+        });
+        console.log(`Email cancellation notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+      } catch (err) {
+        console.error('Failed to send automatic cancellation email:', err);
+        // Log failure in database
+        await prisma.notificacion.create({
+          data: {
+            clienteId: updatedTurno.clienteId,
+            turnoId: updatedTurno.id,
+            canal: 'EMAIL',
+            mensaje: `Error al enviar correo de cancelación: ${err.message}`,
             estado: 'FALLIDO'
           }
         });

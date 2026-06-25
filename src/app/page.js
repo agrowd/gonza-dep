@@ -27,9 +27,13 @@ export default function Home() {
     nombreCompleto: '',
     whatsapp: '',
     email: '',
+    dni: '',
     observaciones: '',
     otroZona: ''
   });
+
+  const [dniChecked, setDniChecked] = useState(false);
+  const [searchingDni, setSearchingDni] = useState(false);
   
   const [selectedZones, setSelectedZones] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null); // string YYYY-MM-DD
@@ -104,10 +108,57 @@ export default function Home() {
       });
   }, [selectedDate, selectedZones]);
 
+  // Handle DNI validation and check
+  const handleDniCheck = async (e) => {
+    e.preventDefault();
+    if (!formData.dni) {
+      setErrorMessage('Por favor, ingresa tu DNI.');
+      return;
+    }
+    
+    setSearchingDni(true);
+    setErrorMessage('');
+    
+    try {
+      const res = await fetch(`/api/clientes/consultar?dni=${encodeURIComponent(formData.dni)}`);
+      const data = await res.json();
+      
+      if (data.error) {
+        setErrorMessage(data.error);
+        return;
+      }
+      
+      if (data.exists) {
+        if (data.hasActiveTurno) {
+          setErrorMessage('Ya tenés un turno activo registrado. Por razones de seguridad y organización, no es posible agendar 2 o más turnos en paralelo de forma online. Por favor, comunícate con nosotros para reprogramarlo.');
+          return;
+        }
+        
+        // Auto-fill and skip to Step 2
+        setFormData(prev => ({
+          ...prev,
+          nombreCompleto: data.client.nombreCompleto,
+          whatsapp: data.client.whatsapp,
+          email: data.client.email
+        }));
+        setDniChecked(true);
+        setStep(2);
+      } else {
+        // DNI doesn't exist, show rest of fields
+        setDniChecked(true);
+      }
+    } catch (err) {
+      console.error('Error checking DNI:', err);
+      setErrorMessage('Error al verificar el DNI. Por favor intenta nuevamente.');
+    } finally {
+      setSearchingDni(false);
+    }
+  };
+
   // Handle personal info submit
   const handleNextStep1 = (e) => {
     e.preventDefault();
-    if (!formData.nombreCompleto || !formData.whatsapp || !formData.email) {
+    if (!formData.nombreCompleto || !formData.whatsapp || !formData.email || !formData.dni) {
       setErrorMessage('Por favor, completa todos los campos obligatorios.');
       return;
     }
@@ -176,6 +227,7 @@ export default function Home() {
           nombreCompleto: formData.nombreCompleto,
           whatsapp: formData.whatsapp,
           email: formData.email,
+          dni: formData.dni,
           fechaStr: dateStr,
           horaInicio: selectedSlot.horaInicio,
           selectedZoneIds: zoneIds,
@@ -245,47 +297,94 @@ export default function Home() {
 
         {/* STEP 1: Personal Info */}
         {step === 1 && (
-          <form onSubmit={handleNextStep1} className={styles.formSection}>
+          <div className={styles.formSection}>
             <h2 className={styles.sectionTitle}>Datos Personales</h2>
             <p className={styles.sectionSubtitle}>Completá tus datos para iniciar la reserva del turno online.</p>
 
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Nombre Completo *</label>
-              <input
-                type="text"
-                placeholder="Ej. Gonzalo Pérez"
-                value={formData.nombreCompleto}
-                onChange={(e) => setFormData({ ...formData, nombreCompleto: e.target.value })}
-                required
-              />
-            </div>
+            {!dniChecked ? (
+              <form onSubmit={handleDniCheck}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Ingresá tu DNI (Documento Nacional de Identidad) *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 12345678"
+                    value={formData.dni}
+                    onChange={(e) => setFormData({ ...formData, dni: e.target.value.replace(/\D/g, '') })}
+                    required
+                  />
+                  <small style={{ color: 'var(--text-secondary)', marginTop: '0.4rem', display: 'block' }}>
+                    Utilizamos tu DNI para identificarte de forma segura y agilizar tu reserva.
+                  </small>
+                </div>
+                <div className={styles.actionsBar} style={{ justifyContent: 'flex-end' }}>
+                  <button type="submit" className="btn btn-primary" disabled={searchingDni}>
+                    {searchingDni ? 'Verificando...' : 'Continuar'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleNextStep1}>
+                <div className={styles.inputGroup}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label className={styles.inputLabel}>DNI</label>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setDniChecked(false);
+                        setFormData(prev => ({ ...prev, dni: '', nombreCompleto: '', whatsapp: '', email: '' }));
+                      }} 
+                      style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer', fontSize: '0.85rem' }}
+                    >
+                      Modificar DNI
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.dni}
+                    disabled
+                    style={{ opacity: 0.7 }}
+                  />
+                </div>
 
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Teléfono / WhatsApp *</label>
-              <input
-                type="tel"
-                placeholder="Ej. 1122334455 (Sin 0 ni 15, código de área de Argentina)"
-                value={formData.whatsapp}
-                onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                required
-              />
-            </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Nombre Completo *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Gonzalo Pérez"
+                    value={formData.nombreCompleto}
+                    onChange={(e) => setFormData({ ...formData, nombreCompleto: e.target.value })}
+                    required
+                  />
+                </div>
 
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Email *</label>
-              <input
-                type="email"
-                placeholder="Ej. cliente@correo.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Teléfono / WhatsApp *</label>
+                  <input
+                    type="tel"
+                    placeholder="Ej. 1122334455 (Sin 0 ni 15, código de área de Argentina)"
+                    value={formData.whatsapp}
+                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                    required
+                  />
+                </div>
 
-            <div className={styles.actionsBar} style={{ justifyContent: 'flex-end' }}>
-              <button type="submit" className="btn btn-primary">Siguiente Paso</button>
-            </div>
-          </form>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Email *</label>
+                  <input
+                    type="email"
+                    placeholder="Ej. cliente@correo.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className={styles.actionsBar} style={{ justifyContent: 'flex-end' }}>
+                  <button type="submit" className="btn btn-primary">Siguiente Paso</button>
+                </div>
+              </form>
+            )}
+          </div>
         )}
 
         {/* STEP 2: Zone Selection */}
@@ -487,9 +586,9 @@ export default function Home() {
                 ⚠️ Indicaciones Previas Importantes
               </h3>
               <ul className={styles.instructionsList}>
-                <li>Tenés que venir <strong>afeitado al ras</strong> con maquinita de afeitar (24hs antes) en las zonas a depilar. No uses cera ni pinza de depilar.</li>
-                <li>Por favor, asiste con puntualidad. Al ser turnos cortos y precisos, la tolerancia de demora es de solo <strong>5 minutos</strong>.</li>
-                <li>Dirección del estudio: <strong>Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong>.</li>
+                <li><span>Tenés que venir <strong>afeitado al ras</strong> con maquinita de afeitar (24hs antes) en las zonas a depilar. No uses cera ni pinza de depilar.</span></li>
+                <li><span>Por favor, asiste con puntualidad. Al ser turnos cortos y precisos, la tolerancia de demora es de solo <strong>5 minutos</strong>.</span></li>
+                <li><span>Dirección del estudio: <strong>Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong>.</span></li>
               </ul>
             </div>
 

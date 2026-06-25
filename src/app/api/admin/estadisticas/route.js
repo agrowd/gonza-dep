@@ -101,13 +101,9 @@ export async function GET(request) {
       return acc;
     }, 0);
 
-    // Señas cobradas en el mes (selected)
-    const senasCobradasMes = turnosMes.reduce((acc, t) => {
-      // If the turn has a status indicating payment of seña (anything except PENDIENTE_PAGO)
-      if (t.estado !== 'PENDIENTE_PAGO' && t.estado !== 'PENDIENTE_AUTORIZACION') {
-        return acc + t.valorSeña;
-      }
-      return acc;
+    // Total bonificaciones en el mes (selected)
+    const bonificacionMes = turnosMes.reduce((acc, t) => {
+      return acc + (t.bonificacion || 0);
     }, 0);
 
     // --- APPOINTMENT COUNTS FOR THE MONTH ---
@@ -198,7 +194,7 @@ export async function GET(request) {
         gananciaDia,
         gananciaSemana,
         gananciaMes,
-        senasCobradasMes
+        bonificacionMes
       },
       turnosMes: {
         total: turnosTotalesMes,

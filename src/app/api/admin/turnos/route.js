@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
+import { sendConfirmationEmail } from '@/lib/email.js';
 
 // Convert HH:MM to minutes from midnight
 function timeToMinutes(timeStr) {
@@ -69,6 +70,7 @@ export async function POST(request) {
       nombreCompleto,
       whatsapp,
       email,
+      dni,
       fechaStr,
       horaInicio,
       horaFin,
@@ -99,6 +101,7 @@ export async function POST(request) {
       let client = await prisma.cliente.findFirst({
         where: {
           OR: [
+            { dni: dni || undefined },
             { email: email },
             { whatsapp: whatsapp }
           ]
@@ -108,6 +111,7 @@ export async function POST(request) {
       if (!client) {
         client = await prisma.cliente.create({
           data: {
+            dni,
             nombreCompleto,
             whatsapp,
             email,
@@ -165,6 +169,43 @@ export async function POST(request) {
         cliente: true
       }
     });
+
+    // 5. Send confirmation email if it is a real appointment (not a time block)
+    if (newTurno.estado !== 'BLOQUEADO') {
+      try {
+        await sendConfirmationEmail(
+          newTurno.cliente.email,
+          newTurno.cliente.nombreCompleto,
+          {
+            fecha: newTurno.fecha,
+            horaInicio: newTurno.horaInicio,
+            zonas: newTurno.zonas,
+            valorSeña: newTurno.valorSeña,
+            valorTotal: newTurno.valorTotal
+          }
+        );
+        await prisma.notificacion.create({
+          data: {
+            clienteId: newTurno.clienteId,
+            turnoId: newTurno.id,
+            canal: 'EMAIL',
+            mensaje: `Confirmación de turno enviada por email al crearse manualmente.`,
+            estado: 'ENVIADO'
+          }
+        });
+      } catch (mailError) {
+        console.error('Failed to send confirmation email on manual create:', mailError);
+        await prisma.notificacion.create({
+          data: {
+            clienteId: newTurno.clienteId,
+            turnoId: newTurno.id,
+            canal: 'EMAIL',
+            mensaje: `Fallo al enviar email de confirmación manual: ${mailError.message}`,
+            estado: 'FALLIDO'
+          }
+        });
+      }
+    }
 
     return NextResponse.json(newTurno);
   } catch (error) {

@@ -136,8 +136,8 @@ export default function EstadisticasPage() {
               <div className={styles.quickSub}>Período seleccionado</div>
             </div>
             <div className={styles.quickCard}>
-              <div className={styles.quickTitle}>Señas Cobradas</div>
-              <div className={styles.quickValue}>{formatMoney(data.quickStats.senasCobradasMes)}</div>
+              <div className={styles.quickTitle}>Total Bonificaciones</div>
+              <div className={styles.quickValue}>{formatMoney(data.quickStats.bonificacionMes)}</div>
               <div className={styles.quickSub}>En el mes seleccionado</div>
             </div>
           </div>

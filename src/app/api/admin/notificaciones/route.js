@@ -201,6 +201,7 @@ export async function POST(request) {
         await prisma.notificacion.create({
           data: {
             clienteId: t.cliente.id,
+            turnoId: t.id,
             canal: 'WHATSAPP',
             mensaje: message,
             estado: 'ENVIADO'
@@ -215,6 +216,7 @@ export async function POST(request) {
         await prisma.notificacion.create({
           data: {
             clienteId: t.cliente.id,
+            turnoId: t.id,
             canal: 'WHATSAPP',
             mensaje: message,
             estado: 'FALLIDO'

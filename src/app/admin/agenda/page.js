@@ -39,6 +39,8 @@ function addMinutesToTime(timeStr, minsToAdd) {
 export default function AgendaPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
+  const [viewMode, setViewMode] = useState('week'); // 'week' or 'day'
+  const [selectedDate, setSelectedDate] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -85,8 +87,14 @@ export default function AgendaPage() {
 
   // 1. Initialize dates and configurations on mount
   useEffect(() => {
-    const monday = getStartOfWeek(new Date());
+    const today = new Date();
+    const monday = getStartOfWeek(today);
     setCurrentWeekStart(monday);
+    setSelectedDate(today);
+
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setViewMode('day');
+    }
 
     fetch('/api/admin/configuracion')
       .then(res => res.json())
@@ -100,6 +108,15 @@ export default function AgendaPage() {
       })
       .catch(err => console.error('Error fetching config:', err));
   }, []);
+
+  // Sync week start when selectedDate changes
+  useEffect(() => {
+    if (!selectedDate) return;
+    const monday = getStartOfWeek(selectedDate);
+    if (!currentWeekStart || currentWeekStart.toDateString() !== monday.toDateString()) {
+      setCurrentWeekStart(monday);
+    }
+  }, [selectedDate]);
 
   // Fetch all clients when modal is opened for autocomplete
   useEffect(() => {
@@ -162,17 +179,41 @@ export default function AgendaPage() {
       .catch(err => console.error('Error fetching zones:', err));
   }, []);
 
-  // 5. Navigate weeks
-  const handlePrevWeek = () => {
-    const prev = new Date(currentWeekStart);
-    prev.setDate(currentWeekStart.getDate() - 7);
-    setCurrentWeekStart(prev);
+  // 5. Navigate weeks/days
+  const handlePrev = () => {
+    if (viewMode === 'day' && selectedDate) {
+      const prev = new Date(selectedDate);
+      prev.setDate(selectedDate.getDate() - 1);
+      setSelectedDate(prev);
+    } else if (currentWeekStart) {
+      const prev = new Date(currentWeekStart);
+      prev.setDate(currentWeekStart.getDate() - 7);
+      setCurrentWeekStart(prev);
+    }
   };
 
-  const handleNextWeek = () => {
-    const next = new Date(currentWeekStart);
-    next.setDate(currentWeekStart.getDate() + 7);
-    setCurrentWeekStart(next);
+  const handleNext = () => {
+    if (viewMode === 'day' && selectedDate) {
+      const next = new Date(selectedDate);
+      next.setDate(selectedDate.getDate() + 1);
+      setSelectedDate(next);
+    } else if (currentWeekStart) {
+      const next = new Date(currentWeekStart);
+      next.setDate(currentWeekStart.getDate() + 7);
+      setCurrentWeekStart(next);
+    }
+  };
+
+  const handleDateChange = (e) => {
+    const val = e.target.value;
+    if (!val) return;
+    const newD = new Date(val + 'T00:00:00');
+    setSelectedDate(newD);
+  };
+
+  const getSelectedDayName = () => {
+    if (!selectedDate) return '';
+    return selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   // Helper: Get layout styling for appointment block
@@ -397,18 +438,73 @@ export default function AgendaPage() {
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <h2>Agenda de Turnos</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Visualizá y gestioná las reservas semanales en bloques de 10 minutos.</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Visualizá y gestioná las reservas en bloques de 10 minutos.</p>
         </div>
-        <div className={styles.controls}>
-          <button onClick={handlePrevWeek} className={styles.navBtn}><PrevIcon /></button>
-          <span className={styles.currentWeek}>{getWeekRangeName()}</span>
-          <button onClick={handleNextWeek} className={styles.navBtn}><NextIcon /></button>
+        <div className={styles.controls} style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+          {/* View Mode Toggle */}
+          <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '20px', overflow: 'hidden', backgroundColor: 'var(--bg-secondary)' }}>
+            <button 
+              onClick={() => setViewMode('day')} 
+              className="btn-toggle"
+              style={{
+                background: viewMode === 'day' ? 'var(--color-gold)' : 'transparent',
+                color: viewMode === 'day' ? '#000' : 'var(--text-primary)',
+                border: 'none',
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'var(--transition)'
+              }}
+            >
+              Día
+            </button>
+            <button 
+              onClick={() => setViewMode('week')} 
+              className="btn-toggle"
+              style={{
+                background: viewMode === 'week' ? 'var(--color-gold)' : 'transparent',
+                color: viewMode === 'week' ? '#000' : 'var(--text-primary)',
+                border: 'none',
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'var(--transition)'
+              }}
+            >
+              Semana
+            </button>
+          </div>
+
+          {/* Jump to Date Picker */}
+          <input 
+            type="date"
+            value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+            onChange={handleDateChange}
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              borderRadius: '6px',
+              padding: '6px 10px',
+              fontSize: '0.85rem',
+              outline: 'none'
+            }}
+          />
+
+          <button onClick={handlePrev} className={styles.navBtn}><PrevIcon /></button>
+          <span className={styles.currentWeek} style={{ minWidth: '150px', textAlign: 'center' }}>
+            {viewMode === 'day' ? getSelectedDayName() : getWeekRangeName()}
+          </span>
+          <button onClick={handleNext} className={styles.navBtn}><NextIcon /></button>
+          
           <button onClick={() => {
             setNewTurno({
               nombreCompleto: '',
               whatsapp: '',
               email: '',
-              fechaStr: new Date().toISOString().split('T')[0],
+              fechaStr: selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
               horaInicio: config.work_start,
               horaFin: addMinutesToTime(config.work_start, 30),
               selectedZoneIds: [],
@@ -423,25 +519,39 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Week Calendar Grid */}
+      {/* Week/Day Calendar Grid */}
       <div className={styles.calendarContainer}>
         {/* Days Header */}
-        <div className={styles.gridHeader}>
+        <div className={styles.gridHeader} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr' } : {}}>
           <div className={`${styles.headerCell} ${styles.timeColHeader}`}>Hora</div>
-          {weekDates.map((date, index) => {
-            const isToday = new Date().toDateString() === date.toDateString();
-            const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
-            return (
-              <div key={index} className={styles.headerCell}>
-                <span className={styles.dayName}>{dayName}</span>
-                <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{date.getDate()}</span>
-              </div>
-            );
-          })}
+          {viewMode === 'day' ? (
+            (() => {
+              if (!selectedDate) return null;
+              const isToday = new Date().toDateString() === selectedDate.toDateString();
+              const dayName = selectedDate.toLocaleDateString('es-ES', { weekday: 'short' });
+              return (
+                <div className={styles.headerCell}>
+                  <span className={styles.dayName}>{dayName}</span>
+                  <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{selectedDate.getDate()}</span>
+                </div>
+              );
+            })()
+          ) : (
+            weekDates.map((date, index) => {
+              const isToday = new Date().toDateString() === date.toDateString();
+              const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+              return (
+                <div key={index} className={styles.headerCell}>
+                  <span className={styles.dayName}>{dayName}</span>
+                  <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{date.getDate()}</span>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Scrollable Timeline body */}
-        <div className={styles.gridBody}>
+        <div className={styles.gridBody} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr' } : {}}>
           {/* Time Column */}
           <div className={styles.timeColumn}>
             {timeLabels.map((time, idx) => (
@@ -450,66 +560,138 @@ export default function AgendaPage() {
           </div>
 
           {/* Days Columns */}
-          {weekDates.map((date, dayIdx) => {
-            const dateStr = date.toISOString().split('T')[0];
-            const dayAppointments = appointments.filter(app => {
-              const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
-              return appDateStr === dateStr;
-            });
+          {viewMode === 'day' ? (
+            (() => {
+              if (!selectedDate) return null;
+              const dateStr = selectedDate.toISOString().split('T')[0];
+              const dayAppointments = appointments.filter(app => {
+                const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                return appDateStr === dateStr;
+              });
 
-            return (
-              <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
-                {/* Background grid lines for hours */}
-                <div className={styles.gridLines}>
-                  {timeLabels.map((_, idx) => (
-                    <div key={idx} className={styles.gridLineRow}></div>
-                  ))}
+              return (
+                <div className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
+                  {/* Background grid lines for hours */}
+                  <div className={styles.gridLines}>
+                    {timeLabels.map((_, idx) => (
+                      <div key={idx} className={styles.gridLineRow}></div>
+                    ))}
+                  </div>
+
+                  {/* Empty slot clicks handlers */}
+                  {Array.from({ length: totalHalfHours }).map((_, idx) => {
+                    const startMin = WORK_START + idx * 30;
+                    const top = idx * 50; // 30 mins = 50px height
+                    return (
+                      <div
+                        key={idx}
+                        className={styles.emptySlotTrigger}
+                        style={{ top: `${top}px`, height: '50px' }}
+                        onClick={() => handleEmptySlotClick(selectedDate, startMin)}
+                      ></div>
+                    );
+                  })}
+
+                  {/* Appointments blocks absolute positioning */}
+                  {dayAppointments.map((app) => {
+                    const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
+                    let zonasText = '';
+                    try {
+                      const zonesArray = JSON.parse(app.zonas);
+                      zonasText = zonesArray.map(z => z.nombre).join(', ');
+                    } catch (e) {
+                      zonasText = app.zonas;
+                    }
+
+                    return (
+                      <div
+                        key={app.id}
+                        className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
+                        style={blockStyle}
+                        onClick={() => {
+                          setSelectedTurno(app);
+                          setIsDetailsOpen(true);
+                        }}
+                      >
+                        <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                        {app.duracionMinutos > 30 && (
+                          <>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                            <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+              );
+            })()
+          ) : (
+            weekDates.map((date, dayIdx) => {
+              const dateStr = date.toISOString().split('T')[0];
+              const dayAppointments = appointments.filter(app => {
+                const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                return appDateStr === dateStr;
+              });
 
-                {/* Empty slot clicks handlers - lets click every 30 minutes for convenience */}
-                {Array.from({ length: totalHalfHours }).map((_, idx) => {
-                  const startMin = WORK_START + idx * 30;
-                  const top = idx * 50; // 30 mins = 50px height
-                  return (
-                    <div
-                      key={idx}
-                      className={styles.emptySlotTrigger}
-                      style={{ top: `${top}px`, height: '50px' }}
-                      onClick={() => handleEmptySlotClick(date, startMin)}
-                    ></div>
-                  );
-                })}
+              return (
+                <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
+                  {/* Background grid lines for hours */}
+                  <div className={styles.gridLines}>
+                    {timeLabels.map((_, idx) => (
+                      <div key={idx} className={styles.gridLineRow}></div>
+                    ))}
+                  </div>
 
-                {/* Appointments blocks absolute positioning */}
-                {dayAppointments.map((app) => {
-                  const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
-                  let zonasText = '';
-                  try {
-                    const zonesArray = JSON.parse(app.zonas);
-                    zonasText = zonesArray.map(z => z.nombre).join(', ');
-                  } catch (e) {
-                    zonasText = app.zonas;
-                  }
+                  {/* Empty slot clicks handlers */}
+                  {Array.from({ length: totalHalfHours }).map((_, idx) => {
+                    const startMin = WORK_START + idx * 30;
+                    const top = idx * 50; // 30 mins = 50px height
+                    return (
+                      <div
+                        key={idx}
+                        className={styles.emptySlotTrigger}
+                        style={{ top: `${top}px`, height: '50px' }}
+                        onClick={() => handleEmptySlotClick(date, startMin)}
+                      ></div>
+                    );
+                  })}
 
-                  return (
-                    <div
-                      key={app.id}
-                      className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
-                      style={blockStyle}
-                      onClick={() => {
-                        setSelectedTurno(app);
-                        setIsDetailsOpen(true);
-                      }}
-                    >
-                      <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
-                      <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
-                      <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+                  {/* Appointments blocks absolute positioning */}
+                  {dayAppointments.map((app) => {
+                    const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
+                    let zonasText = '';
+                    try {
+                      const zonesArray = JSON.parse(app.zonas);
+                      zonasText = zonesArray.map(z => z.nombre).join(', ');
+                    } catch (e) {
+                      zonasText = app.zonas;
+                    }
+
+                    return (
+                      <div
+                        key={app.id}
+                        className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
+                        style={blockStyle}
+                        onClick={() => {
+                          setSelectedTurno(app);
+                          setIsDetailsOpen(true);
+                        }}
+                      >
+                        <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                        {app.duracionMinutos > 30 && (
+                          <>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                            <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -795,13 +977,28 @@ export default function AgendaPage() {
                               alignItems: 'center'
                             }}
                             onMouseDown={() => {
+                              let targetDateStr = newTurno.fechaStr;
+                              if (client.turnos && client.turnos.length > 0) {
+                                const lastTurno = client.turnos[0];
+                                const lastDate = new Date(lastTurno.fecha);
+                                const freqWeeks = client.frecuencia || 4;
+                                lastDate.setDate(lastDate.getDate() + (freqWeeks * 7));
+                                targetDateStr = lastDate.toISOString().split('T')[0];
+                              }
+
                               setNewTurno(prev => ({
                                 ...prev,
                                 nombreCompleto: client.nombreCompleto,
                                 whatsapp: client.whatsapp,
                                 email: client.email,
-                                clienteId: client.id
+                                clienteId: client.id,
+                                fechaStr: targetDateStr
                               }));
+                              
+                              if (targetDateStr) {
+                                setSelectedDate(new Date(targetDateStr + 'T00:00:00'));
+                              }
+                              
                               setShowAutocomplete(false);
                             }}
                           >

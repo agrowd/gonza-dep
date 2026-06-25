@@ -141,8 +141,23 @@
   - Se subieron los archivos modificados al VPS y se ejecutó `./deploy.sh` para reconstruir la compilación Next.js y reiniciar los procesos PM2 con los cambios aplicados.
 
 - **25 de Junio (09:05 AM)**:
-  - Se completó la tarea de cambio de logotipo principal a la versión en blanco (`Logo-Gonzalo-Depilacion-para-hombres-Blanco.png`), manteniendo el favicon en la carpeta `src/app/favicon.ico` con el logotipo oficial circular original.
+  - Se completó la tarea de cambio de logotipo principal a la versión en blanco (`Logo-Gonzalo-Depilacion-para-hombres-Blanco.png`), manteniendo el favicon en la carpeta `src/app/favicon.ico` with el logotipo oficial circular original.
   - Se sincronizaron los archivos locales modificados con el VPS de producción.
   - Se ejecutó el script de despliegue `./deploy.sh` en el VPS para compilar el nuevo build de producción con Next.js y reiniciar el proceso PM2 `gonzalo-agenda` en el puerto 3006.
   - Se verificó la disponibilidad de la web bajo HTTPS respondiendo con HTTP 200 OK mediante comandos curl.
+
+- **25 de Junio (09:25 AM)**:
+  - Se completó la implementación de las mejoras y características pendientes del cliente:
+    - **Estadísticas**: Reemplazo de "Señas Cobradas" por "Total Bonificaciones" (suma acumulada del campo `bonificacion` de los turnos) en la API `/api/admin/estadisticas` y en la vista de administración `/admin/estadisticas`.
+    - **Agenda**:
+      - Implementación de la vista diaria ("Día") con toggle de alternancia a la vista semanal ("Semana") y un selector de fecha interactivo para saltar de forma rápida a cualquier día.
+      - Detección de pantallas móviles (<768px) para forzar la vista diaria por defecto en el primer renderizado.
+      - Ocultamiento de la información secundaria (zonas y hora) en bloques de turnos con duración menor o igual a 30 minutos para evitar solapamiento de textos en la interfaz.
+      - Autocompletado de fecha recomendada (`lastTurnoDate + frecuencia semanas`) cuando se selecciona un cliente del buscador predictivo en el modal de agendado manual, actualizando el formulario y saltando la vista del calendario a ese día.
+    - **Recordatorios automáticos**:
+      - Creación de un cron en background dentro de `src/lib/whatsapp.js` que se ejecuta cada 15 minutos.
+      - En la ventana horaria de 10:00 a 11:00 AM (hora de Argentina GMT-3), busca turnos con estado `SEÑADO` o `REPROGRAMADO` programados para `hoy + 2 días` y despacha automáticamente el recordatorio por WhatsApp si no fue enviado antes.
+    - **Listado de Zonas**:
+      - Ordenamiento alfabético ascendente directo en la consulta `/api/zonas` para asegurar la uniformidad en todas las listas del sistema.
+  - Se sincronizaron los archivos modificados en el servidor VPS de Hostinger, se corrió `npx prisma db push --accept-data-loss` para actualizar la base de datos PostgreSQL con la restricción de DNI único, y se reconstruyó la aplicación Next.js y reinició PM2 mediante `./deploy.sh`.
 

@@ -23,6 +23,7 @@ model Cliente {
   nombreCompleto   String
   whatsapp         String
   email            String
+  dni              String?        @unique
   fechaAlta        DateTime       @default(now())
   canalAdquisicion String         @default("ORGANICO") // "ORGANICO", "PUBLICIDAD_IG", "PUBLICIDAD_FB", "OTRO"
   estado           String         @default("ACTIVO") // "ACTIVO", "INACTIVO"
@@ -45,6 +46,7 @@ model Turno {
   valorTotal       Float
   valorSeña        Float
   saldoPendiente   Float
+  bonificacion     Float    @default(0)
   estado           String   @default("PENDIENTE_PAGO") // "SEÑADO", "REALIZADO", "CANCELADO", "REPROGRAMADO", "NO_ASISTIO", "PENDIENTE_AUTORIZACION", "PENDIENTE_PAGO"
   observaciones    String?
   createdAt        DateTime @default(now())
@@ -62,6 +64,7 @@ model Notificacion {
   id         String   @id @default(uuid())
   clienteId  String
   cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  turnoId    String?
   fechaEnvio DateTime @default(now())
   canal      String   // "WHATSAPP", "EMAIL"
   mensaje    String

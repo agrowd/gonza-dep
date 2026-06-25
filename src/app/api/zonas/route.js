@@ -6,7 +6,11 @@ import prisma from '@/lib/db.js';
 // GET: Public list of zones
 export async function GET() {
   try {
-    const zonas = await prisma.zona.findMany();
+    const zonas = await prisma.zona.findMany({
+      orderBy: {
+        nombre: 'asc'
+      }
+    });
     return NextResponse.json(zonas);
   } catch (error) {
     console.error('Error fetching zones:', error);

@@ -1,5 +1,6 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
+import prisma from './db.js';
 
 // Use globalThis to cache the client across hot-reloads in development
 if (!globalThis.whatsappStatus) {
@@ -19,6 +20,9 @@ export function getWhatsAppStatus() {
 
 export function initWhatsAppClient() {
   if (globalThis.whatsappClient) {
+    if (globalThis.whatsappStatus === 'CONNECTED') {
+      startReminderCron();
+    }
     return globalThis.whatsappClient;
   }
 
@@ -57,6 +61,7 @@ export function initWhatsAppClient() {
     console.log('WhatsApp Client is ready!');
     globalThis.whatsappStatus = 'CONNECTED';
     globalThis.whatsappQr = '';
+    startReminderCron();
   });
 
   client.on('authenticated', () => {
@@ -170,4 +175,170 @@ export async function logoutWhatsApp() {
     globalThis.whatsappStatus = 'DISCONNECTED';
     globalThis.whatsappQr = '';
   }
+}
+
+function parseTemplate(template, client, turno, address) {
+  const d = new Date(turno.fecha);
+  const dateStr = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+  const timeStr = `${turno.horaInicio} a ${turno.horaFin}`;
+  
+  let zonesStr = '';
+  try {
+    const zonesObj = JSON.parse(turno.zonas);
+    zonesStr = zonesObj.map(z => z.nombre).join(', ');
+  } catch (e) {
+    zonesStr = turno.zonas || '';
+  }
+
+  const names = client.nombreCompleto.trim().split(/\s+/);
+  const nombre = names[0] || '';
+  const apellido = names.slice(1).join(' ') || '';
+
+  return template
+    .replace(/\[Nombre\]/g, nombre)
+    .replace(/\[Apellido\]/g, apellido)
+    .replace(/\[FechaTurno\]/g, dateStr)
+    .replace(/\[Horario\]/g, timeStr)
+    .replace(/\[Zonas\]/g, zonesStr)
+    .replace(/\[ValorTotal\]/g, turno.valorTotal.toString())
+    .replace(/\[Seña\]/g, turno.valorSeña.toString())
+    .replace(/\[Direccion\]/g, address);
+}
+
+export async function checkAndSendReminders() {
+  try {
+    // Get time in Argentina (GMT-3)
+    const now = new Date();
+    const argOffset = -3;
+    const argToday = new Date(now.getTime() + argOffset * 60 * 60 * 1000);
+    const hour = argToday.getUTCHours();
+    const todayStr = argToday.toISOString().split('T')[0];
+
+    console.log(`[Reminder Cron] Checking: hour=${hour} today=${todayStr} lastRun=${globalThis.lastReminderRunDate}`);
+
+    // Check if within the 10:00 - 11:00 AM Argentina window
+    if (hour !== 10) {
+      return;
+    }
+
+    if (globalThis.lastReminderRunDate === todayStr) {
+      return;
+    }
+
+    console.log('[Reminder Cron] Automated reminder window active. Fetching appointments for today + 2 days...');
+    
+    // Set run date to prevent duplicate executions
+    globalThis.lastReminderRunDate = todayStr;
+
+    // Calculate start and end of target day (today + 2 days)
+    const targetDate = new Date(Date.UTC(argToday.getUTCFullYear(), argToday.getUTCMonth(), argToday.getUTCDate()));
+    targetDate.setUTCDate(targetDate.getUTCDate() + 2);
+
+    const startRange = new Date(targetDate);
+    startRange.setUTCHours(0, 0, 0, 0);
+
+    const endRange = new Date(targetDate);
+    endRange.setUTCHours(23, 59, 59, 999);
+
+    console.log(`[Reminder Cron] Target range: ${startRange.toISOString()} to ${endRange.toISOString()}`);
+
+    // Load configs
+    const reminderConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_reminder_template' } });
+    const addressConfig = await prisma.configuracion.findUnique({ where: { key: 'address' } });
+    const reminderTemplate = reminderConfig?.value || '';
+    const address = addressConfig?.value || '';
+
+    if (!reminderTemplate) {
+      console.warn('[Reminder Cron] Reminder template is empty. Aborting reminders.');
+      return;
+    }
+
+    // Load appointments scheduled for today + 2 days
+    const turnos = await prisma.turno.findMany({
+      where: {
+        fecha: {
+          gte: startRange,
+          lte: endRange
+        },
+        estado: {
+          in: ['SEÑADO', 'REPROGRAMADO']
+        }
+      },
+      include: {
+        cliente: true
+      }
+    });
+
+    console.log(`[Reminder Cron] Found ${turnos.length} appointments for reminder check.`);
+
+    for (const t of turnos) {
+      // Check if a WHATSAPP notification has already been sent for this specific appointment
+      const existingNotification = await prisma.notificacion.findFirst({
+        where: {
+          turnoId: t.id,
+          canal: 'WHATSAPP'
+        }
+      });
+
+      if (existingNotification) {
+        console.log(`[Reminder Cron] Reminder already sent for appointment ${t.id} to ${t.cliente.nombreCompleto}. Skipping.`);
+        continue;
+      }
+
+      const message = parseTemplate(reminderTemplate, t.cliente, t, address);
+
+      try {
+        if (globalThis.whatsappStatus === 'CONNECTED') {
+          console.log(`[Reminder Cron] Sending automated reminder for appointment ${t.id} to ${t.cliente.nombreCompleto}...`);
+          await sendWhatsAppMessage(t.cliente.whatsapp, message);
+
+          // Save success notification log
+          await prisma.notificacion.create({
+            data: {
+              clienteId: t.cliente.id,
+              turnoId: t.id,
+              canal: 'WHATSAPP',
+              mensaje: message,
+              estado: 'ENVIADO'
+            }
+          });
+        } else {
+          console.warn('[Reminder Cron] Cannot send automated WhatsApp reminder: Client is disconnected.');
+        }
+      } catch (err) {
+        console.error(`[Reminder Cron] Failed to send automated WhatsApp reminder to ${t.cliente.nombreCompleto} (appointment ${t.id}):`, err);
+        // Save failure notification log
+        await prisma.notificacion.create({
+          data: {
+            clienteId: t.cliente.id,
+            turnoId: t.id,
+            canal: 'WHATSAPP',
+            mensaje: message,
+            estado: 'FALLIDO'
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[Reminder Cron] Error in automated reminder cron:', error);
+  }
+}
+
+let reminderInterval = null;
+
+export function startReminderCron() {
+  if (reminderInterval) return;
+
+  console.log('[Reminder Cron] Initializing automated WhatsApp reminder cron (checks every 15 minutes)...');
+  
+  // Run immediate check
+  checkAndSendReminders().catch(err => {
+    console.error('[Reminder Cron] Error running initial reminder check:', err);
+  });
+
+  reminderInterval = setInterval(() => {
+    checkAndSendReminders().catch(err => {
+      console.error('[Reminder Cron] Error running automated reminder check:', err);
+    });
+  }, 15 * 60 * 1000); // 15 minutes
 }

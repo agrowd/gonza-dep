@@ -19,9 +19,9 @@ function timeToMinutes(timeStr) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { nombreCompleto, whatsapp, email, fechaStr, horaInicio, selectedZoneIds, observaciones } = body;
+    const { nombreCompleto, whatsapp, email, dni, fechaStr, horaInicio, selectedZoneIds, observaciones } = body;
 
-    if (!nombreCompleto || !whatsapp || !email || !fechaStr || !horaInicio || !selectedZoneIds || selectedZoneIds.length === 0) {
+    if (!nombreCompleto || !whatsapp || !email || !dni || !fechaStr || !horaInicio || !selectedZoneIds || selectedZoneIds.length === 0) {
       return NextResponse.json(
         { error: 'Todos los campos obligatorios son requeridos.' },
         { status: 400 }
@@ -39,28 +39,66 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Alguna de las zonas seleccionadas no es válida.' }, { status: 400 });
     }
 
-    // 2. Find if client exists by email or whatsapp
-    let client = await prisma.cliente.findFirst({
-      where: {
-        OR: [
-          { email: email },
-          { whatsapp: whatsapp }
-        ]
-      }
+    // 2. Resolve client by DNI
+    let client = await prisma.cliente.findUnique({
+      where: { dni: dni }
     });
 
     let isNewClient = false;
+
     if (!client) {
-      isNewClient = true;
-      client = await prisma.cliente.create({
-        data: {
-          nombreCompleto,
-          whatsapp,
-          email,
-          canalAdquisicion: 'ORGANICO', // default for online booking
-          estado: 'ACTIVO'
+      // Check if client exists with same email or whatsapp but no DNI
+      client = await prisma.cliente.findFirst({
+        where: {
+          OR: [
+            { email: email },
+            { whatsapp: whatsapp }
+          ]
         }
       });
+
+      if (client) {
+        // Update client with DNI and other details
+        client = await prisma.cliente.update({
+          where: { id: client.id },
+          data: { dni, nombreCompleto, whatsapp, email }
+        });
+      } else {
+        // Create new client
+        isNewClient = true;
+        client = await prisma.cliente.create({
+          data: {
+            dni,
+            nombreCompleto,
+            whatsapp,
+            email,
+            canalAdquisicion: 'ORGANICO',
+            estado: 'ACTIVO'
+          }
+        });
+      }
+    }
+
+    // 3. Enforce maximum 1 active appointment rule
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    const activeTurno = await prisma.turno.findFirst({
+      where: {
+        clienteId: client.id,
+        estado: {
+          in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
+        },
+        fecha: {
+          gte: today
+        }
+      }
+    });
+
+    if (activeTurno) {
+      return NextResponse.json({
+        error: 'Ya tenés un turno activo registrado. Por razones de seguridad y organización, no es posible agendar 2 o más turnos en paralelo de forma online. Por favor, comunícate con nosotros para reprogramarlo.'
+      }, { status: 400 });
     }
 
     // 3. Calculate appointment details (duration, pricing, seña)

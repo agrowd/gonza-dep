@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { mpPayment } from '@/lib/mercadopago.js';
+import { sendConfirmationEmail } from '@/lib/email.js';
 
 export async function POST(request) {
   try {
@@ -51,26 +52,68 @@ export async function POST(request) {
           const saldoPendiente = Math.max(0, turno.valorTotal - valorSeña);
 
           // 2. Update Turno in DB
-          await prisma.turno.update({
+          const updatedTurno = await prisma.turno.update({
             where: { id: turnoId },
             data: {
-              estado: 'PENDIENTE_AUTORIZACION',
+              estado: 'SEÑADO', // Confirm automatically!
               valorSeña,
               saldoPendiente
+            },
+            include: {
+              cliente: true
             }
           });
 
           // 3. Create Notification alert in database for Gonzalo/Luciano
           await prisma.notificacion.create({
             data: {
-              clienteId: turno.clienteId,
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
               canal: 'WHATSAPP', // log type
-              mensaje: `Nueva reserva online de ${turno.cliente.nombreCompleto} pendiente de autorización (Seña de $${valorSeña} aprobada).`,
-              estado: 'ENVIADO' // status in dashboard
+              mensaje: `Reserva online confirmada automáticamente para ${updatedTurno.cliente.nombreCompleto} (Seña de $${valorSeña} aprobada).`,
+              estado: 'ENVIADO'
             }
           });
 
-          console.log(`MercadoPago Webhook: Turno ${turnoId} updated to PENDIENTE_AUTORIZACION.`);
+          // 4. Send confirmation email to client
+          try {
+            await sendConfirmationEmail(
+              updatedTurno.cliente.email,
+              updatedTurno.cliente.nombreCompleto,
+              {
+                fecha: updatedTurno.fecha,
+                horaInicio: updatedTurno.horaInicio,
+                zonas: updatedTurno.zonas,
+                valorSeña: updatedTurno.valorSeña,
+                valorTotal: updatedTurno.valorTotal
+              }
+            );
+
+            // Log email sending to DB
+            await prisma.notificacion.create({
+              data: {
+                clienteId: updatedTurno.clienteId,
+                turnoId: updatedTurno.id,
+                canal: 'EMAIL',
+                mensaje: `Confirmación de turno enviada por email al confirmarse la seña.`,
+                estado: 'ENVIADO'
+              }
+            });
+          } catch (mailError) {
+            console.error('Failed to send confirmation email on MP approval:', mailError);
+            // Log failure to DB
+            await prisma.notificacion.create({
+              data: {
+                clienteId: updatedTurno.clienteId,
+                turnoId: updatedTurno.id,
+                canal: 'EMAIL',
+                mensaje: `Fallo al enviar email de confirmación: ${mailError.message}`,
+                estado: 'FALLIDO'
+              }
+            });
+          }
+
+          console.log(`MercadoPago Webhook: Turno ${turnoId} confirmed automatically as SEÑADO.`);
         } else {
           console.warn(`MercadoPago Webhook: Turno ${turnoId} not found in database.`);
         }

@@ -30,6 +30,8 @@ export async function GET(request) {
     nextDate.setDate(targetDate.getDate() + 1);
 
     // 2. Query all existing active/confirmed/pending turns for that day
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
     const turns = await prisma.turno.findMany({
       where: {
         fecha: {
@@ -38,6 +40,12 @@ export async function GET(request) {
         },
         estado: {
           notIn: ['CANCELADO', 'REPROGRAMADO', 'NO_ASISTIO'] // skip cancelled slots
+        },
+        NOT: {
+          estado: 'PENDIENTE_PAGO',
+          createdAt: {
+            lt: fiveMinutesAgo
+          }
         }
       },
       select: {
