@@ -140,3 +140,9 @@
   - Se corrigió el cálculo de rangos de fecha en `/api/admin/notificaciones` aplicando un ajuste de zona horaria específico para Argentina (GMT-3) para evitar desfases temporales debido a la hora UTC del servidor de producción.
   - Se subieron los archivos modificados al VPS y se ejecutó `./deploy.sh` para reconstruir la compilación Next.js y reiniciar los procesos PM2 con los cambios aplicados.
 
+- **25 de Junio (09:05 AM)**:
+  - Se completó la tarea de cambio de logotipo principal a la versión en blanco (`Logo-Gonzalo-Depilacion-para-hombres-Blanco.png`), manteniendo el favicon en la carpeta `src/app/favicon.ico` con el logotipo oficial circular original.
+  - Se sincronizaron los archivos locales modificados con el VPS de producción.
+  - Se ejecutó el script de despliegue `./deploy.sh` en el VPS para compilar el nuevo build de producción con Next.js y reiniciar el proceso PM2 `gonzalo-agenda` en el puerto 3006.
+  - Se verificó la disponibilidad de la web bajo HTTPS respondiendo con HTTP 200 OK mediante comandos curl.
+

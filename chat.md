@@ -298,3 +298,12 @@
 - Implementación de la función `formatArgentinaPhone` en `src/lib/whatsapp.js` para traducir de forma automática números locales de 10 dígitos (ej: `1171244149`) al formato internacional requerido por WhatsApp Web (`5491171244149@c.us`).
 - Corrección de la lógica de filtros de fecha en la API `/api/admin/notificaciones` aplicando desfase de zona horaria local de Argentina (GMT-3) para evitar desplazamientos de fecha por la hora UTC del servidor de producción.
 - Recompilación y despliegue del proyecto Next.js en el VPS de producción ejecutando `./deploy.sh`.
+
+## Mensaje del Usuario (2026-06-25 08:52:31-03:00)
+> Poner este logo Logo-Gonzalo-Depilacion-para-hombres-Blanco que esta en la raiz del documento. reemplazalo por el que esta ahora, el de ahora dejalo solo para el favicon
+
+## Respuesta del Asistente
+- Reemplazo del logo principal (`public/logo.png`) por la versión en blanco (`Logo-Gonzalo-Depilacion-para-hombres-Blanco.png`), manteniendo el favicon actual (`src/app/favicon.ico`) intacto con la versión circular con fondo transparente.
+- Subida de los archivos modificados al VPS de producción.
+- Ejecución de `./deploy.sh` en el VPS para compilar el nuevo build de producción de Next.js y reiniciar el servidor en PM2.
+- Verificación con `curl` del estado HTTP 200 OK del sitio web seguro.
