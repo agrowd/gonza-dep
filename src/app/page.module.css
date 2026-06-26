@@ -3,12 +3,28 @@
   display: flex;
   flex-direction: column;
   background-color: var(--bg-primary);
+
+  /* Light theme overrides for public pages */
+  --bg-primary: #f0ede6;     /* Cream background from screenshot */
+  --bg-secondary: #ffffff;   /* White for cards, inputs, and selectors */
+  --bg-card: #ffffff;
+  --bg-card-hover: #faf9f6;
+  --text-primary: #1d1d1d;   /* Charcoal for body text */
+  --text-secondary: #5a5a5a; /* Dark gray for secondary details */
+  --text-muted: #888888;     /* Muted gray */
+  --border-color: #dcd9d0;   /* Light gray-cream border */
+  --border-gold: rgba(122, 31, 30, 0.25);
+  
+  --color-gold: #7a1f1e;     /* Use brand red/burgundy for primary accents */
+  --color-gold-rgb: 122, 31, 30;
+  --color-gold-light: #9c2828;
+  --color-gold-dark: #5c1414;
 }
 
 .header {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1.5rem 1rem;
-  background-color: var(--bg-secondary);
+  background-color: var(--color-primary);
 }
 
 .headerContent {
@@ -148,7 +164,7 @@
 .stepDotCompleted {
   border-color: var(--color-gold);
   background-color: var(--color-gold);
-  color: #000;
+  color: #fff;
 }
 
 /* Form Styles */
@@ -262,7 +278,7 @@
 .checkboxActive {
   border-color: var(--color-gold);
   background-color: var(--color-gold);
-  color: #000;
+  color: #fff;
 }
 
 /* Date Selection list */
@@ -295,7 +311,7 @@
 .dateButtonActive {
   background-color: var(--color-gold);
   border-color: var(--color-gold);
-  color: #000;
+  color: #fff;
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(var(--color-gold-rgb), 0.3);
 }
@@ -348,7 +364,10 @@
 .slotButtonActive {
   background-color: var(--color-gold);
   border-color: var(--color-gold);
-  color: #000;
+  color: #fff !important;
+  font-weight: 800;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(var(--color-gold-rgb), 0.4);
 }
 
 /* Instructions card */

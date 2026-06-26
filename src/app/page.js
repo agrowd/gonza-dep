@@ -252,7 +252,8 @@ export default function Home() {
   };
 
   // Calculate prices dynamically for Step 2+
-  const calculatedDetails = calculateTurnDetails(selectedZones, true); // Assume new client to be safe and give correct duration
+  // Use isNewClient=false to match the availability API which also uses false
+  const calculatedDetails = calculateTurnDetails(selectedZones, false);
 
   const progressPercent = ((step - 1) / 3) * 100;
 
@@ -264,7 +265,7 @@ export default function Home() {
           <div className={styles.logoContainer}>
             <img src="/logo.png" alt="Gonzalo Depilación para Hombres" style={{ width: '150px', height: 'auto' }} />
           </div>
-          <a href="/login" className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
+          <a href="/login" className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
             Acceso Interno
           </a>
         </div>
@@ -541,15 +542,15 @@ export default function Home() {
             <div className="glass-card premium-border" style={{ marginBottom: '2rem' }}>
               <div className={styles.summaryRow}>
                 <span>Nombre Completo:</span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{formData.nombreCompleto}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formData.nombreCompleto}</span>
               </div>
               <div className={styles.summaryRow}>
                 <span>WhatsApp:</span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{formData.whatsapp}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formData.whatsapp}</span>
               </div>
               <div className={styles.summaryRow}>
                 <span>Día del Turno:</span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{selectedDate.toLocaleDateString('es-ES', { dateStyle: 'full' })}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{selectedDate.toLocaleDateString('es-ES', { dateStyle: 'full' })}</span>
               </div>
               <div className={styles.summaryRow}>
                 <span>Horario:</span>
@@ -559,7 +560,7 @@ export default function Home() {
               </div>
               <div className={styles.summaryRow} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span>Zonas seleccionadas:</span>
-                <span style={{ color: '#fff', fontWeight: 600, textAlign: 'right' }}>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right' }}>
                   {selectedZones.map(z => z.nombre === 'Otro' ? formData.otroZona : z.nombre).join(', ')}
                 </span>
               </div>

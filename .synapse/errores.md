@@ -34,3 +34,15 @@
 **Root Cause:** En `src/app/api/admin/turnos/route.js` y `src/app/api/admin/turnos/[id]/route.js` se utilizó la función auxiliar `timeToMinutes` para calcular la duración, pero la función no estaba declarada ni importada en ninguno de los dos archivos.
 **Solución:** Se declaró el helper `timeToMinutes` al inicio de ambos archivos de ruta.
 **Estado:** ✅ FIXED
+
+## ERR-07: 501 5.1.7 Bad sender address syntax - Emails no se envían (2026-06-25)
+**Síntoma:** Los emails de confirmación, cancelación e inasistencia nunca llegan al cliente. Los logs de PM2 muestran `Mail command failed: 501 5.1.7 Bad sender address syntax` en el comando `MAIL FROM`.
+**Root Cause:** La variable `SMTP_FROM` en el `.env` del VPS contenía comillas escapadas con backslash (`\"Gonzalo Depilación\" <turnos@...>`) que dotenv de Node.js interpretaba literalmente, produciendo un valor `"Gonzalo Depilación" <turnos@...>` (con comillas literales dentro), lo cual es una dirección de remitente inválida para el servidor SMTP de Hostinger.
+**Solución:** Se refactorizó `src/lib/email.js` para usar el formato de objeto de dirección de Nodemailer `{name: 'Gonzalo Depilacion', address: 'turnos@...'}` en vez de construir la dirección desde una variable de entorno con caracteres especiales. Se simplificó `SMTP_FROM` en el VPS a solo la dirección de email.
+**Estado:** ✅ FIXED
+
+## ERR-08: Duración de turno inconsistente entre disponibilidad y resumen (2026-06-25)
+**Síntoma:** En la pantalla de confirmación de reserva, el resumen muestra "14:00 a 14:30 (40 min)" — la hora fin dice 14:30 (30 min de duración) pero el texto dice 40 min.
+**Root Cause:** La API de disponibilidad (`/api/disponibilidad`) calculaba los slots con `calculateTurnDetails(zones, false)` (sin bonus de nuevo cliente = 30 min para Brazos), pero la pantalla de resumen usaba `calculateTurnDetails(zones, true)` (con bonus = 40 min). El `horaFin` del slot era correcto (14:30) pero la duración mostrada era la del cálculo con bonus (40 min). Además, la API de creación de reservas (`/api/reservas/crear`) también usaba el flag `isNewClient` basado en si el cliente era nuevo en la DB, lo que generaba un `horaFin` diferente al que se mostraba al usuario.
+**Solución:** Se unificó el cálculo usando `isNewClient=false` consistentemente en: (1) la búsqueda de disponibilidad, (2) el resumen del frontend, y (3) la API de creación de reservas. El bonus de nuevo cliente es un margen operativo interno, no debe afectar lo que ve el cliente.
+**Estado:** ✅ FIXED

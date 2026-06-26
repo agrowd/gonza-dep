@@ -102,7 +102,9 @@ export async function POST(request) {
     }
 
     // 3. Calculate appointment details (duration, pricing, seña)
-    const { valorTotal, valorSeña, duracionMinutos } = calculateTurnDetails(dbZones, isNewClient);
+    // Always use isNewClient=false for duration to match the availability API
+    // The new client bonus is an internal operational buffer, not shown to the client
+    const { valorTotal, valorSeña, duracionMinutos } = calculateTurnDetails(dbZones, false);
 
     // Calculate horaFin
     const startMinutes = timeToMinutes(horaInicio);

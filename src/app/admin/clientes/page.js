@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import styles from './clientes.module.css';
 import agendaStyles from '../agenda/agenda.module.css';
 
@@ -22,7 +23,10 @@ const getStatusLabelClass = (status) => {
   }
 };
 
-export default function ClientesPage() {
+function ClientesPageContent() {
+  const searchParams = useSearchParams();
+  const initialClientId = searchParams.get('id');
+
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
@@ -70,6 +74,13 @@ export default function ClientesPage() {
   useEffect(() => {
     fetchClients();
   }, [filter]);
+
+  // Trigger search profile when query param 'id' is present
+  useEffect(() => {
+    if (initialClientId) {
+      handleClientClick(initialClientId);
+    }
+  }, [initialClientId]);
 
   const handleCreateClient = async (e) => {
     e.preventDefault();
@@ -304,21 +315,24 @@ export default function ClientesPage() {
       {/* PROFILE MODAL (Ficha completa) */}
       {isProfileOpen && selectedClient && stats && (
         <div className={agendaStyles.modalOverlay}>
-          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '850px' }}>
-            <div className={agendaStyles.modalHeader}>
+          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '850px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', padding: 0 }}>
+            <div className={agendaStyles.modalHeader} style={{ padding: '1.5rem 1.5rem 0.75rem 1.5rem', marginBottom: 0 }}>
               <div>
                 <h3 className={styles.ficheTitle}>{selectedClient.nombreCompleto}</h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')} | Canal: {selectedClient.canalAdquisicion}</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')} | DNI: {selectedClient.dni || 'Sin registrar'} | Canal: {selectedClient.canalAdquisicion}</span>
               </div>
-              <button onClick={() => setIsProfileOpen(false)} className={agendaStyles.closeBtn}>&times;</button>
+              <button onClick={() => setIsProfileOpen(false)} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
             </div>
 
             {/* Tabs */}
-            <div className={styles.tabs}>
+            <div className={styles.tabs} style={{ padding: '0 1.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
               <button onClick={() => setActiveTab('history')} className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`}>Ficha Histórica</button>
               <button onClick={() => setActiveTab('logs')} className={`${styles.tabBtn} ${activeTab === 'logs' ? styles.tabBtnActive : ''}`}>Historial Notificaciones</button>
               <button onClick={() => setActiveTab('settings')} className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`}>Notas y Configuración</button>
             </div>
+
+            {/* Scrollable Content Container */}
+            <div style={{ overflowY: 'auto', padding: '0 1.5rem 1.5rem 1.5rem', flex: 1 }}>
 
             {/* TAB CONTENT: History */}
             {activeTab === 'history' && (
@@ -473,11 +487,11 @@ export default function ClientesPage() {
                     </div>
 
                     <div className={styles.inputGroup} style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '1.25rem' }}>
-                      <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>🛡️ Observaciones Exclusivas para Gonzalo</label>
+                      <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>🛡️ Observaciones del Operador</label>
                       <textarea
                         value={editNotes.notasGonzalo}
                         onChange={(e) => setEditNotes({ ...editNotes, notasGonzalo: e.target.value })}
-                        placeholder="Comentarios importantes de seguridad clínica o indicaciones específicas de Gonzalo..."
+                        placeholder="Comentarios importantes de seguridad clínica o indicaciones específicas del operador..."
                         rows="3"
                         style={{ borderColor: 'rgba(var(--color-gold-rgb), 0.3)' }}
                       />
@@ -493,6 +507,7 @@ export default function ClientesPage() {
                 </div>
               </form>
             )}
+            </div>
           </div>
         </div>
       )}
@@ -579,7 +594,7 @@ export default function ClientesPage() {
                 </div>
 
                 <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>Observaciones Exclusivas para Gonzalo</label>
+                  <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>Observaciones del Operador</label>
                   <textarea
                     value={newClient.notasGonzalo}
                     onChange={(e) => setNewClient({ ...newClient, notasGonzalo: e.target.value })}
@@ -599,5 +614,13 @@ export default function ClientesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ClientesPage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-gold)' }}>Cargando página...</div>}>
+      <ClientesPageContent />
+    </Suspense>
   );
 }

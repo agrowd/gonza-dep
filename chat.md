@@ -313,5 +313,28 @@
 
 ## Respuesta del Asistente
 - Diagnóstico del comportamiento del motor de disponibilidad: se verificó que el comportamiento es correcto y responde al diseño de bloqueo de solapamientos.
-- Si un cliente selecciona un servicio de larga duración (como Cuerpo Completo de 90 minutos) para reservar en una fecha (Sábado 4 de Julio) donde hay una cita existente de 16:00 a 17:30 (Luciano Gomez), el sistema oculta los horarios de inicio a partir de las 14:40 (14:40 + 90 min = 16:10, lo que se encimaría con la cita de las 16:00).
+- Si un cliente selecciona un servicio de larga duración (como Cuerpo Completo de 90 minutos) para reservar en una fecha Sábado 4 de Sábado de Julio, etc., el sistema oculta los horarios de inicio a partir de las 14:40 (14:40 + 90 min = 16:10, lo que se encimaría con la cita de las 16:00).
 - Elaboración de explicación técnica y mensaje de respuesta en español para que el administrador responda a su cliente.
+
+## Mensaje del Usuario (2026-06-26 15:30:03-03:00)
+> Segui
+
+## Respuesta del Asistente
+- Se reanudó la sesión del Cortex/Ariadne Engine.
+- Se inició y ejecutó de forma remota en el VPS Hostinger (`187.127.9.216`) el script `./deploy.sh` que instaló dependencias, actualizó el esquema de base de datos de PostgreSQL, generó el Prisma Client de producción, ejecutó el seed, compiló la aplicación Next.js y reinició PM2 bajo el nombre de proceso `gonzalo-agenda` en el puerto 3006.
+- Se verificó mediante peticiones curl HTTPS que la web responde con `HTTP 200 OK` y que Nginx expone el servicio correctamente bajo SSL (`https://agenda.depilacionparahombres.com`).
+- Se auditaron los logs de PM2 y se constató que el cliente de WhatsApp Web y Puppeteer headless se iniciaron de forma exitosa y están en estado `ready` y vinculados, y que el cron de recordatorios a las 48 horas se encuentra cronometrado y activo.
+- Se actualizaron los documentos de arquitectura del Cortex `.synapse/root.md` y `.synapse/flows_graph.md`.
+
+## Mensaje del Usuario (2026-06-26 17:08:21-03:00)
+> Los colores no son iguales (con captura de la web oficial depilacionparahombres.com que muestra el header bordó #7a1f1e y fondo crema #f0ede6)
+
+## Respuesta del Asistente
+- Creación del plan de alineación cromática en `implementation_plan.md` y obtención de aprobación del usuario.
+- Modificación de variables de estilo locales en `.container` de `src/app/page.module.css` para aplicar el tema de color oficial (fondo crema `#f0ede6`, cabecera y acentos en bordó `#7a1f1e`, textos en carbón `#1d1d1d`, y fondos de tarjetas/inputs en blanco `#ffffff`).
+- Ajuste del contraste de texto en dotaciones de pasos completados y slots activos (de negro a blanco) al renderizarse sobre el fondo bordó.
+- Corrección de estilos en línea en `page.js` y `success/page.js` que tenían el color blanco (`#fff`) hardcodeado, pasándolos a `var(--text-primary)` para que los detalles del turno sean visibles y legibles sobre las tarjetas blancas.
+- Ajuste de visibilidad del botón "Acceso Interno" en la cabecera para que destaque correctamente sobre el fondo rojo.
+- Verificación del correcto build de Next.js (`npm run build`) en local.
+- Carga de archivos al VPS mediante SCP y ejecución de `./deploy.sh` en el servidor para compilar en producción y reiniciar PM2.
+- Verificación mediante `curl` de red con respuesta exitosa `HTTP 200 OK`.

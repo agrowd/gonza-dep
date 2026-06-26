@@ -1,19 +1,22 @@
 import nodemailer from 'nodemailer';
 
 /**
- * Sends a notification email to a client who did not show up for their scheduled appointment.
- * 
- * @param {string} clientEmail - Receiver's email
- * @param {string} clientName - Client's full name
- * @param {object} turnDetails - Appointment data { fecha, horaInicio, zonas, valorSeña }
+ * Create a reusable SMTP transporter and sender address.
+ * Uses Nodemailer's address object format to avoid shell/dotenv escaping issues.
  */
-export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
+function getMailConfig() {
   const host = process.env.SMTP_HOST || 'localhost';
   const port = Number(process.env.SMTP_PORT) || 1025;
   const secure = process.env.SMTP_SECURE === 'true';
   const user = process.env.SMTP_USER || '';
   const pass = process.env.SMTP_PASS || '';
-  const from = process.env.SMTP_FROM || '"Gonzalo Depilación" <noreply@depilacionparahombres.com>';
+  
+  // Use the SMTP_USER as the email address, with a display name
+  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@depilacionparahombres.com';
+  const from = {
+    name: 'Gonzalo Depilacion',
+    address: fromAddress
+  };
 
   const transporter = nodemailer.createTransport({
     host,
@@ -21,6 +24,15 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
     secure,
     auth: user && pass ? { user, pass } : undefined
   });
+
+  return { transporter, from };
+}
+
+/**
+ * Sends a notification email to a client who did not show up for their scheduled appointment.
+ */
+export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
+  const { transporter, from } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña } = turnDetails;
   
@@ -203,19 +215,7 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
  * Sends a confirmation email when an appointment is confirmed (paid or manually booked).
  */
 export async function sendConfirmationEmail(clientEmail, clientName, turnDetails) {
-  const host = process.env.SMTP_HOST || 'localhost';
-  const port = Number(process.env.SMTP_PORT) || 1025;
-  const secure = process.env.SMTP_SECURE === 'true';
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
-  const from = process.env.SMTP_FROM || '"Gonzalo Depilación" <noreply@depilacionparahombres.com>';
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: user && pass ? { user, pass } : undefined
-  });
+  const { transporter, from } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
   
@@ -399,19 +399,7 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
  * Sends a cancellation email when an appointment is cancelled.
  */
 export async function sendCancellationEmail(clientEmail, clientName, turnDetails) {
-  const host = process.env.SMTP_HOST || 'localhost';
-  const port = Number(process.env.SMTP_PORT) || 1025;
-  const secure = process.env.SMTP_SECURE === 'true';
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
-  const from = process.env.SMTP_FROM || '"Gonzalo Depilación" <noreply@depilacionparahombres.com>';
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: user && pass ? { user, pass } : undefined
-  });
+  const { transporter, from } = getMailConfig();
 
   const { fecha, horaInicio, zonas } = turnDetails;
   

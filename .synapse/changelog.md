@@ -59,3 +59,16 @@
 - Reemplazo del indicador "Señas Cobradas" por "Total Bonificaciones" en el panel y API de estadísticas.
 - Ocultamiento de la información secundaria en el calendario para bloques de turnos de 30 minutos o menos.
 - Registro del `turnoId` al almacenar notificaciones en la base de datos para evitar envíos duplicados automáticos.
+
+## [0.8.0] - 2026-06-26
+### Added
+- Línea de tiempo reactiva en tiempo real (`.currentTimeLine`) en la agenda diaria y semanal.
+- Botones de acceso rápido en detalles del turno para ver la Ficha del Cliente y Programar Siguiente Turno (calculando fecha por frecuencia en semanas).
+- Soporte para parámetros de búsqueda (`?id=...`) en la vista de clientes para auto-abrir perfiles.
+- Rediseño de modal de clientes con cabecera y pestañas fijas (`sticky`) y cuerpo scrollable para mejorar el cierre del modal en móviles.
+- Campo DNI del cliente visible en el encabezado de su ficha digital.
+
+### Changed
+- Modificación de cabecera de la landing page pública y páginas de éxito/error a color de marca bordó oscuro (`var(--color-primary)` / `#7a1e1e`).
+- Cambios de etiquetas "Observaciones Exclusivas para Gonzalo" a "Observaciones del Operador" y actualizados sus placeholders.
+

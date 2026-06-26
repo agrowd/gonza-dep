@@ -161,3 +161,42 @@
       - Ordenamiento alfabético ascendente directo en la consulta `/api/zonas` para asegurar la uniformidad en todas las listas del sistema.
   - Se sincronizaron los archivos modificados en el servidor VPS de Hostinger, se corrió `npx prisma db push --accept-data-loss` para actualizar la base de datos PostgreSQL con la restricción de DNI único, y se reconstruyó la aplicación Next.js y reinició PM2 mediante `./deploy.sh`.
 
+- **25 de Junio (05:18 PM - 05:35 PM)**:
+  - El cliente reportó 5 problemas a través de WhatsApp con capturas de pantalla:
+    1. **Notificaciones muestran turnos pasados** — La API `/api/admin/notificaciones` no filtraba por fecha futura.
+    2. **Texto del slot seleccionado no se ve en negro** — Aunque el CSS ya tenía `color: #000`, se reforzó con `!important` y se añadieron efectos visuales (scale, box-shadow) para mejor feedback.
+    3. **Duración inconsistente en el resumen** — El frontend mostraba "14:00 a 14:30 (40 min)". El `horaFin` venía del cálculo sin bonus de nuevo cliente (30min → 14:30) pero la duración mostrada usaba el bonus (+10min → 40min). Se unificó usando `isNewClient=false` en la búsqueda de disponibilidad, el resumen del frontend, y la API de creación de reservas.
+    4. **Emails no llegan al pagar ni al cancelar** — Los logs de PM2 mostraban `501 5.1.7 Bad sender address syntax`. La variable `SMTP_FROM` tenía comillas escapadas (`\"Gonzalo Depilación\"`) que producían una dirección inválida. Se refactorizó `email.js` para usar el formato de objeto de Nodemailer `{name, address}` y se simplificó el `.env`.
+    5. **Email de cancelación no notifica pérdida de seña** — Mismo root cause que el punto 4 (SMTP_FROM malformado).
+  - Se verificó la compilación local exitosa (29/29 páginas).
+  - Se subieron los archivos al VPS y se ejecutó `./deploy.sh`.
+
+## 📅 Sesión: 26 de Junio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Sincronizar archivos y consolidar el despliegue del VPS tras la última tanda de correcciones de SMTP e inconsistencias.
+- [x] Ejecutar la recompilación y reinicio del servidor Next.js en el VPS de producción mediante `./deploy.sh`.
+- [x] Validar la correcta respuesta HTTP del servidor expuesto en HTTPS.
+- [x] Actualizar y mantener los archivos de documentación de Cortex (`.synapse/root.md` y `.synapse/flows_graph.md`).
+
+### 📝 Notas / Bitácora
+- **26 de Junio (03:30 PM)**:
+  - Se continuó la sesión tras una compactación de chat.
+  - Se ejecutó de forma remota en el VPS Hostinger (`187.127.9.216`) el script `./deploy.sh` a través de SSH para recompilar la aplicación Next.js incorporando las correcciones de notificaciones pasadas, estilo del slot activo, unificación de duraciones (`isNewClient=false`) y la refactorización SMTP de Nodemailer.
+  - La compilación e instalación finalizaron de forma 100% exitosa, reiniciando el proceso PM2 `gonzalo-agenda` en el puerto 3006.
+  - Se verificó la disponibilidad pública y el estado del proxy inverso de Nginx mediante un curl HTTPS, devolviendo `HTTP 200 OK` satisfactoriamente.
+  - Se revisaron los logs de PM2 comprobando que el cliente de WhatsApp Web está correctamente inicializado, autenticado y en estado `ready`, y que el cron cronometra la búsqueda de recordatorios de forma programada.
+  - Se actualizaron `.synapse/root.md` y `.synapse/flows_graph.md` para reflejar la arquitectura actual y los flujos con el paso del DNI implementado.
+
+- **26 de Junio (08:40 PM)**:
+  - El usuario reportó que los colores no coinciden con los de la web oficial.
+  - Se definieron variables de estilo CSS locales en la clase `.container` dentro de `src/app/page.module.css` para aplicar el tema de la web oficial: fondo crema (`#f0ede6`), cabecera y acentos en bordó (`#7a1f1e`), texto en carbón oscuro (`#1d1d1d`), tarjetas y campos en blanco (`#ffffff`).
+  - Se corrigió el contraste de texto (de negro a blanco) en elementos activos con fondo rojo bordó (`.stepDotCompleted`, `.checkboxActive`, `.dateButtonActive`, `.slotButtonActive`).
+  - Se eliminaron inline-styles con color blanco (`#fff`) hardcodeado en las tarjetas de resumen de `page.js` y de `success/page.js` para asegurar que el texto sea legible en el nuevo fondo claro.
+  - Se ajustó el estilo del botón "Acceso Interno" en la cabecera pública de `page.js` para mantener su visibilidad y contraste en blanco sobre la cabecera bordó.
+  - Se verificó la compilación local (`npm run build`) y se subieron los archivos modificados al VPS (`187.127.9.216`).
+  - Se ejecutó `./deploy.sh` en el VPS, reconstruyendo la aplicación y recargando PM2.
+  - Se comprobó mediante `curl` de red que el sitio responde correctamente con `HTTP 200 OK`.
+
+
+

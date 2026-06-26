@@ -58,6 +58,7 @@ export default function AgendaPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [nowPosition, setNowPosition] = useState(null);
   const [editTurno, setEditTurno] = useState({
     fechaStr: '',
     horaInicio: '',
@@ -117,6 +118,35 @@ export default function AgendaPage() {
       setCurrentWeekStart(monday);
     }
   }, [selectedDate]);
+
+  // Real-time timeline position calculation
+  useEffect(() => {
+    const updatePosition = () => {
+      const today = new Date();
+      const currentMinutes = today.getHours() * 60 + today.getMinutes();
+      const WORK_START = timeToMinutes(config.work_start);
+      const WORK_END = timeToMinutes(config.work_end);
+
+      if (currentMinutes >= WORK_START && currentMinutes <= WORK_END) {
+        const top = (currentMinutes - WORK_START) * (100 / 60);
+        setNowPosition(top);
+      } else {
+        setNowPosition(null);
+      }
+    };
+
+    updatePosition();
+    const interval = setInterval(updatePosition, 60000);
+    return () => clearInterval(interval);
+  }, [config.work_start, config.work_end]);
+
+  const isToday = (date) => {
+    if (!date) return false;
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear();
+  };
 
   // Fetch all clients when modal is opened for autocomplete
   useEffect(() => {
@@ -264,6 +294,45 @@ export default function AgendaPage() {
     } catch (e) {
       console.error('Error deleting turno:', e);
     }
+  };
+
+  // Schedule next turno based on client's treatment frequency
+  const handleScheduleNextTurn = (turno) => {
+    if (!turno || !turno.cliente) return;
+    
+    const currentFecha = new Date(turno.fecha);
+    const freqWeeks = turno.cliente.frecuencia || 4;
+    
+    const targetDate = new Date(currentFecha);
+    targetDate.setDate(targetDate.getDate() + freqWeeks * 7);
+    const targetDateStr = targetDate.toISOString().split('T')[0];
+    
+    let preselectedZoneIds = [];
+    try {
+      preselectedZoneIds = JSON.parse(turno.zonas).map(z => z.id).filter(Boolean);
+    } catch (e) {
+      console.error(e);
+    }
+    
+    setIsDetailsOpen(false);
+    setSelectedDate(targetDate);
+    
+    setNewTurno({
+      nombreCompleto: turno.cliente.nombreCompleto || '',
+      whatsapp: turno.cliente.whatsapp || '',
+      email: turno.cliente.email || '',
+      fechaStr: targetDateStr,
+      horaInicio: turno.horaInicio,
+      horaFin: turno.horaFin,
+      selectedZoneIds: preselectedZoneIds,
+      valorTotal: turno.valorTotal,
+      valorSeña: turno.valorSeña,
+      estado: 'SEÑADO',
+      observaciones: '',
+      clienteId: turno.clienteId
+    });
+    
+    setIsNewOpen(true);
   };
 
   // Save edited Turno
@@ -578,6 +647,13 @@ export default function AgendaPage() {
                     ))}
                   </div>
 
+                  {/* Current Time Indicator Line */}
+                  {isToday(selectedDate) && nowPosition !== null && (
+                    <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
+                      <div className={styles.currentTimeLineDot}></div>
+                    </div>
+                  )}
+
                   {/* Empty slot clicks handlers */}
                   {Array.from({ length: totalHalfHours }).map((_, idx) => {
                     const startMin = WORK_START + idx * 30;
@@ -642,6 +718,13 @@ export default function AgendaPage() {
                       <div key={idx} className={styles.gridLineRow}></div>
                     ))}
                   </div>
+
+                  {/* Current Time Indicator Line */}
+                  {isToday(date) && nowPosition !== null && (
+                    <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
+                      <div className={styles.currentTimeLineDot}></div>
+                    </div>
+                  )}
 
                   {/* Empty slot clicks handlers */}
                   {Array.from({ length: totalHalfHours }).map((_, idx) => {
@@ -859,6 +942,26 @@ export default function AgendaPage() {
                 <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                   <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.75rem' }}>Acciones Rápidas</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {selectedTurno.clienteId && (
+                      <>
+                        <button
+                          onClick={() => {
+                            window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}`;
+                          }}
+                          className="btn btn-secondary"
+                          style={{ flex: '1 0 45%', borderColor: 'var(--color-gold)', color: 'var(--color-gold)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
+                        >
+                          📁 Ver Ficha del Cliente
+                        </button>
+                        <button
+                          onClick={() => handleScheduleNextTurn(selectedTurno)}
+                          className="btn btn-secondary"
+                          style={{ flex: '1 0 45%', borderColor: '#81c784', color: '#81c784', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
+                        >
+                          📅 Programar Siguiente Turno
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => {
                         setEditTurno({

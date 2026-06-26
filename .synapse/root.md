@@ -1,33 +1,38 @@
 # Project Root - AppWeb Agenda
 
 ## 📌 Descripción General
-Aplicación web para la gestión interna de turnos, clientes, recordatorios y estadísticas para un centro de depilación láser masculina (inspirada en depilacionparahombres.com). Cuenta con una sección pública para que los clientes reserven turnos online con pago de seña ficticio/real y confirmación administrativa.
+Aplicación web full-stack para la gestión interna de turnos, clientes, recordatorios automáticos y estadísticas para el centro de depilación láser masculina "Gonzalo Depilación para Hombres". Cuenta con un flujo público interactivo de reservas online integrado con la pasarela de MercadoPago, confirmación de turnos automática tras el pago, y envíos transaccionales automáticos por correo electrónico y WhatsApp.
 
 ## 🏗️ Arquitectura del Sistema
-- **Frontend & Backend (Full-stack)**: Next.js (App Router) o React + Express. (Por definir en la fase de planificación)
-- **Base de Datos**: PostgreSQL / SQLite (propia del servidor) con Prisma ORM.
-- **Notificaciones**: Integración para envío de WhatsApp (vía links directos o API de WhatsApp) y Emails (Nodemailer/SMTP o servicio externo).
-- **Estilos**: CSS Puro / CSS Modules para un diseño premium y responsive, respetando la paleta de colores de `depilacionparahombres.com`.
+- **Frontend & Backend (Full-stack)**: Next.js 16 (App Router) con soporte para Server Actions y API Routes dinámicas.
+- **Base de Datos**: PostgreSQL en producción (Hostinger VPS) y SQLite en desarrollo local, gestionados mediante Prisma ORM.
+- **Notificaciones**: 
+  - **WhatsApp**: Automatizado mediante `whatsapp-web.js` (Puppeteer headless en el VPS). Cuenta con un cron de recordatorios en background que busca citas a las 48 horas y las despacha cada día entre las 10:00 y 11:00 AM.
+  - **Email**: Notificaciones transaccionales automáticas para altas, cancelaciones e inasistencias (`NO_ASISTIO`) usando `nodemailer` y plantillas de diseño HTML premium.
+- **Estilos**: Vanilla CSS con CSS Modules para máxima personalización y adaptabilidad (incluyendo vista diaria forzada en pantallas móviles).
 
-## 📁 Estructura del Proyecto (Planificada)
+## 📁 Estructura del Proyecto
 ```text
 gonzalo-dep/
-├── .synapse/             # Ariadne Engine Metadata
-│   ├── root.md
-│   ├── decisions.md
-│   ├── env_manager.md
-│   ├── flows_graph.md
-│   ├── testing_qa.md
-│   ├── workcycle.md
-│   ├── errores.md
-│   └── changelog.md
-├── src/                  # Código fuente (a crear)
-├── AppWeb Agenda.docx    # Documento de requerimientos original
-└── chat.md               # Historial de chat con el usuario
+├── .synapse/             # Ariadne Engine Metadata (Cortex)
+│   ├── root.md           # Mapa central del proyecto
+│   ├── decisions.md      # Registro de decisiones de arquitectura
+│   ├── env_manager.md    # Configuración de entornos locales y VPS
+│   ├── flows_graph.md    # Flujos y lógica del sistema
+│   ├── testing_qa.md     # Casos de prueba y calidad
+│   ├── workcycle.md      # Registro de trabajo de sesiones
+│   ├── errores.md        # Historial de bugs resueltos
+│   └── changelog.md      # Historial de versiones y cambios
+├── prisma/               # Esquemas y scripts de base de datos
+│   ├── schema.prisma     # Modelos de base de datos (PostgreSQL/SQLite)
+│   └── seed.js           # Semillero de datos iniciales (Admin y Zonas)
+├── public/               # Recursos estáticos (Logos e imágenes de marca)
+├── src/                  # Código fuente de Next.js
+│   ├── app/              # Rutas del App Router (Páginas y APIs)
+│   ├── lib/              # Librerías (Auth, DB, Email, WhatsApp)
+└── deploy.sh             # Script para automatizar despliegues en el VPS
 ```
 
-## 🚀 Próximos Pasos
-1. Definir la tecnología exacta (Next.js es la recomendación principal por ser full-stack y de fácil despliegue).
-2. Crear la base de datos y esquema de datos (Prisma).
-3. Diseñar y maquetar la interfaz pública (Reserva Online) e interna (Agenda, Clientes, Estadísticas, Notificaciones, Configuración).
-4. Implementar las reglas de negocio de cálculo de duración y costos.
+## 🚀 Estado Actual
+- **Producción**: Totalmente operativo bajo dominio HTTPS seguro en `https://agenda.depilacionparahombres.com`.
+- **Automatizaciones**: El servicio de WhatsApp se reconecta y restablece su sesión de Puppeteer mediante persistencia de `.wwebjs_auth`. Los correos SMTP transaccionales de Hostinger están verificados y funcionando de forma segura.

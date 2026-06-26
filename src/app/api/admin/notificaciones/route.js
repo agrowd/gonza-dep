@@ -93,11 +93,18 @@ export async function GET(request) {
     const reminderTemplate = reminderConfig?.value || '';
     const address = addressConfig?.value || '';
 
-    // Fetch turnos in the range
+    // Fetch turnos in the range (only future ones for notification purposes)
+    const argNow = getArgentinaDate();
+    const todayStart = new Date(Date.UTC(argNow.getUTCFullYear(), argNow.getUTCMonth(), argNow.getUTCDate()));
+    todayStart.setUTCHours(0, 0, 0, 0);
+
+    // For notifications, only show turnos from today onwards (not past ones)
+    const effectiveStart = startRange < todayStart ? todayStart : startRange;
+
     const turnos = await prisma.turno.findMany({
       where: {
         fecha: {
-          gte: startRange,
+          gte: effectiveStart,
           lte: endRange
         },
         estado: {

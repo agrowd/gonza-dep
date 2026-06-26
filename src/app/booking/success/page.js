@@ -66,11 +66,11 @@ function SuccessContent() {
             <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 0', marginBottom: '2rem', textAlign: 'left' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Cliente:</span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{turno.clienteNombre}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{turno.clienteNombre}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Día:</span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{new Date(turno.fecha).toLocaleDateString('es-ES', { dateStyle: 'full' })}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{new Date(turno.fecha).toLocaleDateString('es-ES', { dateStyle: 'full' })}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Horario:</span>
@@ -78,15 +78,15 @@ function SuccessContent() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Zonas:</span>
-                <span style={{ color: '#fff', fontWeight: 600, maxWidth: '70%', textAlign: 'right' }}>{turno.zonas}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600, maxWidth: '70%', textAlign: 'right' }}>{turno.zonas}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', borderTop: '1px dotted var(--border-color)', paddingTop: '0.75rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Seña abonada:</span>
-                <span style={{ color: '#81C784', fontWeight: 700 }}>${turno.valorSeña.toLocaleString()}</span>
+                <span style={{ color: '#2e7d32', fontWeight: 700 }}>${turno.valorSeña.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Saldo pendiente:</span>
-                <span style={{ color: '#fff', fontWeight: 700 }}>${turno.saldoPendiente.toLocaleString()}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>${turno.saldoPendiente.toLocaleString()}</span>
               </div>
             </div>
           ) : null}
