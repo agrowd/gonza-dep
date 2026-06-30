@@ -111,6 +111,11 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
+  position: sticky;
+  left: 0;
+  background-color: var(--bg-card) !important;
+  z-index: 20;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.04);
 }
 
 /* Scrollable Calendar Body */
@@ -125,7 +130,11 @@
 
 .timeColumn {
   border-right: 1px solid var(--border-color);
-  position: relative;
+  position: sticky;
+  left: 0;
+  background-color: var(--bg-secondary) !important;
+  z-index: 10;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.04);
 }
 
 .timeLabel {
