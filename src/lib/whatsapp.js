@@ -1,6 +1,7 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import prisma from './db.js';
+import { sendMaintenanceEmail } from './email.js';
 
 // Use globalThis to cache the client across hot-reloads in development
 if (!globalThis.whatsappStatus) {
@@ -314,6 +315,120 @@ export async function checkAndSendReminders() {
             turnoId: t.id,
             canal: 'WHATSAPP',
             mensaje: message,
+            estado: 'FALLIDO'
+          }
+        });
+      }
+    }
+
+    // ==========================================
+    // AUTOMATED MAINTENANCE REMINDERS (75 DAYS)
+    // ==========================================
+    console.log('[Reminder Cron] Checking finished appointments for 75-day maintenance reminders...');
+
+    const maintTargetDate = new Date(Date.UTC(argToday.getUTCFullYear(), argToday.getUTCMonth(), argToday.getUTCDate()));
+    maintTargetDate.setUTCDate(maintTargetDate.getUTCDate() - 75);
+
+    const maintStartRange = new Date(maintTargetDate);
+    maintStartRange.setUTCHours(0, 0, 0, 0);
+
+    const maintEndRange = new Date(maintTargetDate);
+    maintEndRange.setUTCHours(23, 59, 59, 999);
+
+    const finishedTurnos = await prisma.turno.findMany({
+      where: {
+        fecha: {
+          gte: maintStartRange,
+          lte: maintEndRange
+        },
+        estado: 'REALIZADO'
+      },
+      include: {
+        cliente: true
+      }
+    });
+
+    console.log(`[Reminder Cron] Found ${finishedTurnos.length} finished turnos on target maintenance date.`);
+
+    for (const t of finishedTurnos) {
+      if (!t.cliente || !t.cliente.email) continue;
+
+      // Check if client has any newer turnos
+      const newerTurno = await prisma.turno.findFirst({
+        where: {
+          clienteId: t.clienteId,
+          fecha: {
+            gt: t.fecha
+          }
+        }
+      });
+
+      if (newerTurno) {
+        console.log(`[Reminder Cron] Client ${t.cliente.nombreCompleto} has newer turnos. Skipping maintenance.`);
+        continue;
+      }
+
+      // Check if a maintenance email was already sent
+      const alreadySent = await prisma.notificacion.findFirst({
+        where: {
+          clienteId: t.clienteId,
+          mensaje: {
+            contains: 'mantenimiento'
+          },
+          canal: 'EMAIL'
+        }
+      });
+
+      if (alreadySent) {
+        console.log(`[Reminder Cron] Maintenance email already sent before to ${t.cliente.nombreCompleto}. Skipping.`);
+        continue;
+      }
+
+      // Load config templates
+      const subjectConf = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_subject' } });
+      const bodyConf = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_body' } });
+
+      const subjectTemplate = subjectConf?.value || '¡Te extrañamos! Es hora de tu mantenimiento de depilación láser';
+      const bodyTemplate = bodyConf?.value || 'Hola {cliente}, te recomendamos realizar una sesión de mantenimiento para tus zonas: {zonas}.';
+
+      let zonesText = '';
+      try {
+        const parsed = JSON.parse(t.zonas);
+        zonesText = parsed.map(z => z.nombre).join(', ');
+      } catch (e) {
+        zonesText = t.zonas;
+      }
+
+      const parseEmailTemplate = (template, clientName, zonesText) => {
+        return template
+          .replaceAll('{cliente}', clientName)
+          .replaceAll('{zonas}', zonesText);
+      };
+
+      const parsedSubject = parseEmailTemplate(subjectTemplate, t.cliente.nombreCompleto, zonesText);
+      const parsedBody = parseEmailTemplate(bodyTemplate, t.cliente.nombreCompleto, zonesText);
+
+      try {
+        console.log(`[Reminder Cron] Sending maintenance email to ${t.cliente.nombreCompleto}...`);
+        await sendMaintenanceEmail(t.cliente.email, parsedSubject, parsedBody);
+
+        await prisma.notificacion.create({
+          data: {
+            clienteId: t.cliente.id,
+            turnoId: t.id,
+            canal: 'EMAIL',
+            mensaje: `Correo de mantenimiento automático enviado. Asunto: "${parsedSubject}"`,
+            estado: 'ENVIADO'
+          }
+        });
+      } catch (err) {
+        console.error(`[Reminder Cron] Failed to send maintenance email to ${t.cliente.nombreCompleto}:`, err);
+        await prisma.notificacion.create({
+          data: {
+            clienteId: t.cliente.id,
+            turnoId: t.id,
+            canal: 'EMAIL',
+            mensaje: `Error al enviar correo de mantenimiento automático: ${err.message}`,
             estado: 'FALLIDO'
           }
         });

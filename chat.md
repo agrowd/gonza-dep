@@ -338,3 +338,21 @@
 - Verificación del correcto build de Next.js (`npm run build`) en local.
 - Carga de archivos al VPS mediante SCP y ejecución de `./deploy.sh` en el servidor para compilar en producción y reiniciar PM2.
 - Verificación mediante `curl` de red con respuesta exitosa `HTTP 200 OK`.
+
+## Mensaje del Usuario (2026-06-29 21:19:23-03:00)
+> implementalo (con los requerimientos y el plan aprobado para validación de DNI/email/teléfono, emails de recibos, mantenimiento a los 2.5 meses, estadísticas de rango libre, logo grande en sidebar y extensión de reserva online a 1 mes).
+
+## Respuesta del Asistente
+- Implementación de comprobaciones de duplicación e inconsistencia para DNI, Email y Teléfono en `src/app/api/admin/clientes/route.js` y perfiles de per-cliente `[id]/route.js`.
+- Adición de un selector interactivo "Mes" en `/admin/agenda` con su correspondiente grilla de visualización mensual de turnos.
+- Corrección de la hoja de estilos `agenda.module.css` para permitir el scroll natural de la página en dispositivos móviles (evitando dos scrollboxes y contenedores rígidos).
+- Remoción definitiva del texto aclaratorio sobre bloques de 10 minutos de la pantalla de agenda.
+- Implementación de validaciones para bloquear la reserva de citas en fechas/horas pasadas u horarios superpuestos en creación manual (`POST /api/admin/turnos`), reprogramación (`PUT /api/admin/turnos/[id]`) y agendado público (`POST /api/reservas/crear`).
+- Configuración de estado inicial `PENDIENTE_PAGO` en turnos manuales y cálculo de bonificaciones fijas/porcentuales guardadas dinámicamente en el campo preexistente `bonificacion`.
+- Inclusión del parámetro global `bcc: 'nuevacuenta@depilacionparahombres.com'` en todas las funciones de Nodemailer en `src/lib/email.js`.
+- Creación de la utilidad `sendReceiptEmail` y el endpoint `/api/admin/turnos/[id]/enviar-recibo`, vinculando la función a un botón "Enviar Recibo por Mail" en los detalles de las citas.
+- Adición de un cron de mantenimiento automático a los 75 días (2.5 meses) dentro del chequeo de recordatorios diario a las 10:00 AM en `src/lib/whatsapp.js`.
+- Ampliación de la ventana de reserva online del cliente en `src/app/page.js` de 14 a 30 días hábiles.
+- Modificación del backend `/api/admin/estadisticas` y de la vista `/admin/estadisticas` para procesar filtros por rangos "Desde / Hasta" con Date Pickers HTML5 en lugar de dropdowns de mes/año.
+- Rediseño del sidebar de administración `src/app/admin/SidebarNav.js` para incrementar la visualización del logotipo principal a `190px` de ancho.
+- Verificación exitosa de compilación completa del bundle de producción (`npm run build`) localmente para todas las 29 rutas estáticas y dinámicas.

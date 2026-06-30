@@ -43,14 +43,19 @@ function ClientesPageContent() {
     nombreCompleto: '',
     whatsapp: '',
     email: '',
+    dni: '',
     frecuencia: 4,
     observaciones: '',
-    notasGonzalo: '',
+    notesGonzalo: '',
     canalAdquisicion: 'MANUAL'
   });
 
   // Edit notes state
   const [editNotes, setEditNotes] = useState({
+    nombreCompleto: '',
+    whatsapp: '',
+    email: '',
+    dni: '',
     frecuencia: 4,
     observaciones: '',
     notasGonzalo: ''
@@ -96,6 +101,7 @@ function ClientesPageContent() {
           nombreCompleto: '',
           whatsapp: '',
           email: '',
+          dni: '',
           frecuencia: 4,
           observaciones: '',
           notasGonzalo: '',
@@ -125,6 +131,10 @@ function ClientesPageContent() {
         if (data && !data.error) {
           setSelectedClient(data);
           setEditNotes({
+            nombreCompleto: data.nombreCompleto || '',
+            whatsapp: data.whatsapp || '',
+            email: data.email || '',
+            dni: data.dni || '',
             frecuencia: data.frecuencia,
             observaciones: data.observaciones || '',
             notasGonzalo: data.notasGonzalo || ''
@@ -150,6 +160,10 @@ function ClientesPageContent() {
       if (res.ok) {
         setSelectedClient({
           ...selectedClient,
+          nombreCompleto: data.nombreCompleto,
+          whatsapp: data.whatsapp,
+          email: data.email,
+          dni: data.dni,
           frecuencia: data.frecuencia,
           observaciones: data.observaciones,
           notasGonzalo: data.notasGonzalo
@@ -461,6 +475,52 @@ function ClientesPageContent() {
             {activeTab === 'settings' && (
               <form onSubmit={handleSaveNotes} className={styles.ficheContainer}>
                 <div className={styles.cardSection}>
+                  <h3 className={styles.cardSectionTitle}>Datos del Cliente</h3>
+                  
+                  <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '1.5rem' }}>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>Nombre Completo *</label>
+                      <input
+                        type="text"
+                        value={editNotes.nombreCompleto}
+                        onChange={(e) => setEditNotes({ ...editNotes, nombreCompleto: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>DNI</label>
+                      <input
+                        type="text"
+                        value={editNotes.dni}
+                        onChange={(e) => setEditNotes({ ...editNotes, dni: e.target.value })}
+                        placeholder="Sin registrar"
+                      />
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>WhatsApp *</label>
+                      <input
+                        type="tel"
+                        value={editNotes.whatsapp}
+                        onChange={(e) => setEditNotes({ ...editNotes, whatsapp: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>Email *</label>
+                      <input
+                        type="email"
+                        value={editNotes.email}
+                        onChange={(e) => setEditNotes({ ...editNotes, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.cardSection}>
                   <h3 className={styles.cardSectionTitle}>Anotaciones de Ficha Digital</h3>
                   
                   <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr' }}>
@@ -530,6 +590,16 @@ function ClientesPageContent() {
                     onChange={(e) => setNewClient({ ...newClient, nombreCompleto: e.target.value })}
                     required
                     placeholder="Ej. Juan Pérez"
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>DNI (para validación única)</label>
+                  <input
+                    type="text"
+                    value={newClient.dni}
+                    onChange={(e) => setNewClient({ ...newClient, dni: e.target.value })}
+                    placeholder="Ej. 12345678"
                   />
                 </div>
 

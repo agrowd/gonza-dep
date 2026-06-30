@@ -12,6 +12,56 @@ function timeToMinutes(timeStr) {
   return hours * 60 + minutes;
 }
 
+function minutesToTime(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+}
+
+function isPastDateTime(fechaStr, horaInicio) {
+  const now = new Date();
+  const offsetBuenosAires = -3;
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+  const todayStr = nowLocal.toISOString().split('T')[0];
+  
+  if (fechaStr < todayStr) return true;
+  if (fechaStr === todayStr) {
+    const [hours, minutes] = horaInicio.split(':').map(Number);
+    const nowHours = nowLocal.getHours();
+    const nowMinutes = nowLocal.getMinutes();
+    if (hours < nowHours || (hours === nowHours && minutes < nowMinutes)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null) {
+  const targetDate = new Date(fechaStr + 'T00:00:00');
+  const dayTurnos = await prisma.turno.findMany({
+    where: {
+      fecha: targetDate,
+      estado: { not: 'CANCELADO' },
+      id: excludeTurnoId ? { not: excludeTurnoId } : undefined
+    },
+    include: {
+      cliente: true
+    }
+  });
+
+  const newStartMin = timeToMinutes(horaInicio);
+  const newEndMin = timeToMinutes(horaFin);
+
+  for (const t of dayTurnos) {
+    const startMin = timeToMinutes(t.horaInicio);
+    const endMin = timeToMinutes(t.horaFin);
+    if (startMin < newEndMin && endMin > newStartMin) {
+      return t;
+    }
+  }
+  return null;
+}
 
 // GET: List turnos in range
 export async function GET(request) {
@@ -87,6 +137,22 @@ export async function POST(request) {
 
     if (estado === 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin)) {
       return NextResponse.json({ error: 'Fecha y horarios son requeridos para bloquear' }, { status: 400 });
+    }
+
+    // Validation: Past Date/Time Check
+    if (isPastDateTime(fechaStr, horaInicio)) {
+      return NextResponse.json({ error: 'No es posible agendar turnos con fechas o de horarios anteriores/pasados.' }, { status: 400 });
+    }
+
+    // Validation: Overlap Check
+    const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin);
+    if (checkOverlap) {
+      const isBlock = checkOverlap.estado === 'BLOQUEADO';
+      return NextResponse.json({
+        error: isBlock 
+          ? 'El horario seleccionado se encuentra bloqueado administrativamente.' 
+          : `El horario seleccionado se solapa con otro turno de ${checkOverlap.cliente?.nombreCompleto || 'otro cliente'}.`
+      }, { status: 400 });
     }
 
     let finalClienteId = clienteId;

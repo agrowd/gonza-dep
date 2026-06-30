@@ -51,6 +51,7 @@ export async function PUT(request, { params }) {
       nombreCompleto,
       whatsapp,
       email,
+      dni,
       canalAdquisicion,
       estado,
       frecuencia,
@@ -58,10 +59,50 @@ export async function PUT(request, { params }) {
       notasGonzalo
     } = body;
 
+    // 1. DNI Uniqueness check (only if non-empty and changed)
+    if (dni) {
+      const existingDni = await prisma.cliente.findFirst({
+        where: {
+          dni,
+          id: { not: id }
+        }
+      });
+      if (existingDni) {
+        return NextResponse.json({ error: 'Ya existe otro cliente registrado con el DNI ingresado.' }, { status: 400 });
+      }
+    }
+
+    // 2. Email Uniqueness check
+    if (email) {
+      const existingEmail = await prisma.cliente.findFirst({
+        where: {
+          email,
+          id: { not: id }
+        }
+      });
+      if (existingEmail) {
+        return NextResponse.json({ error: 'Ya existe otro cliente registrado con el Email ingresado.' }, { status: 400 });
+      }
+    }
+
+    // 3. WhatsApp Uniqueness check
+    if (whatsapp) {
+      const existingWhatsapp = await prisma.cliente.findFirst({
+        where: {
+          whatsapp,
+          id: { not: id }
+        }
+      });
+      if (existingWhatsapp) {
+        return NextResponse.json({ error: 'Ya existe otro cliente registrado con el número de WhatsApp ingresado.' }, { status: 400 });
+      }
+    }
+
     const updateData = {};
     if (nombreCompleto) updateData.nombreCompleto = nombreCompleto;
     if (whatsapp) updateData.whatsapp = whatsapp;
     if (email) updateData.email = email;
+    if (dni !== undefined) updateData.dni = dni || null;
     if (canalAdquisicion) updateData.canalAdquisicion = canalAdquisicion;
     if (estado) updateData.estado = estado;
     if (frecuencia !== undefined) updateData.frecuencia = Number(frecuencia);

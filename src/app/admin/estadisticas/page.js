@@ -19,14 +19,18 @@ const WarningIcon = () => (
 
 export default function EstadisticasPage() {
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1); // 1-12
+  const firstDayStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const lastDayStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  const [startDate, setStartDate] = useState(firstDayStr);
+  const [endDate, setEndDate] = useState(lastDayStr);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = () => {
+    if (!startDate || !endDate) return;
     setLoading(true);
-    fetch(`/api/admin/estadisticas?year=${year}&month=${month}`)
+    fetch(`/api/admin/estadisticas?start=${startDate}&end=${endDate}`)
       .then(res => res.json())
       .then(resData => {
         if (!resData.error) {
@@ -39,7 +43,7 @@ export default function EstadisticasPage() {
 
   useEffect(() => {
     fetchStats();
-  }, [year, month]);
+  }, [startDate, endDate]);
 
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('es-AR', {
@@ -48,27 +52,6 @@ export default function EstadisticasPage() {
       maximumFractionDigits: 0
     }).format(amount);
   };
-
-  const monthsList = [
-    { value: 1, label: 'Enero' },
-    { value: 2, label: 'Febrero' },
-    { value: 3, label: 'Marzo' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Mayo' },
-    { value: 6, label: 'Junio' },
-    { value: 7, label: 'Julio' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Septiembre' },
-    { value: 10, label: 'Octubre' },
-    { value: 11, label: 'Noviembre' },
-    { value: 12, label: 'Diciembre' }
-  ];
-
-  const yearsList = [
-    now.getFullYear() - 1,
-    now.getFullYear(),
-    now.getFullYear() + 1
-  ];
 
   // Calculate percentage helper
   const getPercent = (value, total) => {
@@ -85,25 +68,25 @@ export default function EstadisticasPage() {
           <p>Ganancias, pérdidas, rendimiento de turnos y métricas de clientes.</p>
         </div>
 
-        <div className={styles.controls}>
-          <select 
-            className={styles.select} 
-            value={month} 
-            onChange={(e) => setMonth(parseInt(e.target.value, 10))}
-          >
-            {monthsList.map(m => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
-          <select 
-            className={styles.select} 
-            value={year} 
-            onChange={(e) => setYear(parseInt(e.target.value, 10))}
-          >
-            {yearsList.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+        <div className={styles.controls} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Desde</label>
+            <input 
+              type="date"
+              className={styles.select} 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Hasta</label>
+            <input 
+              type="date"
+              className={styles.select} 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 

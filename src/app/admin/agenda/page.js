@@ -19,6 +19,32 @@ function getStartOfWeek(date) {
   return start;
 }
 
+// Helper: Generate Mon-Sat dates for month calendar (excl. Sunday)
+function getMonthGridDates(selectedDate) {
+  if (!selectedDate) return [];
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  
+  // Start with the 1st of the month
+  const firstDay = new Date(year, month, 1);
+  
+  // Find Monday of that week
+  const start = getStartOfWeek(firstDay);
+  
+  const dates = [];
+  const temp = new Date(start);
+  
+  // 6 weeks * 6 days/week = 36 days.
+  for (let i = 0; i < 36; i++) {
+    if (temp.getDay() === 0) {
+      temp.setDate(temp.getDate() + 1); // skip Sunday
+    }
+    dates.push(new Date(temp));
+    temp.setDate(temp.getDate() + 1);
+  }
+  return dates;
+}
+
 // Helper: Convert HH:MM to minutes from midnight
 function timeToMinutes(timeStr) {
   if (!timeStr) return 0;
@@ -39,7 +65,7 @@ function addMinutesToTime(timeStr, minsToAdd) {
 export default function AgendaPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
-  const [viewMode, setViewMode] = useState('week'); // 'week' or 'day'
+  const [viewMode, setViewMode] = useState('week'); // 'week', 'day', 'month'
   const [selectedDate, setSelectedDate] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
@@ -66,6 +92,9 @@ export default function AgendaPage() {
     estado: '',
     valorTotal: '',
     valorSeña: '',
+    descuentoTipo: 'NINGUNO',
+    descuentoValor: '',
+    bonificacion: 0,
     observaciones: ''
   });
 
@@ -75,13 +104,17 @@ export default function AgendaPage() {
     nombreCompleto: '',
     whatsapp: '',
     email: '',
+    dni: '',
     fechaStr: '',
     horaInicio: '10:00',
     horaFin: '10:30',
     selectedZoneIds: [],
     valorTotal: '',
     valorSeña: '',
-    estado: 'SEÑADO',
+    descuentoTipo: 'NINGUNO',
+    descuentoValor: '',
+    bonificacion: 0,
+    estado: 'PENDIENTE_PAGO', // Manual creations default to PENDIENTE_PAGO now
     observaciones: '',
     clienteId: null
   });
@@ -176,11 +209,25 @@ export default function AgendaPage() {
 
   // 3. Fetch appointments when week dates are ready
   const fetchAppointments = () => {
-    if (weekDates.length === 0) return;
     setLoading(true);
+    let startStr, endStr;
     
-    const startStr = weekDates[0].toISOString().split('T')[0];
-    const endStr = weekDates[5].toISOString().split('T')[0];
+    if (viewMode === 'month' && selectedDate) {
+      const monthDates = getMonthGridDates(selectedDate);
+      if (monthDates.length === 0) {
+        setLoading(false);
+        return;
+      }
+      startStr = monthDates[0].toISOString().split('T')[0];
+      endStr = monthDates[monthDates.length - 1].toISOString().split('T')[0];
+    } else {
+      if (weekDates.length === 0) {
+        setLoading(false);
+        return;
+      }
+      startStr = weekDates[0].toISOString().split('T')[0];
+      endStr = weekDates[5].toISOString().split('T')[0];
+    }
 
     fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`)
       .then(res => res.json())
@@ -195,7 +242,7 @@ export default function AgendaPage() {
 
   useEffect(() => {
     fetchAppointments();
-  }, [weekDates]);
+  }, [weekDates, viewMode, selectedDate]);
 
   // 4. Fetch zones for the new appointment modal
   useEffect(() => {
@@ -215,6 +262,10 @@ export default function AgendaPage() {
       const prev = new Date(selectedDate);
       prev.setDate(selectedDate.getDate() - 1);
       setSelectedDate(prev);
+    } else if (viewMode === 'month' && selectedDate) {
+      const prev = new Date(selectedDate);
+      prev.setMonth(selectedDate.getMonth() - 1);
+      setSelectedDate(prev);
     } else if (currentWeekStart) {
       const prev = new Date(currentWeekStart);
       prev.setDate(currentWeekStart.getDate() - 7);
@@ -226,6 +277,10 @@ export default function AgendaPage() {
     if (viewMode === 'day' && selectedDate) {
       const next = new Date(selectedDate);
       next.setDate(selectedDate.getDate() + 1);
+      setSelectedDate(next);
+    } else if (viewMode === 'month' && selectedDate) {
+      const next = new Date(selectedDate);
+      next.setMonth(selectedDate.getMonth() + 1);
       setSelectedDate(next);
     } else if (currentWeekStart) {
       const next = new Date(currentWeekStart);
@@ -296,6 +351,24 @@ export default function AgendaPage() {
     }
   };
 
+  // Send digital receipt via Email
+  const handleSendReceipt = async (turnoId) => {
+    try {
+      const res = await fetch(`/api/admin/turnos/${turnoId}/enviar-recibo`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        alert('Comprobante enviado por correo correctamente.');
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Error al enviar el comprobante.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de red al enviar el comprobante.');
+    }
+  };
+
   // Schedule next turno based on client's treatment frequency
   const handleScheduleNextTurn = (turno) => {
     if (!turno || !turno.cliente) return;
@@ -321,13 +394,17 @@ export default function AgendaPage() {
       nombreCompleto: turno.cliente.nombreCompleto || '',
       whatsapp: turno.cliente.whatsapp || '',
       email: turno.cliente.email || '',
+      dni: turno.cliente.dni || '',
       fechaStr: targetDateStr,
       horaInicio: turno.horaInicio,
       horaFin: turno.horaFin,
       selectedZoneIds: preselectedZoneIds,
       valorTotal: turno.valorTotal,
       valorSeña: turno.valorSeña,
-      estado: 'SEÑADO',
+      descuentoTipo: 'NINGUNO',
+      descuentoValor: '',
+      bonificacion: 0,
+      estado: 'PENDIENTE_PAGO',
       observaciones: '',
       clienteId: turno.clienteId
     });
@@ -349,6 +426,7 @@ export default function AgendaPage() {
           estado: editTurno.estado,
           valorTotal: Number(editTurno.valorTotal),
           valorSeña: Number(editTurno.valorSeña),
+          bonificacion: Number(editTurno.bonificacion || 0),
           observaciones: editTurno.observaciones
         })
       });
@@ -356,9 +434,13 @@ export default function AgendaPage() {
         setIsEditing(false);
         setIsDetailsOpen(false);
         fetchAppointments();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Error al reprogramar el turno.');
       }
     } catch (err) {
       console.error('Error saving edited appointment:', err);
+      alert('Error de red al guardar los cambios.');
     }
   };
 
@@ -378,13 +460,17 @@ export default function AgendaPage() {
       nombreCompleto: '',
       whatsapp: '',
       email: '',
+      dni: '',
       fechaStr: date.toISOString().split('T')[0],
       horaInicio: timeStr,
       horaFin: endTimeStr,
       selectedZoneIds: [],
       valorTotal: '',
       valorSeña: '',
-      estado: 'SEÑADO',
+      descuentoTipo: 'NINGUNO',
+      descuentoValor: '',
+      bonificacion: 0,
+      estado: 'PENDIENTE_PAGO',
       observaciones: '',
       clienteId: null
     });
@@ -406,15 +492,55 @@ export default function AgendaPage() {
     const endMins = endMin % 60;
     const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
+    // Calculate discount (bonificacion)
+    let bonificacion = 0;
+    if (newTurno.descuentoTipo === 'PORCENTAJE') {
+      bonificacion = calcs.valorTotal * (Number(newTurno.descuentoValor || 0) / 100);
+    } else if (newTurno.descuentoTipo === 'PESOS') {
+      bonificacion = Number(newTurno.descuentoValor || 0);
+    }
+
+    const finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+
     setNewTurno(prev => ({
       ...prev,
       horaFin: horaFinStr,
-      valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? calcs.valorTotal : prev.valorTotal,
+      valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? finalTotal : prev.valorTotal,
       valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
-      autoTotal: calcs.valorTotal, // save to compare
-      autoSeña: calcs.valorSeña
+      autoTotal: finalTotal,
+      autoSeña: calcs.valorSeña,
+      bonificacion: bonificacion
     }));
-  }, [newTurno.selectedZoneIds, newTurno.horaInicio]);
+  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor]);
+
+  // Re-calculate pricing/discount for editTurno
+  useEffect(() => {
+    if (!isEditing || !selectedTurno) return;
+    
+    // Calculate base total from zones
+    let baseTotal = 0;
+    try {
+      const parsedZonas = JSON.parse(selectedTurno.zonas);
+      baseTotal = parsedZonas.reduce((sum, z) => sum + (z.precio || z.precioBase || 0), 0);
+    } catch (e) {
+      baseTotal = selectedTurno.valorTotal + (selectedTurno.bonificacion || 0);
+    }
+    
+    let bonificacion = 0;
+    if (editTurno.descuentoTipo === 'PORCENTAJE') {
+      bonificacion = baseTotal * (Number(editTurno.descuentoValor || 0) / 100);
+    } else if (editTurno.descuentoTipo === 'PESOS') {
+      bonificacion = Number(editTurno.descuentoValor || 0);
+    }
+    
+    const finalTotal = Math.max(0, baseTotal - bonificacion);
+    
+    setEditTurno(prev => ({
+      ...prev,
+      valorTotal: finalTotal,
+      bonificacion: bonificacion
+    }));
+  }, [editTurno.descuentoTipo, editTurno.descuentoValor, isEditing]);
 
   // Submit manual creation
   const handleCreateTurno = async (e) => {
@@ -432,9 +558,13 @@ export default function AgendaPage() {
       if (res.ok) {
         setIsNewOpen(false);
         fetchAppointments();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Error al agendar el turno.');
       }
     } catch (err) {
       console.error('Error creating manually:', err);
+      alert('Error de red al crear el turno.');
     }
   };
 
@@ -501,13 +631,17 @@ export default function AgendaPage() {
     return `${first.getDate()} de ${first.toLocaleDateString('es-ES', { month: 'short' })} - ${last.getDate()} de ${last.toLocaleDateString('es-ES', { month: 'short' })} ${last.getFullYear()}`;
   };
 
+  const getMonthName = () => {
+    if (!selectedDate) return '';
+    return selectedDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  };
+
   return (
     <div>
       {/* Page Header */}
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <h2>Agenda de Turnos</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Visualizá y gestioná las reservas en bloques de 10 minutos.</p>
         </div>
         <div className={styles.controls} style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
           {/* View Mode Toggle */}
@@ -544,6 +678,22 @@ export default function AgendaPage() {
             >
               Semana
             </button>
+            <button 
+              onClick={() => setViewMode('month')} 
+              className="btn-toggle"
+              style={{
+                background: viewMode === 'month' ? 'var(--color-gold)' : 'transparent',
+                color: viewMode === 'month' ? '#000' : 'var(--text-primary)',
+                border: 'none',
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+                transition: 'var(--transition)'
+              }}
+            >
+              Mes
+            </button>
           </div>
 
           {/* Jump to Date Picker */}
@@ -563,8 +713,8 @@ export default function AgendaPage() {
           />
 
           <button onClick={handlePrev} className={styles.navBtn}><PrevIcon /></button>
-          <span className={styles.currentWeek} style={{ minWidth: '150px', textAlign: 'center' }}>
-            {viewMode === 'day' ? getSelectedDayName() : getWeekRangeName()}
+          <span className={styles.currentWeek} style={{ minWidth: '150px', textAlign: 'center', textTransform: 'capitalize' }}>
+            {viewMode === 'day' ? getSelectedDayName() : viewMode === 'month' ? getMonthName() : getWeekRangeName()}
           </span>
           <button onClick={handleNext} className={styles.navBtn}><NextIcon /></button>
           
@@ -573,13 +723,17 @@ export default function AgendaPage() {
               nombreCompleto: '',
               whatsapp: '',
               email: '',
+              dni: '',
               fechaStr: selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
               horaInicio: config.work_start,
               horaFin: addMinutesToTime(config.work_start, 30),
               selectedZoneIds: [],
               valorTotal: '',
               valorSeña: '',
-              estado: 'SEÑADO',
+              descuentoTipo: 'NINGUNO',
+              descuentoValor: '',
+              bonificacion: 0,
+              estado: 'PENDIENTE_PAGO',
               observaciones: '',
               clienteId: null
             });
@@ -589,193 +743,281 @@ export default function AgendaPage() {
       </div>
 
       {/* Week/Day Calendar Grid */}
-      <div className={styles.calendarContainer}>
-        {/* Days Header */}
-        <div className={styles.gridHeader} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr' } : {}}>
-          <div className={`${styles.headerCell} ${styles.timeColHeader}`}>Hora</div>
-          {viewMode === 'day' ? (
-            (() => {
-              if (!selectedDate) return null;
-              const isToday = new Date().toDateString() === selectedDate.toDateString();
-              const dayName = selectedDate.toLocaleDateString('es-ES', { weekday: 'short' });
-              return (
-                <div className={styles.headerCell}>
-                  <span className={styles.dayName}>{dayName}</span>
-                  <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{selectedDate.getDate()}</span>
-                </div>
-              );
-            })()
-          ) : (
-            weekDates.map((date, index) => {
-              const isToday = new Date().toDateString() === date.toDateString();
-              const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
-              return (
-                <div key={index} className={styles.headerCell}>
-                  <span className={styles.dayName}>{dayName}</span>
-                  <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{date.getDate()}</span>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Scrollable Timeline body */}
-        <div className={styles.gridBody} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr' } : {}}>
-          {/* Time Column */}
-          <div className={styles.timeColumn}>
-            {timeLabels.map((time, idx) => (
-              <div key={idx} className={styles.timeLabel}>{time}</div>
-            ))}
-          </div>
-
-          {/* Days Columns */}
-          {viewMode === 'day' ? (
-            (() => {
-              if (!selectedDate) return null;
-              const dateStr = selectedDate.toISOString().split('T')[0];
-              const dayAppointments = appointments.filter(app => {
-                const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
-                return appDateStr === dateStr;
-              });
-
-              return (
-                <div className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
-                  {/* Background grid lines for hours */}
-                  <div className={styles.gridLines}>
-                    {timeLabels.map((_, idx) => (
-                      <div key={idx} className={styles.gridLineRow}></div>
-                    ))}
-                  </div>
-
-                  {/* Current Time Indicator Line */}
-                  {isToday(selectedDate) && nowPosition !== null && (
-                    <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
-                      <div className={styles.currentTimeLineDot}></div>
+      {/* Week/Day/Month Calendar Grid */}
+      <div className={styles.calendarContainer} style={viewMode === 'month' ? { height: 'auto', minHeight: 'auto', overflowX: 'visible' } : {}}>
+        {viewMode === 'month' ? (
+          <>
+            {/* Month Header */}
+            <div className={styles.monthGridHeader}>
+              <div className={styles.monthHeaderCell}>Lun</div>
+              <div className={styles.monthHeaderCell}>Mar</div>
+              <div className={styles.monthHeaderCell}>Mié</div>
+              <div className={styles.monthHeaderCell}>Jue</div>
+              <div className={styles.monthHeaderCell}>Vie</div>
+              <div className={styles.monthHeaderCell}>Sáb</div>
+            </div>
+            
+            {/* Month Body Grid */}
+            <div className={styles.monthGrid}>
+              {getMonthGridDates(selectedDate).map((date, idx) => {
+                const dateStr = date.toISOString().split('T')[0];
+                const isToday = new Date().toDateString() === date.toDateString();
+                const isOutsideMonth = date.getMonth() !== selectedDate.getMonth();
+                
+                const dayAppointments = appointments.filter(app => {
+                  const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                  return appDateStr === dateStr;
+                });
+                
+                return (
+                  <div 
+                    key={idx} 
+                    className={`${styles.monthDayCell} ${isOutsideMonth ? styles.monthDayOutside : ''}`}
+                    onClick={() => {
+                      setSelectedDate(date);
+                      setViewMode('day');
+                    }}
+                  >
+                    <span className={`${styles.monthDayNumber} ${isToday ? styles.monthDayNumberToday : ''}`}>
+                      {date.getDate()}
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px', width: '100%', overflow: 'hidden' }}>
+                      {dayAppointments.slice(0, 4).map(app => {
+                        let zonasText = '';
+                        try {
+                          const zonesArray = JSON.parse(app.zonas);
+                          zonasText = zonesArray.map(z => z.nombre).join(', ');
+                        } catch (e) {
+                          zonasText = app.zonas;
+                        }
+                        
+                        return (
+                          <div
+                            key={app.id}
+                            className={`${styles.monthAppBlock} ${getStatusBlockClass(app.estado)}`}
+                            title={`${app.horaInicio} - ${app.cliente?.nombreCompleto || 'Bloqueo'}: ${zonasText}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTurno(app);
+                              setIsDetailsOpen(true);
+                            }}
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              lineHeight: '1.2'
+                            }}
+                          >
+                            {app.horaInicio} {app.cliente?.nombreCompleto || 'Bloqueo'}
+                          </div>
+                        );
+                      })}
+                      {dayAppointments.length > 4 && (
+                        <div style={{ fontSize: '0.65rem', color: 'var(--color-gold)', textAlign: 'center', fontWeight: 'bold' }}>
+                          + {dayAppointments.length - 4} más
+                        </div>
+                      )}
                     </div>
-                  )}
-
-                  {/* Empty slot clicks handlers */}
-                  {Array.from({ length: totalHalfHours }).map((_, idx) => {
-                    const startMin = WORK_START + idx * 30;
-                    const top = idx * 50; // 30 mins = 50px height
-                    return (
-                      <div
-                        key={idx}
-                        className={styles.emptySlotTrigger}
-                        style={{ top: `${top}px`, height: '50px' }}
-                        onClick={() => handleEmptySlotClick(selectedDate, startMin)}
-                      ></div>
-                    );
-                  })}
-
-                  {/* Appointments blocks absolute positioning */}
-                  {dayAppointments.map((app) => {
-                    const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
-                    let zonasText = '';
-                    try {
-                      const zonesArray = JSON.parse(app.zonas);
-                      zonasText = zonesArray.map(z => z.nombre).join(', ');
-                    } catch (e) {
-                      zonasText = app.zonas;
-                    }
-
-                    return (
-                      <div
-                        key={app.id}
-                        className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
-                        style={blockStyle}
-                        onClick={() => {
-                          setSelectedTurno(app);
-                          setIsDetailsOpen(true);
-                        }}
-                      >
-                        <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
-                        {app.duracionMinutos > 30 && (
-                          <>
-                            <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
-                            <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()
-          ) : (
-            weekDates.map((date, dayIdx) => {
-              const dateStr = date.toISOString().split('T')[0];
-              const dayAppointments = appointments.filter(app => {
-                const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
-                return appDateStr === dateStr;
-              });
-
-              return (
-                <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
-                  {/* Background grid lines for hours */}
-                  <div className={styles.gridLines}>
-                    {timeLabels.map((_, idx) => (
-                      <div key={idx} className={styles.gridLineRow}></div>
-                    ))}
                   </div>
-
-                  {/* Current Time Indicator Line */}
-                  {isToday(date) && nowPosition !== null && (
-                    <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
-                      <div className={styles.currentTimeLineDot}></div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Days Header */}
+            <div className={styles.gridHeader} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr', minWidth: 'auto' } : { minWidth: '800px' }}>
+              <div className={`${styles.headerCell} ${styles.timeColHeader}`}>Hora</div>
+              {viewMode === 'day' ? (
+                (() => {
+                  if (!selectedDate) return null;
+                  const isToday = new Date().toDateString() === selectedDate.toDateString();
+                  const dayName = selectedDate.toLocaleDateString('es-ES', { weekday: 'short' });
+                  return (
+                    <div className={styles.headerCell}>
+                      <span className={styles.dayName}>{dayName}</span>
+                      <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{selectedDate.getDate()}</span>
                     </div>
-                  )}
+                  );
+                })()
+              ) : (
+                weekDates.map((date, index) => {
+                  const isToday = new Date().toDateString() === date.toDateString();
+                  const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+                  return (
+                    <div key={index} className={styles.headerCell}>
+                      <span className={styles.dayName}>{dayName}</span>
+                      <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{date.getDate()}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
 
-                  {/* Empty slot clicks handlers */}
-                  {Array.from({ length: totalHalfHours }).map((_, idx) => {
-                    const startMin = WORK_START + idx * 30;
-                    const top = idx * 50; // 30 mins = 50px height
-                    return (
-                      <div
-                        key={idx}
-                        className={styles.emptySlotTrigger}
-                        style={{ top: `${top}px`, height: '50px' }}
-                        onClick={() => handleEmptySlotClick(date, startMin)}
-                      ></div>
-                    );
-                  })}
+            {/* Scrollable Timeline body */}
+            <div className={styles.gridBody} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr', minWidth: 'auto' } : { minWidth: '800px' }}>
+              {/* Time Column */}
+              <div className={styles.timeColumn}>
+                {timeLabels.map((time, idx) => (
+                  <div key={idx} className={styles.timeLabel}>{time}</div>
+                ))}
+              </div>
 
-                  {/* Appointments blocks absolute positioning */}
-                  {dayAppointments.map((app) => {
-                    const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
-                    let zonasText = '';
-                    try {
-                      const zonesArray = JSON.parse(app.zonas);
-                      zonasText = zonesArray.map(z => z.nombre).join(', ');
-                    } catch (e) {
-                      zonasText = app.zonas;
-                    }
+              {/* Days Columns */}
+              {viewMode === 'day' ? (
+                (() => {
+                  if (!selectedDate) return null;
+                  const dateStr = selectedDate.toISOString().split('T')[0];
+                  const dayAppointments = appointments.filter(app => {
+                    const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                    return appDateStr === dateStr;
+                  });
 
-                    return (
-                      <div
-                        key={app.id}
-                        className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
-                        style={blockStyle}
-                        onClick={() => {
-                          setSelectedTurno(app);
-                          setIsDetailsOpen(true);
-                        }}
-                      >
-                        <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
-                        {app.duracionMinutos > 30 && (
-                          <>
-                            <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
-                            <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
-                          </>
-                        )}
+                  return (
+                    <div className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
+                      {/* Background grid lines for hours */}
+                      <div className={styles.gridLines}>
+                        {timeLabels.map((_, idx) => (
+                          <div key={idx} className={styles.gridLineRow}></div>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              );
-            })
-          )}
-        </div>
+
+                      {/* Current Time Indicator Line */}
+                      {isToday(selectedDate) && nowPosition !== null && (
+                        <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
+                          <div className={styles.currentTimeLineDot}></div>
+                        </div>
+                      )}
+
+                      {/* Empty slot clicks handlers */}
+                      {Array.from({ length: totalHalfHours }).map((_, idx) => {
+                        const startMin = WORK_START + idx * 30;
+                        const top = idx * 50; // 30 mins = 50px height
+                        return (
+                          <div
+                            key={idx}
+                            className={styles.emptySlotTrigger}
+                            style={{ top: `${top}px`, height: '50px' }}
+                            onClick={() => handleEmptySlotClick(selectedDate, startMin)}
+                          ></div>
+                        );
+                      })}
+
+                      {/* Appointments blocks absolute positioning */}
+                      {dayAppointments.map((app) => {
+                        const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
+                        let zonasText = '';
+                        try {
+                          const zonesArray = JSON.parse(app.zonas);
+                          zonasText = zonesArray.map(z => z.nombre).join(', ');
+                        } catch (e) {
+                          zonasText = app.zonas;
+                        }
+
+                        return (
+                          <div
+                            key={app.id}
+                            className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
+                            style={blockStyle}
+                            onClick={() => {
+                              setSelectedTurno(app);
+                              setIsDetailsOpen(true);
+                            }}
+                          >
+                            <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                            {app.duracionMinutos > 30 && (
+                              <>
+                                <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              ) : (
+                weekDates.map((date, dayIdx) => {
+                  const dateStr = date.toISOString().split('T')[0];
+                  const dayAppointments = appointments.filter(app => {
+                    const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                    return appDateStr === dateStr;
+                  });
+
+                  return (
+                    <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
+                      {/* Background grid lines for hours */}
+                      <div className={styles.gridLines}>
+                        {timeLabels.map((_, idx) => (
+                          <div key={idx} className={styles.gridLineRow}></div>
+                        ))}
+                      </div>
+
+                      {/* Current Time Indicator Line */}
+                      {isToday(date) && nowPosition !== null && (
+                        <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
+                          <div className={styles.currentTimeLineDot}></div>
+                        </div>
+                      )}
+
+                      {/* Empty slot clicks handlers */}
+                      {Array.from({ length: totalHalfHours }).map((_, idx) => {
+                        const startMin = WORK_START + idx * 30;
+                        const top = idx * 50; // 30 mins = 50px height
+                        return (
+                          <div
+                            key={idx}
+                            className={styles.emptySlotTrigger}
+                            style={{ top: `${top}px`, height: '50px' }}
+                            onClick={() => handleEmptySlotClick(date, startMin)}
+                          ></div>
+                        );
+                      })}
+
+                      {/* Appointments blocks absolute positioning */}
+                      {dayAppointments.map((app) => {
+                        const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
+                        let zonasText = '';
+                        try {
+                          const zonesArray = JSON.parse(app.zonas);
+                          zonasText = zonesArray.map(z => z.nombre).join(', ');
+                        } catch (e) {
+                          zonasText = app.zonas;
+                        }
+
+                        return (
+                          <div
+                            key={app.id}
+                            className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
+                            style={blockStyle}
+                            onClick={() => {
+                              setSelectedTurno(app);
+                              setIsDetailsOpen(true);
+                            }}
+                          >
+                            <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                            {app.duracionMinutos > 30 && (
+                              <>
+                                <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* MODAL 1: Appointment Details */}
@@ -863,6 +1105,29 @@ export default function AgendaPage() {
                       value={editTurno.valorSeña}
                       onChange={(e) => setEditTurno({ ...editTurno, valorSeña: e.target.value })}
                       required
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Tipo de Descuento</label>
+                    <select
+                      value={editTurno.descuentoTipo}
+                      onChange={(e) => setEditTurno({ ...editTurno, descuentoTipo: e.target.value })}
+                    >
+                      <option value="NINGUNO">Sin Descuento</option>
+                      <option value="PORCENTAJE">Porcentaje (%)</option>
+                      <option value="PESOS">Monto Fijo ($)</option>
+                    </select>
+                  </div>
+
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>Valor Descuento</label>
+                    <input
+                      type="number"
+                      value={editTurno.descuentoValor}
+                      onChange={(e) => setEditTurno({ ...editTurno, descuentoValor: e.target.value })}
+                      placeholder="Ej. 10 o 500"
+                      disabled={editTurno.descuentoTipo === 'NINGUNO'}
                     />
                   </div>
 
@@ -1005,6 +1270,15 @@ export default function AgendaPage() {
                         💬 Chatear por WhatsApp
                       </a>
                     )}
+                    {selectedTurno.estado !== 'BLOQUEADO' && selectedTurno.cliente?.email && (
+                      <button
+                        onClick={() => handleSendReceipt(selectedTurno.id)}
+                        className="btn btn-secondary"
+                        style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', borderColor: '#d4a54d', color: '#d4a54d' }}
+                      >
+                        🧾 Enviar Recibo por Mail
+                      </button>
+                    )}
                     <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
                       🗑️ Eliminar Registro
                     </button>
@@ -1094,6 +1368,7 @@ export default function AgendaPage() {
                                 nombreCompleto: client.nombreCompleto,
                                 whatsapp: client.whatsapp,
                                 email: client.email,
+                                dni: client.dni || '',
                                 clienteId: client.id,
                                 fechaStr: targetDateStr
                               }));
@@ -1111,6 +1386,16 @@ export default function AgendaPage() {
                         ))}
                     </ul>
                   )}
+                </div>
+
+                <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                  <label className={styles.inputLabel}>DNI del Cliente</label>
+                  <input
+                    type="text"
+                    value={newTurno.dni}
+                    onChange={(e) => setNewTurno({ ...newTurno, dni: e.target.value })}
+                    placeholder="Opcional. Ej. 12345678"
+                  />
                 </div>
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>WhatsApp *</label>
@@ -1196,6 +1481,29 @@ export default function AgendaPage() {
                     onChange={(e) => setNewTurno({ ...newTurno, valorSeña: e.target.value })}
                     required
                     placeholder="Auto-calculado si está vacío"
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Tipo de Descuento</label>
+                  <select
+                    value={newTurno.descuentoTipo}
+                    onChange={(e) => setNewTurno({ ...newTurno, descuentoTipo: e.target.value })}
+                  >
+                    <option value="NINGUNO">Sin Descuento</option>
+                    <option value="PORCENTAJE">Porcentaje (%)</option>
+                    <option value="PESOS">Monto Fijo ($)</option>
+                  </select>
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Valor Descuento</label>
+                  <input
+                    type="number"
+                    value={newTurno.descuentoValor}
+                    onChange={(e) => setNewTurno({ ...newTurno, descuentoValor: e.target.value })}
+                    placeholder="Ej. 10 o 500"
+                    disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />
                 </div>
                 <div className={styles.inputGroup}>

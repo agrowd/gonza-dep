@@ -17,6 +17,51 @@ function timeToMinutes(timeStr) {
   return hours * 60 + minutes;
 }
 
+function isPastDateTime(fechaStr, horaInicio) {
+  const now = new Date();
+  const offsetBuenosAires = -3;
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+  const todayStr = nowLocal.toISOString().split('T')[0];
+  
+  if (fechaStr < todayStr) return true;
+  if (fechaStr === todayStr) {
+    const [hours, minutes] = horaInicio.split(':').map(Number);
+    const nowHours = nowLocal.getHours();
+    const nowMinutes = nowLocal.getMinutes();
+    if (hours < nowHours || (hours === nowHours && minutes < nowMinutes)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null) {
+  const targetDate = new Date(fechaStr + 'T00:00:00');
+  const dayTurnos = await prisma.turno.findMany({
+    where: {
+      fecha: targetDate,
+      estado: { not: 'CANCELADO' },
+      id: excludeTurnoId ? { not: excludeTurnoId } : undefined
+    },
+    include: {
+      cliente: true
+    }
+  });
+
+  const newStartMin = timeToMinutes(horaInicio);
+  const newEndMin = timeToMinutes(horaFin);
+
+  for (const t of dayTurnos) {
+    const startMin = timeToMinutes(t.horaInicio);
+    const endMin = timeToMinutes(t.horaFin);
+    if (startMin < newEndMin && endMin > newStartMin) {
+      return t;
+    }
+  }
+  return null;
+}
+
 
 // PUT: Update appointment (actions: reprogram, cancel, mark completed, approve)
 export async function PUT(request, { params }) {
@@ -48,6 +93,37 @@ export async function PUT(request, { params }) {
 
     if (!oldTurn) {
       return NextResponse.json({ error: 'Turno no encontrado' }, { status: 404 });
+    }
+
+    const checkFechaStr = fechaStr || oldTurn.fecha.toISOString().split('T')[0];
+    const checkHoraInicio = horaInicio || oldTurn.horaInicio;
+    const checkHoraFin = horaFin || oldTurn.horaFin;
+    const checkEstado = estado || oldTurn.estado;
+
+    // Past Date/Time Check (only validate if date/time is actually changing and not cancelled)
+    if (checkEstado !== 'CANCELADO') {
+      const isDateChanged = fechaStr && fechaStr !== oldTurn.fecha.toISOString().split('T')[0];
+      const isTimeChanged = horaInicio && horaInicio !== oldTurn.horaInicio;
+      const isStateReactivated = estado && estado !== 'CANCELADO' && oldTurn.estado === 'CANCELADO';
+      
+      if (isDateChanged || isTimeChanged || isStateReactivated) {
+        if (isPastDateTime(checkFechaStr, checkHoraInicio)) {
+          return NextResponse.json({ error: 'No es posible reprogramar un turno a una fecha o de horario anteriores/pasados.' }, { status: 400 });
+        }
+      }
+    }
+
+    // Overlap Check (if the appointment is active/being reactivated)
+    if (checkEstado !== 'CANCELADO') {
+      const checkOverlap = await hasOverlappingTurno(checkFechaStr, checkHoraInicio, checkHoraFin, id);
+      if (checkOverlap) {
+        const isBlock = checkOverlap.estado === 'BLOQUEADO';
+        return NextResponse.json({
+          error: isBlock 
+            ? 'El horario seleccionado se encuentra bloqueado administrativamente.' 
+            : `El horario seleccionado se solapa con otro turno de ${checkOverlap.cliente?.nombreCompleto || 'otro cliente'}.`
+        }, { status: 400 });
+      }
     }
 
     // Prepare update data

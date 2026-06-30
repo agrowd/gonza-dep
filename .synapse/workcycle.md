@@ -95,9 +95,7 @@
   - El usuario suministró un nuevo logotipo oficial circular con diseño de color rojo y la letra "G" en gris.
   - Se sobreescribió el archivo de logo (`public/logo.png`) y el favicon (`src/app/favicon.ico`) en el repositorio local.
   - Se transfirieron ambos recursos directamente al VPS a través de SCP.
-  - Se completó con éxito la recompilación del proyecto Next.js en el servidor a través de `./deploy.sh`, empaquetando el nuevo favicon y logo de forma definitiva y reiniciando el servicio bajo PM2.
-
-- **23 de Junio (2:06 PM - 2:10 PM)**:
+  - Se completó con éxito la recompi- **23 de Junio (2:06 PM - 2:10 PM)**:
   - El usuario suministró una nueva versión del logotipo circular con fondo transparente.
   - Se sobreescribió el logo (`public/logo.png`) y el favicon (`src/app/favicon.ico`) locales y se subieron al VPS mediante SCP.
   - Se completó con éxito la recompilación del proyecto Next.js en el servidor a través de `./deploy.sh`, integrando el favicon y logo transparentes y reiniciando el servicio bajo PM2.
@@ -127,7 +125,7 @@
   - Se transfirió el archivo al VPS por SCP a la ruta `/srv/gonzalo-dep/.env` y se ejecutó `./deploy.sh` para reconstruir el bundle de producción y reiniciar PM2.
 
 - **23 de Junio (8:10 PM - 8:28 PM)**:
-  - El usuario reportó que al intentar crear un bloqueo de día completo de `10:00` a `22:00`, la operación fallaba.
+  - El usuario reportó que al intentar crear un bloqueo de día completo de `10:00` a `22:00`, la operation fallaba.
   - Se revisaron los logs de errores de PM2 (`gonzalo-agenda-error.log`), detectando un `ReferenceError: timeToMinutes is not defined` en `src/app/api/admin/turnos/route.js`.
   - Se agregó la definición de la función `timeToMinutes` al inicio de `src/app/api/admin/turnos/route.js` y de `src/app/api/admin/turnos/[id]/route.js` (para la lógica de actualización/PUT).
   - Se subieron los archivos al VPS vía SCP y se ejecutó `./deploy.sh` exitosamente.
@@ -141,7 +139,7 @@
   - Se subieron los archivos modificados al VPS y se ejecutó `./deploy.sh` para reconstruir la compilación Next.js y reiniciar los procesos PM2 con los cambios aplicados.
 
 - **25 de Junio (09:05 AM)**:
-  - Se completó la tarea de cambio de logotipo principal a la versión en blanco (`Logo-Gonzalo-Depilacion-para-hombres-Blanco.png`), manteniendo el favicon en la carpeta `src/app/favicon.ico` with el logotipo oficial circular original.
+  - Se completó la tarea de cambio de logotipo principal a la versión en blanco (`Logo-Gonzalo-Depilacion-para-hombres-Blanco.png`), manteniendo el favicon en la carpeta `src/app/favicon.ico` con el logotipo oficial circular original.
   - Se sincronizaron los archivos locales modificados con el VPS de producción.
   - Se ejecutó el script de despliegue `./deploy.sh` en el VPS para compilar el nuevo build de producción con Next.js y reiniciar el proceso PM2 `gonzalo-agenda` en el puerto 3006.
   - Se verificó la disponibilidad de la web bajo HTTPS respondiendo con HTTP 200 OK mediante comandos curl.
@@ -194,6 +192,40 @@
   - Se corrigió el contraste de texto (de negro a blanco) en elementos activos con fondo rojo bordó (`.stepDotCompleted`, `.checkboxActive`, `.dateButtonActive`, `.slotButtonActive`).
   - Se eliminaron inline-styles con color blanco (`#fff`) hardcodeado en las tarjetas de resumen de `page.js` y de `success/page.js` para asegurar que el texto sea legible en el nuevo fondo claro.
   - Se ajustó el estilo del botón "Acceso Interno" en la cabecera pública de `page.js` para mantener su visibilidad y contraste en blanco sobre la cabecera bordó.
+  - Se verificó la compilación local (`npm run build`) y se subieron los archivos modificados al VPS (`187.127.9.216`).
+  - Se ejecutó `./deploy.sh` en el VPS, reconstruyendo la aplicación y recargando PM2.
+  - Se comprobó mediante `curl` de red que el sitio responde correctamente con `HTTP 200 OK`.
+
+## 📅 Sesión: 29 de Junio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Agregar validaciones de duplicados para DNI, Email y Teléfono (creación y actualización manual).
+- [x] Añadir vista mensual interactiva a la agenda administrativa.
+- [x] Corregir scroll móvil de la agenda para evitar doble scrollbox.
+- [x] Evitar superposición de turnos manuales y reservas de fechas/horas pasadas usando GMT-3.
+- [x] Implementar descuentos (fijo/porcentaje) y valor por defecto PENDIENTE_PAGO en turnos manuales.
+- [x] Agregar copia oculta BCC global a `nuevacuenta@depilacionparahombres.com` en todos los correos.
+- [x] Implementar opción de enviar recibo digital de turno/seña por correo.
+- [x] Crear cron para correos automáticos de mantenimiento a los 2.5 meses (75 días).
+- [x] Extender la ventana de reserva online del cliente de 2 semanas a 1 mes (30 días).
+- [x] Permitir filtrar estadísticas por un rango personalizado de fechas Desde/Hasta.
+- [x] Agrandar el logotipo en la barra de navegación lateral a 190px.
+- [x] Ejecutar build de producción local para verificar integridad del código.
+
+### 📝 Notas / Bitácora
+- **29 de Junio (09:25 PM)**:
+  - Se modificaron los endpoints `/api/admin/clientes` (POST) y `/api/admin/clientes/[id]` (PUT) para realizar comprobaciones estrictas de unicidad para DNI, Email y WhatsApp, y se expusieron estos campos en la pestaña de configuración del perfil del cliente.
+  - Se implementó la vista mensual interactiva ("Mes") en la agenda `/admin/agenda` y se ajustaron las hojas de estilo CSS en `agenda.module.css` para optimizar la visualización móvil mediante scroll nativo continuo (eliminando el contenedor rígido que causaba doble scroll).
+  - Se removió de forma definitiva la leyenda explicativa sobre bloques de 10 minutos de la pantalla de agenda.
+  - Se implementó la prevención de solapamientos de horario y la prohibición de agendar citas en fechas/horas pasadas (calculado en el huso de Argentina GMT-3) para la creación manual (POST `/api/admin/turnos`), reprogramación (PUT `/api/admin/turnos/[id]`) y reserva online (POST `/api/reservas/crear`).
+  - Se configuró el estado por defecto `PENDIENTE_PAGO` en las reservas manuales nuevas, y se añadieron selectores para bonificaciones por porcentaje y valor fijo, calculándose en caliente y guardándose en el campo preexistente `bonificacion`.
+  - Se configuró la copia oculta (BCC) automática de todas las comunicaciones a la dirección `nuevacuenta@depilacionparahombres.com` en `src/lib/email.js`.
+  - Se implementó el envío de comprobantes de turno y señas mediante la función `sendReceiptEmail` y el nuevo endpoint POST `/api/admin/turnos/[id]/enviar-recibo`, vinculándolo a un botón "Enviar Recibo por Mail" en el panel modal de detalles del turno.
+  - Se integró el servicio de correos automáticos de mantenimiento a los 75 días (2.5 meses) dentro del cron diario de recordatorios (a las 10:00 AM) en `src/lib/whatsapp.js`, buscando citas `REALIZADO` hace exactamente 75 días de clientes que no posean reservas posteriores.
+  - Se extendió el rango de reserva online de la landing page `src/app/page.js` de 14 a 30 días hábiles.
+  - Se modificó `/api/admin/estadisticas` y `/admin/estadisticas/page.js` para recibir parámetros `start` y `end`, reemplazando los desplegables de mes y año con dos selectores de fecha HTML5 (Desde / Hasta) para analizar rangos libres.
+  - Se modificó `src/app/admin/SidebarNav.js` para incrementar el tamaño del logotipo principal a `190px` de ancho.
+  - Se inició la compilación local (`npm run build`) para verificar que todo el proyecto compile correctamente sin fallos de ruteo ni dependencias.isibilidad y contraste en blanco sobre la cabecera bordó.
   - Se verificó la compilación local (`npm run build`) y se subieron los archivos modificados al VPS (`187.127.9.216`).
   - Se ejecutó `./deploy.sh` en el VPS, reconstruyendo la aplicación y recargando PM2.
   - Se comprobó mediante `curl` de red que el sitio responde correctamente con `HTTP 200 OK`.

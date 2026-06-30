@@ -72,3 +72,18 @@
 - Modificación de cabecera de la landing page pública y páginas de éxito/error a color de marca bordó oscuro (`var(--color-primary)` / `#7a1e1e`).
 - Cambios de etiquetas "Observaciones Exclusivas para Gonzalo" a "Observaciones del Operador" y actualizados sus placeholders.
 
+## [0.9.0] - 2026-06-29
+### Added
+- Validación manual de duplicados para DNI, Email y Teléfono (creación y actualización manual).
+- Vista mensual interactiva ("Mes") en la agenda administrativa.
+- Solución de scroll móvil en la agenda para permitir scroll nativo de página (eliminación de contenedor rígido y doble scrollbox).
+- Prevención de solapamiento de horarios y bloqueo de reservas de fechas/horas pasadas usando GMT-3.
+- Estado por defecto `PENDIENTE_PAGO` en turnos manuales nuevos y soporte para bonificaciones por porcentaje y valor fijo.
+- Copia oculta BCC global automática a `nuevacuenta@depilacionparahombres.com` en todos los correos.
+- Envío manual de comprobantes de turno y señas por correo mediante POST `/api/admin/turnos/[id]/enviar-recibo` y el botón "Enviar Recibo por Mail".
+- Cron para el envío diario y automático de correos de mantenimiento a los 75 días (2.5 meses) de turnos finalizados sin reservas posteriores.
+- Extensión del rango de reservas online para clientes de 2 semanas a 1 mes (30 días hábiles).
+- Rango de fechas libre y personalizado (Desde / Hasta) con Date Pickers en la sección de estadísticas de negocio.
+- Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
+- Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
+

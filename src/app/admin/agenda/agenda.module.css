@@ -400,3 +400,89 @@
   background-color: #ff3b30;
   box-shadow: 0 0 4px rgba(255, 59, 48, 0.6);
 }
+
+/* Month View Grid */
+.monthGridHeader {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  text-align: center;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.9rem;
+  z-index: 10;
+}
+
+.monthHeaderCell {
+  padding: 0.75rem 0.5rem;
+  border-right: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.monthHeaderCell:last-child {
+  border-right: none;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: minmax(110px, 1fr);
+  gap: 1px;
+  background-color: var(--border-color);
+  border-top: 1px solid var(--border-color);
+}
+
+.monthDayCell {
+  background-color: var(--bg-secondary);
+  padding: 0.5rem;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  transition: var(--transition);
+  cursor: pointer;
+  overflow: hidden;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.monthDayCell:hover {
+  background-color: var(--bg-card);
+}
+
+.monthDayNumber {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.monthDayNumberToday {
+  background-color: var(--color-gold);
+  color: #000;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.monthDayOutside {
+  opacity: 0.35;
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+@media (max-width: 768px) {
+  .calendarContainer {
+    height: auto !important;
+    min-height: auto !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gridBody {
+    overflow-y: visible !important;
+  }
+}

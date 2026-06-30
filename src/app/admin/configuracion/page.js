@@ -36,7 +36,15 @@ export default function ConfiguracionPage() {
     wtsp_confirmation_template: '',
     address: '',
     work_start: '10:00',
-    work_end: '20:00'
+    work_end: '20:00',
+    email_confirmation_subject: '',
+    email_confirmation_body: '',
+    email_cancellation_subject: '',
+    email_cancellation_body: '',
+    email_noshow_subject: '',
+    email_noshow_body: '',
+    email_maintenance_subject: '',
+    email_maintenance_body: ''
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
@@ -67,7 +75,15 @@ export default function ConfiguracionPage() {
             wtsp_confirmation_template: data.wtsp_confirmation_template || '',
             address: data.address || '',
             work_start: data.work_start || '10:00',
-            work_end: data.work_end || '20:00'
+            work_end: data.work_end || '20:00',
+            email_confirmation_subject: data.email_confirmation_subject || '',
+            email_confirmation_body: data.email_confirmation_body || '',
+            email_cancellation_subject: data.email_cancellation_subject || '',
+            email_cancellation_body: data.email_cancellation_body || '',
+            email_noshow_subject: data.email_noshow_subject || '',
+            email_noshow_body: data.email_noshow_body || '',
+            email_maintenance_subject: data.email_maintenance_subject || '',
+            email_maintenance_body: data.email_maintenance_body || ''
           });
         }
       })
@@ -354,7 +370,7 @@ export default function ConfiguracionPage() {
             <div style={{ color: 'var(--color-gold)' }}>Cargando configuraciones...</div>
           ) : (
             <form onSubmit={handleSaveConfigs} className={styles.form} style={{ maxWidth: '750px' }}>
-              
+              <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-gold)', marginBottom: '1rem' }}>Mensajes de WhatsApp</div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Recordatorio Semanal (Sábados)</label>
                 <textarea 
@@ -378,8 +394,8 @@ export default function ConfiguracionPage() {
               </div>
 
               {/* Variable Helper */}
-              <div className={styles.variableHelper}>
-                <div className={styles.variableTitle}>Variables Automáticas Disponibles (Toca para copiar):</div>
+              <div className={styles.variableHelper} style={{ marginBottom: '2rem' }}>
+                <div className={styles.variableTitle}>Variables Automáticas WhatsApp (Toca para copiar):</div>
                 <div className={styles.variableGrid}>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Nombre]')}>[Nombre]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Apellido]')}>[Apellido]</div>
@@ -392,10 +408,129 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
+              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '2rem 0' }} />
+
+              <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-gold)', marginBottom: '1.5rem' }}>Plantillas de Correo Electrónico</div>
+
+              {/* Email 1: Confirmation */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#81c784' }}>📧 Correo de Confirmación de Turno (Alta)</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_confirmation_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_confirmation_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_confirmation_body}
+                    onChange={(e) => setConfigs({ ...configs, email_confirmation_body: e.target.value })}
+                    rows="6"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email 2: Cancellation */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#e57373' }}>📧 Correo de Cancelación de Turno</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_cancellation_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_cancellation_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_cancellation_body}
+                    onChange={(e) => setConfigs({ ...configs, email_cancellation_body: e.target.value })}
+                    rows="4"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email 3: No Show */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#ffb74d' }}>📧 Correo de Inasistencia (No Asistió)</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_noshow_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_noshow_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_noshow_body}
+                    onChange={(e) => setConfigs({ ...configs, email_noshow_body: e.target.value })}
+                    rows="5"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email 4: Maintenance */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#64b5f6' }}>📧 Correo de Invitación a Mantenimiento (2.5 Meses)</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_maintenance_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_maintenance_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_maintenance_body}
+                    onChange={(e) => setConfigs({ ...configs, email_maintenance_body: e.target.value })}
+                    rows="5"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Variable Helper for Emails */}
+              <div className={styles.variableHelper} style={{ marginBottom: '1.5rem' }}>
+                <div className={styles.variableTitle}>Variables Automáticas Email (Toca para copiar):</div>
+                <div className={styles.variableGrid}>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{cliente}')}>{"{cliente}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{fecha}')}>{"{fecha}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{horario}')}>{"{horario}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{zonas}')}>{"{zonas}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{total}')}>{"{total}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{seña}')}>{"{seña}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{saldo}')}>{"{saldo}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{direccion}')}>{"{direccion}"}</div>
+                </div>
+              </div>
+
               <button 
                 type="submit" 
                 className="btn btn-primary" 
-                style={{ width: 'fit-content', padding: '0.75rem 1.5rem', borderRadius: '8px', marginTop: '0.5rem' }}
+                style={{ width: 'fit-content', padding: '0.75rem 1.5rem', borderRadius: '8px' }}
                 disabled={savingConfigs}
               >
                 {savingConfigs ? 'Guardando...' : 'Guardar Plantillas'}

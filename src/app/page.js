@@ -56,7 +56,7 @@ export default function Home() {
       .catch(err => console.error('Error fetching zones:', err));
   }, []);
 
-  // 2. Generate scrollable list of next 14 business days (excluding Sunday)
+  // 2. Generate scrollable list of next 30 business days (excluding Sunday)
   const [dateList, setDateList] = useState([]);
   useEffect(() => {
     const dates = [];
@@ -67,7 +67,7 @@ export default function Home() {
     }
     
     let count = 0;
-    while (count < 14) {
+    while (count < 30) {
       // 0 = Sunday
       if (current.getDay() !== 0) {
         dates.push(new Date(current));

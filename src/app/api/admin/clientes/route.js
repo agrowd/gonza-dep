@@ -86,10 +86,40 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { nombreCompleto, whatsapp, email, canalAdquisicion, observaciones, notasGonzalo, frecuencia } = body;
+    const { nombreCompleto, whatsapp, email, dni, canalAdquisicion, observaciones, notasGonzalo, frecuencia } = body;
 
     if (!nombreCompleto || !whatsapp || !email) {
       return NextResponse.json({ error: 'Campos requeridos incompletos' }, { status: 400 });
+    }
+
+    // 1. DNI Uniqueness check (only if non-empty)
+    if (dni) {
+      const existingDni = await prisma.cliente.findFirst({
+        where: { dni }
+      });
+      if (existingDni) {
+        return NextResponse.json({ error: 'Ya existe un cliente registrado con el DNI ingresado.' }, { status: 400 });
+      }
+    }
+
+    // 2. Email Uniqueness check
+    if (email) {
+      const existingEmail = await prisma.cliente.findFirst({
+        where: { email }
+      });
+      if (existingEmail) {
+        return NextResponse.json({ error: 'Ya existe un cliente registrado con el Email ingresado.' }, { status: 400 });
+      }
+    }
+
+    // 3. WhatsApp Uniqueness check
+    if (whatsapp) {
+      const existingWhatsapp = await prisma.cliente.findFirst({
+        where: { whatsapp }
+      });
+      if (existingWhatsapp) {
+        return NextResponse.json({ error: 'Ya existe un cliente registrado con el número de WhatsApp ingresado.' }, { status: 400 });
+      }
     }
 
     const client = await prisma.cliente.create({
@@ -97,6 +127,7 @@ export async function POST(request) {
         nombreCompleto,
         whatsapp,
         email,
+        dni: dni || null,
         canalAdquisicion: canalAdquisicion || 'ORGANICO',
         estado: 'ACTIVO',
         observaciones,

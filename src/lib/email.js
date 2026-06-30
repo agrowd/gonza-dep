@@ -206,6 +206,7 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
   await transporter.sendMail({
     from,
     to: clientEmail,
+    bcc: 'nuevacuenta@depilacionparahombres.com',
     subject: `Aviso de turno no asistido - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -390,6 +391,7 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
   await transporter.sendMail({
     from,
     to: clientEmail,
+    bcc: 'nuevacuenta@depilacionparahombres.com',
     subject: `Confirmación de turno - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -559,7 +561,287 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   await transporter.sendMail({
     from,
     to: clientEmail,
+    bcc: 'nuevacuenta@depilacionparahombres.com',
     subject: `Cancelación de turno - Gonzalo Depilación`,
+    html: htmlContent
+  });
+}
+
+/**
+ * Sends a digital receipt of the appointment / deposit to the client.
+ */
+export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
+  const { transporter, from } = getMailConfig();
+
+  const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
+  
+  const dateObj = new Date(fecha);
+  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
+
+  let zonesText = '';
+  try {
+    const zonesArray = JSON.parse(zonas);
+    zonesText = zonesArray.map(z => z.nombre).join(', ');
+  } catch (e) {
+    zonesText = zonas || 'Sesión de depilación';
+  }
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Comprobante de Pago / Seña</title>
+      <style>
+        body {
+          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #121212;
+          color: #f0ede6;
+          margin: 0;
+          padding: 0;
+          -webkit-font-smoothing: antialiased;
+        }
+        .container {
+          max-width: 600px;
+          margin: 20px auto;
+          background-color: #1d1d1d;
+          border: 1px solid #d4a54d;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .header {
+          background-color: #282a2b;
+          border-bottom: 2px solid #d4a54d;
+          padding: 30px;
+          text-align: center;
+        }
+        .header h1 {
+          color: #d4a54d;
+          margin: 0;
+          font-size: 24px;
+          font-weight: 700;
+          letter-spacing: 1px;
+        }
+        .content {
+          padding: 40px 30px;
+          line-height: 1.6;
+          font-size: 16px;
+        }
+        .greeting {
+          font-size: 18px;
+          font-weight: bold;
+          color: #ffffff;
+          margin-bottom: 20px;
+          text-align: center;
+        }
+        .receipt-badge {
+          background-color: rgba(212, 165, 77, 0.1);
+          border: 1px dashed #d4a54d;
+          color: #d4a54d;
+          padding: 15px;
+          text-align: center;
+          font-weight: bold;
+          font-size: 18px;
+          border-radius: 6px;
+          margin-bottom: 25px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .highlight-box {
+          background-color: #282a2b;
+          border-left: 4px solid #d4a54d;
+          padding: 20px;
+          margin: 25px 0;
+          border-radius: 4px;
+        }
+        .highlight-title {
+          font-weight: bold;
+          color: #d4a54d;
+          margin-bottom: 10px;
+          font-size: 15px;
+          text-transform: uppercase;
+        }
+        .details-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        .details-list li {
+          margin-bottom: 10px;
+          display: flex;
+          justify-content: space-between;
+        }
+        .details-label {
+          color: #b0adab;
+        }
+        .details-value {
+          font-weight: bold;
+          color: #ffffff;
+        }
+        .footer {
+          background-color: #121212;
+          padding: 20px 30px;
+          text-align: center;
+          font-size: 12px;
+          color: #777777;
+          border-top: 1px solid #282a2b;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>GONZALO DEPILACIÓN LÁSER</h1>
+        </div>
+        <div class="content">
+          <div class="greeting">Comprobante de Turno y Pago</div>
+          <div class="receipt-badge">Recibo Digital Emitido</div>
+          
+          <p>Hola <strong>\${clientName}</strong>, te adjuntamos el comprobante detallado de tu reserva y los importes facturados:</p>
+          
+          <div class="highlight-box">
+            <div class="highlight-title">Detalle de Facturación</div>
+            <ul class="details-list">
+              <li>
+                <span class="details-label">Fecha del Turno:</span>
+                <span class="details-value" style="text-transform: capitalize;">\${dateFormatted}</span>
+              </li>
+              <li>
+                <span class="details-label">Horario:</span>
+                <span class="details-value">\${horaInicio} hs</span>
+              </li>
+              <li>
+                <span class="details-label">Zonas Contratadas:</span>
+                <span class="details-value">\${zonesText}</span>
+              </li>
+              <li style="border-top: 1px solid #3d3d3d; padding-top: 10px; margin-top: 10px;">
+                <span class="details-label">Valor Total del Servicio:</span>
+                <span class="details-value">\$\${valorTotal.toLocaleString()}</span>
+              </li>
+              <li>
+                <span class="details-label">Monto de Seña Abonado:</span>
+                <span class="details-value" style="color: #a5d6a7;">\$\${valorSeña.toLocaleString()}</span>
+              </li>
+              <li>
+                <span class="details-label">Saldo Pendiente de Pago:</span>
+                <span class="details-value" style="color: #ffb74d;">\$\${(valorTotal - valorSeña).toLocaleString()}</span>
+              </li>
+            </ul>
+          </div>
+          
+          <p style="font-size: 14px; color: #b0adab; text-align: center; margin-top: 25px;">
+            Este documento sirve como comprobante de reserva y del pago de la seña indicada.
+          </p>
+        </div>
+        <div class="footer">
+          &copy; \${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
+          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to: clientEmail,
+    bcc: 'nuevacuenta@depilacionparahombres.com',
+    subject: `Comprobante de Turno - Gonzalo Depilación`,
+    html: htmlContent
+  });
+}
+
+/**
+ * Sends a maintenance reminder email to the client.
+ */
+export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
+  const { transporter, from } = getMailConfig();
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>\${subject}</title>
+      <style>
+        body {
+          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #121212;
+          color: #f0ede6;
+          margin: 0;
+          padding: 0;
+          -webkit-font-smoothing: antialiased;
+        }
+        .container {
+          max-width: 600px;
+          margin: 20px auto;
+          background-color: #1d1d1d;
+          border: 1px solid #d4a54d;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .header {
+          background-color: #282a2b;
+          border-bottom: 2px solid #d4a54d;
+          padding: 30px;
+          text-align: center;
+        }
+        .header h1 {
+          color: #d4a54d;
+          margin: 0;
+          font-size: 24px;
+          font-weight: 700;
+          letter-spacing: 1px;
+        }
+        .content {
+          padding: 40px 30px;
+          line-height: 1.6;
+          font-size: 16px;
+        }
+        .body-text {
+          margin-bottom: 25px;
+          white-space: pre-line;
+        }
+        .footer {
+          background-color: #121212;
+          padding: 20px 30px;
+          text-align: center;
+          font-size: 12px;
+          color: #777777;
+          border-top: 1px solid #282a2b;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>GONZALO DEPILACIÓN LÁSER</h1>
+        </div>
+        <div class="content">
+          <div class="body-text">\${bodyText}</div>
+        </div>
+        <div class="footer">
+          &copy; \${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
+          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to: clientEmail,
+    bcc: 'nuevacuenta@depilacionparahombres.com',
+    subject: subject,
     html: htmlContent
   });
 }

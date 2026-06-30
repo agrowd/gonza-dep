@@ -16,6 +16,48 @@ function timeToMinutes(timeStr) {
   return hours * 60 + minutes;
 }
 
+function isPastDateTime(fechaStr, horaInicio) {
+  const now = new Date();
+  const offsetBuenosAires = -3;
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+  const todayStr = nowLocal.toISOString().split('T')[0];
+  
+  if (fechaStr < todayStr) return true;
+  if (fechaStr === todayStr) {
+    const [hours, minutes] = horaInicio.split(':').map(Number);
+    const nowHours = nowLocal.getHours();
+    const nowMinutes = nowLocal.getMinutes();
+    if (hours < nowHours || (hours === nowHours && minutes < nowMinutes)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null) {
+  const targetDate = new Date(fechaStr + 'T00:00:00');
+  const dayTurnos = await prisma.turno.findMany({
+    where: {
+      fecha: targetDate,
+      estado: { not: 'CANCELADO' },
+      id: excludeTurnoId ? { not: excludeTurnoId } : undefined
+    }
+  });
+
+  const newStartMin = timeToMinutes(horaInicio);
+  const newEndMin = timeToMinutes(horaFin);
+
+  for (const t of dayTurnos) {
+    const startMin = timeToMinutes(t.horaInicio);
+    const endMin = timeToMinutes(t.horaFin);
+    if (startMin < newEndMin && endMin > newStartMin) {
+      return t;
+    }
+  }
+  return null;
+}
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -26,6 +68,11 @@ export async function POST(request) {
         { error: 'Todos los campos obligatorios son requeridos.' },
         { status: 400 }
       );
+    }
+
+    // Past Date/Time Check
+    if (isPastDateTime(fechaStr, horaInicio)) {
+      return NextResponse.json({ error: 'El horario seleccionado ya no está disponible por haber transcurrido.' }, { status: 400 });
     }
 
     // 1. Fetch zones details from DB
@@ -110,6 +157,12 @@ export async function POST(request) {
     const startMinutes = timeToMinutes(horaInicio);
     const endMinutes = startMinutes + duracionMinutos;
     const horaFin = minutesToTime(endMinutes);
+
+    // Overlap Check
+    const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin);
+    if (checkOverlap) {
+      return NextResponse.json({ error: 'El horario seleccionado ya no se encuentra disponible. Por favor, elige otro horario o día.' }, { status: 400 });
+    }
 
     // 4. Create Turno in database in PENDIENTE_PAGO state
     const targetDate = new Date(fechaStr + 'T00:00:00');

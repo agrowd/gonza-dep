@@ -13,15 +13,22 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const yearParam = searchParams.get('year');
-    const monthParam = searchParams.get('month'); // 0-indexed or 1-indexed? Let's use 1-indexed (1 = Jan, 12 = Dec)
+    const monthParam = searchParams.get('month');
+    const startParam = searchParams.get('start');
+    const endParam = searchParams.get('end');
 
-    const now = new Date();
-    const year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
-    const month = monthParam ? parseInt(monthParam, 10) : now.getMonth() + 1; // 1-12
+    let startOfMonth, endOfMonth;
 
-    // Calculate date range for the selected month
-    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0);
-    const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+    if (startParam && endParam) {
+      startOfMonth = new Date(startParam + 'T00:00:00');
+      endOfMonth = new Date(endParam + 'T23:59:59');
+    } else {
+      const now = new Date();
+      const year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
+      const month = monthParam ? parseInt(monthParam, 10) : now.getMonth() + 1; // 1-12
+      startOfMonth = new Date(year, month - 1, 1, 0, 0, 0);
+      endOfMonth = new Date(year, month, 0, 23, 59, 59);
+    }
 
     // Calculate dates for current day and current week for dashboard quick indicators
     const startOfToday = new Date();
