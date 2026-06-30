@@ -8,8 +8,8 @@
 
 .sidebar {
   width: 260px;
-  background-color: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  background-color: var(--color-primary);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   padding: 2rem 1.5rem;
@@ -49,12 +49,12 @@
   font-size: 1.1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .logoSubtitle {
   font-size: 0.7rem;
-  color: var(--color-gold);
+  color: #e6be75;
   font-weight: 500;
   text-transform: uppercase;
 }
@@ -72,7 +72,7 @@
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border-radius: 8px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75);
   font-family: var(--font-title);
   font-weight: 500;
   font-size: 0.95rem;
@@ -80,20 +80,20 @@
 }
 
 .navLink:hover {
-  background-color: var(--bg-card);
-  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
   transform: translateX(3px);
 }
 
 .navLinkActive {
-  background-color: rgba(var(--color-gold-rgb), 0.08);
-  border: 1px solid rgba(var(--color-gold-rgb), 0.2);
-  color: var(--color-gold);
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
   font-weight: 600;
 }
 
 .sidebarFooter {
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 1.5rem;
   margin-top: auto;
 }
@@ -107,12 +107,12 @@
 .userName {
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .userRole {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .logoutBtn {
@@ -123,9 +123,9 @@
   gap: 0.5rem;
   padding: 0.75rem;
   border-radius: 8px;
-  background-color: rgba(198, 40, 40, 0.05);
-  border: 1px solid rgba(198, 40, 40, 0.15);
-  color: #ff8a8a;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffb4b4;
   cursor: pointer;
   font-family: var(--font-title);
   font-weight: 600;
@@ -134,9 +134,9 @@
 }
 
 .logoutBtn:hover {
-  background-color: rgba(198, 40, 40, 0.15);
-  border-color: var(--status-cancelado);
-  color: #ff5252;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: #ff5252;
+  color: #ffffff;
 }
 
 .contentArea {

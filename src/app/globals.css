@@ -1,55 +1,55 @@
 /* Custom CSS variables for premium brand styling */
 :root {
   /* Colors */
-  --bg-primary: #1d1d1d;     /* Charcoal from official web */
-  --bg-secondary: #282a2b;   /* Lighter charcoal from official web */
-  --bg-card: #202020;
-  --bg-card-hover: #262626;
+  --bg-primary: #f0ede6;     /* Cream background from official web */
+  --bg-secondary: #ffffff;   /* White for cards, inputs, and selectors */
+  --bg-card: #ffffff;
+  --bg-card-hover: #faf9f6;
   
   --color-primary: #7a1e1e;       /* Burgundy Wine brand color */
   --color-primary-light: #9c2828;
   --color-primary-dark: #5c1414;
   --color-primary-rgb: 122, 30, 30;
 
-  --color-gold: #d4a54d;
-  --color-gold-light: #e6be75;
-  --color-gold-dark: #b88d3a;
-  --color-gold-rgb: 212, 165, 77;
+  --color-gold: #7a1e1e;          /* Accent burgundy matching the web */
+  --color-gold-light: #9c2828;
+  --color-gold-dark: #5c1414;
+  --color-gold-rgb: 122, 30, 30;
 
   --color-available: #00d084;     /* Green for availability */
   --color-available-rgb: 0, 208, 132;
 
-  --text-primary: #ffffff;
-  --text-secondary: #a6a6a6;
-  --text-muted: #666666;
+  --text-primary: #1d1d1d;   /* Charcoal from official web */
+  --text-secondary: #5a5a5a;
+  --text-muted: #888888;
   
-  --border-color: #3a3c3e;
-  --border-gold: rgba(var(--color-gold-rgb), 0.25);
+  --border-color: #dcd9d0;   /* Light gray-cream border */
+  --border-gold: rgba(122, 30, 30, 0.25);
   
   /* Status Colors */
   --status-senado: #2e7d32;
-  --status-senado-bg: rgba(46, 125, 50, 0.15);
+  --status-senado-bg: rgba(46, 125, 50, 0.12);
   --status-realizado: #1565c0;
-  --status-realizado-bg: rgba(21, 101, 192, 0.15);
+  --status-realizado-bg: rgba(21, 101, 192, 0.12);
   --status-cancelado: #c62828;
-  --status-cancelado-bg: rgba(198, 40, 40, 0.15);
+  --status-cancelado-bg: rgba(198, 40, 40, 0.12);
   --status-reprogramado: #ef6c00;
-  --status-reprogramado-bg: rgba(239, 108, 0, 0.15);
+  --status-reprogramado-bg: rgba(239, 108, 0, 0.12);
   --status-no-asistio: #78909c;
-  --status-no-asistio-bg: rgba(120, 144, 156, 0.15);
+  --status-no-asistio-bg: rgba(120, 144, 156, 0.12);
   --status-pendiente-aut: #fbc02d;
-  --status-pendiente-aut-bg: rgba(251, 192, 45, 0.15);
+  --status-pendiente-aut-bg: rgba(251, 192, 45, 0.12);
   --status-pendiente-pago: #8e24aa;
-  --status-pendiente-pago-bg: rgba(142, 36, 170, 0.15);
+  --status-pendiente-pago-bg: rgba(142, 36, 170, 0.12);
 
   /* Fonts */
   --font-title: var(--font-montserrat), 'Montserrat', sans-serif;
   --font-body: var(--font-inter), 'Inter', sans-serif;
 
   /* Card styling & glassmorphism */
-  --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --glass-bg: rgba(40, 42, 43, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.06);
   --border-radius: 12px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

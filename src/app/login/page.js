@@ -45,7 +45,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={styles.container} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, #1a1a1a 0%, #0c0c0c 100%)' }}>
+    <div className={styles.container} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, #f5f2eb 0%, #e3dec9 100%)' }}>
       <main className={styles.main} style={{ maxWidth: '400px', padding: '1rem' }}>
         
         {/* Logo and title */}
@@ -57,7 +57,7 @@ export default function LoginPage() {
               width: '180px', 
               height: 'auto', 
               marginBottom: '1rem',
-              filter: 'drop-shadow(0 0 20px rgba(212, 165, 77, 0.2))'
+              filter: 'drop-shadow(0 0 20px rgba(122, 31, 30, 0.2))'
             }} 
           />
         </div>
