@@ -66,6 +66,7 @@
   font-weight: 700;
   font-size: 0.9rem;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .headerCell {
@@ -119,6 +120,7 @@
   position: relative;
   display: grid;
   grid-template-columns: 80px repeat(6, 1fr);
+  flex-shrink: 0;
 }
 
 .timeColumn {

@@ -1260,8 +1260,13 @@ export default function AgendaPage() {
                         Cancelar Turno
                       </button>
                     )}
-                    {selectedTurno.estado === 'CANCELADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-secondary" style={{ flex: '1 0 45%' }}>
+                    {selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#ef6c00', color: '#ffb74d' }}>
+                        ❌ No Asistió
+                      </button>
+                    )}
+                    {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#81c784', color: '#81c784' }}>
                         Re-activar Turno
                       </button>
                     )}
