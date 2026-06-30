@@ -11,6 +11,7 @@ export async function GET(request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const now = new Date();
     const { searchParams } = new URL(request.url);
     const yearParam = searchParams.get('year');
     const monthParam = searchParams.get('month');
@@ -18,14 +19,16 @@ export async function GET(request) {
     const endParam = searchParams.get('end');
 
     let startOfMonth, endOfMonth;
+    let year, month;
 
     if (startParam && endParam) {
       startOfMonth = new Date(startParam + 'T00:00:00');
       endOfMonth = new Date(endParam + 'T23:59:59');
+      year = startOfMonth.getFullYear();
+      month = startOfMonth.getMonth() + 1;
     } else {
-      const now = new Date();
-      const year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
-      const month = monthParam ? parseInt(monthParam, 10) : now.getMonth() + 1; // 1-12
+      year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
+      month = monthParam ? parseInt(monthParam, 10) : now.getMonth() + 1; // 1-12
       startOfMonth = new Date(year, month - 1, 1, 0, 0, 0);
       endOfMonth = new Date(year, month, 0, 23, 59, 59);
     }

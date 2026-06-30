@@ -62,6 +62,69 @@ function addMinutesToTime(timeStr, minsToAdd) {
   return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
 }
 
+// Helper: Compute visual layout offsets (left and width percentages) for overlapping appointments
+function computeOverlaps(apps) {
+  if (!apps || apps.length === 0) return {};
+  
+  // Sort by start time
+  const sorted = [...apps].sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+  
+  // 1. Group into overlapping clusters
+  const groups = [];
+  for (const app of sorted) {
+    let added = false;
+    for (const group of groups) {
+      const overlaps = group.some(item => {
+        const aStart = timeToMinutes(item.horaInicio);
+        const aEnd = timeToMinutes(item.horaFin);
+        const bStart = timeToMinutes(app.horaInicio);
+        const bEnd = timeToMinutes(app.horaFin);
+        return (bStart < aEnd && bEnd > aStart);
+      });
+      if (overlaps) {
+        group.push(app);
+        added = true;
+        break;
+      }
+    }
+    if (!added) {
+      groups.push([app]);
+    }
+  }
+  
+  // 2. Assign column index and total column count for each cluster
+  const layout = {};
+  for (const group of groups) {
+    const columns = []; // array of columns, each column is an array of apps
+    for (const app of group) {
+      let placed = false;
+      for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+        const overlapsInCol = columns[colIdx].some(item => {
+          const aStart = timeToMinutes(item.horaInicio);
+          const aEnd = timeToMinutes(item.horaFin);
+          const bStart = timeToMinutes(app.horaInicio);
+          const bEnd = timeToMinutes(app.horaFin);
+          return (bStart < aEnd && bEnd > aStart);
+        });
+        if (!overlapsInCol) {
+          columns[colIdx].push(app);
+          layout[app.id] = { colIdx, totalCols: 0 };
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        columns.push([app]);
+        layout[app.id] = { colIdx: columns.length - 1, totalCols: 0 };
+      }
+    }
+    for (const app of group) {
+      layout[app.id].totalCols = columns.length;
+    }
+  }
+  return layout;
+}
+
 export default function AgendaPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
@@ -302,7 +365,7 @@ export default function AgendaPage() {
   };
 
   // Helper: Get layout styling for appointment block
-  const getBlockStyle = (horaInicio, horaFin) => {
+  const getBlockStyle = (horaInicio, horaFin, layout = { colIdx: 0, totalCols: 1 }) => {
     const startMin = timeToMinutes(horaInicio);
     const endMin = timeToMinutes(horaFin);
     const duration = endMin - startMin;
@@ -312,9 +375,14 @@ export default function AgendaPage() {
     const top = Math.max(0, (startMin - WORK_START) * (100 / 60));
     const height = Math.max(20, duration * (100 / 60)); // minimum 20px
 
+    const widthPercent = 100 / layout.totalCols;
+    const leftPercent = layout.colIdx * widthPercent;
+
     return {
       top: `${top}px`,
-      height: `${height}px`
+      height: `${height}px`,
+      width: `calc(${widthPercent}% - 6px)`,
+      left: `calc(${leftPercent}% + 4px)`
     };
   };
 
@@ -909,8 +977,11 @@ export default function AgendaPage() {
                       })}
 
                       {/* Appointments blocks absolute positioning */}
-                      {dayAppointments.map((app) => {
-                        const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
+                      {(() => {
+                        const layoutMap = computeOverlaps(dayAppointments);
+                        return dayAppointments.map((app) => {
+                          const blockLayout = layoutMap[app.id] || { colIdx: 0, totalCols: 1 };
+                          const blockStyle = getBlockStyle(app.horaInicio, app.horaFin, blockLayout);
                         let zonasText = '';
                         try {
                           const zonesArray = JSON.parse(app.zonas);
@@ -938,7 +1009,8 @@ export default function AgendaPage() {
                             )}
                           </div>
                         );
-                      })}
+                      });
+                    })()}
                     </div>
                   );
                 })()
@@ -981,8 +1053,11 @@ export default function AgendaPage() {
                       })}
 
                       {/* Appointments blocks absolute positioning */}
-                      {dayAppointments.map((app) => {
-                        const blockStyle = getBlockStyle(app.horaInicio, app.horaFin);
+                      {(() => {
+                        const layoutMap = computeOverlaps(dayAppointments);
+                        return dayAppointments.map((app) => {
+                          const blockLayout = layoutMap[app.id] || { colIdx: 0, totalCols: 1 };
+                          const blockStyle = getBlockStyle(app.horaInicio, app.horaFin, blockLayout);
                         let zonasText = '';
                         try {
                           const zonesArray = JSON.parse(app.zonas);
@@ -1010,7 +1085,8 @@ export default function AgendaPage() {
                             )}
                           </div>
                         );
-                      })}
+                      });
+                    })()}
                     </div>
                   );
                 })
