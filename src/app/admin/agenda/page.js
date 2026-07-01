@@ -131,6 +131,7 @@ export default function AgendaPage() {
   const [weekDates, setWeekDates] = useState([]);
   const [viewMode, setViewMode] = useState('week'); // 'week', 'day', 'month'
   const [selectedDate, setSelectedDate] = useState(null);
+  const [isNextScheduling, setIsNextScheduling] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -457,6 +458,7 @@ export default function AgendaPage() {
   // Schedule next turno based on client's treatment frequency
   const handleScheduleNextTurn = (turno) => {
     if (!turno || !turno.cliente) return;
+    setIsNextScheduling(true);
     
     const currentFecha = new Date(turno.fecha);
     const freqWeeks = turno.cliente.frecuencia || 4;
@@ -532,6 +534,7 @@ export default function AgendaPage() {
 
   // Open creation modal for a specific day and start hour
   const handleEmptySlotClick = (date, startMin) => {
+    setIsNextScheduling(false);
     const startHour = Math.floor(startMin / 60);
     const startMins = startMin % 60;
     const timeStr = `${startHour.toString().padStart(2, '0')}:${startMins.toString().padStart(2, '0')}`;
@@ -804,6 +807,7 @@ export default function AgendaPage() {
           <button onClick={handleNext} className={styles.navBtn}><NextIcon /></button>
           
           <button onClick={() => {
+            setIsNextScheduling(false);
             setNewTurno({
               nombreCompleto: '',
               whatsapp: '',
@@ -1172,7 +1176,21 @@ export default function AgendaPage() {
                     <input
                       type="time"
                       value={editTurno.horaInicio}
-                      onChange={(e) => setEditTurno({ ...editTurno, horaInicio: e.target.value })}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        const oldStart = editTurno.horaInicio;
+                        const oldEnd = editTurno.horaFin;
+                        let duration = timeToMinutes(oldEnd) - timeToMinutes(oldStart);
+                        if (isNaN(duration) || duration <= 0) {
+                          duration = 30; // fallback
+                        }
+                        const newEnd = addMinutesToTime(newStart, duration);
+                        setEditTurno({
+                          ...editTurno,
+                          horaInicio: newStart,
+                          horaFin: newEnd
+                        });
+                      }}
                       required
                     />
                   </div>
@@ -1459,7 +1477,7 @@ export default function AgendaPage() {
                             }}
                             onMouseDown={() => {
                               let targetDateStr = newTurno.fechaStr;
-                              if (client.turnos && client.turnos.length > 0) {
+                              if (isNextScheduling && client.turnos && client.turnos.length > 0) {
                                 const lastTurno = client.turnos[0];
                                 const lastDate = new Date(lastTurno.fecha);
                                 const freqWeeks = client.frecuencia || 4;
@@ -1477,7 +1495,7 @@ export default function AgendaPage() {
                                 fechaStr: targetDateStr
                               }));
                               
-                              if (targetDateStr) {
+                              if (isNextScheduling && targetDateStr) {
                                 setSelectedDate(new Date(targetDateStr + 'T00:00:00'));
                               }
                               
