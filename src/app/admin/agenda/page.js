@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 
@@ -126,6 +126,7 @@ function computeOverlaps(apps) {
 }
 
 export default function AgendaPage() {
+  const calendarRef = useRef(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
   const [viewMode, setViewMode] = useState('week'); // 'week', 'day', 'month'
@@ -214,6 +215,22 @@ export default function AgendaPage() {
       setCurrentWeekStart(monday);
     }
   }, [selectedDate]);
+
+  // Auto-scroll to today's column in weekly view on mobile
+  useEffect(() => {
+    if (viewMode === 'week' && calendarRef.current && weekDates.length > 0) {
+      const today = new Date();
+      const todayIdx = weekDates.findIndex(date => date.toDateString() === today.toDateString());
+      if (todayIdx !== -1) {
+        const scrollAmount = 80 + todayIdx * 120 - 60;
+        setTimeout(() => {
+          if (calendarRef.current) {
+            calendarRef.current.scrollLeft = Math.max(0, scrollAmount);
+          }
+        }, 100);
+      }
+    }
+  }, [viewMode, weekDates]);
 
   // Real-time timeline position calculation
   useEffect(() => {
@@ -715,7 +732,7 @@ export default function AgendaPage() {
           {/* View Mode Toggle */}
           <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '20px', overflow: 'hidden', backgroundColor: 'var(--bg-secondary)' }}>
             <button 
-              onClick={() => setViewMode('day')} 
+              onClick={() => { setSelectedDate(new Date()); setViewMode('day'); }} 
               className="btn-toggle"
               style={{
                 background: viewMode === 'day' ? 'var(--color-gold)' : 'transparent',
@@ -731,7 +748,7 @@ export default function AgendaPage() {
               Día
             </button>
             <button 
-              onClick={() => setViewMode('week')} 
+              onClick={() => { setSelectedDate(new Date()); setViewMode('week'); }} 
               className="btn-toggle"
               style={{
                 background: viewMode === 'week' ? 'var(--color-gold)' : 'transparent',
@@ -747,7 +764,7 @@ export default function AgendaPage() {
               Semana
             </button>
             <button 
-              onClick={() => setViewMode('month')} 
+              onClick={() => { setSelectedDate(new Date()); setViewMode('month'); }} 
               className="btn-toggle"
               style={{
                 background: viewMode === 'month' ? 'var(--color-gold)' : 'transparent',
@@ -812,7 +829,7 @@ export default function AgendaPage() {
 
       {/* Week/Day Calendar Grid */}
       {/* Week/Day/Month Calendar Grid */}
-      <div className={styles.calendarContainer} style={viewMode === 'month' ? { height: 'auto', minHeight: 'auto', overflowX: 'visible' } : {}}>
+      <div ref={calendarRef} className={styles.calendarContainer} style={viewMode === 'month' ? { height: 'auto', minHeight: 'auto', overflowX: 'visible' } : {}}>
         {viewMode === 'month' ? (
           <>
             {/* Month Header */}
@@ -832,6 +849,12 @@ export default function AgendaPage() {
                 const isToday = new Date().toDateString() === date.toDateString();
                 const isOutsideMonth = date.getMonth() !== selectedDate.getMonth();
                 
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const cellDate = new Date(date);
+                cellDate.setHours(0,0,0,0);
+                const isPast = cellDate < today;
+
                 const dayAppointments = appointments.filter(app => {
                   const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
                   return appDateStr === dateStr;
@@ -840,7 +863,7 @@ export default function AgendaPage() {
                 return (
                   <div 
                     key={idx} 
-                    className={`${styles.monthDayCell} ${isOutsideMonth ? styles.monthDayOutside : ''}`}
+                    className={`${styles.monthDayCell} ${isOutsideMonth ? styles.monthDayOutside : ''} ${isPast ? styles.monthDayPast : ''}`}
                     onClick={() => {
                       setSelectedDate(date);
                       setViewMode('day');
