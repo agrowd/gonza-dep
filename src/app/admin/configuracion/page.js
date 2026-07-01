@@ -372,7 +372,7 @@ export default function ConfiguracionPage() {
             <form onSubmit={handleSaveConfigs} className={styles.form} style={{ maxWidth: '750px' }}>
               <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-gold)', marginBottom: '1rem' }}>Mensajes de WhatsApp</div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Recordatorio Semanal (Sábados)</label>
+                <label className={styles.label}>Recordatorio de Turno (48hs Antes)</label>
                 <textarea 
                   className={`${styles.input} ${styles.textarea}`}
                   value={configs.wtsp_reminder_template}
