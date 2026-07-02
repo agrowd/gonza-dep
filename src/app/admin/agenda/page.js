@@ -474,11 +474,22 @@ export default function AgendaPage() {
       console.error(e);
     }
     
+    const fullName = turno.cliente.nombreCompleto || '';
+    let nombreVal = fullName;
+    let apellidoVal = '';
+    const lastSpaceIdx = fullName.lastIndexOf(' ');
+    if (lastSpaceIdx !== -1) {
+      nombreVal = fullName.substring(0, lastSpaceIdx);
+      apellidoVal = fullName.substring(lastSpaceIdx + 1);
+    }
+
     setIsDetailsOpen(false);
     setSelectedDate(targetDate);
     
     setNewTurno({
-      nombreCompleto: turno.cliente.nombreCompleto || '',
+      nombreCompleto: fullName,
+      nombre: nombreVal,
+      apellido: apellidoVal,
       whatsapp: turno.cliente.whatsapp || '',
       email: turno.cliente.email || '',
       dni: turno.cliente.dni || '',
@@ -546,6 +557,8 @@ export default function AgendaPage() {
 
     setNewTurno({
       nombreCompleto: '',
+      nombre: '',
+      apellido: '',
       whatsapp: '',
       email: '',
       dni: '',
@@ -823,6 +836,8 @@ export default function AgendaPage() {
             setIsNextScheduling(false);
             setNewTurno({
               nombreCompleto: '',
+              nombre: '',
+              apellido: '',
               whatsapp: '',
               email: '',
               dni: '',
@@ -1437,13 +1452,19 @@ export default function AgendaPage() {
             <form onSubmit={handleCreateTurno}>
               <div className={styles.detailGrid}>
                 {/* Personal Info */}
-                <div className={styles.inputGroup} style={{ gridColumn: 'span 2', position: 'relative' }}>
+                <div className={styles.inputGroup} style={{ position: 'relative' }}>
                   <label className={styles.inputLabel}>Nombre del Cliente *</label>
                   <input
                     type="text"
-                    value={newTurno.nombreCompleto}
+                    value={newTurno.nombre || ''}
                     onChange={(e) => {
-                      setNewTurno({ ...newTurno, nombreCompleto: e.target.value, clienteId: null });
+                      const n = e.target.value;
+                      setNewTurno(prev => ({
+                        ...prev,
+                        nombre: n,
+                        nombreCompleto: `${n} ${prev.apellido || ''}`.trim(),
+                        clienteId: null
+                      }));
                       setShowAutocomplete(true);
                     }}
                     onFocus={() => setShowAutocomplete(true)}
@@ -1451,11 +1472,11 @@ export default function AgendaPage() {
                       setTimeout(() => setShowAutocomplete(false), 250);
                     }}
                     required
-                    placeholder="Ej. Juan Pérez"
+                    placeholder="Ej. Juan"
                     autoComplete="off"
                   />
-                  {showAutocomplete && newTurno.nombreCompleto && allClients.filter(c =>
-                    c.nombreCompleto.toLowerCase().includes(newTurno.nombreCompleto.toLowerCase())
+                  {showAutocomplete && newTurno.nombre && allClients.filter(c =>
+                    c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase())
                   ).length > 0 && (
                     <ul style={{
                       position: 'absolute',
@@ -1474,7 +1495,7 @@ export default function AgendaPage() {
                       boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                     }}>
                       {allClients
-                        .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombreCompleto.toLowerCase()))
+                        .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase()))
                         .map(client => (
                           <li
                             key={client.id}
@@ -1498,9 +1519,20 @@ export default function AgendaPage() {
                                 targetDateStr = lastDate.toISOString().split('T')[0];
                               }
 
+                              const fullName = client.nombreCompleto || '';
+                              let nombreVal = fullName;
+                              let apellidoVal = '';
+                              const lastSpaceIdx = fullName.lastIndexOf(' ');
+                              if (lastSpaceIdx !== -1) {
+                                nombreVal = fullName.substring(0, lastSpaceIdx);
+                                apellidoVal = fullName.substring(lastSpaceIdx + 1);
+                              }
+
                               setNewTurno(prev => ({
                                 ...prev,
-                                nombreCompleto: client.nombreCompleto,
+                                nombreCompleto: fullName,
+                                nombre: nombreVal,
+                                apellido: apellidoVal,
                                 whatsapp: client.whatsapp,
                                 email: client.email,
                                 dni: client.dni || '',
@@ -1521,6 +1553,26 @@ export default function AgendaPage() {
                         ))}
                     </ul>
                   )}
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Apellido del Cliente *</label>
+                  <input
+                    type="text"
+                    value={newTurno.apellido || ''}
+                    onChange={(e) => {
+                      const a = e.target.value;
+                      setNewTurno(prev => ({
+                        ...prev,
+                        apellido: a,
+                        nombreCompleto: `${prev.nombre || ''} ${a}`.trim(),
+                        clienteId: null
+                      }));
+                    }}
+                    required
+                    placeholder="Ej. Pérez"
+                    autoComplete="off"
+                  />
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
