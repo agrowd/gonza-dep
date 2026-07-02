@@ -95,59 +95,67 @@ export function initWhatsAppClient() {
   return client;
 }
 
-export function formatArgentinaPhone(phone) {
-  // Remove all non-digits
+export function normalizeWhatsApp(phone) {
+  if (!phone) return '';
   let cleaned = phone.replace(/\D/g, '');
 
-  // If it's already an email-like ID (e.g. ends with @c.us), return it
-  if (phone.includes('@c.us')) {
-    return phone;
+  if (phone.includes('@')) {
+    cleaned = phone.split('@')[0].replace(/\D/g, '');
   }
 
-  // If it starts with 54:
+  // Si empieza con 54:
   if (cleaned.startsWith('54')) {
-    // If it is 549 followed by 10 digits (e.g. 5491171244149), it is already correct.
+    // Si tiene 13 dígitos y empieza con 549 (ej: 5491176735678), está correcto
     if (cleaned.startsWith('549') && cleaned.length === 13) {
-      return `${cleaned}@c.us`;
+      return cleaned;
     }
-    // If it's 54 followed by 10 digits (e.g. 541171244149), insert the 9.
+    // Si tiene 12 dígitos y empieza con 54 (ej: 541176735678), agregar el 9
     if (cleaned.length === 12) {
-      return `549${cleaned.slice(2)}@c.us`;
+      return `549${cleaned.slice(2)}`;
     }
-    // Remove the 54 prefix to normalize as local number
+    // Quitar 54 para normalizar
     cleaned = cleaned.slice(2);
   }
 
-  // Now we have a local number (or it was local from the start)
-  // Handle leading '15' for Buenos Aires (e.g., 1571244149 -> 1171244149)
-  if (cleaned.startsWith('15') && cleaned.length === 10) {
-    cleaned = `11${cleaned.slice(2)}`;
+  // Quitar 0 inicial si existiera
+  if (cleaned.startsWith('0')) {
+    cleaned = cleaned.slice(1);
   }
 
-  // Handle '15' in the middle for area codes (e.g., 341156123456 -> 3416123456)
-  // Standard local mobile numbers have 10 digits. If it has 12 digits and '15' is in the middle:
-  if (cleaned.length === 12 && (cleaned.startsWith('34115') || cleaned.startsWith('26115') || cleaned.startsWith('35115'))) {
+  // Manejar el prefijo 15 de celulares locales
+  if (cleaned.startsWith('15') && cleaned.length === 10) {
+    cleaned = `11${cleaned.slice(2)}`;
+  } else if (cleaned.length === 12 && (cleaned.startsWith('34115') || cleaned.startsWith('26115') || cleaned.startsWith('35115'))) {
     cleaned = cleaned.slice(0, 3) + cleaned.slice(5);
   } else if (cleaned.length === 12 && cleaned.slice(2, 4) === '15') {
     cleaned = cleaned.slice(0, 2) + cleaned.slice(4);
   }
 
-  // If we ended up with a standard 10 digit number, prepend 549
+  // Si nos queda un número local estándar de 10 dígitos, añadir 549
   if (cleaned.length === 10) {
-    return `549${cleaned}@c.us`;
+    return `549${cleaned}`;
   }
 
-  // Fallback: if it's already longer (e.g. has country code + 9), just return it
-  if (cleaned.length > 10) {
-    return `${cleaned}@c.us`;
+  // Si ya tiene 11 dígitos y empieza con 9, asumir que le falta el 54
+  if (cleaned.length === 11 && cleaned.startsWith('9')) {
+    return `54${cleaned}`;
   }
 
-  // If it's shorter (e.g. 8 digits), assume area code 11 and mobile 9
+  // Fallback para número local sin prefijo de 8 dígitos (asumir BsAs 11 y móvil 9)
   if (cleaned.length === 8) {
-    return `54911${cleaned}@c.us`;
+    return `54911${cleaned}`;
   }
 
-  return `${cleaned}@c.us`;
+  return cleaned;
+}
+
+export function formatArgentinaPhone(phone) {
+  if (!phone) return '';
+  if (phone.includes('@c.us')) {
+    return phone;
+  }
+  const normalized = normalizeWhatsApp(phone);
+  return normalized ? `${normalized}@c.us` : '';
 }
 
 export async function sendWhatsAppMessage(phone, text) {

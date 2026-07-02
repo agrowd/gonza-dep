@@ -4,6 +4,7 @@ import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
+import { normalizeWhatsApp } from '@/lib/whatsapp.js';
 
 // Convert HH:MM to minutes from midnight
 function timeToMinutes(timeStr) {
@@ -163,13 +164,15 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Datos de cliente requeridos para nuevo cliente' }, { status: 400 });
       }
 
+      const finalWhatsapp = normalizeWhatsApp(whatsapp);
+
       // Check if already exists
       let client = await prisma.cliente.findFirst({
         where: {
           OR: [
             { dni: dni || undefined },
             { email: email },
-            { whatsapp: whatsapp }
+            { whatsapp: finalWhatsapp }
           ]
         }
       });
@@ -179,7 +182,7 @@ export async function POST(request) {
           data: {
             dni,
             nombreCompleto,
-            whatsapp,
+            whatsapp: finalWhatsapp,
             email,
             canalAdquisicion: 'ORGANICO',
             estado: 'ACTIVO'

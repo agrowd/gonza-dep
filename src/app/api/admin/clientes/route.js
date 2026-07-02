@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
+import { normalizeWhatsApp } from '@/lib/whatsapp.js';
 
 export async function GET(request) {
   try {
@@ -92,6 +93,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Campos requeridos incompletos' }, { status: 400 });
     }
 
+    const finalWhatsapp = normalizeWhatsApp(whatsapp);
+
     // 1. DNI Uniqueness check (only if non-empty)
     if (dni) {
       const existingDni = await prisma.cliente.findFirst({
@@ -113,9 +116,9 @@ export async function POST(request) {
     }
 
     // 3. WhatsApp Uniqueness check
-    if (whatsapp) {
+    if (finalWhatsapp) {
       const existingWhatsapp = await prisma.cliente.findFirst({
-        where: { whatsapp }
+        where: { whatsapp: finalWhatsapp }
       });
       if (existingWhatsapp) {
         return NextResponse.json({ error: 'Ya existe un cliente registrado con el número de WhatsApp ingresado.' }, { status: 400 });
@@ -125,7 +128,7 @@ export async function POST(request) {
     const client = await prisma.cliente.create({
       data: {
         nombreCompleto,
-        whatsapp,
+        whatsapp: finalWhatsapp,
         email,
         dni: dni || null,
         canalAdquisicion: canalAdquisicion || 'ORGANICO',

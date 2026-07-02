@@ -40,6 +40,8 @@ function ClientesPageContent() {
   // Create client modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newClient, setNewClient] = useState({
+    nombre: '',
+    apellido: '',
     nombreCompleto: '',
     whatsapp: '',
     email: '',
@@ -52,6 +54,8 @@ function ClientesPageContent() {
 
   // Edit notes state
   const [editNotes, setEditNotes] = useState({
+    nombre: '',
+    apellido: '',
     nombreCompleto: '',
     whatsapp: '',
     email: '',
@@ -90,21 +94,27 @@ function ClientesPageContent() {
   const handleCreateClient = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...newClient,
+        nombreCompleto: `${newClient.nombre.trim()} ${newClient.apellido.trim()}`.trim()
+      };
       const res = await fetch('/api/admin/clientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newClient)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setIsCreateOpen(false);
         setNewClient({
+          nombre: '',
+          apellido: '',
           nombreCompleto: '',
           whatsapp: '',
           email: '',
           dni: '',
           frecuencia: 4,
           observaciones: '',
-          notasGonzalo: '',
+          notesGonzalo: '',
           canalAdquisicion: 'MANUAL'
         });
         fetchClients();
@@ -129,9 +139,16 @@ function ClientesPageContent() {
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) {
+          const fullName = data.nombreCompleto || '';
+          const spaceIndex = fullName.indexOf(' ');
+          const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
+          const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
+
           setSelectedClient(data);
           setEditNotes({
-            nombreCompleto: data.nombreCompleto || '',
+            nombre,
+            apellido,
+            nombreCompleto: fullName,
             whatsapp: data.whatsapp || '',
             email: data.email || '',
             dni: data.dni || '',
@@ -151,10 +168,14 @@ function ClientesPageContent() {
     e.preventDefault();
     setIsSavingNotes(true);
     try {
+      const payload = {
+        ...editNotes,
+        nombreCompleto: `${editNotes.nombre.trim()} ${editNotes.apellido.trim()}`.trim()
+      };
       const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editNotes)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (res.ok) {
@@ -479,11 +500,21 @@ function ClientesPageContent() {
                   
                   <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '1.5rem' }}>
                     <div className={styles.inputGroup}>
-                      <label className={styles.inputLabel}>Nombre Completo *</label>
+                      <label className={styles.inputLabel}>Nombre *</label>
                       <input
                         type="text"
-                        value={editNotes.nombreCompleto}
-                        onChange={(e) => setEditNotes({ ...editNotes, nombreCompleto: e.target.value })}
+                        value={editNotes.nombre || ''}
+                        onChange={(e) => setEditNotes({ ...editNotes, nombre: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>Apellido *</label>
+                      <input
+                        type="text"
+                        value={editNotes.apellido || ''}
+                        onChange={(e) => setEditNotes({ ...editNotes, apellido: e.target.value })}
                         required
                       />
                     </div>
@@ -500,15 +531,22 @@ function ClientesPageContent() {
 
                     <div className={styles.inputGroup}>
                       <label className={styles.inputLabel}>WhatsApp *</label>
-                      <input
-                        type="tel"
-                        value={editNotes.whatsapp}
-                        onChange={(e) => setEditNotes({ ...editNotes, whatsapp: e.target.value })}
-                        required
-                      />
+                      <div className={styles.phoneInputContainer}>
+                        <div className={styles.phonePrefix}>
+                          <span className={styles.flagIcon}>🇦🇷</span>
+                          <span>+54</span>
+                        </div>
+                        <input
+                          type="tel"
+                          value={editNotes.whatsapp}
+                          onChange={(e) => setEditNotes({ ...editNotes, whatsapp: e.target.value })}
+                          required
+                          style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: '#fff' }}
+                        />
+                      </div>
                     </div>
 
-                    <div className={styles.inputGroup}>
+                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
                       <label className={styles.inputLabel}>Email *</label>
                       <input
                         type="email"
@@ -582,15 +620,27 @@ function ClientesPageContent() {
 
             <form onSubmit={handleCreateClient}>
               <div className={agendaStyles.detailGrid} style={{ gridTemplateColumns: '1fr' }}>
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Nombre Completo *</label>
-                  <input
-                    type="text"
-                    value={newClient.nombreCompleto}
-                    onChange={(e) => setNewClient({ ...newClient, nombreCompleto: e.target.value })}
-                    required
-                    placeholder="Ej. Juan Pérez"
-                  />
+                <div className={styles.inputRow}>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Nombre *</label>
+                    <input
+                      type="text"
+                      value={newClient.nombre || ''}
+                      onChange={(e) => setNewClient({ ...newClient, nombre: e.target.value })}
+                      required
+                      placeholder="Ej. Juan"
+                    />
+                  </div>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Apellido *</label>
+                    <input
+                      type="text"
+                      value={newClient.apellido || ''}
+                      onChange={(e) => setNewClient({ ...newClient, apellido: e.target.value })}
+                      required
+                      placeholder="Ej. Pérez"
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>
@@ -605,13 +655,20 @@ function ClientesPageContent() {
 
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>WhatsApp *</label>
-                  <input
-                    type="tel"
-                    value={newClient.whatsapp}
-                    onChange={(e) => setNewClient({ ...newClient, whatsapp: e.target.value })}
-                    required
-                    placeholder="Ej. 54911223344"
-                  />
+                  <div className={styles.phoneInputContainer}>
+                    <div className={styles.phonePrefix}>
+                      <span className={styles.flagIcon}>🇦🇷</span>
+                      <span>+54</span>
+                    </div>
+                    <input
+                      type="tel"
+                      value={newClient.whatsapp}
+                      onChange={(e) => setNewClient({ ...newClient, whatsapp: e.target.value })}
+                      required
+                      placeholder="Ej. 11 7673 5678"
+                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: '#fff' }}
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>

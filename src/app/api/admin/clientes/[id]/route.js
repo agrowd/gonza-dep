@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
+import { normalizeWhatsApp } from '@/lib/whatsapp.js';
 
 // GET: Fetch client profile details, turn history, and logs
 export async function GET(request, { params }) {
@@ -85,11 +86,13 @@ export async function PUT(request, { params }) {
       }
     }
 
+    const finalWhatsapp = whatsapp ? normalizeWhatsApp(whatsapp) : undefined;
+
     // 3. WhatsApp Uniqueness check
-    if (whatsapp) {
+    if (finalWhatsapp) {
       const existingWhatsapp = await prisma.cliente.findFirst({
         where: {
-          whatsapp,
+          whatsapp: finalWhatsapp,
           id: { not: id }
         }
       });
@@ -100,7 +103,7 @@ export async function PUT(request, { params }) {
 
     const updateData = {};
     if (nombreCompleto) updateData.nombreCompleto = nombreCompleto;
-    if (whatsapp) updateData.whatsapp = whatsapp;
+    if (finalWhatsapp !== undefined) updateData.whatsapp = finalWhatsapp;
     if (email) updateData.email = email;
     if (dni !== undefined) updateData.dni = dni || null;
     if (canalAdquisicion) updateData.canalAdquisicion = canalAdquisicion;

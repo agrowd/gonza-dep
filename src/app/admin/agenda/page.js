@@ -806,6 +806,19 @@ export default function AgendaPage() {
           </span>
           <button onClick={handleNext} className={styles.navBtn}><NextIcon /></button>
           
+          <button 
+            onClick={() => {
+              if (selectedDate) {
+                const dateStr = selectedDate.toISOString().split('T')[0];
+                window.open(`/admin/agenda/imprimir?fecha=${dateStr}`, '_blank');
+              }
+            }} 
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            🖨️ Imprimir Día
+          </button>
+
           <button onClick={() => {
             setIsNextScheduling(false);
             setNewTurno({

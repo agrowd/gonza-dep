@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { mpPreference } from '@/lib/mercadopago.js';
+import { normalizeWhatsApp } from '@/lib/whatsapp.js';
 
 // Convert minutes from midnight to HH:MM string helper
 function minutesToTime(minutes) {
@@ -86,6 +87,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Alguna de las zonas seleccionadas no es válida.' }, { status: 400 });
     }
 
+    const finalWhatsapp = normalizeWhatsApp(whatsapp);
+
     // 2. Resolve client by DNI
     let client = await prisma.cliente.findUnique({
       where: { dni: dni }
@@ -99,7 +102,7 @@ export async function POST(request) {
         where: {
           OR: [
             { email: email },
-            { whatsapp: whatsapp }
+            { whatsapp: finalWhatsapp }
           ]
         }
       });
@@ -108,7 +111,7 @@ export async function POST(request) {
         // Update client with DNI and other details
         client = await prisma.cliente.update({
           where: { id: client.id },
-          data: { dni, nombreCompleto, whatsapp, email }
+          data: { dni, nombreCompleto, whatsapp: finalWhatsapp, email }
         });
       } else {
         // Create new client
@@ -117,7 +120,7 @@ export async function POST(request) {
           data: {
             dni,
             nombreCompleto,
-            whatsapp,
+            whatsapp: finalWhatsapp,
             email,
             canalAdquisicion: 'ORGANICO',
             estado: 'ACTIVO'

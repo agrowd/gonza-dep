@@ -24,6 +24,8 @@ export default function Home() {
   
   // Form State
   const [formData, setFormData] = useState({
+    nombre: '',
+    apellido: '',
     nombreCompleto: '',
     whatsapp: '',
     email: '',
@@ -135,9 +137,16 @@ export default function Home() {
         }
         
         // Auto-fill and skip to Step 2
+        const fullName = data.client.nombreCompleto || '';
+        const spaceIndex = fullName.indexOf(' ');
+        const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
+        const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
+
         setFormData(prev => ({
           ...prev,
-          nombreCompleto: data.client.nombreCompleto,
+          nombre,
+          apellido,
+          nombreCompleto: fullName,
           whatsapp: data.client.whatsapp,
           email: data.client.email
         }));
@@ -158,10 +167,11 @@ export default function Home() {
   // Handle personal info submit
   const handleNextStep1 = (e) => {
     e.preventDefault();
-    if (!formData.nombreCompleto || !formData.whatsapp || !formData.email || !formData.dni) {
+    if (!formData.nombre || !formData.apellido || !formData.whatsapp || !formData.email || !formData.dni) {
       setErrorMessage('Por favor, completa todos los campos obligatorios.');
       return;
     }
+    formData.nombreCompleto = `${formData.nombre.trim()} ${formData.apellido.trim()}`.trim();
     setErrorMessage('');
     setStep(2);
   };
@@ -347,26 +357,45 @@ export default function Home() {
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Nombre Completo *</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Gonzalo Pérez"
-                    value={formData.nombreCompleto}
-                    onChange={(e) => setFormData({ ...formData, nombreCompleto: e.target.value })}
-                    required
-                  />
+                <div className={styles.inputRow}>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Nombre *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Gonzalo"
+                      value={formData.nombre || ''}
+                      onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Apellido *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Pérez"
+                      value={formData.apellido || ''}
+                      onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Teléfono / WhatsApp *</label>
-                  <input
-                    type="tel"
-                    placeholder="Ej. 1122334455 (Sin 0 ni 15, código de área de Argentina)"
-                    value={formData.whatsapp}
-                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                    required
-                  />
+                  <div className={styles.phoneInputContainer}>
+                    <div className={styles.phonePrefix}>
+                      <span className={styles.flagIcon}>🇦🇷</span>
+                      <span>+54</span>
+                    </div>
+                    <input
+                      type="tel"
+                      placeholder="Ej. 11 7673 5678 (Celular sin 0 ni 15)"
+                      value={formData.whatsapp}
+                      onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                      required
+                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent' }}
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>
