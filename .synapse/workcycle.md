@@ -230,5 +230,25 @@
   - Se ejecutó `./deploy.sh` en el VPS, reconstruyendo la aplicación y recargando PM2.
   - Se comprobó mediante `curl` de red que el sitio responde correctamente con `HTTP 200 OK`.
 
+## 📅 Sesión: 2 de Julio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Separar Nombre Completo en campos Nombre y Apellido en formulario de reserva público y modal de creación/edición de clientes.
+- [x] Implementar selector de Teléfono / WhatsApp en frontend con bandera argentina y prefijo +54 (formato Agenda Pro).
+- [x] Asegurar normalización automática de números telefónicos a formato internacional (549...) en base de datos.
+- [x] Crear opción de Imprimir/Exportar a PDF los turnos del día en el panel de control.
+- [x] Realizar build local y subir cambios al VPS remotos con reinicio de PM2.
+
+### 📝 Notas / Bitácora
+- **2 de Julio (11:00 AM)**:
+  - Se implementó la división de `nombreCompleto` en campos independientes de `Nombre` y `Apellido` en `src/app/page.js` y `src/app/admin/clientes/page.js`. Al guardarse o enviarse, se concatenan de forma automática, preservando la compatibilidad de base de datos de Prisma y de MongoDB.
+  - Se diseñó el selector telefónico premium con prefijo de bandera `🇦🇷 +54` en ambos formularios.
+  - Se creó y exportó la función de utilidad `normalizeWhatsApp` en `src/lib/whatsapp.js` para limpiar y formatear números al formato internacional (`549...`). Los endpoints de creación/edición de clientes y reservas ahora normalizan el número antes de validar y guardar en la base de datos para evitar registros duplicados.
+  - Se creó el endpoint `/api/admin/turnos/imprimir` (GET) para recuperar y ordenar cronológicamente los turnos del día.
+  - Se desarrolló la vista interactiva `/admin/agenda/imprimir` optimizada para impresión nativa y PDF (`@media print` con fondo blanco y textos negros de alta legibilidad, ocultando barras de acciones y barras laterales).
+  - Se integró el botón "Imprimir Día" con icono de impresora en `/admin/agenda/page.js`.
+  - Se compiló con éxito localmente, se creó el script de subida `scratch/deploy_gonzalo.mjs` y se desplegó todo a producción en el VPS (`187.127.9.216`), reiniciándose PM2 de forma exitosa.
+  - Se realizó push a `main` de GitHub.
+
 
 
