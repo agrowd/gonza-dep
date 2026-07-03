@@ -145,6 +145,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No es posible agendar turnos con fechas o de horarios anteriores/pasados.' }, { status: 400 });
     }
 
+    // Fetch work hours configuration
+    const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
+    const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
+    const workStartStr = startConfig?.value || '10:00';
+    const workEndStr = endConfig?.value || '20:00';
+    
+    const workStartMinutes = timeToMinutes(workStartStr);
+    const workEndMinutes = timeToMinutes(workEndStr);
+    
+    const startMinutes = timeToMinutes(horaInicio);
+    const endMinutes = timeToMinutes(horaFin);
+
+    if (startMinutes < workStartMinutes || endMinutes > workEndMinutes) {
+      return NextResponse.json({ error: `El horario seleccionado está fuera del horario de atención permitido (${workStartStr} hs a ${workEndStr} hs).` }, { status: 400 });
+    }
+
     // Validation: Overlap Check
     const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin);
     if (checkOverlap) {

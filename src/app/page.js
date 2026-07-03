@@ -273,9 +273,9 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.logoContainer}>
-            <img src="/logo.png" alt="Gonzalo Depilación para Hombres" style={{ width: '150px', height: 'auto' }} />
+            <img src="/logo.png" alt="Gonzalo Depilación para Hombres" style={{ width: '240px', height: 'auto' }} />
           </div>
-          <a href="/login" className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
+          <a href="/login" className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', color: '#000000', borderColor: 'rgba(0, 0, 0, 0.4)', fontWeight: 600 }}>
             Acceso Interno
           </a>
         </div>

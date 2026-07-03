@@ -4,6 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 
+// Timezone-safe date helper
+const formatLocalDate = (dateInput) => {
+  if (!dateInput) return '';
+  const dateStr = typeof dateInput === 'string' ? dateInput : dateInput.toISOString();
+  const datePart = dateStr.split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  return d.toLocaleDateString('es-ES', { dateStyle: 'long' });
+};
+
 // SVG Icons
 const PrevIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>;
 const NextIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>;
@@ -150,6 +160,8 @@ export default function AgendaPage() {
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [nowPosition, setNowPosition] = useState(null);
+  const [newTurnoWarning, setNewTurnoWarning] = useState('');
+  const [editTurnoWarning, setEditTurnoWarning] = useState('');
   const [editTurno, setEditTurno] = useState({
     fechaStr: '',
     horaInicio: '',
@@ -642,6 +654,105 @@ export default function AgendaPage() {
       bonificacion: bonificacion
     }));
   }, [editTurno.descuentoTipo, editTurno.descuentoValor, isEditing]);
+
+  // Check overlap/availability for newTurno in real-time
+  useEffect(() => {
+    if (!isNewOpen || !newTurno.fechaStr || !newTurno.horaInicio || !newTurno.horaFin || newTurno.estado === 'BLOQUEADO') {
+      setNewTurnoWarning('');
+      return;
+    }
+
+    const checkNewTurnoOverlap = async () => {
+      try {
+        const res = await fetch(`/api/admin/turnos?start=${newTurno.fechaStr}&end=${newTurno.fechaStr}`);
+        if (!res.ok) return;
+        const dayTurnos = await res.json();
+        
+        const newStart = timeToMinutes(newTurno.horaInicio);
+        const newEnd = timeToMinutes(newTurno.horaFin);
+        
+        // Find if there is any overlapping turno
+        const overlap = dayTurnos.find(t => {
+          if (t.estado === 'CANCELADO') return false;
+          const start = timeToMinutes(t.horaInicio);
+          const end = timeToMinutes(t.horaFin);
+          return start < newEnd && end > newStart;
+        });
+
+        if (overlap) {
+          const isBlock = overlap.estado === 'BLOQUEADO';
+          setNewTurnoWarning(isBlock 
+            ? '⚠️ El horario seleccionado se encuentra bloqueado administrativamente.' 
+            : `⚠️ Se solapa con otro turno de ${overlap.cliente?.nombreCompleto || 'otro cliente'} (${overlap.horaInicio} - ${overlap.horaFin}).`
+          );
+        } else {
+          // Check if outside business hours
+          const workStartMinutes = timeToMinutes(config.work_start || '10:00');
+          const workEndMinutes = timeToMinutes(config.work_end || '20:00');
+          if (newStart < workStartMinutes || newEnd > workEndMinutes) {
+            setNewTurnoWarning(`⚠️ Fuera del horario de atención configurado (${config.work_start || '10:00'} a ${config.work_end || '20:00'} hs).`);
+          } else {
+            setNewTurnoWarning('');
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const delayDebounce = setTimeout(checkNewTurnoOverlap, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [newTurno.fechaStr, newTurno.horaInicio, newTurno.horaFin, newTurno.estado, isNewOpen, config.work_start, config.work_end]);
+
+  // Check overlap/availability for editTurno in real-time
+  useEffect(() => {
+    if (!isEditing || !selectedTurno || !editTurno.fechaStr || !editTurno.horaInicio || !editTurno.horaFin || editTurno.estado === 'BLOQUEADO') {
+      setEditTurnoWarning('');
+      return;
+    }
+
+    const checkEditTurnoOverlap = async () => {
+      try {
+        const res = await fetch(`/api/admin/turnos?start=${editTurno.fechaStr}&end=${editTurno.fechaStr}`);
+        if (!res.ok) return;
+        const dayTurnos = await res.json();
+        
+        const newStart = timeToMinutes(editTurno.horaInicio);
+        const newEnd = timeToMinutes(editTurno.horaFin);
+        
+        // Find if there is any overlapping turno (excluding current edited turno)
+        const overlap = dayTurnos.find(t => {
+          if (t.id === selectedTurno.id) return false;
+          if (t.estado === 'CANCELADO') return false;
+          const start = timeToMinutes(t.horaInicio);
+          const end = timeToMinutes(t.horaFin);
+          return start < newEnd && end > newStart;
+        });
+
+        if (overlap) {
+          const isBlock = overlap.estado === 'BLOQUEADO';
+          setEditTurnoWarning(isBlock 
+            ? '⚠️ El horario seleccionado se encuentra bloqueado administrativamente.' 
+            : `⚠️ Se solapa con otro turno de ${overlap.cliente?.nombreCompleto || 'otro cliente'} (${overlap.horaInicio} - ${overlap.horaFin}).`
+          );
+        } else {
+          // Check if outside business hours
+          const workStartMinutes = timeToMinutes(config.work_start || '10:00');
+          const workEndMinutes = timeToMinutes(config.work_end || '20:00');
+          if (newStart < workStartMinutes || newEnd > workEndMinutes) {
+            setEditTurnoWarning(`⚠️ Fuera del horario de atención configurado (${config.work_start || '10:00'} a ${config.work_end || '20:00'} hs).`);
+          } else {
+            setEditTurnoWarning('');
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const delayDebounce = setTimeout(checkEditTurnoOverlap, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [editTurno.fechaStr, editTurno.horaInicio, editTurno.horaFin, editTurno.estado, isEditing, selectedTurno, config.work_start, config.work_end]);
 
   // Submit manual creation
   const handleCreateTurno = async (e) => {
@@ -1286,6 +1397,12 @@ export default function AgendaPage() {
                   </div>
                 </div>
 
+                {editTurnoWarning && (
+                  <div style={{ color: '#ffb74d', backgroundColor: 'rgba(255, 183, 77, 0.1)', border: '1px solid #ffb74d', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', marginTop: '1rem', textAlign: 'center', width: '100%' }}>
+                    {editTurnoWarning}
+                  </div>
+                )}
+
                 <div className={styles.modalFooter}>
                   <button type="button" onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancelar</button>
                   <button type="submit" className="btn btn-primary">Guardar Cambios</button>
@@ -1308,7 +1425,7 @@ export default function AgendaPage() {
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Día</span>
-                    <span className={styles.detailValue}>{new Date(selectedTurno.fecha).toLocaleDateString('es-ES', { dateStyle: 'long' })}</span>
+                    <span className={styles.detailValue}>{formatLocalDate(selectedTurno.fecha)}</span>
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Horario</span>
@@ -1356,17 +1473,17 @@ export default function AgendaPage() {
                       <>
                         <button
                           onClick={() => {
-                            window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}`;
+                            window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda`;
                           }}
                           className="btn btn-secondary"
-                          style={{ flex: '1 0 45%', borderColor: 'var(--color-gold)', color: 'var(--color-gold)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
+                          style={{ flex: '1 0 45%', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
                         >
                           📁 Ver Ficha del Cliente
                         </button>
                         <button
                           onClick={() => handleScheduleNextTurn(selectedTurno)}
                           className="btn btn-secondary"
-                          style={{ flex: '1 0 45%', borderColor: '#81c784', color: '#81c784', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
+                          style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
                         >
                           📅 Programar Siguiente Turno
                         </button>
@@ -1386,37 +1503,37 @@ export default function AgendaPage() {
                         setIsEditing(true);
                       }}
                       className="btn btn-primary"
-                      style={{ flex: '1 0 45%', backgroundColor: '#d4a54d', color: '#000' }}
+                      style={{ flex: '1 0 45%', backgroundColor: '#d4a54d', color: '#000', border: 'none' }}
                     >
                       ✏️ Editar / Reprogramar
                     </button>
                     {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-primary" style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-primary" style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff', border: 'none' }}>
                         Aprobar y Confirmar
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#1565c0', color: '#64b5f6' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#1565c0', color: '#fff', border: 'none' }}>
                         Marcar como Realizado
                       </button>
                     )}
                     {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#c62828', color: '#fff', border: 'none' }}>
                         Cancelar Turno
                       </button>
                     )}
                     {selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#ef6c00', color: '#ffb74d' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#ef6c00', color: '#fff', border: 'none' }}>
                         ❌ No Asistió
                       </button>
                     )}
                     {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#81c784', color: '#81c784' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff', border: 'none' }}>
                         Re-activar Turno
                       </button>
                     )}
                     {selectedTurno.estado !== 'BLOQUEADO' && (
-                      <a href={`https://wa.me/${(selectedTurno.cliente?.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', borderColor: '#25D366', color: '#25D366' }}>
+                      <a href={`https://wa.me/${(selectedTurno.cliente?.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', backgroundColor: '#25D366', color: '#fff', border: 'none' }}>
                         💬 Chatear por WhatsApp
                       </a>
                     )}
@@ -1424,12 +1541,12 @@ export default function AgendaPage() {
                       <button
                         onClick={() => handleSendReceipt(selectedTurno.id)}
                         className="btn btn-secondary"
-                        style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', borderColor: '#d4a54d', color: '#d4a54d' }}
+                        style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', backgroundColor: '#d4a54d', color: '#000', border: 'none' }}
                       >
                         🧾 Enviar Recibo por Mail
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn btn-secondary" style={{ flex: '1 0 45%', borderColor: '#c62828', color: '#ff8a8a' }}>
+                    <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#c62828', color: '#fff', border: 'none' }}>
                       🗑️ Eliminar Registro
                     </button>
                   </div>
@@ -1740,6 +1857,12 @@ export default function AgendaPage() {
                   />
                 </div>
               </div>
+
+              {newTurnoWarning && (
+                <div style={{ color: '#ffb74d', backgroundColor: 'rgba(255, 183, 77, 0.1)', border: '1px solid #ffb74d', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center', width: '100%' }}>
+                  {newTurnoWarning}
+                </div>
+              )}
 
               <div className={styles.modalFooter}>
                 <button type="button" onClick={() => setIsNewOpen(false)} className="btn btn-secondary">Cancelar</button>

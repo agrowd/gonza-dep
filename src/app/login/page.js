@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from '../page.module.css';
 
@@ -10,6 +10,33 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (data.authenticated) {
+          router.replace('/admin/agenda');
+        } else {
+          setCheckingSession(false);
+        }
+      } catch (err) {
+        console.error('Error checking active session:', err);
+        setCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, [router]);
+
+  if (checkingSession) {
+    return (
+      <div className={styles.container} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, #f5f2eb 0%, #e3dec9 100%)' }}>
+        <div style={{ color: '#000000', fontWeight: 600 }}>Verificando sesión...</div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

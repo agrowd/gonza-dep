@@ -103,12 +103,28 @@ export async function PUT(request, { params }) {
     // Past Date/Time Check (only validate if date/time is actually changing and not cancelled)
     if (checkEstado !== 'CANCELADO') {
       const isDateChanged = fechaStr && fechaStr !== oldTurn.fecha.toISOString().split('T')[0];
-      const isTimeChanged = horaInicio && horaInicio !== oldTurn.horaInicio;
+      const isTimeChanged = (horaInicio && horaInicio !== oldTurn.horaInicio) || (horaFin && horaFin !== oldTurn.horaFin);
       const isStateReactivated = estado && estado !== 'CANCELADO' && oldTurn.estado === 'CANCELADO';
       
       if (isDateChanged || isTimeChanged || isStateReactivated) {
         if (isPastDateTime(checkFechaStr, checkHoraInicio)) {
           return NextResponse.json({ error: 'No es posible reprogramar un turno a una fecha o de horario anteriores/pasados.' }, { status: 400 });
+        }
+
+        // Fetch work hours configuration
+        const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
+        const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
+        const workStartStr = startConfig?.value || '10:00';
+        const workEndStr = endConfig?.value || '20:00';
+        
+        const workStartMinutes = timeToMinutes(workStartStr);
+        const workEndMinutes = timeToMinutes(workEndStr);
+        
+        const startMinutes = timeToMinutes(checkHoraInicio);
+        const endMinutes = timeToMinutes(checkHoraFin);
+
+        if (startMinutes < workStartMinutes || endMinutes > workEndMinutes) {
+          return NextResponse.json({ error: `El horario seleccionado está fuera del horario de atención permitido (${workStartStr} hs a ${workEndStr} hs).` }, { status: 400 });
         }
       }
     }

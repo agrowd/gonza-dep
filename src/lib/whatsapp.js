@@ -359,7 +359,7 @@ export async function checkAndSendReminders() {
     console.log(`[Reminder Cron] Found ${finishedTurnos.length} finished turnos on target maintenance date.`);
 
     for (const t of finishedTurnos) {
-      if (!t.cliente || !t.cliente.email) continue;
+      if (!t.cliente || !t.cliente.email || t.cliente.estado !== 'FINALIZADO') continue;
 
       // Check if client has any newer turnos
       const newerTurno = await prisma.turno.findFirst({

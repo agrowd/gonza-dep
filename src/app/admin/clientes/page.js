@@ -1,9 +1,28 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import styles from './clientes.module.css';
 import agendaStyles from '../agenda/agenda.module.css';
+
+// Timezone-safe date helpers
+const formatLocalDate = (dateInput) => {
+  if (!dateInput) return '';
+  const dateStr = typeof dateInput === 'string' ? dateInput : dateInput.toISOString();
+  const datePart = dateStr.split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  return d.toLocaleDateString('es-ES', { dateStyle: 'long' });
+};
+
+const formatLocalDateMedium = (dateInput) => {
+  if (!dateInput) return '';
+  const dateStr = typeof dateInput === 'string' ? dateInput : dateInput.toISOString();
+  const datePart = dateStr.split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  return d.toLocaleDateString('es-ES', { dateStyle: 'medium' });
+};
 
 // SVG Icons
 const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
@@ -84,12 +103,84 @@ function ClientesPageContent() {
     fetchClients();
   }, [filter]);
 
+  const router = useRouter();
+  const fromPage = searchParams.get('from');
+
+  // Fetch individual profile details
+  const loadClientData = (clientId) => {
+    fetch(`/api/admin/clientes/${clientId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          const fullName = data.nombreCompleto || '';
+          const spaceIndex = fullName.indexOf(' ');
+          const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
+          const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
+
+          setSelectedClient(data);
+          setEditNotes({
+            nombre,
+            apellido,
+            nombreCompleto: fullName,
+            whatsapp: data.whatsapp || '',
+            email: data.email || '',
+            dni: data.dni || '',
+            frecuencia: data.frecuencia,
+            observaciones: data.observaciones || '',
+            notasGonzalo: data.notasGonzalo || ''
+          });
+          setActiveTab('history');
+          setIsProfileOpen(true);
+        }
+      })
+      .catch(err => console.error('Error fetching client profile:', err));
+  };
+
   // Trigger search profile when query param 'id' is present
   useEffect(() => {
     if (initialClientId) {
-      handleClientClick(initialClientId);
+      loadClientData(initialClientId);
+    } else {
+      setIsProfileOpen(false);
+      setSelectedClient(null);
     }
   }, [initialClientId]);
+
+  // Handle modal close
+  const handleCloseProfile = () => {
+    setIsProfileOpen(false);
+    if (fromPage === 'agenda') {
+      router.push('/admin/agenda');
+    } else {
+      router.push('/admin/clientes');
+    }
+  };
+
+  // Handle client status toggle (ACTIVO <-> FINALIZADO)
+  const handleToggleEstado = async (newEstado) => {
+    if (!selectedClient) return;
+    try {
+      const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: newEstado })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedClient(prev => ({
+          ...prev,
+          estado: data.estado
+        }));
+        alert(`Estado del cliente cambiado a: ${data.estado}`);
+        fetchClients(); // refresh list
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err) {
+      console.error('Error changing client status:', err);
+      alert('Error de red al actualizar estado.');
+    }
+  };
 
   const handleCreateClient = async (e) => {
     e.preventDefault();
@@ -133,34 +224,9 @@ function ClientesPageContent() {
     fetchClients();
   };
 
-  // Fetch individual profile details
+  // Navigate to individual profile via search param
   const handleClientClick = (clientId) => {
-    fetch(`/api/admin/clientes/${clientId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && !data.error) {
-          const fullName = data.nombreCompleto || '';
-          const spaceIndex = fullName.indexOf(' ');
-          const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
-          const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
-
-          setSelectedClient(data);
-          setEditNotes({
-            nombre,
-            apellido,
-            nombreCompleto: fullName,
-            whatsapp: data.whatsapp || '',
-            email: data.email || '',
-            dni: data.dni || '',
-            frecuencia: data.frecuencia,
-            observaciones: data.observaciones || '',
-            notasGonzalo: data.notasGonzalo || ''
-          });
-          setActiveTab('history');
-          setIsProfileOpen(true);
-        }
-      })
-      .catch(err => console.error('Error fetching client profile:', err));
+    router.push(`/admin/clientes?id=${clientId}${fromPage ? `&from=${fromPage}` : ''}`);
   };
 
   // Save admin profile notes/frequency settings
@@ -228,11 +294,16 @@ function ClientesPageContent() {
     if (count > 0) {
       // client.turnos are ordered by date desc
       const last = turnosRealizados[0];
-      const lastD = new Date(last.fecha);
-      lastDate = lastD.toLocaleDateString('es-ES', { dateStyle: 'medium' });
+      lastDate = formatLocalDateMedium(last.fecha);
 
       // time elapsed
-      const diffTime = Math.abs(new Date() - lastD);
+      const datePart = new Date(last.fecha).toISOString().split('T')[0];
+      const [year, month, day] = datePart.split('-').map(Number);
+      const lastD = new Date(year, month - 1, day);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffTime = Math.abs(today - lastD);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
       if (diffDays < 30) {
@@ -244,8 +315,17 @@ function ClientesPageContent() {
       }
     }
 
-    // Next turn if any
-    const nextTurn = client.turnos.find(t => new Date(t.fecha) >= new Date() && t.estado !== 'CANCELADO');
+    // Next turn if any (strictly tomorrow or later, ignoring today/past)
+    const startOfTomorrow = new Date();
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    startOfTomorrow.setHours(0, 0, 0, 0);
+
+    const nextTurn = client.turnos.find(t => {
+      const datePart = new Date(t.fecha).toISOString().split('T')[0];
+      const [year, month, day] = datePart.split('-').map(Number);
+      const tDate = new Date(year, month - 1, day);
+      return tDate >= startOfTomorrow && t.estado !== 'CANCELADO';
+    });
 
     return {
       count,
@@ -335,7 +415,7 @@ function ClientesPageContent() {
                       {client.canalAdquisicion.toLowerCase().replace('_', ' ')}
                     </td>
                     <td>
-                      <span className={`${agendaStyles.statusPill} ${client.estado === 'ACTIVO' ? agendaStyles.badgeSenado : agendaStyles.badgeNoAsistio}`} style={{ fontSize: '0.7rem' }}>
+                      <span className={`${agendaStyles.statusPill} ${client.estado === 'ACTIVO' ? agendaStyles.badgeSenado : (client.estado === 'FINALIZADO' ? agendaStyles.badgeRealizado : agendaStyles.badgeNoAsistio)}`} style={{ fontSize: '0.7rem' }}>
                         {client.estado}
                       </span>
                     </td>
@@ -356,7 +436,7 @@ function ClientesPageContent() {
                 <h3 className={styles.ficheTitle}>{selectedClient.nombreCompleto}</h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')} | DNI: {selectedClient.dni || 'Sin registrar'} | Canal: {selectedClient.canalAdquisicion}</span>
               </div>
-              <button onClick={() => setIsProfileOpen(false)} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
+              <button onClick={handleCloseProfile} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
             </div>
 
             {/* Tabs */}
@@ -394,7 +474,7 @@ function ClientesPageContent() {
                       {stats.nextTurn ? (
                         <div>
                           <span className={styles.detailValue} style={{ color: 'var(--color-gold)', fontSize: '1.05rem', fontWeight: 700 }}>
-                            {new Date(stats.nextTurn.fecha).toLocaleDateString('es-ES', { dateStyle: 'medium' })}
+                            {formatLocalDateMedium(stats.nextTurn.fecha)}
                           </span>
                           <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginTop: '0.25rem' }}>
                             {stats.nextTurn.horaInicio} a {stats.nextTurn.horaFin}
@@ -413,6 +493,15 @@ function ClientesPageContent() {
 
                     {/* Quick Contacts Actions */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      {selectedClient.estado === 'ACTIVO' ? (
+                        <button onClick={() => handleToggleEstado('FINALIZADO')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#1565c0', color: '#fff', border: 'none' }}>
+                          🏁 Finalizar Tratamiento
+                        </button>
+                      ) : (
+                        <button onClick={() => handleToggleEstado('ACTIVO')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none' }}>
+                          🟢 Reactivar Cliente (Activo)
+                        </button>
+                      )}
                       <a href={`https://wa.me/${selectedClient.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderColor: '#25D366', color: '#25D366' }}>
                         💬 WhatsApp del Cliente
                       </a>
@@ -443,7 +532,7 @@ function ClientesPageContent() {
                             <div key={t.id} className={`${styles.paperItem} ${isCanceled ? styles.paperItemCanceled : ''}`}>
                               <div className={styles.paperItemHeader}>
                                 <span className={styles.paperDate}>
-                                  {selectedClient.turnos.length - idx}) {new Date(t.fecha).toLocaleDateString('es-ES')} - {t.horaInicio} hs
+                                  {selectedClient.turnos.length - idx}) {formatLocalDate(t.fecha)} - {t.horaInicio} hs
                                 </span>
                                 <span className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.5rem' }}>
                                   {t.estado}
@@ -598,7 +687,7 @@ function ClientesPageContent() {
                 </div>
 
                 <div className={agendaStyles.modalFooter}>
-                  <button type="button" onClick={() => setIsProfileOpen(false)} className="btn btn-secondary">Cancelar</button>
+                  <button type="button" onClick={handleCloseProfile} className="btn btn-secondary">Cancelar</button>
                   <button type="submit" className="btn btn-primary" disabled={isSavingNotes}>
                     {isSavingNotes ? 'Guardando...' : 'Guardar Ficha'}
                   </button>
