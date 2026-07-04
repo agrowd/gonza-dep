@@ -4,7 +4,7 @@ import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
-import { normalizeWhatsApp } from '@/lib/whatsapp.js';
+import { normalizeWhatsApp, sendWhatsAppMessage } from '@/lib/whatsapp.js';
 
 // Convert HH:MM to minutes from midnight
 function timeToMinutes(timeStr) {
@@ -17,6 +17,10 @@ function minutesToTime(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+}
+
+function formatDate(date) {
+  return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long' });
 }
 
 function isPastDateTime(fechaStr, horaInicio) {
@@ -255,8 +259,9 @@ export async function POST(request) {
       }
     });
 
-    // 5. Send confirmation email if it is a real appointment (not a time block)
+    // 5. Send confirmation email and WhatsApp if it is a real appointment (not a time block)
     if (newTurno.estado !== 'BLOQUEADO') {
+      // 5.1 Send Email
       try {
         await sendConfirmationEmail(
           newTurno.cliente.email,
@@ -286,6 +291,60 @@ export async function POST(request) {
             turnoId: newTurno.id,
             canal: 'EMAIL',
             mensaje: `Fallo al enviar email de confirmación manual: ${mailError.message}`,
+            estado: 'FALLIDO'
+          }
+        });
+      }
+
+      // 5.2 Send WhatsApp confirmation
+      try {
+        const templateConfig = await prisma.configuracion.findUnique({
+          where: { key: 'wtsp_confirmation_manual_template' }
+        });
+        const addressConfig = await prisma.configuracion.findUnique({
+          where: { key: 'address' }
+        });
+
+        const templateVal = templateConfig?.value || "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] para [Zonas] fue agendado con éxito. Recordá venir afeitado al ras. ¡Te esperamos!";
+        const addressVal = addressConfig?.value || "Paraná 597, piso 8, depto 48";
+
+        let zonesText = '';
+        try {
+          const parsedZonas = JSON.parse(newTurno.zonas);
+          zonesText = parsedZonas.map(z => z.nombre).join(', ');
+        } catch (e) {
+          zonesText = 'tratamiento';
+        }
+
+        let msg = templateVal
+          .replaceAll('[Nombre]', newTurno.cliente.nombreCompleto)
+          .replaceAll('[FechaTurno]', formatDate(newTurno.fecha))
+          .replaceAll('[Horario]', `${newTurno.horaInicio} hs`)
+          .replaceAll('[Zonas]', zonesText)
+          .replaceAll('[ValorTotal]', `$${newTurno.valorTotal}`)
+          .replaceAll('[Seña]', `$${newTurno.valorSeña}`)
+          .replaceAll('[Direccion]', addressVal);
+
+        await sendWhatsAppMessage(newTurno.cliente.whatsapp, msg);
+
+        await prisma.notificacion.create({
+          data: {
+            clienteId: newTurno.clienteId,
+            turnoId: newTurno.id,
+            canal: 'WHATSAPP',
+            mensaje: msg,
+            estado: 'ENVIADO'
+          }
+        });
+        console.log(`WhatsApp confirmation automatically sent on manual create to ${newTurno.cliente.nombreCompleto}.`);
+      } catch (wppError) {
+        console.error('Failed to send WhatsApp confirmation on manual create:', wppError);
+        await prisma.notificacion.create({
+          data: {
+            clienteId: newTurno.clienteId,
+            turnoId: newTurno.id,
+            canal: 'WHATSAPP',
+            mensaje: `Fallo al enviar WhatsApp de confirmación manual: ${wppError.message}`,
             estado: 'FALLIDO'
           }
         });

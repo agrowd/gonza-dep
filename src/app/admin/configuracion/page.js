@@ -44,7 +44,11 @@ export default function ConfiguracionPage() {
     email_noshow_subject: '',
     email_noshow_body: '',
     email_maintenance_subject: '',
-    email_maintenance_body: ''
+    email_maintenance_body: '',
+    wtsp_confirmation_manual_template: '',
+    wtsp_noshow_template: '',
+    email_reprogram_subject: '',
+    email_reprogram_body: ''
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
@@ -83,7 +87,11 @@ export default function ConfiguracionPage() {
             email_noshow_subject: data.email_noshow_subject || '',
             email_noshow_body: data.email_noshow_body || '',
             email_maintenance_subject: data.email_maintenance_subject || '',
-            email_maintenance_body: data.email_maintenance_body || ''
+            email_maintenance_body: data.email_maintenance_body || '',
+            wtsp_confirmation_manual_template: data.wtsp_confirmation_manual_template || '',
+            wtsp_noshow_template: data.wtsp_noshow_template || '',
+            email_reprogram_subject: data.email_reprogram_subject || '',
+            email_reprogram_body: data.email_reprogram_body || ''
           });
         }
       })
@@ -393,6 +401,28 @@ export default function ConfiguracionPage() {
                 />
               </div>
 
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Confirmación de Alta de Turno Manual</label>
+                <textarea 
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={configs.wtsp_confirmation_manual_template}
+                  onChange={(e) => setConfigs({ ...configs, wtsp_confirmation_manual_template: e.target.value })}
+                  placeholder="Tu turno fue agendado con éxito..."
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Aviso de Inasistencia (No Asistió) por WhatsApp</label>
+                <textarea 
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={configs.wtsp_noshow_template}
+                  onChange={(e) => setConfigs({ ...configs, wtsp_noshow_template: e.target.value })}
+                  placeholder="Lamentamos que no hayas asistido a tu turno..."
+                  required
+                />
+              </div>
+
               {/* Variable Helper */}
               <div className={styles.variableHelper} style={{ marginBottom: '2rem' }}>
                 <div className={styles.variableTitle}>Variables Automáticas WhatsApp (Toca para copiar):</div>
@@ -506,6 +536,31 @@ export default function ConfiguracionPage() {
                     className={`${styles.input} ${styles.textarea}`}
                     value={configs.email_maintenance_body}
                     onChange={(e) => setConfigs({ ...configs, email_maintenance_body: e.target.value })}
+                    rows="5"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email 5: Rescheduling */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#ffb74d' }}>📧 Correo de Reprogramación de Turno</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_reprogram_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_reprogram_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_reprogram_body}
+                    onChange={(e) => setConfigs({ ...configs, email_reprogram_body: e.target.value })}
                     rows="5"
                     required
                   />

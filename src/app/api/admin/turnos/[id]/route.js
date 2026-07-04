@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { sendWhatsAppMessage } from '@/lib/whatsapp.js';
-import { sendNoShowEmail, sendCancellationEmail } from '@/lib/email.js';
+import { sendNoShowEmail, sendCancellationEmail, sendRescheduleEmail } from '@/lib/email.js';
 
 // Helper to format date
 function formatDate(date) {
@@ -238,9 +238,10 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Email Notification Trigger:
+    // Email and WhatsApp Notification Trigger for No-Show (NO_ASISTIO):
     // If state changes to "NO_ASISTIO" and old state was not "NO_ASISTIO"
     if (estado === 'NO_ASISTIO' && oldTurn.estado !== 'NO_ASISTIO') {
+      // 1. Send Email
       try {
         await sendNoShowEmail(
           updatedTurno.cliente.email,
@@ -253,7 +254,6 @@ export async function PUT(request, { params }) {
           }
         );
 
-        // Log in database
         await prisma.notificacion.create({
           data: {
             clienteId: updatedTurno.clienteId,
@@ -266,13 +266,50 @@ export async function PUT(request, { params }) {
         console.log(`Email no-show notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
       } catch (err) {
         console.error('Failed to send automatic no-show email:', err);
-        // Log failure in database
         await prisma.notificacion.create({
           data: {
             clienteId: updatedTurno.clienteId,
             turnoId: updatedTurno.id,
             canal: 'EMAIL',
             mensaje: `Error al enviar correo por inasistencia: ${err.message}`,
+            estado: 'FALLIDO'
+          }
+        });
+      }
+
+      // 2. Send WhatsApp No-Show Alert
+      try {
+        const templateConfig = await prisma.configuracion.findUnique({
+          where: { key: 'wtsp_noshow_template' }
+        });
+        const templateVal = templateConfig?.value || "¡Hola [Nombre]! Lamentamos que no hayas asistido a tu turno del día [FechaTurno] a las [Horario]. Según nuestras políticas, la seña de [Seña] no es reembolsable para cubrir los costos del horario reservado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web.";
+        
+        let msg = templateVal
+          .replaceAll('[Nombre]', updatedTurno.cliente.nombreCompleto)
+          .replaceAll('[FechaTurno]', formatDate(updatedTurno.fecha))
+          .replaceAll('[Horario]', `${updatedTurno.horaInicio} hs`)
+          .replaceAll('[Seña]', `$${updatedTurno.valorSeña}`);
+
+        await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, msg);
+
+        await prisma.notificacion.create({
+          data: {
+            clienteId: updatedTurno.clienteId,
+            turnoId: updatedTurno.id,
+            canal: 'WHATSAPP',
+            mensaje: msg,
+            estado: 'ENVIADO'
+          }
+        });
+        console.log(`WhatsApp no-show notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+      } catch (wppNoShowErr) {
+        console.error('Failed to send WhatsApp no-show notification:', wppNoShowErr);
+        await prisma.notificacion.create({
+          data: {
+            clienteId: updatedTurno.clienteId,
+            turnoId: updatedTurno.id,
+            canal: 'WHATSAPP',
+            mensaje: `Error al enviar WhatsApp por inasistencia: ${wppNoShowErr.message}`,
             estado: 'FALLIDO'
           }
         });
@@ -316,6 +353,61 @@ export async function PUT(request, { params }) {
             estado: 'FALLIDO'
           }
         });
+      }
+    }
+
+    // Email Notification Trigger for Rescheduling:
+    // If date, time, or state is rescheduled, and it is not CANCELADO / BLOQUEADO
+    if (updatedTurno.estado !== 'CANCELADO' && updatedTurno.estado !== 'BLOQUEADO') {
+      const isDateChanged = updatedTurno.fecha.toISOString().split('T')[0] !== oldTurn.fecha.toISOString().split('T')[0];
+      const isTimeChanged = updatedTurno.horaInicio !== oldTurn.horaInicio || updatedTurno.horaFin !== oldTurn.horaFin;
+      const isStateReprogrammed = updatedTurno.estado === 'REPROGRAMADO' && oldTurn.estado !== 'REPROGRAMADO';
+
+      if (isDateChanged || isTimeChanged || isStateReprogrammed) {
+        try {
+          const subjectConfig = await prisma.configuracion.findUnique({
+            where: { key: 'email_reprogram_subject' }
+          });
+          const bodyConfig = await prisma.configuracion.findUnique({
+            where: { key: 'email_reprogram_body' }
+          });
+
+          await sendRescheduleEmail(
+            updatedTurno.cliente.email,
+            updatedTurno.cliente.nombreCompleto,
+            {
+              fecha: updatedTurno.fecha,
+              horaInicio: updatedTurno.horaInicio,
+              zonas: updatedTurno.zonas,
+              valorSeña: updatedTurno.valorSeña,
+              valorTotal: updatedTurno.valorTotal
+            },
+            subjectConfig?.value,
+            bodyConfig?.value
+          );
+
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Correo enviado por reprogramación de turno al ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+              estado: 'ENVIADO'
+            }
+          });
+          console.log(`Email rescheduling notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+        } catch (rescheduleMailErr) {
+          console.error('Failed to send rescheduling email:', rescheduleMailErr);
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Error al enviar correo de reprogramación: ${rescheduleMailErr.message}`,
+              estado: 'FALLIDO'
+            }
+          });
+        }
       }
     }
 
