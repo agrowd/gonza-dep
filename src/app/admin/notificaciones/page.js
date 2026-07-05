@@ -21,6 +21,16 @@ const SendIcon = () => (
 );
 
 export default function NotificacionesPage() {
+  // Toast Notification State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 4000);
+  };
+
   // WhatsApp Status
   const [wppStatus, setWppStatus] = useState('DISCONNECTED');
   const [wppQr, setWppQr] = useState('');
@@ -145,16 +155,16 @@ export default function NotificacionesPage() {
         const successes = data.results.filter(r => r.status === 'SUCCESS');
         const failures = data.results.filter(r => r.status === 'FAILED');
         setSendingResults({ successes, failures });
-        alert(`Envío finalizado. Éxitos: ${successes.length}. Errores: ${failures.length}.`);
+        showToast(`Envío finalizado. Éxitos: ${successes.length}. Errores: ${failures.length}.`, failures.length > 0 ? 'error' : 'success');
         
         // Refresh reminders list (to update status labels)
         fetchRemindersList();
       } else {
-        alert(data.error || 'Error al enviar recordatorios.');
+        showToast(data.error || 'Error al enviar recordatorios.', 'error');
       }
     } catch (error) {
       console.error('Error sending reminders:', error);
-      alert('Error de conexión al enviar recordatorios.');
+      showToast('Error de conexión al enviar recordatorios.', 'error');
     } finally {
       setSendingReminders(false);
     }
@@ -473,6 +483,45 @@ export default function NotificacionesPage() {
               <button className="btn btn-secondary" onClick={() => setIsPreviewOpen(false)}>Cerrar</button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: toast.type === 'error' ? '#ef5350' : '#2e7d32',
+          color: '#ffffff',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          animation: 'slideIn 0.3s ease forwards',
+          fontWeight: '600',
+          fontSize: '0.9rem'
+        }}>
+          <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
+          <span>{toast.message}</span>
+          <button 
+            onClick={() => setToast(prev => ({ ...prev, show: false }))} 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              marginLeft: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              lineHeight: 1,
+              padding: 0
+            }}
+          >
+            &times;
+          </button>
         </div>
       )}
     </div>

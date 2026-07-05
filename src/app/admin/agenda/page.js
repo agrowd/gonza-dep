@@ -146,6 +146,16 @@ export default function AgendaPage() {
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Toast Notification State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 4000);
+  };
+
   // Autocomplete and config states
   const [allClients, setAllClients] = useState([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -456,14 +466,14 @@ export default function AgendaPage() {
         method: 'POST'
       });
       if (res.ok) {
-        alert('Comprobante enviado por correo correctamente.');
+        showToast('Comprobante enviado por correo correctamente.');
       } else {
         const err = await res.json();
-        alert(err.error || 'Error al enviar el comprobante.');
+        showToast(err.error || 'Error al enviar el comprobante.', 'error');
       }
     } catch (e) {
       console.error(e);
-      alert('Error de red al enviar el comprobante.');
+      showToast('Error de red al enviar el comprobante.', 'error');
     }
   };
 
@@ -543,14 +553,15 @@ export default function AgendaPage() {
       if (res.ok) {
         setIsEditing(false);
         setIsDetailsOpen(false);
+        showToast('Turno reprogramado con éxito.');
         fetchAppointments();
       } else {
         const errData = await res.json();
-        alert(errData.error || 'Error al reprogramar el turno.');
+        showToast(errData.error || 'Error al reprogramar el turno.', 'error');
       }
     } catch (err) {
       console.error('Error saving edited appointment:', err);
-      alert('Error de red al guardar los cambios.');
+      showToast('Error de red al guardar los cambios.', 'error');
     }
   };
 
@@ -592,7 +603,24 @@ export default function AgendaPage() {
 
   // Re-calculate pricing/durations when newTurno inputs change
   useEffect(() => {
-    if (newTurno.selectedZoneIds.length === 0) return;
+    if (newTurno.selectedZoneIds.length === 0) {
+      const startMin = timeToMinutes(newTurno.horaInicio);
+      const endMin = startMin + (newTurno.estado === 'BLOQUEADO' ? 30 : 0);
+      const endHour = Math.floor(endMin / 60);
+      const endMins = endMin % 60;
+      const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+
+      setNewTurno(prev => ({
+        ...prev,
+        horaFin: horaFinStr,
+        valorTotal: 0,
+        valorSeña: 0,
+        autoTotal: 0,
+        autoSeña: 0,
+        bonificacion: 0
+      }));
+      return;
+    }
     const selected = zones.filter(z => newTurno.selectedZoneIds.includes(z.id));
     
     // Assume regular/new based on form (defaults to new=false for manual scheduler)
@@ -769,14 +797,15 @@ export default function AgendaPage() {
       });
       if (res.ok) {
         setIsNewOpen(false);
+        showToast('Turno agendado con éxito.');
         fetchAppointments();
       } else {
         const errData = await res.json();
-        alert(errData.error || 'Error al agendar el turno.');
+        showToast(errData.error || 'Error al agendar el turno.', 'error');
       }
     } catch (err) {
       console.error('Error creating manually:', err);
-      alert('Error de red al crear el turno.');
+      showToast('Error de red al crear el turno.', 'error');
     }
   };
 
@@ -1387,6 +1416,39 @@ export default function AgendaPage() {
                     />
                   </div>
 
+                  {/* Resumen de Descuento y Saldo a Pagar */}
+                  {editTurno.estado !== 'BLOQUEADO' && (
+                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
+                        <span style={{ fontWeight: '600' }}>
+                          ${(() => {
+                            let baseTotal = 0;
+                            try {
+                              const parsedZonas = JSON.parse(selectedTurno.zonas);
+                              baseTotal = parsedZonas.reduce((sum, z) => sum + (z.precio || z.precioBase || 0), 0);
+                            } catch (e) {
+                              baseTotal = (Number(editTurno.valorTotal) || 0) + (Number(editTurno.bonificacion) || 0);
+                            }
+                            return baseTotal.toLocaleString('es-ES');
+                          })()}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Descuento Aplicado:</span>
+                        <span style={{ color: '#d32f2f', fontWeight: '600' }}>-${(editTurno.bonificacion || 0).toLocaleString('es-ES')}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                        <span style={{ fontWeight: '700' }}>Monto Final de Venta:</span>
+                        <span style={{ fontWeight: '800', color: 'var(--color-gold)' }}>${Number(editTurno.valorTotal || 0).toLocaleString('es-ES')}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                        <span style={{ fontWeight: '700' }}>Saldo a Pagar en Local:</span>
+                        <span style={{ fontWeight: '800', color: '#2e7d32' }}>${Math.max(0, Number(editTurno.valorTotal || 0) - Number(editTurno.valorSeña || 0)).toLocaleString('es-ES')}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
                     <label className={styles.inputLabel}>Observaciones</label>
                     <textarea
@@ -1847,6 +1909,28 @@ export default function AgendaPage() {
                   </select>
                 </div>
 
+                {/* Resumen de Descuento y Saldo a Pagar */}
+                {newTurno.estado !== 'BLOQUEADO' && (
+                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
+                      <span style={{ fontWeight: '600' }}>${((newTurno.autoTotal || 0) + (newTurno.bonificacion || 0)).toLocaleString('es-ES')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Descuento Aplicado:</span>
+                      <span style={{ color: '#d32f2f', fontWeight: '600' }}>-${(newTurno.bonificacion || 0).toLocaleString('es-ES')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                      <span style={{ fontWeight: '700' }}>Monto Final de Venta:</span>
+                      <span style={{ fontWeight: '800', color: 'var(--color-gold)' }}>${Number(newTurno.valorTotal || 0).toLocaleString('es-ES')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                      <span style={{ fontWeight: '700' }}>Saldo a Pagar en Local:</span>
+                      <span style={{ fontWeight: '800', color: '#2e7d32' }}>${Math.max(0, Number(newTurno.valorTotal || 0) - Number(newTurno.valorSeña || 0)).toLocaleString('es-ES')}</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
                   <label className={styles.inputLabel}>Observaciones</label>
                   <textarea
@@ -1870,6 +1954,45 @@ export default function AgendaPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: toast.type === 'error' ? '#ef5350' : '#2e7d32',
+          color: '#ffffff',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          animation: 'slideIn 0.3s ease forwards',
+          fontWeight: '600',
+          fontSize: '0.9rem'
+        }}>
+          <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
+          <span>{toast.message}</span>
+          <button 
+            onClick={() => setToast(prev => ({ ...prev, show: false }))} 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              marginLeft: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              lineHeight: 1,
+              padding: 0
+            }}
+          >
+            &times;
+          </button>
         </div>
       )}
     </div>

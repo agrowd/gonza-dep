@@ -58,6 +58,16 @@ function ClientesPageContent() {
 
   // Create client modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Toast Notification State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 4000);
+  };
   const [newClient, setNewClient] = useState({
     nombre: '',
     apellido: '',
@@ -171,14 +181,14 @@ function ClientesPageContent() {
           ...prev,
           estado: data.estado
         }));
-        alert(`Estado del cliente cambiado a: ${data.estado}`);
+        showToast(`Estado del cliente cambiado a: ${data.estado}`);
         fetchClients(); // refresh list
       } else {
-        alert(`Error: ${data.error}`);
+        showToast(`Error: ${data.error}`, 'error');
       }
     } catch (err) {
       console.error('Error changing client status:', err);
-      alert('Error de red al actualizar estado.');
+      showToast('Error de red al actualizar estado.', 'error');
     }
   };
 
@@ -208,14 +218,15 @@ function ClientesPageContent() {
           notesGonzalo: '',
           canalAdquisicion: 'MANUAL'
         });
+        showToast('Cliente creado correctamente.');
         fetchClients();
       } else {
         const errData = await res.json();
-        alert(`Error al crear cliente: ${errData.error || 'error desconocido'}`);
+        showToast(`Error al crear cliente: ${errData.error || 'error desconocido'}`, 'error');
       }
     } catch (err) {
       console.error('Error creating client:', err);
-      alert('Error de red al crear cliente.');
+      showToast('Error de red al crear cliente.', 'error');
     }
   };
 
@@ -255,11 +266,12 @@ function ClientesPageContent() {
           observaciones: data.observaciones,
           notasGonzalo: data.notasGonzalo
         });
-        alert('Ficha del cliente actualizada correctamente.');
+        showToast('Ficha del cliente actualizada correctamente.');
         fetchClients(); // refresh list
       }
     } catch (err) {
       console.error('Error saving notes:', err);
+      showToast('Error al actualizar la ficha del cliente.', 'error');
     } finally {
       setIsSavingNotes(false);
     }
@@ -274,10 +286,14 @@ function ClientesPageContent() {
       });
       if (res.ok) {
         setIsProfileOpen(false);
+        showToast('Cliente eliminado correctamente.');
         fetchClients();
+      } else {
+        showToast('No se pudo eliminar el cliente.', 'error');
       }
     } catch (e) {
       console.error('Error deleting client:', e);
+      showToast('Error de red al intentar eliminar el cliente.', 'error');
     }
   };
 
@@ -502,10 +518,10 @@ function ClientesPageContent() {
                           🟢 Reactivar Cliente (Activo)
                         </button>
                       )}
-                      <a href={`https://wa.me/${selectedClient.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', borderColor: '#25D366', color: '#25D366' }}>
+                       <a href={`https://wa.me/${selectedClient.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#25D366', color: '#fff', border: 'none', fontWeight: 600 }}>
                         💬 WhatsApp del Cliente
                       </a>
-                      <button onClick={() => handleDeleteClient(selectedClient.id)} className="btn btn-secondary" style={{ borderColor: 'var(--status-cancelado)', color: '#ff8a8a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <button onClick={() => handleDeleteClient(selectedClient.id)} className="btn btn-primary" style={{ backgroundColor: '#d32f2f', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}>
                         <TrashIcon /> Eliminar Cliente
                       </button>
                     </div>
@@ -827,6 +843,45 @@ function ClientesPageContent() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: toast.type === 'error' ? '#ef5350' : '#2e7d32',
+          color: '#ffffff',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          animation: 'slideIn 0.3s ease forwards',
+          fontWeight: '600',
+          fontSize: '0.9rem'
+        }}>
+          <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
+          <span>{toast.message}</span>
+          <button 
+            onClick={() => setToast(prev => ({ ...prev, show: false }))} 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              marginLeft: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              lineHeight: 1,
+              padding: 0
+            }}
+          >
+            &times;
+          </button>
         </div>
       )}
     </div>

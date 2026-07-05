@@ -238,3 +238,14 @@ input::placeholder, textarea::placeholder {
   height: 3px;
   background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
 }
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}

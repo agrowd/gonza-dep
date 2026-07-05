@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import styles from './configuracion.module.css';
 
 // SVG Icons
@@ -22,6 +22,17 @@ export default function ConfiguracionPage() {
   const [loadingZones, setLoadingZones] = useState(true);
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
   const [editingZone, setEditingZone] = useState(null); // null means creating new
+  const [editingZoneId, setEditingZoneId] = useState(null); // for inline editing
+
+  // Toast Notification State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 4000);
+  };
 
   const [zoneForm, setZoneForm] = useState({
     nombre: '',
@@ -115,14 +126,14 @@ export default function ConfiguracionPage() {
         body: JSON.stringify(configs)
       });
       if (res.ok) {
-        alert('Configuraciones guardadas correctamente.');
+        showToast('Configuraciones guardadas correctamente.');
       } else {
         const d = await res.json();
-        alert(d.error || 'Error al guardar configuraciones.');
+        showToast(d.error || 'Error al guardar configuraciones.', 'error');
       }
     } catch (err) {
       console.error('Error saving configs:', err);
-      alert('Error de red al guardar configuraciones.');
+      showToast('Error de red al guardar configuraciones.', 'error');
     } finally {
       setSavingConfigs(false);
     }
@@ -140,34 +151,64 @@ export default function ConfiguracionPage() {
     setIsZoneModalOpen(true);
   };
 
-  // 5. CRUD Zone: Open edit modal
+  // 5. CRUD Zone: Open inline edit row
   const handleOpenEditZone = (zone) => {
-    setEditingZone(zone);
+    setEditingZoneId(zone.id);
     setZoneForm({
       nombre: zone.nombre,
       precioBase: zone.precioBase,
       duracionMinutos: zone.duracionMinutos,
       señaBase: zone.señaBase
     });
-    setIsZoneModalOpen(true);
   };
 
-  // 6. CRUD Zone: Submit creation/update
+  // 5.1 CRUD Zone: Submit inline edit
+  const handleSaveInlineZone = async (e, zoneId) => {
+    e.preventDefault();
+    if (!zoneForm.nombre || !zoneForm.precioBase || !zoneForm.duracionMinutos || !zoneForm.señaBase) {
+      showToast('Por favor, completa todos los campos.', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/zonas/${zoneId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: zoneForm.nombre,
+          precioBase: Number(zoneForm.precioBase),
+          duracionMinutos: Number(zoneForm.duracionMinutos),
+          señaBase: Number(zoneForm.señaBase)
+        })
+      });
+
+      if (res.ok) {
+        setEditingZoneId(null);
+        showToast('Zona modificada correctamente.');
+        fetchZones();
+      } else {
+        const d = await res.json();
+        showToast(d.error || 'Error al guardar la zona.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving zone:', err);
+      showToast('Error al guardar la zona.', 'error');
+    }
+  };
+
+  // 6. CRUD Zone: Submit creation (Modal)
   const handleSaveZone = async (e) => {
     e.preventDefault();
     
     // Basic validation
     if (!zoneForm.nombre || !zoneForm.precioBase || !zoneForm.duracionMinutos || !zoneForm.señaBase) {
-      alert('Por favor, completa todos los campos.');
+      showToast('Por favor, completa todos los campos.', 'error');
       return;
     }
 
-    const url = editingZone ? `/api/zonas/${editingZone.id}` : '/api/zonas';
-    const method = editingZone ? 'PUT' : 'POST';
-
     try {
-      const res = await fetch(url, {
-        method,
+      const res = await fetch('/api/zonas', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre: zoneForm.nombre,
@@ -179,14 +220,15 @@ export default function ConfiguracionPage() {
 
       if (res.ok) {
         setIsZoneModalOpen(false);
+        showToast('Nueva zona agregada con éxito.');
         fetchZones();
       } else {
         const d = await res.json();
-        alert(d.error || 'Error al guardar la zona.');
+        showToast(d.error || 'Error al guardar la zona.', 'error');
       }
     } catch (err) {
       console.error('Error saving zone:', err);
-      alert('Error al guardar la zona.');
+      showToast('Error al guardar la zona.', 'error');
     }
   };
 
@@ -196,21 +238,22 @@ export default function ConfiguracionPage() {
     try {
       const res = await fetch(`/api/zonas/${zoneId}`, { method: 'DELETE' });
       if (res.ok) {
+        showToast('Zona eliminada correctamente.');
         fetchZones();
       } else {
         const d = await res.json();
-        alert(d.error || 'No se puede eliminar la zona. Podría estar vinculada a turnos existentes.');
+        showToast(d.error || 'No se puede eliminar la zona. Podría estar vinculada a turnos existentes.', 'error');
       }
     } catch (e) {
       console.error('Error deleting zone:', e);
-      alert('Error al intentar eliminar la zona.');
+      showToast('Error al intentar eliminar la zona.', 'error');
     }
   };
 
   // 8. Copy variable placeholder to clipboard helper
   const handleCopyVariable = (variable) => {
     navigator.clipboard.writeText(variable);
-    alert(`Copiado al portapapeles: ${variable}`);
+    showToast(`Copiado al portapapeles: ${variable}`);
   };
 
   // Generating work hours slots for the selector (07:00 to 22:00 every 30 minutes)
@@ -284,24 +327,105 @@ export default function ConfiguracionPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {zones.map(z => (
-                    <tr key={z.id} className={styles.tr}>
-                      <td className={styles.td} style={{ fontWeight: 600 }}>{z.nombre}</td>
-                      <td className={styles.td}>{formatMoney(z.precioBase)}</td>
-                      <td className={styles.td}>{formatMoney(z.señaBase)}</td>
-                      <td className={styles.td}>{z.duracionMinutos} min</td>
-                      <td className={styles.td} style={{ textAlign: 'right' }}>
-                        <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
-                          <button className="btn btn-secondary" style={{ padding: '0.35rem 0.65rem' }} onClick={() => handleOpenEditZone(z)}>
-                            <EditIcon />
-                          </button>
-                          <button className="btn btn-secondary" style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} onClick={() => handleDeleteZone(z.id)}>
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {zones.map(z => {
+                    const isEditingThisZone = editingZoneId === z.id;
+                    return (
+                      <Fragment key={z.id}>
+                        <tr className={styles.tr}>
+                          <td className={styles.td} style={{ fontWeight: 600 }}>{z.nombre}</td>
+                          <td className={styles.td}>{formatMoney(z.precioBase)}</td>
+                          <td className={styles.td}>{formatMoney(z.señaBase)}</td>
+                          <td className={styles.td}>{z.duracionMinutos} min</td>
+                          <td className={styles.td} style={{ textAlign: 'right' }}>
+                            <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.35rem 0.65rem' }} 
+                                onClick={() => handleOpenEditZone(z)}
+                                disabled={editingZoneId !== null && editingZoneId !== z.id}
+                              >
+                                <EditIcon />
+                              </button>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
+                                onClick={() => handleDeleteZone(z.id)}
+                                disabled={editingZoneId !== null}
+                              >
+                                <TrashIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isEditingThisZone && (
+                          <tr key={`edit-${z.id}`}>
+                            <td colSpan="5" className={styles.td} style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.04)', padding: '1rem', borderBottom: '2px solid var(--color-gold)' }}>
+                              <form onSubmit={(e) => handleSaveInlineZone(e, z.id)} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                                  <div className={styles.formGroup} style={{ margin: 0 }}>
+                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Nombre de la Zona</label>
+                                    <input 
+                                      type="text" 
+                                      className={styles.input} 
+                                      value={zoneForm.nombre}
+                                      onChange={(e) => setZoneForm({ ...zoneForm, nombre: e.target.value })}
+                                      required 
+                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                    />
+                                  </div>
+                                  <div className={styles.formGroup} style={{ margin: 0 }}>
+                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Precio Base ($)</label>
+                                    <input 
+                                      type="number" 
+                                      className={styles.input} 
+                                      value={zoneForm.precioBase}
+                                      onChange={(e) => setZoneForm({ ...zoneForm, precioBase: e.target.value })}
+                                      required 
+                                      min="0"
+                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                    />
+                                  </div>
+                                  <div className={styles.formGroup} style={{ margin: 0 }}>
+                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Seña Requerida ($)</label>
+                                    <input 
+                                      type="number" 
+                                      className={styles.input} 
+                                      value={zoneForm.señaBase}
+                                      onChange={(e) => setZoneForm({ ...zoneForm, señaBase: e.target.value })}
+                                      required 
+                                      min="0"
+                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                    />
+                                  </div>
+                                  <div className={styles.formGroup} style={{ margin: 0 }}>
+                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Duración (minutos)</label>
+                                    <input 
+                                      type="number" 
+                                      className={styles.input} 
+                                      value={zoneForm.duracionMinutos}
+                                      onChange={(e) => setZoneForm({ ...zoneForm, duracionMinutos: e.target.value })}
+                                      required 
+                                      min="10"
+                                      step="10"
+                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                    />
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                                  <button type="button" className="btn btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', height: 'auto' }} onClick={() => setEditingZoneId(null)}>
+                                    Cancelar
+                                  </button>
+                                  <button type="submit" className="btn btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', height: 'auto' }}>
+                                    Modificar
+                                  </button>
+                                </div>
+                              </form>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -663,6 +787,45 @@ export default function ConfiguracionPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: toast.type === 'error' ? '#ef5350' : '#2e7d32',
+          color: '#ffffff',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          animation: 'slideIn 0.3s ease forwards',
+          fontWeight: '600',
+          fontSize: '0.9rem'
+        }}>
+          <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
+          <span>{toast.message}</span>
+          <button 
+            onClick={() => setToast(prev => ({ ...prev, show: false }))} 
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              marginLeft: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              lineHeight: 1,
+              padding: 0
+            }}
+          >
+            &times;
+          </button>
         </div>
       )}
     </div>
