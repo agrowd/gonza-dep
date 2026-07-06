@@ -646,7 +646,7 @@ function ClientesPageContent() {
                           value={editNotes.whatsapp}
                           onChange={(e) => setEditNotes({ ...editNotes, whatsapp: e.target.value })}
                           required
-                          style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: '#fff' }}
+                          style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                         />
                       </div>
                     </div>
@@ -771,7 +771,7 @@ function ClientesPageContent() {
                       onChange={(e) => setNewClient({ ...newClient, whatsapp: e.target.value })}
                       required
                       placeholder="Ej. 11 7673 5678"
-                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: '#fff' }}
+                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
                     />
                   </div>
                 </div>
