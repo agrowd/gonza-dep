@@ -245,7 +245,7 @@ export default function NotificacionesPage() {
             <RefreshIcon /> Actualizar
           </button>
           
-          {wppStatus === 'CONNECTED' && (
+          {wppStatus && wppStatus !== 'DISCONNECTED' && (
             <button 
               onClick={handleWppLogout} 
               className={styles.logoutBtn || 'btn btn-secondary'} 

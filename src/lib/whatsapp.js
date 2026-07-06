@@ -176,14 +176,29 @@ export async function logoutWhatsApp() {
   if (client) {
     try {
       await client.logout();
+    } catch (e) {
+      console.error('Error during WhatsApp client.logout():', e);
+    }
+    try {
       await client.destroy();
     } catch (e) {
-      console.error('Error during WhatsApp logout:', e);
+      console.error('Error during WhatsApp client.destroy():', e);
     }
     globalThis.whatsappClient = null;
-    globalThis.whatsappStatus = 'DISCONNECTED';
-    globalThis.whatsappQr = '';
   }
+
+  try {
+    const fs = await import('fs');
+    if (fs.existsSync('./.wwebjs_auth')) {
+      fs.rmSync('./.wwebjs_auth', { recursive: true, force: true });
+      console.log('Forcefully removed WhatsApp session directory .wwebjs_auth');
+    }
+  } catch (e) {
+    console.error('Error deleting .wwebjs_auth directory:', e);
+  }
+
+  globalThis.whatsappStatus = 'DISCONNECTED';
+  globalThis.whatsappQr = '';
 }
 
 function parseTemplate(template, client, turno, address) {
