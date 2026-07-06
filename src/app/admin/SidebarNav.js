@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import styles from './layout.module.css';
@@ -34,6 +34,22 @@ export default function SidebarNav({ user }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [wppStatus, setWppStatus] = useState(null);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await fetch('/api/whatsapp/status');
+        const data = await res.json();
+        setWppStatus(data.status);
+      } catch (e) {
+        console.error('Error fetching WhatsApp status in nav:', e);
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -92,6 +108,7 @@ export default function SidebarNav({ user }) {
         <nav className={styles.nav}>
           {navItems.map((item) => {
             const isActive = pathname ? pathname.startsWith(item.path) : false;
+            const isNotifications = item.path === '/admin/notificaciones';
             return (
               <Link
                 key={item.path}
@@ -101,10 +118,50 @@ export default function SidebarNav({ user }) {
               >
                 {item.icon}
                 <span>{item.name}</span>
+                {isNotifications && wppStatus && (
+                  <span 
+                    title={wppStatus === 'CONNECTED' ? 'WhatsApp Conectado' : 'WhatsApp Desconectado (Escanea QR)'} 
+                    style={{
+                      marginLeft: 'auto',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: wppStatus === 'CONNECTED' ? '#4caf50' : '#f44336',
+                      boxShadow: wppStatus === 'CONNECTED' ? '0 0 8px #4caf50' : '0 0 8px #f44336',
+                      display: 'inline-block'
+                    }}
+                  />
+                )}
               </Link>
             );
           })}
         </nav>
+
+        {wppStatus && wppStatus !== 'CONNECTED' && (
+          <Link 
+            href="/admin/notificaciones"
+            onClick={() => setIsOpen(false)}
+            style={{
+              margin: '0 0.5rem 1rem 0.5rem',
+              padding: '0.6rem 0.8rem',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              border: '1px solid rgba(244, 67, 54, 0.3)',
+              color: '#f44336',
+              fontSize: '0.75rem',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              textDecoration: 'none',
+              cursor: 'pointer',
+              lineHeight: '1.3'
+            }}
+          >
+            <span>⚠️</span>
+            <span>WhatsApp desconectado. Hacé clic para vincular.</span>
+          </Link>
+        )}
 
         <div className={styles.sidebarFooter}>
           <div className={styles.userInfo}>
