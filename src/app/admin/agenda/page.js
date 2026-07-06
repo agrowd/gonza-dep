@@ -14,6 +14,25 @@ const formatLocalDate = (dateInput) => {
   return d.toLocaleDateString('es-ES', { dateStyle: 'long' });
 };
 
+const getWhatsAppLink = (phone) => {
+  if (!phone) return '';
+  let cleaned = phone.replace(/\D/g, '');
+  if (!cleaned.startsWith('54')) {
+    if (cleaned.length === 10) {
+      cleaned = `549${cleaned}`;
+    } else if (cleaned.length === 11 && cleaned.startsWith('9')) {
+      cleaned = `54${cleaned}`;
+    } else {
+      cleaned = `549${cleaned}`;
+    }
+  } else {
+    if (cleaned.length === 12 && !cleaned.startsWith('549')) {
+      cleaned = `549${cleaned.slice(2)}`;
+    }
+  }
+  return `https://wa.me/${cleaned}`;
+};
+
 // SVG Icons
 const PrevIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>;
 const NextIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>;
@@ -555,6 +574,9 @@ export default function AgendaPage() {
         setIsDetailsOpen(false);
         showToast('Turno reprogramado con éxito.');
         fetchAppointments();
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
       } else {
         const errData = await res.json();
         showToast(errData.error || 'Error al reprogramar el turno.', 'error');
@@ -799,6 +821,9 @@ export default function AgendaPage() {
         setIsNewOpen(false);
         showToast('Turno agendado con éxito.');
         fetchAppointments();
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
       } else {
         const errData = await res.json();
         showToast(errData.error || 'Error al agendar el turno.', 'error');
@@ -1595,7 +1620,7 @@ export default function AgendaPage() {
                       </button>
                     )}
                     {selectedTurno.estado !== 'BLOQUEADO' && (
-                      <a href={`https://wa.me/${(selectedTurno.cliente?.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', backgroundColor: '#25D366', color: '#fff', border: 'none' }}>
+                      <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', backgroundColor: '#25D366', color: '#fff', border: 'none' }}>
                         💬 Chatear por WhatsApp
                       </a>
                     )}
