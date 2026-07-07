@@ -40,7 +40,8 @@ export async function GET(request) {
         whatsapp: client.whatsapp,
         email: client.email
       },
-      hasActiveTurno
+      hasActiveTurno,
+      activeTurno: hasActiveTurno ? client.turnos[0] : null
     });
 
   } catch (error) {

@@ -87,3 +87,17 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [0.10.0] - 2026-07-07
+### Added
+- Nuevo flujo de autogestión de clientes en el portal público (`src/app/page.js`): al ingresar DNI, si el cliente posee un turno activo, se le presenta la pantalla de detalles y las acciones de cancelación y reprogramación.
+- API endpoints de autogestión de reservas para clientes: `/api/reservas/cancelar` (POST) y `/api/reservas/reprogramar` (POST).
+- Recordatorio automático de 7 días (vía correo electrónico) integrado en el cron diario a las 10:00 AM en `src/lib/whatsapp.js`.
+- Configuración de nuevas plantillas de email (7 días) y WhatsApp (Cancelación y Reprogramación) editables desde el panel de control.
+- Envío automático de notificaciones de WhatsApp ante reprogramaciones y cancelaciones realizadas desde el panel de administración.
+- Filtro estricto anti-bloqueos en notificaciones de actualización para evitar correos de rebote (bounce mail) en turnos bloqueados.
+
+### Fixed
+- Solución al scroll horizontal de la agenda semanal en móviles: scroll bidireccional puro en `.calendarContainer` y adhesión 2D sticky en cabeceras y columna de horas en `agenda.module.css`.
+- Desencimamiento de botones de navegación e indicación de fecha en el calendario a través de un contenedor píldora `.navigationWrapper` que previene el desborde y la superposición.
+- Hiding del menú hamburguesa y barra lateral mediante inyección de CSS global en `SidebarNav.js` en la ruta `/admin/agenda/imprimir` para lograr capturas limpias para impresión y PDF.
+

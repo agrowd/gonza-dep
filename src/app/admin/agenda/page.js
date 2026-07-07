@@ -978,11 +978,13 @@ export default function AgendaPage() {
             }}
           />
 
-          <button onClick={handlePrev} className={styles.navBtn}><PrevIcon /></button>
-          <span className={styles.currentWeek} style={{ minWidth: '150px', textAlign: 'center', textTransform: 'capitalize' }}>
-            {viewMode === 'day' ? getSelectedDayName() : viewMode === 'month' ? getMonthName() : getWeekRangeName()}
-          </span>
-          <button onClick={handleNext} className={styles.navBtn}><NextIcon /></button>
+          <div className={styles.navigationWrapper}>
+            <button onClick={handlePrev} className={styles.navBtnSmall}><PrevIcon /></button>
+            <span className={styles.currentWeekText}>
+              {viewMode === 'day' ? getSelectedDayName() : viewMode === 'month' ? getMonthName() : getWeekRangeName()}
+            </span>
+            <button onClick={handleNext} className={styles.navBtnSmall}><NextIcon /></button>
+          </div>
           
           <button 
             onClick={() => {
@@ -1780,12 +1782,13 @@ export default function AgendaPage() {
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
-                  <label className={styles.inputLabel}>DNI del Cliente</label>
+                  <label className={styles.inputLabel}>DNI del Cliente *</label>
                   <input
                     type="text"
                     value={newTurno.dni}
                     onChange={(e) => setNewTurno({ ...newTurno, dni: e.target.value })}
-                    placeholder="Opcional. Ej. 12345678"
+                    placeholder="Ej. 12345678"
+                    required
                   />
                 </div>
                 <div className={styles.inputGroup}>

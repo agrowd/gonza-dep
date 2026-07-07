@@ -250,5 +250,29 @@
   - Se compiló con éxito localmente, se creó el script de subida `scratch/deploy_gonzalo.mjs` y se desplegó todo a producción en el VPS (`187.127.9.216`), reiniciándose PM2 de forma exitosa.
   - Se realizó push a `main` de GitHub.
 
+## 📅 Sesión: 7 de Julio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Agregar recordatorio automático por mail 7 días antes de la cita en el cron diario.
+- [x] Habilitar envío de WhatsApp automático al reprogramar o cancelar turnos desde el panel.
+- [x] Solucionar solapamiento/encimamiento de botones de navegación en la agenda (vista mobile).
+- [x] Ocultar botón flotante de menú (hamburguesa) y barra lateral en vista de impresión.
+- [x] Desarrollar flujo de autogestión de clientes (cancelar/reprogramar según política de 24hs).
+
+### 📝 Notas / Bitácora
+- **7 de Julio (09:30 AM)**:
+  - Se configuraron los nuevos campos y plantillas de correo y WhatsApp por defecto en `src/app/api/admin/configuracion/route.js`.
+  - Se crearon los campos correspondientes en la interfaz de configuración del panel de control (`src/app/admin/configuracion/page.js`) para editar estas nuevas plantillas en vivo.
+  - Se implementó la función de envío de recordatorio a 7 días `sendReminder7DaysEmail` en `src/lib/email.js` y se integró en el cron diario a las 10:00 AM en `src/lib/whatsapp.js`, comprobando turnos y evitando bloqueos.
+  - Se modificó el endpoint de actualización de turnos `src/app/api/admin/turnos/[id]/route.js` para disparar notificaciones de WhatsApp usando las plantillas configuradas ante cancelaciones y reprogramaciones.
+  - Se implementó un filtro estricto anti-bloqueos en el endpoint de actualización para omitir envíos de emails y WhatsApps si la cita tiene estado `BLOQUEADO` o el correo del cliente incluye `bloqueo`, resolviendo los correos de rebote (bounce mail).
+  - Se crearon los endpoints de autogestión para clientes `/api/reservas/cancelar` (POST) y `/api/reservas/reprogramar` (POST).
+  - Se modificó la consulta por DNI `/api/clientes/consultar` para retornar los datos del turno activo del cliente si existe.
+  - Se implementó la interfaz de autogestión en el portal de reserva público `src/app/page.js`: si el cliente ingresa su DNI y tiene un turno activo, se le permite ver sus detalles, cancelar el turno (advirtiendo la pérdida de seña si faltan < 24hs) o reprogramarlo (si faltan > 24hs) eligiendo un nuevo slot utilizando el flujo habitual de reserva.
+  - Se corrigió el scroll de la agenda semanal en pantallas móviles aplicando scroll bidireccional puro en `.calendarContainer` y estableciendo adhesión pegajosa (sticky) en 2D en `.gridHeader`, `.timeColHeader` y `.timeColumn` dentro de `src/app/admin/agenda/agenda.module.css`.
+  - Se agruparon los botones de navegación y la fecha actual en un contenedor estilizado como píldora `.navigationWrapper` para evitar desalineación y encimamiento en móviles.
+  - Se implementó la inyección dinámica de CSS en `src/app/admin/SidebarNav.js` para ocultar la barra lateral y el botón hamburguesa cuando la ruta es `/admin/agenda/imprimir`, logrando una captura limpia y sin elementos distractores.
+  - Se ejecutó con éxito `npm run build` localmente sin ningún error de compilación.
+
 
 

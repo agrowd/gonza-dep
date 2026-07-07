@@ -644,12 +644,13 @@ function ClientesPageContent() {
                     </div>
 
                     <div className={styles.inputGroup}>
-                      <label className={styles.inputLabel}>DNI</label>
+                      <label className={styles.inputLabel}>DNI *</label>
                       <input
                         type="text"
                         value={editNotes.dni}
                         onChange={(e) => setEditNotes({ ...editNotes, dni: e.target.value })}
-                        placeholder="Sin registrar"
+                        required
+                        placeholder="Ej. 12345678"
                       />
                     </div>
 
@@ -768,11 +769,12 @@ function ClientesPageContent() {
                 </div>
 
                 <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>DNI (para validación única)</label>
+                  <label className={styles.inputLabel}>DNI *</label>
                   <input
                     type="text"
                     value={newClient.dni}
                     onChange={(e) => setNewClient({ ...newClient, dni: e.target.value })}
+                    required
                     placeholder="Ej. 12345678"
                   />
                 </div>

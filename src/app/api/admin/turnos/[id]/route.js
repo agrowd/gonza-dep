@@ -7,7 +7,27 @@ import { sendNoShowEmail, sendCancellationEmail, sendRescheduleEmail } from '@/l
 
 // Helper to format date
 function formatDate(date) {
-  return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long' });
+  return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long', timeZone: 'UTC' });
+}
+
+function parseWppTemplate(template, client, turno, address) {
+  if (!template) return '';
+  let zonesText = '';
+  try {
+    const parsedZonas = JSON.parse(turno.zonas);
+    zonesText = parsedZonas.map(z => z.nombre).join(', ');
+  } catch (e) {
+    zonesText = turno.zonas || 'tratamiento';
+  }
+
+  return template
+    .replaceAll('[Nombre]', client.nombreCompleto)
+    .replaceAll('[FechaTurno]', formatDate(turno.fecha))
+    .replaceAll('[Horario]', `${turno.horaInicio} hs`)
+    .replaceAll('[Zonas]', zonesText)
+    .replaceAll('[ValorTotal]', `$${turno.valorTotal}`)
+    .replaceAll('[Seña]', `$${turno.valorSeña}`)
+    .replaceAll('[Direccion]', address || 'Paraná 597');
 }
 
 // Convert HH:MM to minutes from midnight
@@ -175,6 +195,11 @@ export async function PUT(request, { params }) {
       include: { cliente: true }
     });
 
+    if (updatedTurno.estado === 'BLOQUEADO' || (updatedTurno.cliente && updatedTurno.cliente.email && updatedTurno.cliente.email.includes('bloqueo'))) {
+      console.log('Skipping all notifications for blocked slots or blocking email.');
+      return NextResponse.json(updatedTurno);
+    }
+
     // WhatsApp Notification Trigger:
     // If state changes to "SEÑADO" (Approved) and old state was "PENDIENTE_AUTORIZACION"
     if (estado === 'SEÑADO' && oldTurn.estado === 'PENDIENTE_AUTORIZACION') {
@@ -316,7 +341,7 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Email Notification Trigger for Cancellation:
+    // Email and WhatsApp Notification Trigger for Cancellation:
     // If state changes to "CANCELADO" and old state was not "CANCELADO"
     if (estado === 'CANCELADO' && oldTurn.estado !== 'CANCELADO') {
       try {
@@ -354,9 +379,45 @@ export async function PUT(request, { params }) {
           }
         });
       }
+
+      // WhatsApp Cancellation Trigger
+      try {
+        const wppCancelConfig = await prisma.configuracion.findUnique({
+          where: { key: 'wtsp_cancellation_template' }
+        });
+        const addressConfig = await prisma.configuracion.findUnique({
+          where: { key: 'address' }
+        });
+        if (wppCancelConfig) {
+          const wppMsg = parseWppTemplate(wppCancelConfig.value, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+          await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
+          
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'WHATSAPP',
+              mensaje: wppMsg,
+              estado: 'ENVIADO'
+            }
+          });
+          console.log(`WhatsApp cancellation notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+        }
+      } catch (wppErr) {
+        console.error('Failed to send WhatsApp cancellation notification:', wppErr);
+        await prisma.notificacion.create({
+          data: {
+            clienteId: updatedTurno.clienteId,
+            turnoId: updatedTurno.id,
+            canal: 'WHATSAPP',
+            mensaje: `Error al enviar WhatsApp de cancelación: ${wppErr.message}`,
+            estado: 'FALLIDO'
+          }
+        });
+      }
     }
 
-    // Email Notification Trigger for Rescheduling:
+    // Email and WhatsApp Notification Trigger for Rescheduling:
     // If date, time, or state is rescheduled, and it is not CANCELADO / BLOQUEADO
     if (updatedTurno.estado !== 'CANCELADO' && updatedTurno.estado !== 'BLOQUEADO') {
       const isDateChanged = updatedTurno.fecha.toISOString().split('T')[0] !== oldTurn.fecha.toISOString().split('T')[0];
@@ -404,6 +465,42 @@ export async function PUT(request, { params }) {
               turnoId: updatedTurno.id,
               canal: 'EMAIL',
               mensaje: `Error al enviar correo de reprogramación: ${rescheduleMailErr.message}`,
+              estado: 'FALLIDO'
+            }
+          });
+        }
+
+        // WhatsApp Reschedule Trigger
+        try {
+          const wppRescheduleConfig = await prisma.configuracion.findUnique({
+            where: { key: 'wtsp_reschedule_template' }
+          });
+          const addressConfig = await prisma.configuracion.findUnique({
+            where: { key: 'address' }
+          });
+          if (wppRescheduleConfig) {
+            const wppMsg = parseWppTemplate(wppRescheduleConfig.value, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+            await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
+            
+            await prisma.notificacion.create({
+              data: {
+                clienteId: updatedTurno.clienteId,
+                turnoId: updatedTurno.id,
+                canal: 'WHATSAPP',
+                mensaje: wppMsg,
+                estado: 'ENVIADO'
+              }
+            });
+            console.log(`WhatsApp rescheduling notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+          }
+        } catch (wppErr) {
+          console.error('Failed to send WhatsApp rescheduling notification:', wppErr);
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'WHATSAPP',
+              mensaje: `Error al enviar WhatsApp de reprogramación: ${wppErr.message}`,
               estado: 'FALLIDO'
             }
           });

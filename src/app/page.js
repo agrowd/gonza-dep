@@ -46,6 +46,13 @@ export default function Home() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const [activeTurno, setActiveTurno] = useState(null);
+  const [isSelfManagement, setIsSelfManagement] = useState(false);
+  const [rescheduleMode, setRescheduleMode] = useState(false);
+  const [submittingReschedule, setSubmittingReschedule] = useState(false);
+  const [submittingCancel, setSubmittingCancel] = useState(false);
+  const [selfMgmtSuccess, setSelfMgmtSuccess] = useState(null);
+
   // 1. Fetch default zones on mount
   useEffect(() => {
     fetch('/api/zonas')
@@ -131,12 +138,6 @@ export default function Home() {
       }
       
       if (data.exists) {
-        if (data.hasActiveTurno) {
-          setErrorMessage('Ya tenés un turno activo registrado. Por razones de seguridad y organización, no es posible agendar 2 o más turnos en paralelo de forma online. Por favor, comunícate con nosotros para reprogramarlo.');
-          return;
-        }
-        
-        // Auto-fill and skip to Step 2
         const fullName = data.client.nombreCompleto || '';
         const spaceIndex = fullName.indexOf(' ');
         const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
@@ -150,10 +151,16 @@ export default function Home() {
           whatsapp: data.client.whatsapp,
           email: data.client.email
         }));
+
+        if (data.hasActiveTurno) {
+          setActiveTurno(data.activeTurno);
+          setIsSelfManagement(true);
+          return;
+        }
+        
         setDniChecked(true);
         setStep(2);
       } else {
-        // DNI doesn't exist, show rest of fields
         setDniChecked(true);
       }
     } catch (err) {
@@ -161,6 +168,146 @@ export default function Home() {
       setErrorMessage('Error al verificar el DNI. Por favor intenta nuevamente.');
     } finally {
       setSearchingDni(false);
+    }
+  };
+
+  const handleCancelActiveTurno = async () => {
+    if (!activeTurno) return;
+    
+    const now = new Date();
+    const turnTime = new Date(activeTurno.fecha);
+    const [h, m] = activeTurno.horaInicio.split(':').map(Number);
+    turnTime.setUTCHours(h, m, 0, 0);
+    const diffMs = turnTime.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    let confirmMsg = '¿Estás seguro de que deseas cancelar tu turno?';
+    if (diffHours < 24) {
+      confirmMsg = '⚠️ Faltan menos de 24 hs para tu turno. Si cancelás ahora, perderás la seña abonada. ¿Deseas continuar y cancelar el turno de todas formas?';
+    } else {
+      confirmMsg = 'Tu turno será cancelado y el horario se liberará. Tu seña será liberada (contáctanos para coordinar crédito o devolución). ¿Deseas confirmar la cancelación?';
+    }
+    
+    if (!window.confirm(confirmMsg)) return;
+    
+    setSubmittingCancel(true);
+    setErrorMessage('');
+    try {
+      const res = await fetch('/api/reservas/cancelar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ turnoId: activeTurno.id, dni: formData.dni })
+      });
+      const data = await res.json();
+      if (data.error) {
+        setErrorMessage(data.error);
+      } else {
+        setSelfMgmtSuccess({
+          type: 'cancel',
+          message: 'Tu turno ha sido cancelado con éxito. Se ha enviado un correo y mensaje de WhatsApp de confirmación.'
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Ocurrió un error al procesar la cancelación.');
+    } finally {
+      setSubmittingCancel(false);
+    }
+  };
+
+  const handleRescheduleActiveTurno = () => {
+    if (!activeTurno) return;
+    
+    const now = new Date();
+    const turnTime = new Date(activeTurno.fecha);
+    const [h, m] = activeTurno.horaInicio.split(':').map(Number);
+    turnTime.setUTCHours(h, m, 0, 0);
+    const diffMs = turnTime.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    if (diffHours < 24) {
+      const confirmNew = window.confirm('⚠️ Faltan menos de 24 hs para tu turno. Si reprogramás ahora, se perderá la seña actual y deberás registrar un nuevo turno abonando una nueva seña.\n\n¿Deseas cancelar el turno actual para poder reservar uno nuevo?');
+      if (confirmNew) {
+        setSubmittingCancel(true);
+        fetch('/api/reservas/cancelar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ turnoId: activeTurno.id, dni: formData.dni })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            setErrorMessage(data.error);
+          } else {
+            setActiveTurno(null);
+            setIsSelfManagement(false);
+            setDniChecked(true);
+            setStep(2);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          setErrorMessage('Error al procesar el cambio.');
+        })
+        .finally(() => {
+          setSubmittingCancel(false);
+        });
+      }
+    } else {
+      try {
+        const turnZones = JSON.parse(activeTurno.zonas).map(z => ({
+          id: z.id,
+          nombre: z.nombre,
+          precioBase: z.precio || z.precioBase || 0,
+          duracionMinutos: z.duracion || z.duracionMinutos || 0,
+          señaBase: z.seña || z.señaBase || 0
+        }));
+        setSelectedZones(turnZones);
+        setRescheduleMode(true);
+        setStep(2);
+      } catch (err) {
+        setErrorMessage('Error al leer las zonas del turno actual. Por favor, comunícate con nosotros.');
+      }
+    }
+  };
+
+  const handleConfirmReschedule = async () => {
+    if (!acceptedTerms) {
+      setErrorMessage('Debes aceptar las indicaciones previas para proceder.');
+      return;
+    }
+    
+    setLoadingCheckout(true);
+    setErrorMessage('');
+    try {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const res = await fetch('/api/reservas/reprogramar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          turnoId: activeTurno.id,
+          dni: formData.dni,
+          fechaStr: dateStr,
+          horaInicio: selectedSlot.horaInicio
+        })
+      });
+      const data = await res.json();
+      if (data.error) {
+        setErrorMessage(data.error);
+      } else {
+        setSelfMgmtSuccess({
+          type: 'reschedule',
+          message: 'Tu turno ha sido reprogramado con éxito. Se ha enviado un correo y mensaje de WhatsApp de confirmación con los nuevos detalles.'
+        });
+        setStep(1);
+        setIsSelfManagement(true);
+        setRescheduleMode(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Ocurrió un error al procesar la reprogramación.');
+    } finally {
+      setLoadingCheckout(false);
     }
   };
 
@@ -306,14 +453,116 @@ export default function Home() {
           </div>
         )}
 
-        {/* STEP 1: Personal Info */}
+        {/* STEP 1: Personal Info or Self-Management */}
         {step === 1 && (
-          <div className={styles.formSection}>
-            <h2 className={styles.sectionTitle}>Datos Personales</h2>
-            <p className={styles.sectionSubtitle}>Completá tus datos para iniciar la reserva del turno online.</p>
+          isSelfManagement ? (
+            <div className={styles.formSection}>
+              <h2 className={styles.sectionTitle}>Gestionar mi Turno</h2>
+              {selfMgmtSuccess ? (
+                <div className="glass-card premium-border" style={{ textAlign: 'center', padding: '2rem' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                  <h3 style={{ color: 'var(--color-gold)', marginBottom: '1rem' }}>¡Operación exitosa!</h3>
+                  <p style={{ marginBottom: '2rem', lineHeight: '1.6' }}>{selfMgmtSuccess.message}</p>
+                  <button
+                    onClick={() => {
+                      setIsSelfManagement(false);
+                      setActiveTurno(null);
+                      setSelfMgmtSuccess(null);
+                      setDniChecked(false);
+                      setFormData(prev => ({ ...prev, dni: '' }));
+                    }}
+                    className="btn btn-primary"
+                  >
+                    Volver al inicio
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className={styles.sectionSubtitle}>
+                    Hola <strong>{formData.nombreCompleto || activeTurno.cliente?.nombreCompleto}</strong>, aquí podés consultar y gestionar tu turno activo.
+                  </p>
 
-            {!dniChecked ? (
-              <form onSubmit={handleDniCheck}>
+                  <div className="glass-card premium-border" style={{ marginBottom: '2rem' }}>
+                    <div className={styles.summaryRow}>
+                      <span>Día del Turno:</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {new Date(activeTurno.fecha).toLocaleDateString('es-ES', { dateStyle: 'full', timeZone: 'UTC' })}
+                      </span>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span>Horario:</span>
+                      <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
+                        {activeTurno.horaInicio} a {activeTurno.horaFin}
+                      </span>
+                    </div>
+                    <div className={styles.summaryRow} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span>Zonas contratadas:</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right' }}>
+                        {(() => {
+                          try {
+                            return JSON.parse(activeTurno.zonas).map(z => z.nombre).join(', ');
+                          } catch (e) {
+                            return activeTurno.zonas;
+                          }
+                        })()}
+                      </span>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span>Seña abonada:</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                        ${activeTurno.valorSeña.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span>Saldo a pagar en el local:</span>
+                      <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
+                        ${(activeTurno.valorTotal - activeTurno.valorSeña).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <button 
+                      onClick={handleRescheduleActiveTurno} 
+                      className="btn btn-primary" 
+                      disabled={submittingCancel || submittingReschedule}
+                      style={{ width: '100%' }}
+                    >
+                      🔄 Reprogramar Turno
+                    </button>
+
+                    <button 
+                      onClick={handleCancelActiveTurno} 
+                      className="btn btn-secondary" 
+                      disabled={submittingCancel || submittingReschedule}
+                      style={{ width: '100%', borderColor: '#ff5252', color: '#ffb4b4', backgroundColor: 'rgba(255,82,82,0.05)' }}
+                    >
+                      {submittingCancel ? 'Cancelando...' : '❌ Cancelar Turno'}
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setIsSelfManagement(false);
+                        setActiveTurno(null);
+                        setDniChecked(false);
+                        setFormData(prev => ({ ...prev, dni: '' }));
+                      }}
+                      className="btn btn-secondary"
+                      style={{ width: '100%', marginTop: '1rem' }}
+                    >
+                      Volver
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={styles.formSection}>
+              <h2 className={styles.sectionTitle}>Datos Personales</h2>
+              <p className={styles.sectionSubtitle}>Completá tus datos para iniciar la reserva del turno online.</p>
+
+              {!dniChecked ? (
+                <form onSubmit={handleDniCheck}>
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Ingresá tu DNI (Documento Nacional de Identidad) *</label>
                   <input
@@ -415,78 +664,102 @@ export default function Home() {
               </form>
             )}
           </div>
-        )}
+        ))}
 
         {/* STEP 2: Zone Selection */}
         {step === 2 && (
           <div className={styles.formSection}>
-            <h2 className={styles.sectionTitle}>Zonas de Depilación</h2>
-            <p className={styles.sectionSubtitle}>Selecciona una o más zonas corporales para realizarte el tratamiento.</p>
-
-            <div className={styles.zonesGrid}>
-              {zones.map((zone) => {
-                const isActive = selectedZones.some(z => z.id === zone.id);
-                return (
-                  <div
-                    key={zone.id}
-                    className={`${styles.zoneCard} ${isActive ? styles.zoneCardActive : ''}`}
-                    onClick={() => toggleZone(zone)}
-                  >
-                    <div className={styles.zoneInfo}>
-                      <span className={styles.zoneName}>{zone.nombre}</span>
-                      <div className={styles.zoneMeta}>
-                        <span className={styles.zoneMetaItem}>
-                          <ClockIcon /> {zone.duracionMinutos} min
-                        </span>
-                      </div>
+            <h2 className={styles.sectionTitle}>{rescheduleMode ? 'Zonas de tu Turno' : 'Zonas de Depilación'}</h2>
+            {rescheduleMode ? (
+              <div>
+                <p className={styles.sectionSubtitle}>Zonas contratadas del turno que estás reprogramando:</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
+                  {selectedZones.map((z, idx) => (
+                    <div key={idx} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                      <span style={{ fontWeight: 600 }}>{z.nombre}</span>
+                      <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>${(z.precioBase || z.precio || 0).toLocaleString()}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span className={styles.zonePrice}>${zone.precioBase.toLocaleString()}</span>
-                      <div className={`${styles.checkbox} ${isActive ? styles.checkboxActive : ''}`}>
-                        {isActive && '✓'}
+                  ))}
+                </div>
+                <div className={styles.actionsBar}>
+                  <button onClick={() => {
+                    setRescheduleMode(false);
+                    setIsSelfManagement(true);
+                    setStep(1);
+                  }} className="btn btn-secondary">Atrás</button>
+                  <button onClick={() => setStep(3)} className="btn btn-primary">Elegir Horario</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className={styles.sectionSubtitle}>Selecciona una o más zonas corporales para realizarte el tratamiento.</p>
+
+                <div className={styles.zonesGrid}>
+                  {zones.map((zone) => {
+                    const isActive = selectedZones.some(z => z.id === zone.id);
+                    return (
+                      <div
+                        key={zone.id}
+                        className={`${styles.zoneCard} ${isActive ? styles.zoneCardActive : ''}`}
+                        onClick={() => toggleZone(zone)}
+                      >
+                        <div className={styles.zoneInfo}>
+                          <span className={styles.zoneName}>{zone.nombre}</span>
+                          <div className={styles.zoneMeta}>
+                            <span className={styles.zoneMetaItem}>
+                              <ClockIcon /> {zone.duracionMinutos} min
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <span className={styles.zonePrice}>${zone.precioBase.toLocaleString()}</span>
+                          <div className={`${styles.checkbox} ${isActive ? styles.checkboxActive : ''}`}>
+                            {isActive && '✓'}
+                          </div>
+                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Sub-form if "Otro" is selected */}
+                {selectedZones.some(z => z.nombre === 'Otro') && (
+                  <div className={styles.inputGroup} style={{ animation: 'fadeIn 0.3s ease' }}>
+                    <label className={styles.inputLabel}>Especificá qué zona deseas depilar y te contactaremos para cotizar *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Espalda completa y hombros"
+                      value={formData.otroZona}
+                      onChange={(e) => setFormData({ ...formData, otroZona: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
+
+                {selectedZones.length > 0 && (
+                  <div className="glass-card premium-border" style={{ marginTop: '2rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--color-gold)' }}>Resumen del Servicio</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span>Duración estimada:</span>
+                      <span style={{ fontWeight: 600 }}>{calculatedDetails.duracionMinutos} minutos</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span>Precio Total Estimado:</span>
+                      <span style={{ fontWeight: 600 }}>${calculatedDetails.valorTotal.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-gold)' }}>
+                      <span>Seña a abonar hoy (MercadoPago):</span>
+                      <span style={{ fontWeight: 700 }}>${calculatedDetails.valorSeña.toLocaleString()}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                )}
 
-            {/* Sub-form if "Otro" is selected */}
-            {selectedZones.some(z => z.nombre === 'Otro') && (
-              <div className={styles.inputGroup} style={{ animation: 'fadeIn 0.3s ease' }}>
-                <label className={styles.inputLabel}>Especificá qué zona deseas depilar y te contactaremos para cotizar *</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Espalda completa y hombros"
-                  value={formData.otroZona}
-                  onChange={(e) => setFormData({ ...formData, otroZona: e.target.value })}
-                  required
-                />
-              </div>
+                <div className={styles.actionsBar}>
+                  <button onClick={() => setStep(1)} className="btn btn-secondary">Atrás</button>
+                  <button onClick={handleNextStep2} className="btn btn-primary">Elegir Horario</button>
+                </div>
+              </>
             )}
-
-            {selectedZones.length > 0 && (
-              <div className="glass-card premium-border" style={{ marginTop: '2rem' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--color-gold)' }}>Resumen del Servicio</h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span>Duración estimada:</span>
-                  <span style={{ fontWeight: 600 }}>{calculatedDetails.duracionMinutos} minutos</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span>Precio Total Estimado:</span>
-                  <span style={{ fontWeight: 600 }}>${calculatedDetails.valorTotal.toLocaleString()}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-gold)' }}>
-                  <span>Seña a abonar hoy (MercadoPago):</span>
-                  <span style={{ fontWeight: 700 }}>${calculatedDetails.valorSeña.toLocaleString()}</span>
-                </div>
-              </div>
-            )}
-
-            <div className={styles.actionsBar}>
-              <button onClick={() => setStep(1)} className="btn btn-secondary">Atrás</button>
-              <button onClick={handleNextStep2} className="btn btn-primary">Elegir Horario</button>
-            </div>
           </div>
         )}
 
@@ -565,8 +838,12 @@ export default function Home() {
         {/* STEP 4: Checkout Summary and MercadoPago */}
         {step === 4 && (
           <div className={styles.formSection}>
-            <h2 className={styles.sectionTitle}>Confirmación y Pago</h2>
-            <p className={styles.sectionSubtitle}>Revisa los detalles de tu turno y procede al pago de la seña por MercadoPago.</p>
+            <h2 className={styles.sectionTitle}>{rescheduleMode ? 'Confirmar Reprogramación' : 'Confirmación y Pago'}</h2>
+            <p className={styles.sectionSubtitle}>
+              {rescheduleMode 
+                ? 'Revisa los nuevos detalles de tu turno y confirma para aplicar los cambios. Tu seña se conservará.' 
+                : 'Revisa los detalles de tu turno y procede al pago de la seña por MercadoPago.'}
+            </p>
 
             <div className="glass-card premium-border" style={{ marginBottom: '2rem' }}>
               <div className={styles.summaryRow}>
@@ -600,7 +877,7 @@ export default function Home() {
                   <span>${calculatedDetails.valorTotal.toLocaleString()}</span>
                 </div>
                 <div className={styles.summaryRowSeña}>
-                  <span>Seña a abonar:</span>
+                  <span>{rescheduleMode ? 'Seña (ya abonada):' : 'Seña a abonar:'}</span>
                   <span>${calculatedDetails.valorSeña.toLocaleString()}</span>
                 </div>
                 <div className={styles.summaryRowTotal}>
@@ -638,14 +915,25 @@ export default function Home() {
 
             <div className={styles.actionsBar}>
               <button onClick={() => setStep(3)} className="btn btn-secondary" disabled={loadingCheckout}>Atrás</button>
-              <button
-                onClick={handleCheckout}
-                className="btn btn-primary"
-                style={{ background: '#009ee3', color: '#fff' }} // MercadoPago blue style
-                disabled={!acceptedTerms || loadingCheckout}
-              >
-                {loadingCheckout ? 'Creando Reserva...' : 'Pagar Seña con MercadoPago'}
-              </button>
+              {rescheduleMode ? (
+                <button
+                  onClick={handleConfirmReschedule}
+                  className="btn btn-primary"
+                  style={{ background: 'var(--color-gold)', color: '#000' }}
+                  disabled={!acceptedTerms || loadingCheckout}
+                >
+                  {loadingCheckout ? 'Procesando...' : 'Confirmar Reprogramación'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleCheckout}
+                  className="btn btn-primary"
+                  style={{ background: '#009ee3', color: '#fff' }} // MercadoPago blue style
+                  disabled={!acceptedTerms || loadingCheckout}
+                >
+                  {loadingCheckout ? 'Creando Reserva...' : 'Pagar Seña con MercadoPago'}
+                </button>
+              )}
             </div>
           </div>
         )}

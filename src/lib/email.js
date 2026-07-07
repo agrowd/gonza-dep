@@ -975,3 +975,131 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
     html: htmlContent
   });
 }
+
+/**
+ * Sends a 7-day automated email reminder to the client.
+ */
+export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetails, address, subjectTemplate, bodyTemplate) {
+  const { transporter, from } = getMailConfig();
+
+  const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
+  
+  const dateObj = new Date(fecha);
+  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
+
+  let zonesText = '';
+  try {
+    const zonesArray = JSON.parse(zonas);
+    zonesText = zonesArray.map(z => z.nombre).join(', ');
+  } catch (e) {
+    zonesText = zonas || 'Sesión de depilación';
+  }
+
+  const replacePlaceholders = (text) => {
+    if (!text) return '';
+    return text
+      .replaceAll('{fecha}', dateFormatted)
+      .replaceAll('{horario}', `${horaInicio} hs`)
+      .replaceAll('{zonas}', zonesText)
+      .replaceAll('{seña}', `$${valorSeña.toLocaleString()}`)
+      .replaceAll('{saldo}', `$${(valorTotal - valorSeña).toLocaleString()}`)
+      .replaceAll('{direccion}', address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)');
+  };
+
+  const subject = replacePlaceholders(subjectTemplate || 'Recordatorio de tu turno en 7 días - Gonzalo Depilación');
+  const bodyText = replacePlaceholders(bodyTemplate || 'Te recordamos que tenés un turno programado para dentro de 7 días.');
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${subject}</title>
+      <style>
+        body {
+          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #121212;
+          color: #f0ede6;
+          margin: 0;
+          padding: 0;
+          -webkit-font-smoothing: antialiased;
+        }
+        .container {
+          max-width: 600px;
+          margin: 20px auto;
+          background-color: #1d1d1d;
+          border: 1px solid #d4a54d;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .header {
+          background-color: #282a2b;
+          border-bottom: 2px solid #d4a54d;
+          padding: 30px;
+          text-align: center;
+        }
+        .header h1 {
+          color: #d4a54d;
+          margin: 0;
+          font-size: 24px;
+          font-weight: 700;
+          letter-spacing: 1px;
+        }
+        .content {
+          padding: 40px 30px;
+          line-height: 1.6;
+          font-size: 16px;
+        }
+        .greeting {
+          font-size: 18px;
+          font-weight: bold;
+          color: #ffffff;
+          margin-bottom: 20px;
+        }
+        .body-text {
+          margin-bottom: 25px;
+          white-space: pre-line;
+        }
+        .footer {
+          background-color: #121212;
+          padding: 20px 30px;
+          text-align: center;
+          font-size: 12px;
+          color: #777777;
+          border-top: 1px solid #282a2b;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>GONZALO DEPILACIÓN LÁSER</h1>
+        </div>
+        <div class="content">
+          <div class="greeting">Hola ${clientName},</div>
+          <div class="body-text">${bodyText}</div>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
+          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to: clientEmail,
+    bcc: 'nuevacuenta@depilacionparahombres.com',
+    subject: subject,
+    html: htmlContent
+  });
+}

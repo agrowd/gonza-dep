@@ -44,6 +44,46 @@
   color: var(--text-primary);
 }
 
+.navigationWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.85rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 30px;
+  min-width: 260px;
+}
+
+.navBtnSmall {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.navBtnSmall:hover {
+  color: var(--color-gold);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.currentWeekText {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  text-align: center;
+  flex: 1;
+}
+
 /* Calendar Layout Grid */
 .calendarContainer {
   background: var(--bg-secondary);
@@ -508,23 +548,38 @@
 
 @media (max-width: 768px) {
   .calendarContainer {
-    height: calc(100vh - 150px) !important;
-    min-height: 450px !important;
-    overflow-x: auto !important;
+    max-height: calc(100vh - 180px) !important;
+    overflow: auto !important;
     -webkit-overflow-scrolling: touch;
-    display: flex;
-    flex-direction: column;
+    display: block !important;
   }
   .gridContainer {
-    flex: 1;
+    min-width: 800px;
+    height: auto !important;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: auto;
-    overflow: visible;
+  }
+  .gridHeader {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    background-color: var(--bg-card);
+  }
+  .timeColHeader {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 35;
+    background-color: var(--bg-card) !important;
   }
   .gridBody {
-    flex: 1;
-    overflow-y: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .timeColumn {
+    position: sticky;
+    left: 0;
+    z-index: 15;
+    background-color: var(--bg-secondary) !important;
   }
 }

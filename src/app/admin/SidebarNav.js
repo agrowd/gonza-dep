@@ -68,6 +68,33 @@ export default function SidebarNav({ user }) {
     { name: 'Configuración', path: '/admin/configuracion', icon: <SettingsIcon /> },
   ];
 
+  const isPrintPage = pathname === '/admin/agenda/imprimir';
+
+  if (isPrintPage) {
+    return (
+      <style dangerouslySetInnerHTML={{__html: `
+        aside,
+        .${styles.mobileToggleBtn},
+        .${styles.mobileBackdrop} {
+          display: none !important;
+        }
+        main,
+        [class*="contentArea"] {
+          padding: 0 !important;
+          margin: 0 !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        body, html {
+          background: #ffffff !important;
+          color: #000000 !important;
+        }
+      `}} />
+    );
+  }
+
   return (
     <>
       {/* Mobile Hamburger Toggle Button */}

@@ -58,8 +58,12 @@ export default function ConfiguracionPage() {
     email_maintenance_body: '',
     wtsp_confirmation_manual_template: '',
     wtsp_noshow_template: '',
+    wtsp_cancellation_template: '',
+    wtsp_reschedule_template: '',
     email_reprogram_subject: '',
-    email_reprogram_body: ''
+    email_reprogram_body: '',
+    email_reminder_7days_subject: '',
+    email_reminder_7days_body: ''
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
@@ -101,8 +105,12 @@ export default function ConfiguracionPage() {
             email_maintenance_body: data.email_maintenance_body || '',
             wtsp_confirmation_manual_template: data.wtsp_confirmation_manual_template || '',
             wtsp_noshow_template: data.wtsp_noshow_template || '',
+            wtsp_cancellation_template: data.wtsp_cancellation_template || '',
+            wtsp_reschedule_template: data.wtsp_reschedule_template || '',
             email_reprogram_subject: data.email_reprogram_subject || '',
-            email_reprogram_body: data.email_reprogram_body || ''
+            email_reprogram_body: data.email_reprogram_body || '',
+            email_reminder_7days_subject: data.email_reminder_7days_subject || '',
+            email_reminder_7days_body: data.email_reminder_7days_body || ''
           });
         }
       })
@@ -547,6 +555,28 @@ export default function ConfiguracionPage() {
                 />
               </div>
 
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Aviso de Cancelación de Turno por WhatsApp</label>
+                <textarea 
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={configs.wtsp_cancellation_template}
+                  onChange={(e) => setConfigs({ ...configs, wtsp_cancellation_template: e.target.value })}
+                  placeholder="Tu turno fue cancelado..."
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Aviso de Reprogramación de Turno por WhatsApp</label>
+                <textarea 
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={configs.wtsp_reschedule_template}
+                  onChange={(e) => setConfigs({ ...configs, wtsp_reschedule_template: e.target.value })}
+                  placeholder="Tu turno fue reprogramado con éxito..."
+                  required
+                />
+              </div>
+
               {/* Variable Helper */}
               <div className={styles.variableHelper} style={{ marginBottom: '2rem' }}>
                 <div className={styles.variableTitle}>Variables Automáticas WhatsApp (Toca para copiar):</div>
@@ -686,6 +716,31 @@ export default function ConfiguracionPage() {
                     value={configs.email_reprogram_body}
                     onChange={(e) => setConfigs({ ...configs, email_reprogram_body: e.target.value })}
                     rows="5"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email 6: 7-Day Reminder */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#81c784' }}>📧 Correo de Recordatorio Automático (7 Días Antes)</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_reminder_7days_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_reminder_7days_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_reminder_7days_body}
+                    onChange={(e) => setConfigs({ ...configs, email_reminder_7days_body: e.target.value })}
+                    rows="6"
                     required
                   />
                 </div>

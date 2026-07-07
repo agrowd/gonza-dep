@@ -345,6 +345,99 @@ export async function checkAndSendReminders() {
     }
 
     // ==========================================
+    // EMAIL REMINDERS (7 Days Before)
+    // ==========================================
+    console.log('[Reminder Cron] Fetching appointments for today + 7 days for email reminders...');
+    const target7Days = new Date(Date.UTC(argToday.getUTCFullYear(), argToday.getUTCMonth(), argToday.getUTCDate()));
+    target7Days.setUTCDate(target7Days.getUTCDate() + 7);
+
+    const start7Range = new Date(target7Days);
+    start7Range.setUTCHours(0, 0, 0, 0);
+
+    const end7Range = new Date(target7Days);
+    end7Range.setUTCHours(23, 59, 59, 999);
+
+    const turnos7 = await prisma.turno.findMany({
+      where: {
+        fecha: {
+          gte: start7Range,
+          lte: end7Range
+        },
+        estado: {
+          in: ['SEÑADO', 'REPROGRAMADO']
+        }
+      },
+      include: {
+        cliente: true
+      }
+    });
+
+    console.log(`[Reminder Cron] Found ${turnos7.length} appointments for 7-day email reminders check.`);
+
+    const email7SubjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_subject' } });
+    const email7BodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_body' } });
+    const email7SubjectTemplate = email7SubjectConfig?.value || "Recordatorio de tu turno en 7 días - Gonzalo Depilación";
+    const email7BodyTemplate = email7BodyConfig?.value || "";
+
+    if (email7BodyTemplate && turnos7.length > 0) {
+      const { sendReminder7DaysEmail } = await import('./email.js');
+      
+      for (const t of turnos7) {
+        if (t.estado === 'BLOQUEADO' || (t.cliente && t.cliente.email && t.cliente.email.includes('bloqueo'))) {
+          continue;
+        }
+
+        const existing7Notification = await prisma.notificacion.findFirst({
+          where: {
+            turnoId: t.id,
+            canal: 'EMAIL',
+            mensaje: {
+              startsWith: 'Recordatorio automático (7 días antes)'
+            }
+          }
+        });
+
+        if (existing7Notification) {
+          console.log(`[Reminder Cron] 7-day email reminder already sent for appointment ${t.id} to ${t.cliente.nombreCompleto}. Skipping.`);
+          continue;
+        }
+
+        try {
+          console.log(`[Reminder Cron] Sending automatic 7-day email reminder to ${t.cliente.nombreCompleto}...`);
+          await sendReminder7DaysEmail(
+            t.cliente.email,
+            t.cliente.nombreCompleto,
+            t,
+            address,
+            email7SubjectTemplate,
+            email7BodyTemplate
+          );
+
+          await prisma.notificacion.create({
+            data: {
+              clienteId: t.cliente.id,
+              turnoId: t.id,
+              canal: 'EMAIL',
+              mensaje: `Recordatorio automático (7 días antes) enviado por correo electrónico.`,
+              estado: 'ENVIADO'
+            }
+          });
+        } catch (err) {
+          console.error(`[Reminder Cron] Failed to send automatic 7-day email reminder to ${t.cliente.nombreCompleto}:`, err);
+          await prisma.notificacion.create({
+            data: {
+              clienteId: t.cliente.id,
+              turnoId: t.id,
+              canal: 'EMAIL',
+              mensaje: `Recordatorio automático (7 días antes) fallido: ${err.message}`,
+              estado: 'FALLIDO'
+            }
+          });
+        }
+      }
+    }
+
+    // ==========================================
     // AUTOMATED MAINTENANCE REMINDERS (75 DAYS)
     // ==========================================
     console.log('[Reminder Cron] Checking finished appointments for 75-day maintenance reminders...');
