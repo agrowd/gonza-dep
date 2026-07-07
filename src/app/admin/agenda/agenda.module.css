@@ -583,3 +583,33 @@
     background-color: var(--bg-secondary) !important;
   }
 }
+
+/* Phone Prefix & Input Rows */
+.phoneInputContainer {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: var(--transition);
+  width: 100%;
+}
+
+.phoneInputContainer:focus-within {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 2px rgba(var(--color-gold-rgb), 0.15);
+}
+
+.phonePrefix {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.9rem;
+  background-color: #282a2b;
+  border-right: 1px solid var(--border-color);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  user-select: none;
+}

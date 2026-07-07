@@ -1798,15 +1798,22 @@ export default function AgendaPage() {
                     required
                   />
                 </div>
-                <div className={styles.inputGroup}>
+                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>WhatsApp *</label>
-                  <input
-                    type="tel"
-                    value={newTurno.whatsapp}
-                    onChange={(e) => setNewTurno({ ...newTurno, whatsapp: e.target.value })}
-                    required
-                    placeholder="Ej. 54911223344"
-                  />
+                  <div className={styles.phoneInputContainer}>
+                    <div className={styles.phonePrefix}>
+                      <span className={styles.flagIcon}>🇦🇷</span>
+                      <span>+54</span>
+                    </div>
+                    <input
+                      type="tel"
+                      value={newTurno.whatsapp}
+                      onChange={(e) => setNewTurno({ ...newTurno, whatsapp: e.target.value })}
+                      required
+                      placeholder="Ej. 911223344"
+                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
+                    />
+                  </div>
                 </div>
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Email *</label>
