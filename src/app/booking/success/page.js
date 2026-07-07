@@ -15,21 +15,24 @@ function SuccessContent() {
   const turnoId = searchParams.get('turnoId');
   const [turno, setTurno] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [confirmed, setConfirmed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState('');
 
-  // We can query a quick public status check endpoint `/api/reservas/status?id=xxx`
-  // let's create a quick status checker
   useEffect(() => {
     if (!turnoId) {
       setLoading(false);
       return;
     }
 
-    // Try to fetch appointment status from database (public safe endpoint)
     fetch(`/api/reservas/consultar?id=${turnoId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.turno) {
           setTurno(data.turno);
+          if (data.turno.estado === 'SEÑADO' || data.turno.estado === 'REPROGRAMADO') {
+            setConfirmed(true);
+          }
         }
       })
       .catch(err => console.error('Error fetching appointment details:', err))
@@ -37,6 +40,36 @@ function SuccessContent() {
         setLoading(false);
       });
   }, [turnoId]);
+
+  const handleConfirmTurno = async () => {
+    setConfirming(true);
+    setConfirmError('');
+    try {
+      const paymentId = searchParams.get('payment_id');
+      const status = searchParams.get('status');
+      
+      const res = await fetch('/api/reservas/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          turnoId,
+          paymentId,
+          status
+        })
+      });
+      const data = await res.json();
+      if (data.error) {
+        setConfirmError(data.error);
+      } else {
+        setConfirmed(true);
+      }
+    } catch (e) {
+      console.error(e);
+      setConfirmError('Error de red al confirmar tu turno. Por favor, vuelve a intentar.');
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -50,15 +83,28 @@ function SuccessContent() {
 
       <main className={styles.main} style={{ maxWidth: '600px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <div className="glass-card premium-border" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}>
-          <CheckCircleIcon />
           
-          <h2 className={styles.sectionTitle} style={{ fontSize: '1.75rem', marginBottom: '1rem' }}>
-            ¡Reserva Recibida!
-          </h2>
-          
-          <p className={styles.sectionSubtitle} style={{ marginBottom: '2rem' }}>
-            Tu pago de seña ha sido registrado con éxito.
-          </p>
+          {confirmed ? (
+            <>
+              <CheckCircleIcon />
+              <h2 className={styles.sectionTitle} style={{ fontSize: '1.75rem', marginBottom: '1rem' }}>
+                ¡Turno Confirmado con Éxito!
+              </h2>
+              <p className={styles.sectionSubtitle} style={{ marginBottom: '2rem' }}>
+                Tu pago de seña ha sido registrado y tu turno fue cargado en la agenda.
+              </p>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💳</div>
+              <h2 className={styles.sectionTitle} style={{ fontSize: '1.75rem', marginBottom: '1rem' }}>
+                ¡Pago Realizado!
+              </h2>
+              <p className={styles.sectionSubtitle} style={{ marginBottom: '2rem' }}>
+                Para agendar definitivamente tu turno, hacé clic en el botón de abajo.
+              </p>
+            </>
+          )}
 
           {loading ? (
             <p style={{ color: 'var(--color-gold)' }}>Cargando detalles de tu turno...</p>
@@ -91,21 +137,40 @@ function SuccessContent() {
             </div>
           ) : null}
 
-          <div className={styles.instructionsCard} style={{ textAlign: 'left', width: '100%', marginBottom: '2rem' }}>
-            <h4 style={{ color: 'var(--color-gold)', fontSize: '1rem', marginBottom: '0.5rem', fontWeight: 700 }}>
-              📌 ¿Qué pasa ahora?
-            </h4>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-              El turno quedó registrado como **"Pendiente de autorización"**. Gonzalo o Luciano verificarán el turno en la agenda y te enviarán un mensaje de confirmación por **WhatsApp** y **Email** a la brevedad.
-            </p>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              Recordá venir **afeitado al ras** con maquinita de afeitar en las zonas indicadas. La dirección es **Paraná 597, Piso 8, Depto 48**.
-            </p>
-          </div>
+          {confirmError && (
+            <div style={{ width: '100%', padding: '1rem', background: 'rgba(255, 82, 82, 0.1)', border: '1px solid #ff5252', borderRadius: '6px', color: '#ffb4b4', marginBottom: '1.5rem', textAlign: 'left', fontSize: '0.9rem' }}>
+              {confirmError}
+            </div>
+          )}
 
-          <button onClick={() => router.push('/')} className="btn btn-primary" style={{ width: '100%' }}>
-            Volver al Inicio
-          </button>
+          {confirmed ? (
+            <>
+              <div className={styles.instructionsCard} style={{ textAlign: 'left', width: '100%', marginBottom: '2rem' }}>
+                <h4 style={{ color: 'var(--color-gold)', fontSize: '1rem', marginBottom: '0.5rem', fontWeight: 700 }}>
+                  📌 ¿Qué pasa ahora?
+                </h4>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                  El turno quedó confirmado en la agenda. Se ha enviado un mensaje de confirmación por **WhatsApp** y **Email** con los detalles.
+                </p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  Recordá venir **afeitado al ras** con maquinita de afeitar en las zonas indicadas. La dirección es **Paraná 597, Piso 8, Depto 48**.
+                </p>
+              </div>
+
+              <button onClick={() => router.push('/')} className="btn btn-primary" style={{ width: '100%' }}>
+                Volver al Inicio
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={handleConfirmTurno} 
+              disabled={confirming || loading} 
+              className="btn btn-primary" 
+              style={{ width: '100%', fontSize: '1.1rem', padding: '1rem' }}
+            >
+              {confirming ? 'Confirmando...' : 'Confirmar y Cargar Turno 🚀'}
+            </button>
+          )}
         </div>
       </main>
 

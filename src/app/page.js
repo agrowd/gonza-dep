@@ -65,20 +65,19 @@ export default function Home() {
       .catch(err => console.error('Error fetching zones:', err));
   }, []);
 
-  // 2. Generate scrollable list of next 30 business days (excluding Sunday)
+  // 2. Generate scrollable list of next 30 business days (excluding Saturday & Sunday)
   const [dateList, setDateList] = useState([]);
   useEffect(() => {
     const dates = [];
     let current = new Date();
-    // Start from tomorrow or today if early
-    if (current.getHours() >= 20) {
-      current.setDate(current.getDate() + 1);
-    }
+    // Always start from tomorrow (do not allow today's booking)
+    current.setDate(current.getDate() + 1);
     
     let count = 0;
     while (count < 30) {
-      // 0 = Sunday
-      if (current.getDay() !== 0) {
+      const day = current.getDay();
+      // 0 = Sunday, 6 = Saturday
+      if (day !== 0 && day !== 6) {
         dates.push(new Date(current));
         count++;
       }
@@ -182,10 +181,10 @@ export default function Home() {
     const diffHours = diffMs / (1000 * 60 * 60);
     
     let confirmMsg = '¿Estás seguro de que deseas cancelar tu turno?';
-    if (diffHours < 24) {
-      confirmMsg = '⚠️ Faltan menos de 24 hs para tu turno. Si cancelás ahora, perderás la seña abonada. ¿Deseas continuar y cancelar el turno de todas formas?';
+    if (diffHours < 72) {
+      confirmMsg = '⚠️ Faltan menos de 72 hs para tu turno. Si cancelás ahora, perderás la seña abonada. ¿Deseas continuar y cancelar el turno de todas formas?';
     } else {
-      confirmMsg = 'Tu turno será cancelado y el horario se liberará. Tu seña será liberada (contáctanos para coordinar crédito o devolución). ¿Deseas confirmar la cancelación?';
+      confirmMsg = 'Tu turno será cancelado y el horario se liberará. Tu seña quedará registrada a tu favor (contáctanos para reprogramar utilizando esta seña). ¿Deseas confirmar la cancelación?';
     }
     
     if (!window.confirm(confirmMsg)) return;
@@ -225,8 +224,8 @@ export default function Home() {
     const diffMs = turnTime.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
     
-    if (diffHours < 24) {
-      const confirmNew = window.confirm('⚠️ Faltan menos de 24 hs para tu turno. Si reprogramás ahora, se perderá la seña actual y deberás registrar un nuevo turno abonando una nueva seña.\n\n¿Deseas cancelar el turno actual para poder reservar uno nuevo?');
+    if (diffHours < 72) {
+      const confirmNew = window.confirm('⚠️ Faltan menos de 72 hs para tu turno. Si reprogramás ahora, se perderá la seña actual y deberás registrar un nuevo turno abonando una nueva seña.\n\n¿Deseas cancelar el turno actual para poder reservar uno nuevo?');
       if (confirmNew) {
         setSubmittingCancel(true);
         fetch('/api/reservas/cancelar', {

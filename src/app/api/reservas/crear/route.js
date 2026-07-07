@@ -71,9 +71,21 @@ export async function POST(request) {
       );
     }
 
-    // Past Date/Time Check
-    if (isPastDateTime(fechaStr, horaInicio)) {
-      return NextResponse.json({ error: 'El horario seleccionado ya no está disponible por haber transcurrido.' }, { status: 400 });
+    // Enforce no same-day booking
+    const now = new Date();
+    const offsetBuenosAires = -3;
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+    const todayStr = nowLocal.toISOString().split('T')[0];
+    if (fechaStr <= todayStr) {
+      return NextResponse.json({ error: 'No es posible agendar turnos para el mismo día.' }, { status: 400 });
+    }
+
+    // Enforce no Saturdays or Sundays
+    const targetDate = new Date(fechaStr + 'T00:00:00');
+    const targetDay = targetDate.getDay(); // 0 = Sunday, 6 = Saturday
+    if (targetDay === 0 || targetDay === 6) {
+      return NextResponse.json({ error: 'No es posible agendar turnos los fines de semana (sábados ni domingos).' }, { status: 400 });
     }
 
     // 1. Fetch zones details from DB
@@ -181,8 +193,6 @@ export async function POST(request) {
     }
 
     // 4. Create Turno in database in PENDIENTE_PAGO state
-    const targetDate = new Date(fechaStr + 'T00:00:00');
-    
     const turno = await prisma.turno.create({
       data: {
         clienteId: client.id,

@@ -51,7 +51,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'El turno ya se encuentra cancelado.' }, { status: 400 });
     }
 
-    // 2. Perform cancellation in DB
+    // 2. Calculate policy threshold
+    const now = new Date();
+    const turnTime = new Date(turno.fecha);
+    const [h, m] = turno.horaInicio.split(':').map(Number);
+    turnTime.setUTCHours(h, m, 0, 0);
+    const diffMs = turnTime.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    const withLossOfDeposit = diffHours < 72;
+
+    // Perform cancellation in DB
     const updatedTurno = await prisma.turno.update({
       where: { id: turnoId },
       data: { estado: 'CANCELADO' },
@@ -67,8 +76,10 @@ export async function POST(request) {
           {
             fecha: updatedTurno.fecha,
             horaInicio: updatedTurno.horaInicio,
-            zonas: updatedTurno.zonas
-          }
+            zonas: updatedTurno.zonas,
+            valorSeña: updatedTurno.valorSeña
+          },
+          withLossOfDeposit
         );
 
         await prisma.notificacion.create({

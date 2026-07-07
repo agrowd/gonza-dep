@@ -448,10 +448,17 @@ export default function AgendaPage() {
   // Handle Turno quick action: CANCEL, REALIZADO, APPROVE
   const handleUpdateStatus = async (turnoId, newStatus) => {
     try {
+      let preserveDeposit = false;
+      if (newStatus === 'CANCELADO') {
+        const confirmCancel = confirm('¿Confirmas la cancelación del turno?\n\n[Aceptar] = Cancelar aplicando penalización (se pierde la seña si falta <72hs)\n[Cancelar] = Cancelar conservando la seña a favor del cliente');
+        if (!confirmCancel) {
+          preserveDeposit = true;
+        }
+      }
       const res = await fetch(`/api/admin/turnos/${turnoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: newStatus })
+        body: JSON.stringify({ estado: newStatus, preserveDeposit })
       });
       if (res.ok) {
         setIsDetailsOpen(false);

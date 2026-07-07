@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { mpPayment } from '@/lib/mercadopago.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
+import { sendWhatsAppMessage } from '@/lib/whatsapp.js';
 
 export async function POST(request) {
   try {
@@ -74,6 +75,58 @@ export async function POST(request) {
               estado: 'ENVIADO'
             }
           });
+
+          // Send confirmation WhatsApp to client
+          try {
+            const wppConfig = await prisma.configuracion.findUnique({
+              where: { key: 'wtsp_confirmation_template' }
+            });
+            const addressConfig = await prisma.configuracion.findUnique({
+              where: { key: 'address' }
+            });
+            const wppTemplate = wppConfig?.value || "¡Hola [Nombre]! Tu reserva para el día [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!";
+            
+            const formatDateLocal = (date) => {
+              return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long', timeZone: 'UTC' });
+            };
+            
+            const parseWppTemplateLocal = (template, client, appointment, address) => {
+              if (!template) return '';
+              let zonesText = '';
+              try {
+                const parsedZonas = JSON.parse(appointment.zonas);
+                zonesText = parsedZonas.map(z => z.nombre).join(', ');
+              } catch (e) {
+                zonesText = appointment.zonas || 'tratamiento';
+              }
+              return template
+                .replaceAll('[Nombre]', client.nombreCompleto)
+                .replaceAll('[FechaTurno]', formatDateLocal(appointment.fecha))
+                .replaceAll('[Horario]', `${appointment.horaInicio} hs`)
+                .replaceAll('[Zonas]', zonesText)
+                .replaceAll('[ValorTotal]', `$${appointment.valorTotal}`)
+                .replaceAll('[Seña]', `$${appointment.valorSeña}`)
+                .replaceAll('[Direccion]', address || 'Paraná 597');
+            };
+
+            const wppMsg = parseWppTemplateLocal(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+            
+            if (updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
+              await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
+              
+              await prisma.notificacion.create({
+                data: {
+                  clienteId: updatedTurno.clienteId,
+                  turnoId: updatedTurno.id,
+                  canal: 'WHATSAPP',
+                  mensaje: wppMsg,
+                  estado: 'ENVIADO'
+                }
+              });
+            }
+          } catch (wppError) {
+            console.error('Failed to send WhatsApp confirmation on MP approval:', wppError);
+          }
 
           // 4. Send confirmation email to client
           try {

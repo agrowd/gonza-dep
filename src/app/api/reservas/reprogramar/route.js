@@ -85,16 +85,33 @@ export async function POST(request) {
       return NextResponse.json({ error: 'El turno se encuentra cancelado. No se puede reprogramar.' }, { status: 400 });
     }
 
-    // 2. Enforce 24 hours advance policy
     const now = new Date();
+
+    // Enforce no same-day rescheduling
+    const offsetBuenosAires = -3;
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+    const todayStr = nowLocal.toISOString().split('T')[0];
+    if (fechaStr <= todayStr) {
+      return NextResponse.json({ error: 'No es posible agendar turnos para el mismo día.' }, { status: 400 });
+    }
+
+    // Enforce no Saturdays or Sundays
+    const targetDate = new Date(fechaStr + 'T00:00:00');
+    const targetDay = targetDate.getDay(); // 0 = Sunday, 6 = Saturday
+    if (targetDay === 0 || targetDay === 6) {
+      return NextResponse.json({ error: 'No es posible agendar turnos los fines de semana (sábados ni domingos).' }, { status: 400 });
+    }
+
+    // 2. Enforce 72 hours advance policy
     const turnTime = new Date(turno.fecha);
     const [h, m] = turno.horaInicio.split(':').map(Number);
     turnTime.setUTCHours(h, m, 0, 0);
     const diffMs = turnTime.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
 
-    if (diffHours < 24) {
-      return NextResponse.json({ error: 'Faltan menos de 24 horas para tu turno. Por políticas de la empresa, no podés reprogramar directamente de forma gratuita.' }, { status: 400 });
+    if (diffHours < 72) {
+      return NextResponse.json({ error: 'Faltan menos de 72 horas para tu turno. Por políticas de la empresa, no podés reprogramar directamente de forma gratuita.' }, { status: 400 });
     }
 
     // 3. Check for overlaps for the new date and time
@@ -108,7 +125,6 @@ export async function POST(request) {
     }
 
     // 4. Update the appointment in DB
-    const targetDate = new Date(fechaStr + 'T00:00:00');
     const updatedTurno = await prisma.turno.update({
       where: { id: turnoId },
       data: {

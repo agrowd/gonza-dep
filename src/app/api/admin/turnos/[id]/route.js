@@ -345,14 +345,26 @@ export async function PUT(request, { params }) {
     // If state changes to "CANCELADO" and old state was not "CANCELADO"
     if (estado === 'CANCELADO' && oldTurn.estado !== 'CANCELADO') {
       try {
+        const now = new Date();
+        const turnTime = new Date(oldTurn.fecha);
+        const [h, m] = oldTurn.horaInicio.split(':').map(Number);
+        turnTime.setUTCHours(h, m, 0, 0);
+        const diffMs = turnTime.getTime() - now.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        // Deposit is lost if within 72 hours AND we are NOT preserving it
+        const withLossOfDeposit = diffHours < 72 && !body.preserveDeposit;
+
         await sendCancellationEmail(
           updatedTurno.cliente.email,
           updatedTurno.cliente.nombreCompleto,
           {
             fecha: updatedTurno.fecha,
             horaInicio: updatedTurno.horaInicio,
-            zonas: updatedTurno.zonas
-          }
+            zonas: updatedTurno.zonas,
+            valorSeña: updatedTurno.valorSeña
+          },
+          withLossOfDeposit
         );
 
         // Log in database

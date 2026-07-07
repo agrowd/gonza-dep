@@ -400,10 +400,10 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
 /**
  * Sends a cancellation email when an appointment is cancelled.
  */
-export async function sendCancellationEmail(clientEmail, clientName, turnDetails) {
+export async function sendCancellationEmail(clientEmail, clientName, turnDetails, withLossOfDeposit = false) {
   const { transporter, from } = getMailConfig();
 
-  const { fecha, horaInicio, zonas } = turnDetails;
+  const { fecha, horaInicio, zonas, valorSeña } = turnDetails;
   
   const dateObj = new Date(fecha);
   const dateFormatted = dateObj.toLocaleDateString('es-ES', {
@@ -421,6 +421,10 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   } catch (e) {
     zonesText = zonas || 'Sesión de depilación';
   }
+
+  const policyText = withLossOfDeposit
+    ? `<p style="margin-bottom: 1.5rem; line-height: 1.6;">Debido a que la cancelación se realizó con **menos de 72 horas** de anticipación, de acuerdo con nuestras políticas corporativas, la seña abonada de <strong>$${(valorSeña || 0).toLocaleString()}</strong> ha sido retenida para cubrir los costos de reserva del espacio.</p>`
+    : `<p style="margin-bottom: 1.5rem; line-height: 1.6;">Al haberse realizado la cancelación con **más de 72 horas** de anticipación (o por disposición administrativa), tu seña original de <strong>$${(valorSeña || 0).toLocaleString()}</strong> queda registrada <strong>a tu favor</strong>. Por favor, ponte en contacto con nosotros para coordinar la reprogramación de tu cita utilizando esta seña.</p>`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -453,36 +457,35 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
           text-align: center;
         }
         .header h1 {
-          color: #ff8a8a;
           margin: 0;
+          color: #7a1e1e;
           font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
+          font-weight: 800;
+          letter-spacing: 2px;
         }
         .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
+          padding: 30px;
         }
         .greeting {
           font-size: 18px;
-          font-weight: bold;
+          font-weight: 700;
           color: #ffffff;
           margin-bottom: 20px;
         }
         .highlight-box {
-          background-color: #282a2b;
-          border-left: 4px solid #ff8a8a;
+          background-color: rgba(122, 30, 30, 0.05);
+          border: 1px solid rgba(122, 30, 30, 0.2);
+          border-radius: 6px;
           padding: 20px;
-          margin: 25px 0;
-          border-radius: 4px;
+          margin-bottom: 25px;
         }
         .highlight-title {
+          font-size: 16px;
           font-weight: bold;
-          color: #ff8a8a;
-          margin-bottom: 10px;
-          font-size: 15px;
+          color: #7a1e1e;
+          margin-bottom: 15px;
           text-transform: uppercase;
+          letter-spacing: 1px;
         }
         .details-list {
           list-style: none;
@@ -491,8 +494,16 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
         }
         .details-list li {
           margin-bottom: 10px;
+          font-size: 15px;
           display: flex;
           justify-content: space-between;
+          border-bottom: 1px dotted rgba(255,255,255,0.05);
+          padding-bottom: 8px;
+        }
+        .details-list li:last-child {
+          margin-bottom: 0;
+          border-bottom: none;
+          padding-bottom: 0;
         }
         .details-label {
           color: #b0adab;
@@ -525,10 +536,10 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
         </div>
         <div class="content">
           <div class="greeting">Hola ${clientName},</div>
-          <p>Te informamos que tu turno para depilación láser ha sido **cancelado**:</p>
+          <p style="margin-bottom: 1rem; line-height: 1.6;">Te informamos que tu turno para depilación láser ha sido <strong>cancelado</strong>:</p>
           
           <div class="highlight-box">
-            <div class="highlight-title">Turno Cancelado</div>
+            <div class="highlight-title">Detalles del Turno Cancelado</div>
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha:</span>
@@ -545,6 +556,8 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
             </ul>
           </div>
 
+          ${policyText}
+
           <div class="note">
             Si crees que esto es un error o deseas volver a agendar tu turno, podés hacerlo a través de nuestro sitio web en cualquier momento.
           </div>
@@ -558,11 +571,15 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
     </html>
   `;
 
+  const mailSubject = withLossOfDeposit
+    ? `Cancelación de turno (seña retenida) - Gonzalo Depilación`
+    : `Cancelación de turno - Gonzalo Depilación`;
+
   await transporter.sendMail({
     from,
     to: clientEmail,
     bcc: 'nuevacuenta@depilacionparahombres.com',
-    subject: `Cancelación de turno - Gonzalo Depilación`,
+    subject: mailSubject,
     html: htmlContent
   });
 }
