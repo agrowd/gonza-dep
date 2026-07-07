@@ -95,9 +95,15 @@
 - Configuración de nuevas plantillas de email (7 días) y WhatsApp (Cancelación y Reprogramación) editables desde el panel de control.
 - Envío automático de notificaciones de WhatsApp ante reprogramaciones y cancelaciones realizadas desde el panel de administración.
 - Filtro estricto anti-bloqueos en notificaciones de actualización para evitar correos de rebote (bounce mail) en turnos bloqueados.
+- Notificaciones automáticas de confirmación de WhatsApp integradas dentro del webhook de pago aprobado de MercadoPago (`src/app/api/webhooks/mercadopago/route.js`).
+- API endpoint `/api/reservas/confirmar` (POST) para procesar la confirmación interactiva del cliente tras volver de MercadoPago.
+- Botón "Confirmar y Cargar Turno 🚀" interactivo en la pantalla de éxito de reservas (`/booking/success`).
 
 ### Fixed
 - Solución al scroll horizontal de la agenda semanal en móviles: scroll bidireccional puro en `.calendarContainer` y adhesión 2D sticky en cabeceras y columna de horas en `agenda.module.css`.
 - Desencimamiento de botones de navegación e indicación de fecha en el calendario a través de un contenedor píldora `.navigationWrapper` que previene el desborde y la superposición.
 - Hiding del menú hamburguesa y barra lateral mediante inyección de CSS global en `SidebarNav.js` en la ruta `/admin/agenda/imprimir` para lograr capturas limpias para impresión y PDF.
-
+- Aumento de la ventana de la política de seña a **72 horas** de anticipación (reemplazando la regla de 24 horas) en frontend y backend.
+- Exclusión estricta de reservas para el mismo día (mínimo a partir de mañana) y fines de semana (sábados y domingos) en el calendario público y APIs.
+- Envío diferenciado de correos de cancelación: seña retenida por cancelación menor a 72hs vs seña conservada por cancelación mayor a 72hs.
+- Obligatoriedad de DNI en creación/edición de clientes y reservas manuales.

@@ -257,7 +257,12 @@
 - [x] Habilitar envío de WhatsApp automático al reprogramar o cancelar turnos desde el panel.
 - [x] Solucionar solapamiento/encimamiento de botones de navegación en la agenda (vista mobile).
 - [x] Ocultar botón flotante de menú (hamburguesa) y barra lateral en vista de impresión.
-- [x] Desarrollar flujo de autogestión de clientes (cancelar/reprogramar según política de 24hs).
+- [x] Desarrollar flujo de autogestión de clientes (cancelar/reprogramar según política de 72hs).
+- [x] Obligatoriedad de campo DNI en creación/edición de clientes y reservas manuales.
+- [x] Enviar notificaciones WhatsApp automáticas en webhook de aprobación de MercadoPago.
+- [x] Bloquear reservas/reprogramaciones para el mismo día y fines de semana (sábados y domingos).
+- [x] Crear botón interactivo en página de éxito para confirmar y cargar el turno manualmente tras pago.
+- [x] Dividir los correos de cancelación en dos plantillas (seña perdida vs seña conservada).
 
 ### 📝 Notas / Bitácora
 - **7 de Julio (09:30 AM)**:
@@ -268,11 +273,18 @@
   - Se implementó un filtro estricto anti-bloqueos en el endpoint de actualización para omitir envíos de emails y WhatsApps si la cita tiene estado `BLOQUEADO` o el correo del cliente incluye `bloqueo`, resolviendo los correos de rebote (bounce mail).
   - Se crearon los endpoints de autogestión para clientes `/api/reservas/cancelar` (POST) y `/api/reservas/reprogramar` (POST).
   - Se modificó la consulta por DNI `/api/clientes/consultar` para retornar los datos del turno activo del cliente si existe.
-  - Se implementó la interfaz de autogestión en el portal de reserva público `src/app/page.js`: si el cliente ingresa su DNI y tiene un turno activo, se le permite ver sus detalles, cancelar el turno (advirtiendo la pérdida de seña si faltan < 24hs) o reprogramarlo (si faltan > 24hs) eligiendo un nuevo slot utilizando el flujo habitual de reserva.
+  - Se implementó la interfaz de autogestión en el portal de reserva público `src/app/page.js`: si el cliente ingresa su DNI y tiene un turno activo, se le permite ver sus detalles, cancelar el turno (advirtiendo la pérdida de seña si faltan < 72hs) o reprogramarlo (si faltan > 72hs) eligiendo un nuevo slot utilizando el flujo habitual de reserva.
   - Se corrigió el scroll de la agenda semanal en pantallas móviles aplicando scroll bidireccional puro en `.calendarContainer` y estableciendo adhesión pegajosa (sticky) en 2D en `.gridHeader`, `.timeColHeader` y `.timeColumn` dentro de `src/app/admin/agenda/agenda.module.css`.
   - Se agruparon los botones de navegación y la fecha actual en un contenedor estilizado como píldora `.navigationWrapper` para evitar desalineación y encimamiento en móviles.
   - Se implementó la inyección dinámica de CSS en `src/app/admin/SidebarNav.js` para ocultar la barra lateral y el botón hamburguesa cuando la ruta es `/admin/agenda/imprimir`, logrando una captura limpia y sin elementos distractores.
-  - Se ejecutó con éxito `npm run build` localmente sin ningún error de compilación.
+  - Se hizo obligatorio el DNI en los formularios de clientes y agenda del panel de control.
+  - **7 de Julio (04:20 PM)**:
+    - Se incrementó el límite de la política de seña a **72 horas** de anticipación (reemplazando las referencias a 24 horas).
+    - Se integró el envío de mensajes de confirmación de WhatsApp en el webhook de MercadoPago (`src/app/api/webhooks/mercadopago/route.js`).
+    - Se bloquearon las reservas para el mismo día (sólo a partir de mañana) y los sábados y domingos tanto en el frontend como en los endpoints del backend (`/api/reservas/crear` y `/api/reservas/reprogramar`).
+    - Se diseñó el botón "Confirmar y Cargar Turno 🚀" en la página de éxito (`/booking/success`) y se creó el endpoint `/api/reservas/confirmar` (POST) para registrar y notificar el turno una vez que el cliente hace clic después de pagar.
+    - Se adaptó `sendCancellationEmail` en `src/lib/email.js` para recibir `withLossOfDeposit` y renderizar un correo diferenciado (seña retenida por cancelar < 72hs vs seña conservada por cancelar > 72hs).
+    - Se verificó compilación local con éxito y se desplegó todo al VPS de producción de Hostinger, reiniciando PM2.
 
 
 
