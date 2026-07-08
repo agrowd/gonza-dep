@@ -30,6 +30,7 @@ model Cliente {
   frecuencia       Int            @default(4) // Frecuencia en semanas
   observaciones    String?
   notasGonzalo     String?
+  enviarNotificaciones Boolean @default(true)
   turnos           Turno[]
   notificaciones   Notificacion[]
 }

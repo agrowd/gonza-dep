@@ -57,7 +57,8 @@ export async function PUT(request, { params }) {
       estado,
       frecuencia,
       observaciones,
-      notasGonzalo
+      notasGonzalo,
+      enviarNotificaciones
     } = body;
 
     // 1. DNI Uniqueness check (only if non-empty and changed)
@@ -111,6 +112,7 @@ export async function PUT(request, { params }) {
     if (frecuencia !== undefined) updateData.frecuencia = Number(frecuencia);
     if (observaciones !== undefined) updateData.observaciones = observaciones;
     if (notasGonzalo !== undefined) updateData.notasGonzalo = notasGonzalo;
+    if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = enviarNotificaciones;
 
     const updated = await prisma.cliente.update({
       where: { id },

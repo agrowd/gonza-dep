@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
+import { cleanupExpiredPendingPayments } from '@/lib/cleanup.js';
 
 // Convert HH:MM string to minutes from midnight
 function timeToMinutes(timeStr) {
@@ -16,6 +17,7 @@ function minutesToTime(minutes) {
 
 export async function GET(request) {
   try {
+    await cleanupExpiredPendingPayments();
     const { searchParams } = new URL(request.url);
     const fechaStr = searchParams.get('fecha'); // e.g., "2026-06-20"
     const duracion = Number(searchParams.get('duracion') || 30); // in minutes

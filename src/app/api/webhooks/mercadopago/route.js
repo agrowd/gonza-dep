@@ -109,9 +109,16 @@ export async function POST(request) {
                 .replaceAll('[Direccion]', address || 'Paraná 597');
             };
 
+            const configGlobal = await prisma.configuracion.findUnique({
+              where: { key: 'global_notifications_enabled' }
+            });
+            const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
+            const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
+            const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+
             const wppMsg = parseWppTemplateLocal(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
             
-            if (updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
+            if (notificationsEnabled && updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
               await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
               
               await prisma.notificacion.create({
@@ -129,17 +136,18 @@ export async function POST(request) {
           }
 
           // 4. Send confirmation email to client
-          try {
-            await sendConfirmationEmail(
-              updatedTurno.cliente.email,
-              updatedTurno.cliente.nombreCompleto,
-              {
-                fecha: updatedTurno.fecha,
-                horaInicio: updatedTurno.horaInicio,
-                zonas: updatedTurno.zonas,
-                valorSeña: updatedTurno.valorSeña,
-                valorTotal: updatedTurno.valorTotal
-              }
+          if (notificationsEnabled) {
+            try {
+              await sendConfirmationEmail(
+                updatedTurno.cliente.email,
+                updatedTurno.cliente.nombreCompleto,
+                {
+                  fecha: updatedTurno.fecha,
+                  horaInicio: updatedTurno.horaInicio,
+                  zonas: updatedTurno.zonas,
+                  valorSeña: updatedTurno.valorSeña,
+                  valorTotal: updatedTurno.valorTotal
+                }
             );
 
             // Log email sending to DB
@@ -165,6 +173,7 @@ export async function POST(request) {
               }
             });
           }
+        }
 
           console.log(`MercadoPago Webhook: Turno ${turnoId} confirmed automatically as SEÑADO.`);
         } else {

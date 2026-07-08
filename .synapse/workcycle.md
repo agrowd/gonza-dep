@@ -285,6 +285,25 @@
     - Se diseñó el botón "Confirmar y Cargar Turno 🚀" en la página de éxito (`/booking/success`) y se creó el endpoint `/api/reservas/confirmar` (POST) para registrar y notificar el turno una vez que el cliente hace clic después de pagar.
     - Se adaptó `sendCancellationEmail` en `src/lib/email.js` para recibir `withLossOfDeposit` y renderizar un correo diferenciado (seña retenida por cancelar < 72hs vs seña conservada por cancelar > 72hs).
     - Se verificó compilación local con éxito y se desplegó todo al VPS de producción de Hostinger, reiniciando PM2.
-
-
+  - **8 de Julio (01:00 AM)**:
+    - Se implementó la limpieza automática `cleanupExpiredPendingPayments` para turnos online `PENDIENTE_PAGO` con más de 15 minutos en `/api/disponibilidad`, `/api/reservas/crear` y `/api/reservas/reprogramar`.
+    - Se agregaron fallbacks para plantillas de WhatsApp de cancelaciones y reprogramaciones en `/api/admin/turnos/[id]` y `/api/reservas/reprogramar`.
+    - Se implementó el retry de envío de confirmaciones (WhatsApp/Email) si el intento anterior no tenía estado `ENVIADO`.
+    - Se integró el recorte dinámico de prefijos telefónicos (`54`/`549`) mediante `stripPhonePrefix` en los inputs de agenda y clientes.
+    - Se solucionó el reinicio de la fecha de la agenda al cerrar modales, manteniendo la fecha y semana sincronizadas y eliminando las recargas de página completas (`window.location.reload()`).
+    - Se mejoró la claridad de los diálogos de cancelación administrativa en dos pasos en `/admin/agenda/page.js`.
+    - Se actualizó el walkthrough y se comprobó la compilación local (`npm run build`) con éxito.
+  - **8 de Julio (05:40 PM)**:
+    - Se hizo opcional el DNI en los formularios de clientes y reserva de agenda de administración, convirtiendo valores vacíos a `null` en el backend (`/api/admin/turnos`) para evitar fallos de clave única duplicada en SQLite.
+    - Se solucionó el problema por el cual se borraban los descuentos y señas al editar/reprogramar turnos desde la administración, inicializando los valores y agregando control de `autoTotal` en `editTurno` para evitar que la recalculación por useEffect los sobrescriba.
+    - Se separó la lógica de saltar notificaciones en base a correos temporales "bloqueo-": los clientes manuales sin email sí recibirán WhatsApps ante cancelaciones/reprogramaciones desde la administración (los correos bloqueados se siguen omitiendo para evitar bounces).
+    - Se formateó visualmente el teléfono a `🇦🇷 +54 9 [número]` en la tabla de clientes, detalles de turno y autocompletado para una visualización consistente.
+  - **8 de Julio (08:20 PM)**:
+    - Se modificó la base de datos local y el esquema Prisma agregando `enviarNotificaciones Boolean @default(true)` a la tabla `Cliente`. Se corrió `npx prisma db push` para aplicar la migración.
+    - Se agregó el checkbox "Enviar notificaciones automáticas" en la ficha de cliente (pestaña Notas y Configuración) y en el formulario de creación manual en `/admin/clientes`.
+    - Se agregó un badge dorado "⚠️ Notificaciones Desactivadas" en el encabezado de la ficha del cliente en el panel administrativo si tiene desactivada la opción.
+    - Se implementó un switch de "Pausa Global de Envíos" en el panel `/admin/notificaciones` guardando la configuración `global_notifications_enabled` en la tabla `Configuracion`.
+    - Se condicionaron todos los envíos de notificaciones en el backend (webhook de Mercado Pago, creación de turnos manuales, cancelaciones, reprogramaciones y cron diario de recordatorios) para verificar tanto el check global como el check individual del cliente.
+    - Se implementó la transición a Email en la autogestión de clientes y reserva online, reemplazando las entradas y comprobaciones de DNI por Email. DNI se hizo opcional en el formulario de registro online.
+    - Se verificó la compilación del bundle de producción local (`npm run build`) de forma exitosa (34/34 rutas).
 

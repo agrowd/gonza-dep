@@ -24,6 +24,18 @@ const formatLocalDateMedium = (dateInput) => {
   return d.toLocaleDateString('es-ES', { dateStyle: 'medium' });
 };
 
+const stripPhonePrefix = (phone) => {
+  if (!phone) return '';
+  let cleaned = phone.replace(/\D/g, '');
+  if (cleaned.startsWith('549') && cleaned.length > 3) {
+    return cleaned.slice(3);
+  }
+  if (cleaned.startsWith('54') && cleaned.length > 2) {
+    return cleaned.slice(2);
+  }
+  return cleaned;
+};
+
 // SVG Icons
 const getWhatsAppLink = (phone) => {
   if (!phone) return '';
@@ -97,7 +109,8 @@ function ClientesPageContent() {
     frecuencia: 4,
     observaciones: '',
     notesGonzalo: '',
-    canalAdquisicion: 'MANUAL'
+    canalAdquisicion: 'MANUAL',
+    enviarNotificaciones: true
   });
 
   // Edit notes state
@@ -110,7 +123,8 @@ function ClientesPageContent() {
     dni: '',
     frecuencia: 4,
     observaciones: '',
-    notasGonzalo: ''
+    notasGonzalo: '',
+    enviarNotificaciones: true
   });
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
@@ -151,12 +165,13 @@ function ClientesPageContent() {
             nombre,
             apellido,
             nombreCompleto: fullName,
-            whatsapp: data.whatsapp || '',
+            whatsapp: stripPhonePrefix(data.whatsapp || ''),
             email: data.email || '',
             dni: data.dni || '',
             frecuencia: data.frecuencia,
             observaciones: data.observaciones || '',
-            notasGonzalo: data.notasGonzalo || ''
+            notasGonzalo: data.notasGonzalo || '',
+            enviarNotificaciones: data.enviarNotificaciones !== false
           });
           setActiveTab('history');
           setIsProfileOpen(true);
@@ -235,7 +250,8 @@ function ClientesPageContent() {
           frecuencia: 4,
           observaciones: '',
           notesGonzalo: '',
-          canalAdquisicion: 'MANUAL'
+          canalAdquisicion: 'MANUAL',
+          enviarNotificaciones: true
         });
         showToast('Cliente creado correctamente.');
         fetchClients();
@@ -283,8 +299,14 @@ function ClientesPageContent() {
           dni: data.dni,
           frecuencia: data.frecuencia,
           observaciones: data.observaciones,
-          notasGonzalo: data.notasGonzalo
+          notasGonzalo: data.notasGonzalo,
+          enviarNotificaciones: data.enviarNotificaciones
         });
+        setEditNotes(prev => ({
+          ...prev,
+          whatsapp: stripPhonePrefix(data.whatsapp || ''),
+          enviarNotificaciones: data.enviarNotificaciones
+        }));
         showToast('Ficha del cliente actualizada correctamente.');
         fetchClients(); // refresh list
       }
@@ -443,7 +465,7 @@ function ClientesPageContent() {
                     <td onClick={() => handleClientClick(client.id)} className={styles.clientName}>
                       {client.nombreCompleto}
                     </td>
-                    <td className={styles.metaText}>{client.whatsapp}</td>
+                    <td className={styles.metaText}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</td>
                     <td className={styles.metaText}>{client.email}</td>
                     <td style={{ fontWeight: 600 }}>{realizadosCount}</td>
                     <td className={styles.metaText} style={{ textTransform: 'capitalize' }}>
@@ -468,7 +490,14 @@ function ClientesPageContent() {
           <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '850px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', padding: 0 }}>
             <div className={agendaStyles.modalHeader} style={{ padding: '1.5rem 1.5rem 0.75rem 1.5rem', marginBottom: 0 }}>
               <div>
-                <h3 className={styles.ficheTitle}>{selectedClient.nombreCompleto}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <h3 className={styles.ficheTitle}>{selectedClient.nombreCompleto}</h3>
+                  {selectedClient.enviarNotificaciones === false && (
+                    <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#d4a54d', color: '#000', fontWeight: 'bold' }}>
+                      ⚠️ Notificaciones Desactivadas
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')} | DNI: {selectedClient.dni || 'Sin registrar'} | Canal: {selectedClient.canalAdquisicion}</span>
               </div>
               <button onClick={handleCloseProfile} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
@@ -644,12 +673,11 @@ function ClientesPageContent() {
                     </div>
 
                     <div className={styles.inputGroup}>
-                      <label className={styles.inputLabel}>DNI *</label>
+                      <label className={styles.inputLabel}>DNI (Opcional)</label>
                       <input
                         type="text"
                         value={editNotes.dni}
                         onChange={(e) => setEditNotes({ ...editNotes, dni: e.target.value })}
-                        required
                         placeholder="Ej. 12345678"
                       />
                     </div>
@@ -679,6 +707,19 @@ function ClientesPageContent() {
                         onChange={(e) => setEditNotes({ ...editNotes, email: e.target.value })}
                         required
                       />
+                    </div>
+
+                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        id="enviarNotificaciones"
+                        checked={editNotes.enviarNotificaciones}
+                        onChange={(e) => setEditNotes({ ...editNotes, enviarNotificaciones: e.target.checked })}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                      />
+                      <label htmlFor="enviarNotificaciones" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '500', color: 'var(--text-primary)' }}>
+                        Enviar notificaciones automáticas (WhatsApp y Email)
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -769,12 +810,11 @@ function ClientesPageContent() {
                 </div>
 
                 <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>DNI *</label>
+                  <label className={styles.inputLabel}>DNI (Opcional)</label>
                   <input
                     type="text"
                     value={newClient.dni}
                     onChange={(e) => setNewClient({ ...newClient, dni: e.target.value })}
-                    required
                     placeholder="Ej. 12345678"
                   />
                 </div>
@@ -846,15 +886,17 @@ function ClientesPageContent() {
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>Observaciones del Operador</label>
-                  <textarea
-                    value={newClient.notasGonzalo}
-                    onChange={(e) => setNewClient({ ...newClient, notasGonzalo: e.target.value })}
-                    placeholder="Observaciones de seguridad clínica..."
-                    rows="3"
-                    style={{ borderColor: 'rgba(var(--color-gold-rgb), 0.3)' }}
+                <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="newClient_enviarNotificaciones"
+                    checked={newClient.enviarNotificaciones}
+                    onChange={(e) => setNewClient({ ...newClient, enviarNotificaciones: e.target.checked })}
+                    style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
                   />
+                  <label htmlFor="newClient_enviarNotificaciones" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '500', color: 'var(--text-primary)' }}>
+                    Enviar notificaciones automáticas (WhatsApp y Email)
+                  </label>
                 </div>
               </div>
 

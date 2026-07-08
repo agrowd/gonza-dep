@@ -31,20 +31,27 @@ function parseWppTemplate(template, client, turno, address) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { turnoId, dni } = body;
+    const { turnoId, dni, email } = body;
 
-    if (!turnoId || !dni) {
-      return NextResponse.json({ error: 'Turno ID y DNI son obligatorios.' }, { status: 400 });
+    if (!turnoId || (!dni && !email)) {
+      return NextResponse.json({ error: 'Turno ID y credenciales son obligatorios.' }, { status: 400 });
     }
 
-    // 1. Fetch appointment and verify owner DNI
+    // 1. Fetch appointment and verify owner
     const turno = await prisma.turno.findUnique({
       where: { id: turnoId },
       include: { cliente: true }
     });
 
-    if (!turno || !turno.cliente || turno.cliente.dni !== dni) {
-      return NextResponse.json({ error: 'Turno no encontrado o DNI no coincide.' }, { status: 404 });
+    if (!turno || !turno.cliente) {
+      return NextResponse.json({ error: 'Turno no encontrado.' }, { status: 404 });
+    }
+
+    const matchesDni = dni && turno.cliente.dni === dni;
+    const matchesEmail = email && turno.cliente.email.toLowerCase().trim() === email.toLowerCase().trim();
+
+    if (!matchesDni && !matchesEmail) {
+      return NextResponse.json({ error: 'Credenciales inválidas.' }, { status: 403 });
     }
 
     if (turno.estado === 'CANCELADO') {
@@ -67,8 +74,15 @@ export async function POST(request) {
       include: { cliente: true }
     });
 
+    const configGlobal = await prisma.configuracion.findUnique({
+      where: { key: 'global_notifications_enabled' }
+    });
+    const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
+    const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
+    const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+
     // 3. Dispatch Email notification (if not blocked/special email)
-    if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
+    if (notificationsEnabled && updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
       try {
         await sendCancellationEmail(
           updatedTurno.cliente.email,
@@ -106,28 +120,31 @@ export async function POST(request) {
     }
 
     // 4. Dispatch WhatsApp notification
-    try {
-      const wppCancelConfig = await prisma.configuracion.findUnique({
-        where: { key: 'wtsp_cancellation_template' }
-      });
-      const addressConfig = await prisma.configuracion.findUnique({
-        where: { key: 'address' }
-      });
-      const wppTemplate = wppCancelConfig?.value || "¡Hola [Nombre]! Tu turno del [FechaTurno] a las [Horario] fue cancelado con éxito.";
-      const wppMsg = parseWppTemplate(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+    if (notificationsEnabled) {
+      try {
+        const wppCancelConfig = await prisma.configuracion.findUnique({
+          where: { key: 'wtsp_cancellation_template' }
+        });
+        const addressConfig = await prisma.configuracion.findUnique({
+          where: { key: 'address' }
+        });
+        const wppTemplate = wppCancelConfig?.value || "¡Hola [Nombre]! Tu turno del [FechaTurno] a las [Horario] fue cancelado con éxito.";
+        const wppMsg = parseWppTemplate(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
 
-      await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
+        if (updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
+          await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
 
-      await prisma.notificacion.create({
-        data: {
-          clienteId: updatedTurno.clienteId,
-          turnoId: updatedTurno.id,
-          canal: 'WHATSAPP',
-          mensaje: wppMsg,
-          estado: 'ENVIADO'
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'WHATSAPP',
+              mensaje: wppMsg,
+              estado: 'ENVIADO'
+            }
+          });
         }
-      });
-    } catch (wppErr) {
+      } catch (wppErr) {
       console.error('Failed to send customer cancellation WhatsApp:', wppErr);
       await prisma.notificacion.create({
         data: {
@@ -139,6 +156,7 @@ export async function POST(request) {
         }
       });
     }
+  }
 
     return NextResponse.json({ success: true, message: 'Turno cancelado con éxito.' });
   } catch (error) {

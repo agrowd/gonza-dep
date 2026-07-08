@@ -3,6 +3,7 @@ import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { mpPreference } from '@/lib/mercadopago.js';
 import { normalizeWhatsApp } from '@/lib/whatsapp.js';
+import { cleanupExpiredPendingPayments } from '@/lib/cleanup.js';
 
 // Convert minutes from midnight to HH:MM string helper
 function minutesToTime(minutes) {
@@ -61,10 +62,11 @@ async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId
 
 export async function POST(request) {
   try {
+    await cleanupExpiredPendingPayments();
     const body = await request.json();
     const { nombreCompleto, whatsapp, email, dni, fechaStr, horaInicio, selectedZoneIds, observaciones } = body;
 
-    if (!nombreCompleto || !whatsapp || !email || !dni || !fechaStr || !horaInicio || !selectedZoneIds || selectedZoneIds.length === 0) {
+    if (!nombreCompleto || !whatsapp || !email || !fechaStr || !horaInicio || !selectedZoneIds || selectedZoneIds.length === 0) {
       return NextResponse.json(
         { error: 'Todos los campos obligatorios son requeridos.' },
         { status: 400 }
@@ -101,44 +103,58 @@ export async function POST(request) {
 
     const finalWhatsapp = normalizeWhatsApp(whatsapp);
 
-    // 2. Resolve client by DNI
-    let client = await prisma.cliente.findUnique({
-      where: { dni: dni }
+    // 2. Resolve client by Email
+    let client = await prisma.cliente.findFirst({
+      where: {
+        email: {
+          equals: email.trim().toLowerCase()
+        }
+      }
     });
+
+    if (!client && dni) {
+      client = await prisma.cliente.findUnique({
+        where: { dni }
+      });
+    }
 
     let isNewClient = false;
 
-    if (!client) {
-      // Check if client exists with same email or whatsapp but no DNI
-      client = await prisma.cliente.findFirst({
-        where: {
-          OR: [
-            { email: email },
-            { whatsapp: finalWhatsapp }
-          ]
-        }
-      });
+    if (client) {
+      // Update client DNI if empty, and merge details if changed
+      const updateData = {};
+      if (!client.dni && dni) {
+        updateData.dni = dni;
+      }
+      if (client.nombreCompleto !== nombreCompleto) {
+        updateData.nombreCompleto = nombreCompleto;
+      }
+      if (client.whatsapp !== finalWhatsapp) {
+        updateData.whatsapp = finalWhatsapp;
+      }
+      if (client.email.toLowerCase() !== email.trim().toLowerCase()) {
+        updateData.email = email.trim().toLowerCase();
+      }
 
-      if (client) {
-        // Update client with DNI and other details
+      if (Object.keys(updateData).length > 0) {
         client = await prisma.cliente.update({
           where: { id: client.id },
-          data: { dni, nombreCompleto, whatsapp: finalWhatsapp, email }
-        });
-      } else {
-        // Create new client
-        isNewClient = true;
-        client = await prisma.cliente.create({
-          data: {
-            dni,
-            nombreCompleto,
-            whatsapp: finalWhatsapp,
-            email,
-            canalAdquisicion: 'ORGANICO',
-            estado: 'ACTIVO'
-          }
+          data: updateData
         });
       }
+    } else {
+      // Create new client
+      isNewClient = true;
+      client = await prisma.cliente.create({
+        data: {
+          dni: dni || null,
+          nombreCompleto,
+          whatsapp: finalWhatsapp,
+          email: email.trim().toLowerCase(),
+          canalAdquisicion: 'ORGANICO',
+          estado: 'ACTIVO'
+        }
+      });
     }
 
     // 3. Enforce maximum 1 active appointment rule
@@ -205,7 +221,7 @@ export async function POST(request) {
         valorSeña,
         saldoPendiente: valorTotal - valorSeña,
         estado: 'PENDIENTE_PAGO',
-        observaciones
+        observaciones: observaciones ? `[ONLINE] ${observaciones}` : '[ONLINE]'
       }
     });
 

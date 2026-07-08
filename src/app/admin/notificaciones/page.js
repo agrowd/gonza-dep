@@ -37,6 +37,42 @@ export default function NotificacionesPage() {
   const [wppError, setWppError] = useState('');
   const [checkingStatus, setCheckingStatus] = useState(true);
 
+  // Global notifications check
+  const [globalNotificationsEnabled, setGlobalNotificationsEnabled] = useState(true);
+
+  const fetchConfigs = async () => {
+    try {
+      const res = await fetch('/api/admin/configuracion');
+      const data = await res.json();
+      if (!data.error) {
+        setGlobalNotificationsEnabled(data.global_notifications_enabled === 'true');
+      }
+    } catch (e) {
+      console.error('Error fetching configuration:', e);
+    }
+  };
+
+  const handleToggleGlobalNotifications = async (checked) => {
+    setGlobalNotificationsEnabled(checked);
+    try {
+      const res = await fetch('/api/admin/configuracion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ global_notifications_enabled: checked ? 'true' : 'false' })
+      });
+      if (res.ok) {
+        showToast(checked ? 'Envío automático de notificaciones activado.' : 'Envío automático de notificaciones pausado globalmente.', checked ? 'success' : 'warning');
+      } else {
+        showToast('Error al actualizar la configuración.', 'error');
+        setGlobalNotificationsEnabled(!checked);
+      }
+    } catch (e) {
+      console.error('Error updating configuration:', e);
+      showToast('Error de red al actualizar la configuración.', 'error');
+      setGlobalNotificationsEnabled(!checked);
+    }
+  };
+
   // Reminders List
   const [week, setWeek] = useState('current'); // 'current' or 'next'
   const [turnos, setTurnos] = useState([]);
@@ -73,6 +109,7 @@ export default function NotificacionesPage() {
   // 2. Poll status on mount and configure interval
   useEffect(() => {
     fetchWhatsAppStatus();
+    fetchConfigs();
     
     // Poll status every 6 seconds to capture QR generation or Ready states
     statusInterval.current = setInterval(() => {
@@ -271,10 +308,45 @@ export default function NotificacionesPage() {
       {/* Grid Layout */}
       <div className={styles.topLayout}>
         
-        {/* Left Column: WhatsApp Connection status */}
-        <div className={styles.card}>
-          <div className={styles.cardTitle}>Sincronización WhatsApp</div>
-          {renderWppStatusBox()}
+        {/* Left Column: WhatsApp Connection status & Config */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className={styles.card}>
+            <div className={styles.cardTitle}>Sincronización WhatsApp</div>
+            {renderWppStatusBox()}
+          </div>
+          
+          <div className={styles.card}>
+            <div className={styles.cardTitle}>Pausa Global de Envíos</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.25rem 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-primary)' }}>Notificaciones Automáticas:</span>
+                <label style={{ position: 'relative', display: 'inline-block', width: '46px', height: '24px', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={globalNotificationsEnabled}
+                    onChange={(e) => handleToggleGlobalNotifications(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{ 
+                    position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: globalNotificationsEnabled ? '#2e7d32' : '#7a1e1e',
+                    transition: '.4s', borderRadius: '24px'
+                  }}>
+                    <span style={{
+                      position: 'absolute', content: '""', height: '18px', width: '18px', left: '3px', bottom: '3px',
+                      backgroundColor: 'white', transition: '.4s', borderRadius: '50%',
+                      transform: globalNotificationsEnabled ? 'translateX(22px)' : 'translateX(0)'
+                    }} />
+                  </span>
+                </label>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                {globalNotificationsEnabled 
+                  ? '🟢 El sistema despacha con normalidad todos los correos y mensajes de WhatsApp.' 
+                  : '🔴 Todos los envíos de notificaciones (confirmación, cancelación, recordatorios, Mercado Pago) están suspendidos.'}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Weekly reminders list */}

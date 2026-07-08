@@ -93,6 +93,7 @@ export async function POST(request) {
       where: {
         turnoId: updatedTurno.id,
         canal: 'EMAIL',
+        estado: 'ENVIADO',
         mensaje: { contains: 'Confirmación de turno' }
       }
     });
@@ -130,6 +131,7 @@ export async function POST(request) {
       where: {
         turnoId: updatedTurno.id,
         canal: 'WHATSAPP',
+        estado: 'ENVIADO',
         mensaje: { not: { contains: 'Reserva online confirmada automáticamente' } }
       }
     });

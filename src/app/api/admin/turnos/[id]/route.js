@@ -195,14 +195,21 @@ export async function PUT(request, { params }) {
       include: { cliente: true }
     });
 
-    if (updatedTurno.estado === 'BLOQUEADO' || (updatedTurno.cliente && updatedTurno.cliente.email && updatedTurno.cliente.email.includes('bloqueo'))) {
-      console.log('Skipping all notifications for blocked slots or blocking email.');
+    if (updatedTurno.estado === 'BLOQUEADO') {
+      console.log('Skipping all notifications for blocked slots.');
       return NextResponse.json(updatedTurno);
     }
 
+    const configGlobal = await prisma.configuracion.findUnique({
+      where: { key: 'global_notifications_enabled' }
+    });
+    const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
+    const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
+    const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+
     // WhatsApp Notification Trigger:
     // If state changes to "SEÑADO" (Approved) and old state was "PENDIENTE_AUTORIZACION"
-    if (estado === 'SEÑADO' && oldTurn.estado === 'PENDIENTE_AUTORIZACION') {
+    if (notificationsEnabled && estado === 'SEÑADO' && oldTurn.estado === 'PENDIENTE_AUTORIZACION') {
       try {
         // Fetch template from configuration
         const templateConfig = await prisma.configuracion.findUnique({
@@ -265,41 +272,43 @@ export async function PUT(request, { params }) {
 
     // Email and WhatsApp Notification Trigger for No-Show (NO_ASISTIO):
     // If state changes to "NO_ASISTIO" and old state was not "NO_ASISTIO"
-    if (estado === 'NO_ASISTIO' && oldTurn.estado !== 'NO_ASISTIO') {
+    if (notificationsEnabled && estado === 'NO_ASISTIO' && oldTurn.estado !== 'NO_ASISTIO') {
       // 1. Send Email
-      try {
-        await sendNoShowEmail(
-          updatedTurno.cliente.email,
-          updatedTurno.cliente.nombreCompleto,
-          {
-            fecha: updatedTurno.fecha,
-            horaInicio: updatedTurno.horaInicio,
-            zonas: updatedTurno.zonas,
-            valorSeña: updatedTurno.valorSeña
-          }
-        );
+      if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
+        try {
+          await sendNoShowEmail(
+            updatedTurno.cliente.email,
+            updatedTurno.cliente.nombreCompleto,
+            {
+              fecha: updatedTurno.fecha,
+              horaInicio: updatedTurno.horaInicio,
+              zonas: updatedTurno.zonas,
+              valorSeña: updatedTurno.valorSeña
+            }
+          );
 
-        await prisma.notificacion.create({
-          data: {
-            clienteId: updatedTurno.clienteId,
-            turnoId: updatedTurno.id,
-            canal: 'EMAIL',
-            mensaje: `Correo enviado por inasistencia al turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
-            estado: 'ENVIADO'
-          }
-        });
-        console.log(`Email no-show notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
-      } catch (err) {
-        console.error('Failed to send automatic no-show email:', err);
-        await prisma.notificacion.create({
-          data: {
-            clienteId: updatedTurno.clienteId,
-            turnoId: updatedTurno.id,
-            canal: 'EMAIL',
-            mensaje: `Error al enviar correo por inasistencia: ${err.message}`,
-            estado: 'FALLIDO'
-          }
-        });
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Correo enviado por inasistencia al turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+              estado: 'ENVIADO'
+            }
+          });
+          console.log(`Email no-show notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+        } catch (err) {
+          console.error('Failed to send automatic no-show email:', err);
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Error al enviar correo por inasistencia: ${err.message}`,
+              estado: 'FALLIDO'
+            }
+          });
+        }
       }
 
       // 2. Send WhatsApp No-Show Alert
@@ -343,7 +352,7 @@ export async function PUT(request, { params }) {
 
     // Email and WhatsApp Notification Trigger for Cancellation:
     // If state changes to "CANCELADO" and old state was not "CANCELADO"
-    if (estado === 'CANCELADO' && oldTurn.estado !== 'CANCELADO') {
+    if (notificationsEnabled && estado === 'CANCELADO' && oldTurn.estado !== 'CANCELADO') {
       try {
         const now = new Date();
         const turnTime = new Date(oldTurn.fecha);
@@ -355,41 +364,45 @@ export async function PUT(request, { params }) {
         // Deposit is lost if within 72 hours AND we are NOT preserving it
         const withLossOfDeposit = diffHours < 72 && !body.preserveDeposit;
 
-        await sendCancellationEmail(
-          updatedTurno.cliente.email,
-          updatedTurno.cliente.nombreCompleto,
-          {
-            fecha: updatedTurno.fecha,
-            horaInicio: updatedTurno.horaInicio,
-            zonas: updatedTurno.zonas,
-            valorSeña: updatedTurno.valorSeña
-          },
-          withLossOfDeposit
-        );
+        if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
+          await sendCancellationEmail(
+            updatedTurno.cliente.email,
+            updatedTurno.cliente.nombreCompleto,
+            {
+              fecha: updatedTurno.fecha,
+              horaInicio: updatedTurno.horaInicio,
+              zonas: updatedTurno.zonas,
+              valorSeña: updatedTurno.valorSeña
+            },
+            withLossOfDeposit
+          );
 
-        // Log in database
-        await prisma.notificacion.create({
-          data: {
-            clienteId: updatedTurno.clienteId,
-            turnoId: updatedTurno.id,
-            canal: 'EMAIL',
-            mensaje: `Correo enviado por cancelación de turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
-            estado: 'ENVIADO'
-          }
-        });
-        console.log(`Email cancellation notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+          // Log in database
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Correo enviado por cancelación de turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+              estado: 'ENVIADO'
+            }
+          });
+          console.log(`Email cancellation notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+        }
       } catch (err) {
         console.error('Failed to send automatic cancellation email:', err);
         // Log failure in database
-        await prisma.notificacion.create({
-          data: {
-            clienteId: updatedTurno.clienteId,
-            turnoId: updatedTurno.id,
-            canal: 'EMAIL',
-            mensaje: `Error al enviar correo de cancelación: ${err.message}`,
-            estado: 'FALLIDO'
-          }
-        });
+        if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
+          await prisma.notificacion.create({
+            data: {
+              clienteId: updatedTurno.clienteId,
+              turnoId: updatedTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Error al enviar correo de cancelación: ${err.message}`,
+              estado: 'FALLIDO'
+            }
+          });
+        }
       }
 
       // WhatsApp Cancellation Trigger
@@ -400,8 +413,10 @@ export async function PUT(request, { params }) {
         const addressConfig = await prisma.configuracion.findUnique({
           where: { key: 'address' }
         });
-        if (wppCancelConfig) {
-          const wppMsg = parseWppTemplate(wppCancelConfig.value, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+        const templateVal = wppCancelConfig?.value || "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!";
+        const wppMsg = parseWppTemplate(templateVal, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+        
+        if (updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
           await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
           
           await prisma.notificacion.create({
@@ -436,7 +451,7 @@ export async function PUT(request, { params }) {
       const isTimeChanged = updatedTurno.horaInicio !== oldTurn.horaInicio || updatedTurno.horaFin !== oldTurn.horaFin;
       const isStateReprogrammed = updatedTurno.estado === 'REPROGRAMADO' && oldTurn.estado !== 'REPROGRAMADO';
 
-      if (isDateChanged || isTimeChanged || isStateReprogrammed) {
+      if (notificationsEnabled && (isDateChanged || isTimeChanged || isStateReprogrammed)) {
         try {
           const subjectConfig = await prisma.configuracion.findUnique({
             where: { key: 'email_reprogram_subject' }
@@ -445,41 +460,45 @@ export async function PUT(request, { params }) {
             where: { key: 'email_reprogram_body' }
           });
 
-          await sendRescheduleEmail(
-            updatedTurno.cliente.email,
-            updatedTurno.cliente.nombreCompleto,
-            {
-              fecha: updatedTurno.fecha,
-              horaInicio: updatedTurno.horaInicio,
-              zonas: updatedTurno.zonas,
-              valorSeña: updatedTurno.valorSeña,
-              valorTotal: updatedTurno.valorTotal
-            },
-            subjectConfig?.value,
-            bodyConfig?.value
-          );
+          if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
+            await sendRescheduleEmail(
+              updatedTurno.cliente.email,
+              updatedTurno.cliente.nombreCompleto,
+              {
+                fecha: updatedTurno.fecha,
+                horaInicio: updatedTurno.horaInicio,
+                zonas: updatedTurno.zonas,
+                valorSeña: updatedTurno.valorSeña,
+                valorTotal: updatedTurno.valorTotal
+              },
+              subjectConfig?.value,
+              bodyConfig?.value
+            );
 
-          await prisma.notificacion.create({
-            data: {
-              clienteId: updatedTurno.clienteId,
-              turnoId: updatedTurno.id,
-              canal: 'EMAIL',
-              mensaje: `Correo enviado por reprogramación de turno al ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
-              estado: 'ENVIADO'
-            }
-          });
-          console.log(`Email rescheduling notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+            await prisma.notificacion.create({
+              data: {
+                clienteId: updatedTurno.clienteId,
+                turnoId: updatedTurno.id,
+                canal: 'EMAIL',
+                mensaje: `Correo enviado por reprogramación de turno al ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+                estado: 'ENVIADO'
+              }
+            });
+            console.log(`Email rescheduling notification automatically sent to ${updatedTurno.cliente.nombreCompleto}.`);
+          }
         } catch (rescheduleMailErr) {
           console.error('Failed to send rescheduling email:', rescheduleMailErr);
-          await prisma.notificacion.create({
-            data: {
-              clienteId: updatedTurno.clienteId,
-              turnoId: updatedTurno.id,
-              canal: 'EMAIL',
-              mensaje: `Error al enviar correo de reprogramación: ${rescheduleMailErr.message}`,
-              estado: 'FALLIDO'
-            }
-          });
+          if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
+            await prisma.notificacion.create({
+              data: {
+                clienteId: updatedTurno.clienteId,
+                turnoId: updatedTurno.id,
+                canal: 'EMAIL',
+                mensaje: `Error al enviar correo de reprogramación: ${rescheduleMailErr.message}`,
+                estado: 'FALLIDO'
+              }
+            });
+          }
         }
 
         // WhatsApp Reschedule Trigger
@@ -490,8 +509,10 @@ export async function PUT(request, { params }) {
           const addressConfig = await prisma.configuracion.findUnique({
             where: { key: 'address' }
           });
-          if (wppRescheduleConfig) {
-            const wppMsg = parseWppTemplate(wppRescheduleConfig.value, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+          const templateVal = wppRescheduleConfig?.value || "¡Hola [Nombre]! Tu turno fue reprogramado con éxito para el día [FechaTurno] a las [Horario] para [Zonas]. Recordá venir afeitado al ras. ¡Te esperamos!";
+          const wppMsg = parseWppTemplate(templateVal, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+          
+          if (updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
             await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
             
             await prisma.notificacion.create({

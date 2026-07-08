@@ -87,7 +87,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { nombreCompleto, whatsapp, email, dni, canalAdquisicion, observaciones, notasGonzalo, frecuencia } = body;
+    const { nombreCompleto, whatsapp, email, dni, canalAdquisicion, observaciones, notasGonzalo, frecuencia, enviarNotificaciones } = body;
 
     if (!nombreCompleto || !whatsapp || !email) {
       return NextResponse.json({ error: 'Campos requeridos incompletos' }, { status: 400 });
@@ -135,7 +135,8 @@ export async function POST(request) {
         estado: 'ACTIVO',
         observaciones,
         notasGonzalo,
-        frecuencia: frecuencia ? Number(frecuencia) : 4
+        frecuencia: frecuencia ? Number(frecuencia) : 4,
+        enviarNotificaciones: enviarNotificaciones !== false
       }
     });
 

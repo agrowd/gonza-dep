@@ -87,6 +87,35 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [1.0.0] - 2026-07-08
+### Added
+- Transición a identificación por Email en Autogestión: Los clientes ingresan al portal de autogestión y reservan ingresando su Email en lugar de su DNI.
+- DNI Opcional para nuevos clientes en la reserva online.
+- Checkbox de Notificaciones por Cliente: Switch "Enviar notificaciones automáticas" en la ficha de cada cliente (creación y actualización) para activar/desactivar todos los avisos de WhatsApp y correo a ese cliente.
+- Badge visual en el panel de control administrativo indicando si un cliente posee las notificaciones desactivadas.
+- Switch Global de Notificaciones: Control central en el panel de notificaciones para pausar o reactivar todas las alertas automáticas del sistema (útil para períodos de migración de datos).
+- Comprobación centralizada en todas las APIs de notificaciones (webhook de Mercado Pago, creación de turnos manuales, cancelaciones, reprogramaciones y cron diario de recordatorios) que verifica las configuraciones globales y del cliente antes de despachar mensajes.
+
+## [0.12.0] - 2026-07-08
+### Added
+- Soporte para DNI opcional en creación y edición de clientes y reservas manuales. Los valores vacíos de DNI se guardan como `null` en la base de datos para evitar colisiones por clave única duplicada.
+- Formateo visual del teléfono del cliente (`🇦🇷 +54 9 [celular_local]`) en la tabla de clientes, detalles de turno y autocompletado del panel administrativo.
+
+### Fixed
+- Solución al borrado de descuentos y señas al reprogramar o editar turnos desde la administración, inicializando correctamente las propiedades y evitando la sobreescritura automática por `useEffect` si el valor fue modificado manualmente.
+- Corrección de notificaciones de WhatsApp para clientes creados administrativamente sin dirección de email (que poseen emails con prefijo `bloqueo-`). Los correos siguen omitiéndose para evitar rebotes, pero los mensajes de WhatsApp se despachan correctamente.
+
+## [0.11.0] - 2026-07-08
+### Added
+- Limpieza automática de pre-reservas expiradas `PENDIENTE_PAGO` online tras 15 minutos de inactividad, integrada en endpoints de disponibilidad, creación y reprogramación.
+- Fallback para plantillas de WhatsApp (cancelación, reprogramación y confirmación manual) si los valores no se encuentran inicializados en la base de datos de configuraciones.
+- Retry de notificaciones (WhatsApp/Email) en la confirmación de la reserva si el intento inicial no finalizó en estado `ENVIADO`.
+
+### Fixed
+- Recorte visual dinámico de prefijos telefónicos `54` / `549` en los modales de clientes y agendamiento para evitar duplicaciones molestas al editar.
+- Solución al reinicio de la fecha de la agenda al cerrar modales, manteniendo la fecha y semana seleccionadas y eliminando la recarga completa de página (`window.location.reload()`).
+- Diálogos de confirmación de cancelaciones administrativas mejorados en dos pasos (confirmar cancelación -> confirmar preservación de seña).
+
 ## [0.10.0] - 2026-07-07
 ### Added
 - Nuevo flujo de autogestión de clientes en el portal público (`src/app/page.js`): al ingresar DNI, si el cliente posee un turno activo, se le presenta la pantalla de detalles y las acciones de cancelación y reprogramación.

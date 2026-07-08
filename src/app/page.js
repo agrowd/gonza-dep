@@ -116,11 +116,11 @@ export default function Home() {
       });
   }, [selectedDate, selectedZones]);
 
-  // Handle DNI validation and check
+  // Handle Email validation and check
   const handleDniCheck = async (e) => {
     e.preventDefault();
-    if (!formData.dni) {
-      setErrorMessage('Por favor, ingresa tu DNI.');
+    if (!formData.email) {
+      setErrorMessage('Por favor, ingresa tu Email.');
       return;
     }
     
@@ -128,7 +128,7 @@ export default function Home() {
     setErrorMessage('');
     
     try {
-      const res = await fetch(`/api/clientes/consultar?dni=${encodeURIComponent(formData.dni)}`);
+      const res = await fetch(`/api/clientes/consultar?email=${encodeURIComponent(formData.email.trim())}`);
       const data = await res.json();
       
       if (data.error) {
@@ -148,7 +148,8 @@ export default function Home() {
           apellido,
           nombreCompleto: fullName,
           whatsapp: data.client.whatsapp,
-          email: data.client.email
+          email: data.client.email,
+          dni: data.client.dni || ''
         }));
 
         if (data.hasActiveTurno) {
@@ -163,8 +164,8 @@ export default function Home() {
         setDniChecked(true);
       }
     } catch (err) {
-      console.error('Error checking DNI:', err);
-      setErrorMessage('Error al verificar el DNI. Por favor intenta nuevamente.');
+      console.error('Error checking Email:', err);
+      setErrorMessage('Error al verificar el Email. Por favor intenta nuevamente.');
     } finally {
       setSearchingDni(false);
     }
@@ -195,7 +196,7 @@ export default function Home() {
       const res = await fetch('/api/reservas/cancelar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ turnoId: activeTurno.id, dni: formData.dni })
+        body: JSON.stringify({ turnoId: activeTurno.id, email: formData.email })
       });
       const data = await res.json();
       if (data.error) {
@@ -231,7 +232,7 @@ export default function Home() {
         fetch('/api/reservas/cancelar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ turnoId: activeTurno.id, dni: formData.dni })
+          body: JSON.stringify({ turnoId: activeTurno.id, email: formData.email })
         })
         .then(res => res.json())
         .then(data => {
@@ -285,7 +286,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           turnoId: activeTurno.id,
-          dni: formData.dni,
+          email: formData.email,
           fechaStr: dateStr,
           horaInicio: selectedSlot.horaInicio
         })
@@ -313,7 +314,7 @@ export default function Home() {
   // Handle personal info submit
   const handleNextStep1 = (e) => {
     e.preventDefault();
-    if (!formData.nombre || !formData.apellido || !formData.whatsapp || !formData.email || !formData.dni) {
+    if (!formData.nombre || !formData.apellido || !formData.whatsapp || !formData.email) {
       setErrorMessage('Por favor, completa todos los campos obligatorios.');
       return;
     }
@@ -468,7 +469,7 @@ export default function Home() {
                       setActiveTurno(null);
                       setSelfMgmtSuccess(null);
                       setDniChecked(false);
-                      setFormData(prev => ({ ...prev, dni: '' }));
+                      setFormData(prev => ({ ...prev, email: '' }));
                     }}
                     className="btn btn-primary"
                   >
@@ -544,7 +545,7 @@ export default function Home() {
                         setIsSelfManagement(false);
                         setActiveTurno(null);
                         setDniChecked(false);
-                        setFormData(prev => ({ ...prev, dni: '' }));
+                        setFormData(prev => ({ ...prev, email: '' }));
                       }}
                       className="btn btn-secondary"
                       style={{ width: '100%', marginTop: '1rem' }}
@@ -563,16 +564,16 @@ export default function Home() {
               {!dniChecked ? (
                 <form onSubmit={handleDniCheck}>
                 <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Ingresá tu DNI (Documento Nacional de Identidad) *</label>
+                  <label className={styles.inputLabel}>Ingresá tu Email (Correo Electrónico) *</label>
                   <input
-                    type="text"
-                    placeholder="Ej. 12345678"
-                    value={formData.dni}
-                    onChange={(e) => setFormData({ ...formData, dni: e.target.value.replace(/\D/g, '') })}
+                    type="email"
+                    placeholder="Ej. juan@gmail.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
                   />
                   <small style={{ color: 'var(--text-secondary)', marginTop: '0.4rem', display: 'block' }}>
-                    Utilizamos tu DNI para identificarte de forma segura y agilizar tu reserva.
+                    Utilizamos tu Email para identificarte de forma segura y agilizar tu reserva.
                   </small>
                 </div>
                 <div className={styles.actionsBar} style={{ justifyContent: 'flex-end' }}>
@@ -585,21 +586,21 @@ export default function Home() {
               <form onSubmit={handleNextStep1}>
                 <div className={styles.inputGroup}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className={styles.inputLabel}>DNI</label>
+                    <label className={styles.inputLabel}>Email</label>
                     <button 
                       type="button" 
                       onClick={() => {
                         setDniChecked(false);
-                        setFormData(prev => ({ ...prev, dni: '', nombreCompleto: '', whatsapp: '', email: '' }));
+                        setFormData(prev => ({ ...prev, email: '', nombreCompleto: '', whatsapp: '', dni: '' }));
                       }} 
                       style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer', fontSize: '0.85rem' }}
                     >
-                      Modificar DNI
+                      Modificar Email
                     </button>
                   </div>
                   <input
-                    type="text"
-                    value={formData.dni}
+                    type="email"
+                    value={formData.email}
                     disabled
                     style={{ opacity: 0.7 }}
                   />
@@ -647,14 +648,16 @@ export default function Home() {
                 </div>
 
                 <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Email *</label>
+                  <label className={styles.inputLabel}>DNI (Opcional)</label>
                   <input
-                    type="email"
-                    placeholder="Ej. cliente@correo.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
+                    type="text"
+                    placeholder="Ej. 12345678"
+                    value={formData.dni}
+                    onChange={(e) => setFormData({ ...formData, dni: e.target.value.replace(/\D/g, '') })}
                   />
+                  <small style={{ color: 'var(--text-secondary)', marginTop: '0.4rem', display: 'block' }}>
+                    Opcional. Permite registrar tu documento para gestiones administrativas.
+                  </small>
                 </div>
 
                 <div className={styles.actionsBar} style={{ justifyContent: 'flex-end' }}>

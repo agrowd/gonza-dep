@@ -269,8 +269,16 @@ export async function checkAndSendReminders() {
     // Load configs
     const reminderConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_reminder_template' } });
     const addressConfig = await prisma.configuracion.findUnique({ where: { key: 'address' } });
+    const configGlobal = await prisma.configuracion.findUnique({ where: { key: 'global_notifications_enabled' } });
+    
     const reminderTemplate = reminderConfig?.value || '';
     const address = addressConfig?.value || '';
+    const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
+
+    if (!globalNotificationsEnabled) {
+      console.log('[Reminder Cron] Global notifications are paused. Skipping all reminder tasks.');
+      return;
+    }
 
     if (!reminderTemplate) {
       console.warn('[Reminder Cron] Reminder template is empty. Aborting reminders.');
@@ -303,6 +311,11 @@ export async function checkAndSendReminders() {
           canal: 'WHATSAPP'
         }
       });
+
+      if (t.cliente && t.cliente.enviarNotificaciones === false) {
+        console.log(`[Reminder Cron] Notifications disabled for client ${t.cliente.nombreCompleto}. Skipping WhatsApp reminder.`);
+        continue;
+      }
 
       if (existingNotification) {
         console.log(`[Reminder Cron] Reminder already sent for appointment ${t.id} to ${t.cliente.nombreCompleto}. Skipping.`);
@@ -383,6 +396,11 @@ export async function checkAndSendReminders() {
       const { sendReminder7DaysEmail } = await import('./email.js');
       
       for (const t of turnos7) {
+        if (t.cliente && t.cliente.enviarNotificaciones === false) {
+          console.log(`[Reminder Cron] Notifications disabled for client ${t.cliente.nombreCompleto}. Skipping Email reminder.`);
+          continue;
+        }
+
         if (t.estado === 'BLOQUEADO' || (t.cliente && t.cliente.email && t.cliente.email.includes('bloqueo'))) {
           continue;
         }

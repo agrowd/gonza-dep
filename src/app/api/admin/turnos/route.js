@@ -200,7 +200,7 @@ export async function POST(request) {
       if (!client) {
         client = await prisma.cliente.create({
           data: {
-            dni,
+            dni: dni || null,
             nombreCompleto,
             whatsapp: finalWhatsapp,
             email,
@@ -261,43 +261,53 @@ export async function POST(request) {
 
     // 5. Send confirmation email and WhatsApp if it is a real appointment (not a time block)
     if (newTurno.estado !== 'BLOQUEADO') {
+      const configGlobal = await prisma.configuracion.findUnique({
+        where: { key: 'global_notifications_enabled' }
+      });
+      const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
+      const clientNotificationsEnabled = newTurno.cliente ? newTurno.cliente.enviarNotificaciones !== false : true;
+      const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+
       // 5.1 Send Email
-      try {
-        await sendConfirmationEmail(
-          newTurno.cliente.email,
-          newTurno.cliente.nombreCompleto,
-          {
-            fecha: newTurno.fecha,
-            horaInicio: newTurno.horaInicio,
-            zonas: newTurno.zonas,
-            valorSeña: newTurno.valorSeña,
-            valorTotal: newTurno.valorTotal
-          }
-        );
-        await prisma.notificacion.create({
-          data: {
-            clienteId: newTurno.clienteId,
-            turnoId: newTurno.id,
-            canal: 'EMAIL',
-            mensaje: `Confirmación de turno enviada por email al crearse manualmente.`,
-            estado: 'ENVIADO'
-          }
-        });
-      } catch (mailError) {
-        console.error('Failed to send confirmation email on manual create:', mailError);
-        await prisma.notificacion.create({
-          data: {
-            clienteId: newTurno.clienteId,
-            turnoId: newTurno.id,
-            canal: 'EMAIL',
-            mensaje: `Fallo al enviar email de confirmación manual: ${mailError.message}`,
-            estado: 'FALLIDO'
-          }
-        });
+      if (notificationsEnabled) {
+        try {
+          await sendConfirmationEmail(
+            newTurno.cliente.email,
+            newTurno.cliente.nombreCompleto,
+            {
+              fecha: newTurno.fecha,
+              horaInicio: newTurno.horaInicio,
+              zonas: newTurno.zonas,
+              valorSeña: newTurno.valorSeña,
+              valorTotal: newTurno.valorTotal
+            }
+          );
+          await prisma.notificacion.create({
+            data: {
+              clienteId: newTurno.clienteId,
+              turnoId: newTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Confirmación de turno enviada por email al crearse manualmente.`,
+              estado: 'ENVIADO'
+            }
+          });
+        } catch (mailError) {
+          console.error('Failed to send confirmation email on manual create:', mailError);
+          await prisma.notificacion.create({
+            data: {
+              clienteId: newTurno.clienteId,
+              turnoId: newTurno.id,
+              canal: 'EMAIL',
+              mensaje: `Fallo al enviar email de confirmación manual: ${mailError.message}`,
+              estado: 'FALLIDO'
+            }
+          });
+        }
       }
 
       // 5.2 Send WhatsApp confirmation
-      try {
+      if (notificationsEnabled) {
+        try {
         const templateConfig = await prisma.configuracion.findUnique({
           where: { key: 'wtsp_confirmation_manual_template' }
         });
@@ -350,6 +360,7 @@ export async function POST(request) {
         });
       }
     }
+  }
 
     return NextResponse.json(newTurno);
   } catch (error) {

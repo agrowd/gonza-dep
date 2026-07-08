@@ -4,27 +4,51 @@ import prisma from '@/lib/db.js';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email')?.trim().toLowerCase();
     const dni = searchParams.get('dni');
 
-    if (!dni) {
-      return NextResponse.json({ error: 'DNI es requerido' }, { status: 400 });
+    if (!email && !dni) {
+      return NextResponse.json({ error: 'Email o DNI es requerido' }, { status: 400 });
     }
 
-    const client = await prisma.cliente.findUnique({
-      where: { dni: dni },
-      include: {
-        turnos: {
-          where: {
-            estado: {
-              in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
-            },
-            fecha: {
-              gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today or future
+    let client = null;
+    if (email) {
+      client = await prisma.cliente.findFirst({
+        where: {
+          email: {
+            equals: email
+          }
+        },
+        include: {
+          turnos: {
+            where: {
+              estado: {
+                in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
+              },
+              fecha: {
+                gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today or future
+              }
             }
           }
         }
-      }
-    });
+      });
+    } else if (dni) {
+      client = await prisma.cliente.findUnique({
+        where: { dni: dni },
+        include: {
+          turnos: {
+            where: {
+              estado: {
+                in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
+              },
+              fecha: {
+                gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today or future
+              }
+            }
+          }
+        }
+      });
+    }
 
     if (!client) {
       return NextResponse.json({ exists: false });

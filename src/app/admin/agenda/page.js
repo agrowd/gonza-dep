@@ -14,6 +14,18 @@ const formatLocalDate = (dateInput) => {
   return d.toLocaleDateString('es-ES', { dateStyle: 'long' });
 };
 
+const stripPhonePrefix = (phone) => {
+  if (!phone) return '';
+  let cleaned = phone.replace(/\D/g, '');
+  if (cleaned.startsWith('549') && cleaned.length > 3) {
+    return cleaned.slice(3);
+  }
+  if (cleaned.startsWith('54') && cleaned.length > 2) {
+    return cleaned.slice(2);
+  }
+  return cleaned;
+};
+
 const getWhatsAppLink = (phone) => {
   if (!phone) return '';
   let cleaned = phone.replace(/\D/g, '');
@@ -201,6 +213,7 @@ export default function AgendaPage() {
     descuentoTipo: 'NINGUNO',
     descuentoValor: '',
     bonificacion: 0,
+    autoTotal: 0,
     observaciones: ''
   });
 
@@ -392,6 +405,7 @@ export default function AgendaPage() {
       const prev = new Date(currentWeekStart);
       prev.setDate(currentWeekStart.getDate() - 7);
       setCurrentWeekStart(prev);
+      setSelectedDate(prev);
     }
   };
 
@@ -408,6 +422,7 @@ export default function AgendaPage() {
       const next = new Date(currentWeekStart);
       next.setDate(currentWeekStart.getDate() + 7);
       setCurrentWeekStart(next);
+      setSelectedDate(next);
     }
   };
 
@@ -450,10 +465,10 @@ export default function AgendaPage() {
     try {
       let preserveDeposit = false;
       if (newStatus === 'CANCELADO') {
-        const confirmCancel = confirm('¿Confirmas la cancelación del turno?\n\n[Aceptar] = Cancelar aplicando penalización (se pierde la seña si falta <72hs)\n[Cancelar] = Cancelar conservando la seña a favor del cliente');
-        if (!confirmCancel) {
-          preserveDeposit = true;
-        }
+        const confirmCancel = confirm('¿Estás seguro de que deseas cancelar este turno?');
+        if (!confirmCancel) return; // Abort cancellation entirely
+        
+        preserveDeposit = confirm('¿Deseas CONSERVAR la seña a favor del cliente?\n\n[Aceptar] = Conservar la seña (no se cobra penalidad)\n[Cancelar] = Retener/perder la seña (se cobra penalidad)');
       }
       const res = await fetch(`/api/admin/turnos/${turnoId}`, {
         method: 'PUT',
@@ -538,7 +553,7 @@ export default function AgendaPage() {
       nombreCompleto: fullName,
       nombre: nombreVal,
       apellido: apellidoVal,
-      whatsapp: turno.cliente.whatsapp || '',
+      whatsapp: stripPhonePrefix(turno.cliente.whatsapp || ''),
       email: turno.cliente.email || '',
       dni: turno.cliente.dni || '',
       fechaStr: targetDateStr,
@@ -581,9 +596,6 @@ export default function AgendaPage() {
         setIsDetailsOpen(false);
         showToast('Turno reprogramado con éxito.');
         fetchAppointments();
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
       } else {
         const errData = await res.json();
         showToast(errData.error || 'Error al reprogramar el turno.', 'error');
@@ -597,6 +609,7 @@ export default function AgendaPage() {
 
   // Open creation modal for a specific day and start hour
   const handleEmptySlotClick = (date, startMin) => {
+    setSelectedDate(date);
     setIsNextScheduling(false);
     const startHour = Math.floor(startMin / 60);
     const startMins = startMin % 60;
@@ -707,7 +720,8 @@ export default function AgendaPage() {
     
     setEditTurno(prev => ({
       ...prev,
-      valorTotal: finalTotal,
+      valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? finalTotal : prev.valorTotal,
+      autoTotal: finalTotal,
       bonificacion: bonificacion
     }));
   }, [editTurno.descuentoTipo, editTurno.descuentoValor, isEditing]);
@@ -828,9 +842,6 @@ export default function AgendaPage() {
         setIsNewOpen(false);
         showToast('Turno agendado con éxito.');
         fetchAppointments();
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
       } else {
         const errData = await res.json();
         showToast(errData.error || 'Error al agendar el turno.', 'error');
@@ -1553,7 +1564,9 @@ export default function AgendaPage() {
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>WhatsApp</span>
-                    <span className={styles.detailValue}>{selectedTurno.cliente?.whatsapp || 'N/A'}</span>
+                    <span className={styles.detailValue}>
+                      {selectedTurno.cliente?.whatsapp ? `🇦🇷 +54 9 ${stripPhonePrefix(selectedTurno.cliente.whatsapp)}` : 'N/A'}
+                    </span>
                   </div>
                   <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
                     <span className={styles.detailLabel}>Observaciones</span>
@@ -1587,6 +1600,7 @@ export default function AgendaPage() {
                     )}
                     <button
                       onClick={() => {
+                        const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
                         setEditTurno({
                           fechaStr: new Date(selectedTurno.fecha).toISOString().split('T')[0],
                           horaInicio: selectedTurno.horaInicio,
@@ -1594,6 +1608,10 @@ export default function AgendaPage() {
                           estado: selectedTurno.estado,
                           valorTotal: selectedTurno.valorTotal,
                           valorSeña: selectedTurno.valorSeña,
+                          descuentoTipo: hasDiscount ? 'PESOS' : 'NINGUNO',
+                          descuentoValor: hasDiscount ? selectedTurno.bonificacion : '',
+                          bonificacion: selectedTurno.bonificacion || 0,
+                          autoTotal: selectedTurno.valorTotal,
                           observaciones: selectedTurno.observaciones || ''
                         });
                         setIsEditing(true);
@@ -1659,7 +1677,7 @@ export default function AgendaPage() {
           <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '550px' }}>
             <div className={styles.modalHeader}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>Agendar Nuevo Turno</h3>
-              <button onClick={() => setIsNewOpen(false)} className={styles.closeBtn}>&times;</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewOpen(false); }} className={styles.closeBtn}>&times;</button>
             </div>
 
             <form onSubmit={handleCreateTurno}>
@@ -1746,7 +1764,7 @@ export default function AgendaPage() {
                                 nombreCompleto: fullName,
                                 nombre: nombreVal,
                                 apellido: apellidoVal,
-                                whatsapp: client.whatsapp,
+                                whatsapp: stripPhonePrefix(client.whatsapp),
                                 email: client.email,
                                 dni: client.dni || '',
                                 clienteId: client.id,
@@ -1761,7 +1779,7 @@ export default function AgendaPage() {
                             }}
                           >
                             <span>{client.nombreCompleto}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>{client.whatsapp}</span>
+                             <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</span>
                           </li>
                         ))}
                     </ul>
@@ -1789,13 +1807,12 @@ export default function AgendaPage() {
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
-                  <label className={styles.inputLabel}>DNI del Cliente *</label>
+                  <label className={styles.inputLabel}>DNI del Cliente (Opcional)</label>
                   <input
                     type="text"
                     value={newTurno.dni}
                     onChange={(e) => setNewTurno({ ...newTurno, dni: e.target.value })}
                     placeholder="Ej. 12345678"
-                    required
                   />
                 </div>
                  <div className={styles.inputGroup}>
