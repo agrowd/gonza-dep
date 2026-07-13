@@ -100,6 +100,7 @@
 - Política de Cancelación en Autogestión: Mensaje de confirmación del portal de clientes modificado para indicar que al cancelar por autogestión se pierde la seña sin excepción.
 - Backend de Cancelación de Clientes: Configurado para procesar la cancelación siempre con pérdida de seña (`withLossOfDeposit = true`).
 - Corrección de Remitente de Correo (SMTP): Cambiado `getMailConfig` en `src/lib/email.js` para usar directamente una cadena formateada simple para el campo `from` en lugar de una estructura de objeto malformada. Esto resuelve los errores de SMTP que tachaban a la cuenta de origen como inexistente.
+- Reemplazo de Logo: Actualizada la imagen corporativa del logo en `public/logo.png` con la versión de letras negras provista por el cliente (`letras negras.png`).
 
 ## [1.0.0] - 2026-07-08
 ### Added

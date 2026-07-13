@@ -319,3 +319,4 @@
     - Se agregó el ordenamiento cronológico por fecha y hora de inicio de forma ascendente en las consultas Prisma en `/api/clientes/consultar/route.js`. Esto garantiza que en la vista de autogestión de clientes con múltiples reservas futuras activas se muestre siempre la cita más próxima.
     - Se modificó la renderización del historial de turnos de la ficha del cliente en `src/app/admin/clientes/page.js` para que las sesiones de depilación se numeren cronológicamente y de forma exclusiva si tienen estado `REALIZADO`. Las canceladas o futuras se muestran en la lista pero sin prefijo numérico para no distorsionar el contador.
     - Se verificó la compilación local (`npm run build`) de forma exitosa.
+    - Se reemplazó la imagen del logo en `public/logo.png` por la nueva imagen de letras negras provista (`letras negras.png`), y se incluyó en el repositorio git.
