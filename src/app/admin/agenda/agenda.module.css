@@ -436,14 +436,14 @@
   width: fit-content;
 }
 
-.badgeSenado { background-color: var(--status-senado-bg); color: #81c784; }
-.badgeRealizado { background-color: var(--status-realizado-bg); color: #64b5f6; }
-.badgeCancelado { background-color: var(--status-cancelado-bg); color: #e57373; }
-.badgeReprogramado { background-color: var(--status-reprogramado-bg); color: #ffb74d; }
-.badgeNoAsistio { background-color: var(--status-no-asistio-bg); color: #b0bec5; }
-.badgePendienteAut { background-color: var(--status-pendiente-aut-bg); color: #fff176; }
-.badgePendientePago { background-color: var(--status-pendiente-pago-bg); color: #ba68c8; }
-.badgeBloqueado { background-color: #333333; color: #9e9e9e; }
+.badgeSenado { background-color: var(--status-senado-bg); color: var(--status-senado); }
+.badgeRealizado { background-color: var(--status-realizado-bg); color: var(--status-realizado); }
+.badgeCancelado { background-color: var(--status-cancelado-bg); color: var(--status-cancelado); }
+.badgeReprogramado { background-color: var(--status-reprogramado-bg); color: var(--status-reprogramado); }
+.badgeNoAsistio { background-color: var(--status-no-asistio-bg); color: #37474f; }
+.badgePendienteAut { background-color: var(--status-pendiente-aut-bg); color: #b45309; }
+.badgePendientePago { background-color: var(--status-pendiente-pago-bg); color: var(--status-pendiente-pago); }
+.badgeBloqueado { background-color: #212121; color: #ffffff; }
 
 /* Current time indicator line on the calendar */
 .currentTimeLine {

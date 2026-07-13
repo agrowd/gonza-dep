@@ -87,6 +87,17 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [1.1.0] - 2026-07-13
+### Added
+- Edición de Zonas Administrativa: Agregado selector de checkboxes de zonas en el modal de edición/reprogramación del operador. Ahora se recalculan en tiempo real la hora de fin, monto total y seña al modificar las zonas de una cita.
+- Soporte en backend PUT de turnos para guardar las zonas modificadas en formato JSON en la base de datos.
+
+### Changed
+- Contraste de colores: Modificados colores de texto de los badges de estado en la Ficha del Cliente para usar las variables CSS oscuras y legibles (SEÑADO, REALIZADO, CANCELADO, etc.).
+- Legibilidad de advertencias: Cambiado el color amarillo claro (`#ffb74d`) de los mensajes de solapamiento en la agenda por un color ámbar/dorado oscuro de alta legibilidad (`#b45309`).
+- Política de Cancelación en Autogestión: Mensaje de confirmación del portal de clientes modificado para indicar que al cancelar por autogestión se pierde la seña sin excepción.
+- Backend de Cancelación de Clientes: Configurado para procesar la cancelación siempre con pérdida de seña (`withLossOfDeposit = true`).
+
 ## [1.0.0] - 2026-07-08
 ### Added
 - Transición a identificación por Email en Autogestión: Los clientes ingresan al portal de autogestión y reservan ingresando su Email en lugar de su DNI.

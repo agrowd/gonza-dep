@@ -181,12 +181,7 @@ export default function Home() {
     const diffMs = turnTime.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
     
-    let confirmMsg = '¿Estás seguro de que deseas cancelar tu turno?';
-    if (diffHours < 72) {
-      confirmMsg = '⚠️ Faltan menos de 72 hs para tu turno. Si cancelás ahora, perderás la seña abonada. ¿Deseas continuar y cancelar el turno de todas formas?';
-    } else {
-      confirmMsg = 'Tu turno será cancelado y el horario se liberará. Tu seña quedará registrada a tu favor (contáctanos para reprogramar utilizando esta seña). ¿Deseas confirmar la cancelación?';
-    }
+    const confirmMsg = '⚠️ Tu turno será cancelado y el horario se liberará. Tené en cuenta que al cancelar por autogestión perderás la seña abonada, sin importar la anticipación con la que lo hagas (no hay devolución ni transferencia de seña). ¿Deseas confirmar la cancelación?';
     
     if (!window.confirm(confirmMsg)) return;
     

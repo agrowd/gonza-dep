@@ -64,8 +64,7 @@ export async function POST(request) {
     const [h, m] = turno.horaInicio.split(':').map(Number);
     turnTime.setUTCHours(h, m, 0, 0);
     const diffMs = turnTime.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    const withLossOfDeposit = diffHours < 72;
+    const withLossOfDeposit = true;
 
     // Perform cancellation in DB
     const updatedTurno = await prisma.turno.update({

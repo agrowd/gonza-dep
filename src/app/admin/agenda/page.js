@@ -588,7 +588,8 @@ export default function AgendaPage() {
           valorTotal: Number(editTurno.valorTotal),
           valorSeña: Number(editTurno.valorSeña),
           bonificacion: Number(editTurno.bonificacion || 0),
-          observaciones: editTurno.observaciones
+          observaciones: editTurno.observaciones,
+          selectedZoneIds: editTurno.selectedZoneIds
         })
       });
       if (res.ok) {
@@ -700,31 +701,48 @@ export default function AgendaPage() {
   useEffect(() => {
     if (!isEditing || !selectedTurno) return;
     
-    // Calculate base total from zones
-    let baseTotal = 0;
-    try {
-      const parsedZonas = JSON.parse(selectedTurno.zonas);
-      baseTotal = parsedZonas.reduce((sum, z) => sum + (z.precio || z.precioBase || 0), 0);
-    } catch (e) {
-      baseTotal = selectedTurno.valorTotal + (selectedTurno.bonificacion || 0);
+    if (!editTurno.selectedZoneIds || editTurno.selectedZoneIds.length === 0) {
+      setEditTurno(prev => ({
+        ...prev,
+        horaFin: prev.horaInicio,
+        valorTotal: 0,
+        valorSeña: 0,
+        autoTotal: 0,
+        autoSeña: 0,
+        bonificacion: 0
+      }));
+      return;
     }
-    
+
+    const selected = zones.filter(z => editTurno.selectedZoneIds.includes(z.id));
+    const calcs = calculateTurnDetails(selected, false);
+
+    // Calculate horaFin based on start time + calculated duration
+    const startMin = timeToMinutes(editTurno.horaInicio);
+    const endMin = startMin + calcs.duracionMinutos;
+    const endHour = Math.floor(endMin / 60);
+    const endMins = endMin % 60;
+    const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+
     let bonificacion = 0;
     if (editTurno.descuentoTipo === 'PORCENTAJE') {
-      bonificacion = baseTotal * (Number(editTurno.descuentoValor || 0) / 100);
+      bonificacion = calcs.valorTotal * (Number(editTurno.descuentoValor || 0) / 100);
     } else if (editTurno.descuentoTipo === 'PESOS') {
       bonificacion = Number(editTurno.descuentoValor || 0);
     }
-    
-    const finalTotal = Math.max(0, baseTotal - bonificacion);
-    
+
+    const finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+
     setEditTurno(prev => ({
       ...prev,
+      horaFin: horaFinStr,
       valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? finalTotal : prev.valorTotal,
+      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
       autoTotal: finalTotal,
+      autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [editTurno.descuentoTipo, editTurno.descuentoValor, isEditing]);
+  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, isEditing]);
 
   // Check overlap/availability for newTurno in real-time
   useEffect(() => {
@@ -863,6 +881,21 @@ export default function AgendaPage() {
       setNewTurno({
         ...newTurno,
         selectedZoneIds: [...newTurno.selectedZoneIds, zoneId]
+      });
+    }
+  };
+
+  const toggleEditTurnoZone = (zoneId) => {
+    const exists = editTurno.selectedZoneIds?.includes(zoneId) || false;
+    if (exists) {
+      setEditTurno({
+        ...editTurno,
+        selectedZoneIds: (editTurno.selectedZoneIds || []).filter(id => id !== zoneId)
+      });
+    } else {
+      setEditTurno({
+        ...editTurno,
+        selectedZoneIds: [...(editTurno.selectedZoneIds || []), zoneId]
       });
     }
   };
@@ -1408,6 +1441,22 @@ export default function AgendaPage() {
                     />
                   </div>
 
+                  {/* Zones Checkboxes */}
+                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                    <label className={styles.inputLabel}>Seleccionar Zonas *</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', opacity: editTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: editTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
+                      {zones.map(z => {
+                        const isChecked = editTurno.selectedZoneIds?.includes(z.id) || false;
+                        return (
+                          <div key={z.id} onClick={() => toggleEditTurnoZone(z.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                            <input type="checkbox" checked={isChecked} readOnly style={{ width: 'auto' }} />
+                            <span>{z.nombre}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Hora Fin</label>
                     <input
@@ -1505,7 +1554,7 @@ export default function AgendaPage() {
                 </div>
 
                 {editTurnoWarning && (
-                  <div style={{ color: '#ffb74d', backgroundColor: 'rgba(255, 183, 77, 0.1)', border: '1px solid #ffb74d', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', marginTop: '1rem', textAlign: 'center', width: '100%' }}>
+                  <div style={{ color: '#b45309', backgroundColor: 'rgba(180, 83, 9, 0.08)', border: '1px solid #d97706', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', marginTop: '1rem', textAlign: 'center', width: '100%' }}>
                     {editTurnoWarning}
                   </div>
                 )}
@@ -1601,6 +1650,12 @@ export default function AgendaPage() {
                     <button
                       onClick={() => {
                         const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
+                        let preselectedZoneIds = [];
+                        try {
+                          preselectedZoneIds = JSON.parse(selectedTurno.zonas).map(z => z.id).filter(Boolean);
+                        } catch (e) {
+                          console.error('Error parsing zones for editing:', e);
+                        }
                         setEditTurno({
                           fechaStr: new Date(selectedTurno.fecha).toISOString().split('T')[0],
                           horaInicio: selectedTurno.horaInicio,
@@ -1612,6 +1667,8 @@ export default function AgendaPage() {
                           descuentoValor: hasDiscount ? selectedTurno.bonificacion : '',
                           bonificacion: selectedTurno.bonificacion || 0,
                           autoTotal: selectedTurno.valorTotal,
+                          autoSeña: selectedTurno.valorSeña,
+                          selectedZoneIds: preselectedZoneIds,
                           observaciones: selectedTurno.observaciones || ''
                         });
                         setIsEditing(true);
@@ -2002,7 +2059,7 @@ export default function AgendaPage() {
               </div>
 
               {newTurnoWarning && (
-                <div style={{ color: '#ffb74d', backgroundColor: 'rgba(255, 183, 77, 0.1)', border: '1px solid #ffb74d', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center', width: '100%' }}>
+                <div style={{ color: '#b45309', backgroundColor: 'rgba(180, 83, 9, 0.08)', border: '1px solid #d97706', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center', width: '100%' }}>
                   {newTurnoWarning}
                 </div>
               )}

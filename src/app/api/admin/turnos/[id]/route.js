@@ -102,7 +102,8 @@ export async function PUT(request, { params }) {
       valorTotal,
       valorSeña,
       bonificacion,
-      observaciones
+      observaciones,
+      selectedZoneIds
     } = body;
 
     // Fetch old turn state
@@ -172,6 +173,18 @@ export async function PUT(request, { params }) {
     if (valorSeña !== undefined) updateData.valorSeña = valorSeña;
     if (bonificacion !== undefined) updateData.bonificacion = Number(bonificacion);
     if (observaciones !== undefined) updateData.observaciones = observaciones;
+
+    if (selectedZoneIds !== undefined) {
+      const dbZones = await prisma.zona.findMany({
+        where: { id: { in: selectedZoneIds } }
+      });
+      updateData.zonas = JSON.stringify(dbZones.map(z => ({
+        id: z.id,
+        nombre: z.nombre,
+        precio: z.precioBase,
+        duracion: z.duracionMinutos
+      })));
+    }
 
     // Recalculate remaining balance
     const finalTotal = valorTotal !== undefined ? valorTotal : oldTurn.valorTotal;

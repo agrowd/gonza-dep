@@ -306,4 +306,11 @@
     - Se condicionaron todos los envíos de notificaciones en el backend (webhook de Mercado Pago, creación de turnos manuales, cancelaciones, reprogramaciones y cron diario de recordatorios) para verificar tanto el check global como el check individual del cliente.
     - Se implementó la transición a Email en la autogestión de clientes y reserva online, reemplazando las entradas y comprobaciones de DNI por Email. DNI se hizo opcional en el formulario de registro online.
     - Se verificó la compilación del bundle de producción local (`npm run build`) de forma exitosa (34/34 rutas).
-
+  - **13 de Julio (09:20 AM)**:
+    - Se modificó la vista de autogestión en `src/app/page.js` para alertar siempre sobre la pérdida total de seña al cancelar por autogestión.
+    - Se actualizó el endpoint `/api/reservas/cancelar/route.js` para forzar `withLossOfDeposit = true` en las cancelaciones iniciadas por clientes.
+    - Se incrementó el contraste de las clases de badges de estado (`.badgeSenado`, `.badgeRealizado`, etc.) en `src/app/admin/agenda/agenda.module.css` usando las variables CSS de color del tema oscuro en el texto sobre el fondo claro.
+    - Se aumentó la legibilidad de las advertencias de solapamiento en `src/app/admin/agenda/page.js` de color amarillo claro a color dorado/ámbar oscuro (`#b45309`).
+    - Se implementó la selección y edición de zonas en el modal de edición/reprogramación de turnos administrativos en `src/app/admin/agenda/page.js` inicializando los checkboxes, agregando `toggleEditTurnoZone`, recalculando en caliente (horaFin, total, seña) y enviando el array en el cuerpo de la petición `PUT`.
+    - Se modificó `/api/admin/turnos/[id]/route.js` para capturar `selectedZoneIds` y actualizar la columna `zonas` del turno en base de datos.
+    - Se validó la compilación local (`npm run build`) de forma exitosa.
