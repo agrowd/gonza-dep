@@ -91,12 +91,15 @@
 ### Added
 - Edición de Zonas Administrativa: Agregado selector de checkboxes de zonas en el modal de edición/reprogramación del operador. Ahora se recalculan en tiempo real la hora de fin, monto total y seña al modificar las zonas de una cita.
 - Soporte en backend PUT de turnos para guardar las zonas modificadas en formato JSON en la base de datos.
+- Ordenamiento en Autogestión: Añadido `orderBy` por fecha y hora ascendente al buscar el turno activo de un cliente en autogestión. Si el cliente tiene múltiples citas futuras, se le mostrará la más cercana.
+- Numeración de Sesiones por Cliente: Modificado el listado de historial de turnos de la ficha del cliente en el panel administrativo para que las sesiones se numeren cronológicamente de forma ascendente y **solo** incrementen para turnos con estado `REALIZADO`. Las cancelaciones y citas futuras no llevan prefijo numérico para no distorsionar el contador.
 
 ### Changed
 - Contraste de colores: Modificados colores de texto de los badges de estado en la Ficha del Cliente para usar las variables CSS oscuras y legibles (SEÑADO, REALIZADO, CANCELADO, etc.).
 - Legibilidad de advertencias: Cambiado el color amarillo claro (`#ffb74d`) de los mensajes de solapamiento en la agenda por un color ámbar/dorado oscuro de alta legibilidad (`#b45309`).
 - Política de Cancelación en Autogestión: Mensaje de confirmación del portal de clientes modificado para indicar que al cancelar por autogestión se pierde la seña sin excepción.
 - Backend de Cancelación de Clientes: Configurado para procesar la cancelación siempre con pérdida de seña (`withLossOfDeposit = true`).
+- Corrección de Remitente de Correo (SMTP): Cambiado `getMailConfig` en `src/lib/email.js` para usar directamente una cadena formateada simple para el campo `from` en lugar de una estructura de objeto malformada. Esto resuelve los errores de SMTP que tachaban a la cuenta de origen como inexistente.
 
 ## [1.0.0] - 2026-07-08
 ### Added

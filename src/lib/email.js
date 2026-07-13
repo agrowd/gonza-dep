@@ -11,12 +11,12 @@ function getMailConfig() {
   const user = process.env.SMTP_USER || '';
   const pass = process.env.SMTP_PASS || '';
   
-  // Use the SMTP_USER as the email address, with a display name
-  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@depilacionparahombres.com';
-  const from = {
-    name: 'Gonzalo Depilacion',
-    address: fromAddress
-  };
+  let from = 'Gonzalo Depilación <turnos@depilacionparahombres.com>';
+  if (process.env.SMTP_FROM) {
+    from = process.env.SMTP_FROM;
+  } else if (process.env.SMTP_USER) {
+    from = `Gonzalo Depilación <${process.env.SMTP_USER}>`;
+  }
 
   const transporter = nodemailer.createTransport({
     host,

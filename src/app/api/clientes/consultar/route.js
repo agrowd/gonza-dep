@@ -28,7 +28,11 @@ export async function GET(request) {
               fecha: {
                 gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today or future
               }
-            }
+            },
+            orderBy: [
+              { fecha: 'asc' },
+              { horaInicio: 'asc' }
+            ]
           }
         }
       });
@@ -44,7 +48,11 @@ export async function GET(request) {
               fecha: {
                 gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today or future
               }
-            }
+            },
+            orderBy: [
+              { fecha: 'asc' },
+              { horaInicio: 'asc' }
+            ]
           }
         }
       });

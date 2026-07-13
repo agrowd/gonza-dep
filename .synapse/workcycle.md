@@ -314,3 +314,8 @@
     - Se implementó la selección y edición de zonas en el modal de edición/reprogramación de turnos administrativos en `src/app/admin/agenda/page.js` inicializando los checkboxes, agregando `toggleEditTurnoZone`, recalculando en caliente (horaFin, total, seña) y enviando el array en el cuerpo de la petición `PUT`.
     - Se modificó `/api/admin/turnos/[id]/route.js` para capturar `selectedZoneIds` y actualizar la columna `zonas` del turno en base de datos.
     - Se validó la compilación local (`npm run build`) de forma exitosa.
+  - **13 de Julio (09:40 AM)**:
+    - Se corrigió `getMailConfig` en `src/lib/email.js` para retornar `from` como un string plano limpio en lugar de un objeto. Esto soluciona los rebotes de correo generados por un encabezado From malformado (que los servidores de correo interpretaban como remitente inexistente).
+    - Se agregó el ordenamiento cronológico por fecha y hora de inicio de forma ascendente en las consultas Prisma en `/api/clientes/consultar/route.js`. Esto garantiza que en la vista de autogestión de clientes con múltiples reservas futuras activas se muestre siempre la cita más próxima.
+    - Se modificó la renderización del historial de turnos de la ficha del cliente en `src/app/admin/clientes/page.js` para que las sesiones de depilación se numeren cronológicamente y de forma exclusiva si tienen estado `REALIZADO`. Las canceladas o futuras se muestran en la lista pero sin prefijo numérico para no distorsionar el contador.
+    - Se verificó la compilación local (`npm run build`) de forma exitosa.

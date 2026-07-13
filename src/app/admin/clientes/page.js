@@ -583,39 +583,64 @@ function ClientesPageContent() {
                       <div className={styles.emptyState}>Sin historial registrado</div>
                     ) : (
                       <div className={styles.paperList}>
-                        {selectedClient.turnos.map((t, idx) => {
-                          const isCanceled = t.estado === 'CANCELADO';
-                          let zonas = '';
-                          try {
-                            zonas = JSON.parse(t.zonas).map(z => z.nombre).join(', ');
-                          } catch (e) {
-                            zonas = t.zonas;
-                          }
+                        {(() => {
+                          const completedSessions = {};
+                          let completedCount = 0;
+                          
+                          // Sort turnos chronologically to assign session numbers
+                          const chronologicalTurnos = [...selectedClient.turnos].sort((a, b) => {
+                            const dateA = new Date(a.fecha);
+                            const dateB = new Date(b.fecha);
+                            if (dateA.getTime() !== dateB.getTime()) {
+                              return dateA.getTime() - dateB.getTime();
+                            }
+                            return a.horaInicio.localeCompare(b.horaInicio);
+                          });
+                          
+                          chronologicalTurnos.forEach(t => {
+                            if (t.estado === 'REALIZADO') {
+                              completedCount++;
+                              completedSessions[t.id] = completedCount;
+                            }
+                          });
 
-                          return (
-                            <div key={t.id} className={`${styles.paperItem} ${isCanceled ? styles.paperItemCanceled : ''}`}>
-                              <div className={styles.paperItemHeader}>
-                                <span className={styles.paperDate}>
-                                  {selectedClient.turnos.length - idx}) {formatLocalDate(t.fecha)} - {t.horaInicio} hs
-                                </span>
-                                <span className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.5rem' }}>
-                                  {t.estado}
-                                </span>
-                              </div>
-                              <div className={styles.paperZonas}>Zonas: {zonas}</div>
-                              <div className={styles.paperMeta}>
-                                <span>Costo: ${t.valorTotal.toLocaleString()}</span>
-                                <span>Seña: ${t.valorSeña.toLocaleString()}</span>
-                                <span>Saldo: ${t.saldoPendiente.toLocaleString()}</span>
-                              </div>
-                              {t.observaciones && (
-                                <div className={styles.paperNotes}>
-                                  <strong>Nota:</strong> {t.observaciones}
+                          return selectedClient.turnos.map((t, idx) => {
+                            const isCanceled = t.estado === 'CANCELADO';
+                            let zonas = '';
+                            try {
+                              zonas = JSON.parse(t.zonas).map(z => z.nombre).join(', ');
+                            } catch (e) {
+                              zonas = t.zonas;
+                            }
+
+                            const sessionNum = completedSessions[t.id];
+                            const prefix = sessionNum ? `${sessionNum}) ` : '';
+
+                            return (
+                              <div key={t.id} className={`${styles.paperItem} ${isCanceled ? styles.paperItemCanceled : ''}`}>
+                                <div className={styles.paperItemHeader}>
+                                  <span className={styles.paperDate}>
+                                    {prefix}{formatLocalDate(t.fecha)} - {t.horaInicio} hs
+                                  </span>
+                                  <span className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.5rem' }}>
+                                    {t.estado}
+                                  </span>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                                <div className={styles.paperZonas}>Zonas: {zonas}</div>
+                                <div className={styles.paperMeta}>
+                                  <span>Costo: ${t.valorTotal.toLocaleString()}</span>
+                                  <span>Seña: ${t.valorSeña.toLocaleString()}</span>
+                                  <span>Saldo: ${t.saldoPendiente.toLocaleString()}</span>
+                                </div>
+                                {t.observaciones && (
+                                  <div className={styles.paperNotes}>
+                                    <strong>Nota:</strong> {t.observaciones}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     )}
                   </div>
