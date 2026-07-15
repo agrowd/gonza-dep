@@ -320,3 +320,10 @@
     - Se modificó la renderización del historial de turnos de la ficha del cliente en `src/app/admin/clientes/page.js` para que las sesiones de depilación se numeren cronológicamente y de forma exclusiva si tienen estado `REALIZADO`. Las canceladas o futuras se muestran en la lista pero sin prefijo numérico para no distorsionar el contador.
     - Se verificó la compilación local (`npm run build`) de forma exitosa.
     - Se reemplazó la imagen del logo en `public/logo.png` por la nueva imagen de letras negras provista (`letras negras.png`), y se incluyó en el repositorio git.
+  - **15 de Julio (01:45 PM)**:
+    - Se procesó el archivo `clientes_452252_1783952206.xlsx` de la raíz del proyecto usando un script de Python para realizar diagnósticos y convertir la información a JSON.
+    - Se constató que la lista contiene 428 clientes sin emails duplicados ni DNIs duplicados, con un único email nulo y todos los números de teléfono presentes.
+    - Se escribió el script `import_clients.js` para limpiar DNIs flotantes a string, normalizar números de teléfono usando `normalizeWhatsApp` del sistema, generar un email único de fallback para el caso nulo, y realizar un upsert condicionado por DNI, Email o WhatsApp.
+    - Se ejecutó el script exitosamente sobre el entorno de desarrollo local (SQLite).
+    - Se escribió y ejecutó `remote_import.js` para establecer una sesión SFTP segura, subir los datos e importar los clientes en el entorno de producción (PostgreSQL) sin exponer la información personal a Git. Se crearon 426 clientes nuevos y se fusionaron 2 existentes en el servidor de producción.
+    - Se limpiaron los archivos temporales JSON de desarrollo y producción para salvaguardar la privacidad de la información.

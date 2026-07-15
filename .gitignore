@@ -54,3 +54,7 @@ next-env.d.ts
 # local scratch folder
 /scratch/
 
+# client data imports
+*.xlsx
+*.json
+

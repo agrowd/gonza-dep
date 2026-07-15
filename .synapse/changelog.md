@@ -87,6 +87,11 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [1.1.1] - 2026-07-15
+### Added
+- Importación Masiva de Clientes: Implementado script para procesar, normalizar y cargar 428 clientes del archivo exportado de AgendaPro (`clientes_452252_1783952206.xlsx`) de forma directa y segura en la base de datos PostgreSQL de producción y SQLite de desarrollo local sin comprometer la privacidad (los datos sensibles se manejaron de forma aislada sin subirse a Git).
+- Normalización automática de números de teléfono (formato internacional +54 9...), DNIs float a strings limpios y emails nulos.
+
 ## [1.1.0] - 2026-07-13
 ### Added
 - Edición de Zonas Administrativa: Agregado selector de checkboxes de zonas en el modal de edición/reprogramación del operador. Ahora se recalculan en tiempo real la hora de fin, monto total y seña al modificar las zonas de una cita.
