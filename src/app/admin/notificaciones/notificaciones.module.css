@@ -84,22 +84,22 @@
 
 .badgeConnected {
   background-color: var(--status-senado-bg);
-  color: #81c784;
+  color: var(--status-senado);
 }
 
 .badgeDisconnected {
   background-color: var(--status-cancelado-bg);
-  color: #e57373;
+  color: var(--status-cancelado);
 }
 
 .badgeInitializing {
   background-color: var(--status-reprogramado-bg);
-  color: #ffb74d;
+  color: var(--status-reprogramado);
 }
 
 .badgeQr {
   background-color: var(--status-pendiente-aut-bg);
-  color: #ffd54f;
+  color: #b45309;
 }
 
 .qrWrapper {
