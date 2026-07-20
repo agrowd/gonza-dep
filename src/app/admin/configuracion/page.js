@@ -340,11 +340,11 @@ export default function ConfiguracionPage() {
                     return (
                       <Fragment key={z.id}>
                         <tr className={styles.tr}>
-                          <td className={styles.td} style={{ fontWeight: 600 }}>{z.nombre}</td>
-                          <td className={styles.td}>{formatMoney(z.precioBase)}</td>
-                          <td className={styles.td}>{formatMoney(z.señaBase)}</td>
-                          <td className={styles.td}>{z.duracionMinutos} min</td>
-                          <td className={styles.td} style={{ textAlign: 'right' }}>
+                          <td className={styles.td} data-label="Zona" style={{ fontWeight: 600 }}>{z.nombre}</td>
+                          <td className={styles.td} data-label="Precio Base">{formatMoney(z.precioBase)}</td>
+                          <td className={styles.td} data-label="Seña Requerida">{formatMoney(z.señaBase)}</td>
+                          <td className={styles.td} data-label="Duración">{z.duracionMinutos} min</td>
+                          <td className={styles.td} data-label="Acciones" style={{ textAlign: 'right' }}>
                             <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
                               <button 
                                 className="btn btn-secondary" 

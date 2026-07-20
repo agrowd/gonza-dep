@@ -112,6 +112,58 @@
   gap: 0.5rem;
 }
 
+@media (max-width: 600px) {
+  .tableWrapper {
+    border: none;
+    border-radius: 0;
+  }
+  .table {
+    display: block;
+  }
+  .table thead {
+    display: none;
+  }
+  .table tbody {
+    display: block;
+    width: 100%;
+  }
+  .tr {
+    display: block;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .tr:hover {
+    background-color: var(--bg-secondary);
+  }
+  .td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    text-align: right !important;
+  }
+  .td:last-child {
+    border-bottom: none;
+    padding-top: 0.75rem;
+  }
+  .td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: left;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+  }
+  .actionCell {
+    width: 100%;
+    justify-content: flex-end !important;
+  }
+}
+
 /* Forms */
 .form {
   display: flex;

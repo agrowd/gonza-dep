@@ -95,6 +95,8 @@
 - Preservación de estado de fecha y vista de la agenda: al hacer clic en "Ver Ficha del Cliente" y cerrar la ficha pulsando la "X", se retorna exactamente al mismo día, semana o mes y modo de vista que se estaba consultando.
 - Diseño responsivo para el buscador de clientes en móviles, apilando los controles de búsqueda verticalmente y asegurando que la barra de texto se exponga y visualice de forma legible al 100% del ancho disponible.
 - Búsqueda insensible a mayúsculas/minúsculas (case-insensitive) en el buscador de la base de datos de clientes, corrigiendo fallos de búsqueda en producción bajo PostgreSQL.
+- Diseño responsivo para el Catálogo de Zonas y Precios en móviles, transformando la grilla tabular en tarjetas (cards) individuales para que las columnas de Duración y Acciones (Editar/Eliminar) sean visibles e interactivas.
+- Configuración del correo electrónico de respaldo (BCC) en todas las notificaciones transaccionales reemplazando 'nuevacuenta@depilacionparahombres.com' por 'backup@depilacionparahombres.com' tal como se solicitó para su posterior provisión.
 
 ### Changed
 - Remoción del bloqueo de notificaciones global estricto: ahora las notificaciones se rigen por la preferencia individual de cada cliente (permitiendo envíos selectivos incluso con la pausa global activada).

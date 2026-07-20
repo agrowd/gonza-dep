@@ -338,6 +338,8 @@
 - [x] Implementar selector "Otros" y campo de texto en el frontend (Agenda modals)
 - [x] Conectar observaciones del cliente al modal de detalle del turno (Agenda detail modal + backend)
 - [x] Compilar, verificar y desplegar en producción (Hostinger VPS)
+- [x] Rediseñar responsivamente la tabla del catálogo de zonas y precios en móviles (cards layout)
+- [x] Cambiar la cuenta de correo de copias (BCC) a `backup@depilacionparahombres.com` (como mockup)
 
 ### 📝 Notas / Bitácora
 - **20 de Julio (10:50 AM)**:
@@ -350,3 +352,7 @@
   - **20 de Julio (12:10 PM)**:
     - Se corrigió el diseño responsivo del buscador en la vista `/admin/clientes` implementando reglas flexbox con `flex-direction: column` en pantallas móviles. Esto evita que el campo de texto se achique a dimensiones de checkbox y permite que los controles de búsqueda se apilen limpiamente ocupando el 100% de la pantalla.
     - Se resolvió un error de distinción de mayúsculas y minúsculas (case-sensitivity) en la consulta PostgreSQL del buscador de clientes (`/api/admin/clientes`). Se añadió la propiedad `mode: 'insensitive'` en Prisma para que las búsquedas por nombre, email o WhatsApp funcionen correctamente sin importar la capitalización de la consulta del usuario.
+  - **20 de Julio (01:15 PM)**:
+    - Se modificaron todas las llamadas a `sendMail` en `src/lib/email.js` reemplazando la casilla de copia oculta (BCC) `nuevacuenta@depilacionparahombres.com` por la nueva dirección `backup@depilacionparahombres.com` tal como lo solicitó Gonzalo para preparar la posterior creación de la casilla de correos.
+    - Se rediseñó el catálogo de zonas y precios en `src/app/admin/configuracion/page.js` agregando atributos `data-label` a los elementos `td` de la tabla.
+    - Se implementaron estilos responsivos en `src/app/admin/configuracion/configuracion.module.css` para reestructurar la tabla convirtiéndola en una lista de tarjetas (cards) individuales en pantallas móviles. Esto expone completamente la duración de la zona y los botones de Editar y Eliminar de manera táctil y legible.

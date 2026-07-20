@@ -375,3 +375,12 @@
 - Corrección responsiva del buscador de clientes en `src/app/admin/clientes/clientes.module.css` aplicando `flex-direction: column` y `width: 100%` en pantallas móviles. Esto evita que el campo de texto se achique a dimensiones diminutas y permite que los controles de búsqueda se apilen limpiamente ocupando el 100% de la pantalla.
 - Implementación de búsqueda insensible a mayúsculas/minúsculas (case-insensitive) mediante `mode: 'insensitive'` en la API de consulta de clientes (`src/app/api/admin/clientes/route.js`), solucionando el comportamiento del motor de bases de datos PostgreSQL en producción.
 - Verificación y compilación local exitosa del bundle de producción de Next.js.
+
+## Mensaje del Usuario (2026-07-20 10:14:42-03:00)
+> Dejemos lo del mail para lo ultimo. Dejalo puesto como backup@depilacionparahombres.com como un mockup. Cuando terminemos todos los cambios va a ser lo ultimo que apliquemos. Luego con el punto 2: Aplica la solucion
+
+## Respuesta del Asistente
+- Reemplazo de la dirección de correo de copias ocultas (BCC) en todas las funciones de `src/lib/email.js`, sustituyendo `nuevacuenta@depilacionparahombres.com` por `backup@depilacionparahombres.com` como mockup preventivo.
+- Rediseño del Catálogo de Zonas y Precios en `src/app/admin/configuracion/page.js` agregando atributos `data-label` a los elementos `td` del cuerpo de la tabla.
+- Integración de estilos responsivos avanzados en `src/app/admin/configuracion/configuracion.module.css` para transformar la grilla tabular en un listado de tarjetas (cards) individuales en pantallas móviles. Esto garantiza que las columnas de "Duración" y "Acciones" (con sus respectivos botones de Editar y Eliminar) queden completamente legibles y accesibles al tacto.
+- Verificación y compilación local exitosa del bundle de Next.js en producción.

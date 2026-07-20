@@ -206,7 +206,7 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'nuevacuenta@depilacionparahombres.com',
+    bcc: 'backup@depilacionparahombres.com',
     subject: `Aviso de turno no asistido - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -391,7 +391,7 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'nuevacuenta@depilacionparahombres.com',
+    bcc: 'backup@depilacionparahombres.com',
     subject: `Confirmación de turno - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -578,7 +578,7 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'nuevacuenta@depilacionparahombres.com',
+    bcc: 'backup@depilacionparahombres.com',
     subject: mailSubject,
     html: htmlContent
   });
@@ -769,7 +769,7 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'nuevacuenta@depilacionparahombres.com',
+    bcc: 'backup@depilacionparahombres.com',
     subject: `Comprobante de Turno - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -857,7 +857,7 @@ export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'nuevacuenta@depilacionparahombres.com',
+    bcc: 'backup@depilacionparahombres.com',
     subject: subject,
     html: htmlContent
   });
@@ -987,7 +987,7 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'nuevacuenta@depilacionparahombres.com',
+    bcc: 'backup@depilacionparahombres.com',
     subject: subject,
     html: htmlContent
   });
@@ -1115,7 +1115,7 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'nuevacuenta@depilacionparahombres.com',
+    bcc: 'backup@depilacionparahombres.com',
     subject: subject,
     html: htmlContent
   });
