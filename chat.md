@@ -355,4 +355,15 @@
 - Ampliación de la ventana de reserva online del cliente en `src/app/page.js` de 14 a 30 días hábiles.
 - Modificación del backend `/api/admin/estadisticas` y de la vista `/admin/estadisticas` para procesar filtros por rangos "Desde / Hasta" con Date Pickers HTML5 en lugar de dropdowns de mes/año.
 - Rediseño del sidebar de administración `src/app/admin/SidebarNav.js` para incrementar la visualización del logotipo principal a `190px` de ancho.
-- Verificación exitosa de compilación completa del bundle de producción (`npm run build`) localmente para todas las 29 rutas estáticas y dinámicas.
+- Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
+
+## Mensaje del Usuario (2026-07-20 08:49:01-03:00)
+> Procede
+
+## Respuesta del Asistente
+- Implementación de la sincronización automática de notificaciones globales en el backend, actualizando masivamente el check de envío automático de todos los clientes en la base de datos.
+- Eliminación de los bloqueos rígidos de envío de notificaciones basados en la bandera global, rigiéndose únicamente por las preferencias individuales del cliente.
+- Modificación de los redireccionamientos de la ficha del cliente a la agenda administrativa para pasar y restaurar parámetros de fecha (`date`) y modo de vista (`view`), evitando el reinicio del calendario.
+- Soporte en backend y frontend para la zona extra personalizada "Otros" con un campo de entrada interactivo requerido en los formularios de agendamiento y reprogramación.
+- Conexión del bloque de observaciones del modal de detalles del turno directamente con el campo general del cliente (`cliente.observaciones`), permitiendo su visualización y edición en caliente.
+- Ejecución y verificación exitosa de compilación del bundle de producción (`npm run build`) en local.

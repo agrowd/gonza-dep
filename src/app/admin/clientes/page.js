@@ -148,6 +148,8 @@ function ClientesPageContent() {
 
   const router = useRouter();
   const fromPage = searchParams.get('from');
+  const dateParam = searchParams.get('date');
+  const viewParam = searchParams.get('view');
 
   // Fetch individual profile details
   const loadClientData = (clientId) => {
@@ -194,7 +196,11 @@ function ClientesPageContent() {
   const handleCloseProfile = () => {
     setIsProfileOpen(false);
     if (fromPage === 'agenda') {
-      router.push('/admin/agenda');
+      const params = [];
+      if (dateParam) params.push(`date=${dateParam}`);
+      if (viewParam) params.push(`view=${viewParam}`);
+      const queryStr = params.length > 0 ? `?${params.join('&')}` : '';
+      router.push(`/admin/agenda${queryStr}`);
     } else {
       router.push('/admin/clientes');
     }

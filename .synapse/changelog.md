@@ -87,6 +87,16 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [1.2.0] - 2026-07-20
+### Added
+- Soporte para zona extra "Otros" en formularios de creación y reprogramación de turnos administrativos, permitiendo añadir una zona personalizada y editar manualmente el precio total y la duración.
+- Edición e integración de Observaciones Generales del Cliente en el modal "Detalle del Turno". Se enlazó directamente con `cliente.observaciones` de la base de datos para ver, editar y guardar en cascada para todos sus turnos.
+- Sincronización automática de notificaciones: al pausar o reactivar las notificaciones globales, se actualiza masivamente el estado `enviarNotificaciones` de todos los clientes en la base de datos.
+- Preservación de estado de fecha y vista de la agenda: al hacer clic en "Ver Ficha del Cliente" y cerrar la ficha pulsando la "X", se retorna exactamente al mismo día, semana o mes y modo de vista que se estaba consultando.
+
+### Changed
+- Remoción del bloqueo de notificaciones global estricto: ahora las notificaciones se rigen por la preferencia individual de cada cliente (permitiendo envíos selectivos incluso con la pausa global activada).
+
 ## [1.1.1] - 2026-07-15
 ### Added
 - Importación Masiva de Clientes: Implementado script para procesar, normalizar y cargar 428 clientes del archivo exportado de AgendaPro (`clientes_452252_1783952206.xlsx`) de forma directa y segura en la base de datos PostgreSQL de producción y SQLite de desarrollo local sin comprometer la privacidad (los datos sensibles se manejaron de forma aislada sin subirse a Git).

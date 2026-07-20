@@ -73,12 +73,8 @@ export async function POST(request) {
       include: { cliente: true }
     });
 
-    const configGlobal = await prisma.configuracion.findUnique({
-      where: { key: 'global_notifications_enabled' }
-    });
-    const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
     const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
-    const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+    const notificationsEnabled = clientNotificationsEnabled;
 
     // 3. Dispatch Email notification (if not blocked/special email)
     if (notificationsEnabled && updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {

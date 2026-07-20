@@ -327,3 +327,23 @@
     - Se ejecutó el script exitosamente sobre el entorno de desarrollo local (SQLite).
     - Se escribió y ejecutó `remote_import.js` para establecer una sesión SFTP segura, subir los datos e importar los clientes en el entorno de producción (PostgreSQL) sin exponer la información personal a Git. Se crearon 426 clientes nuevos y se fusionaron 2 existentes en el servidor de producción.
     - Se limpiaron los archivos temporales JSON de desarrollo y producción para salvaguardar la privacidad de la información.
+
+## 📅 Sesión: 20 de Julio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Sincronizar notificaciones en backend (POST `/api/admin/configuracion`)
+- [x] Eliminar bloqueos globales de envío de notificaciones (APIs + Cron)
+- [x] Implementar navegación con fecha preservada entre Agenda y Ficha del Cliente (Agenda + Clientes frontend)
+- [x] Soportar la zona extra "Otros" en el backend (POST + PUT APIs)
+- [x] Implementar selector "Otros" y campo de texto en el frontend (Agenda modals)
+- [x] Conectar observaciones del cliente al modal de detalle del turno (Agenda detail modal + backend)
+- [x] Compilar, verificar y desplegar en producción (Hostinger VPS)
+
+### 📝 Notas / Bitácora
+- **20 de Julio (10:50 AM)**:
+  - Se modificó la API de configuración en `src/app/api/admin/configuracion/route.js` para realizar una actualización masiva de `enviarNotificaciones = true/false` en todos los clientes en la base de datos cuando se activa/desactiva el interruptor global de notificaciones.
+  - Se removieron los bloqueos rígidos de `global_notifications_enabled` de los archivos del cron de recordatorios (`src/lib/whatsapp.js`) y de todas las rutas de envío de mensajes/correos (turnos, MercadoPago webhooks, reprogramaciones, cancelaciones). Ahora las notificaciones se rigen únicamente por la preferencia individual de cada cliente.
+  - Se modificó la navegación de la ficha del cliente en `/admin/clientes` para recibir los parámetros `date` y `view` de la agenda y retornarlos en el redireccionamiento de vuelta al presionar la "X", preservando así la fecha del calendario y evitando que se reinicie al día actual.
+  - Se agregó soporte para una zona extra "Otros" con un campo de texto interactivo requerido en los formularios de agendamiento y reprogramación de turnos administrativos. El valor de "Otros" se inyecta en el JSON `zonas` del turno bajo el identificador `otros` y permite la edición manual del precio y la duración de la cita sin bloqueos automáticos.
+  - Se vinculó el bloque de observaciones en el modal "Detalle del Turno" directamente con la base de datos de observaciones generales del cliente (`cliente.observaciones`), permitiendo su visualización y edición en caliente directamente desde la agenda para que aplique en cascada a todos los turnos del cliente.
+  - Se verificó la compilación local del proyecto Next.js en producción mediante `npm run build` con éxito.

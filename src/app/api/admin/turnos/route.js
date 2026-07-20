@@ -133,10 +133,12 @@ export async function POST(request) {
       valorTotal, // overridden or sum
       valorSeña,  // overridden or sum
       estado,
-      observaciones
+      observaciones,
+      hasOtros,
+      otrosTexto
     } = body;
 
-    if (estado !== 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin || !selectedZoneIds || selectedZoneIds.length === 0)) {
+    if (estado !== 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin || ((!selectedZoneIds || selectedZoneIds.length === 0) && !hasOtros))) {
       return NextResponse.json({ error: 'Campos requeridos incompletos' }, { status: 400 });
     }
 
@@ -223,16 +225,28 @@ export async function POST(request) {
       const endMin = timeToMinutes(horaFin);
       computedDuration = Math.max(10, endMin - startMin);
     } else {
-      const dbZones = await prisma.zona.findMany({
-        where: { id: { in: selectedZoneIds } }
-      });
-      zonasJson = JSON.stringify(dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precioBase, duracion: z.duracionMinutos })));
+      let dbZones = [];
+      if (selectedZoneIds && selectedZoneIds.length > 0) {
+        dbZones = await prisma.zona.findMany({
+          where: { id: { in: selectedZoneIds } }
+        });
+      }
+      const parsedZones = dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precioBase, duracion: z.duracionMinutos }));
+      if (hasOtros && otrosTexto) {
+        parsedZones.push({ id: 'otros', nombre: `Otros: ${otrosTexto}`, precio: 0, duracion: 0 });
+      }
+      zonasJson = JSON.stringify(parsedZones);
       
       const clientRecord = await prisma.cliente.findUnique({ where: { id: finalClienteId }, include: { turnos: true } });
       const isNew = clientRecord.turnos.length === 0;
       const coreDetails = calculateTurnDetails(dbZones, isNew);
       
       computedDuration = coreDetails.duracionMinutos;
+      if (computedDuration <= 0) {
+        const startMin = timeToMinutes(horaInicio);
+        const endMin = timeToMinutes(horaFin);
+        computedDuration = Math.max(10, endMin - startMin);
+      }
       if (valorTotal === undefined || valorTotal === '') finalValorTotal = coreDetails.valorTotal;
       if (valorSeña === undefined || valorSeña === '') finalValorSeña = coreDetails.valorSeña;
     }
@@ -259,14 +273,20 @@ export async function POST(request) {
       }
     });
 
+    if (observaciones !== undefined && observaciones !== '') {
+      await prisma.cliente.update({
+        where: { id: finalClienteId },
+        data: { observaciones }
+      });
+      if (newTurno.cliente) {
+        newTurno.cliente.observaciones = observaciones;
+      }
+    }
+
     // 5. Send confirmation email and WhatsApp if it is a real appointment (not a time block)
     if (newTurno.estado !== 'BLOQUEADO') {
-      const configGlobal = await prisma.configuracion.findUnique({
-        where: { key: 'global_notifications_enabled' }
-      });
-      const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
       const clientNotificationsEnabled = newTurno.cliente ? newTurno.cliente.enviarNotificaciones !== false : true;
-      const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+      const notificationsEnabled = clientNotificationsEnabled;
 
       // 5.1 Send Email
       if (notificationsEnabled) {

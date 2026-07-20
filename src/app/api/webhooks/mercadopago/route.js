@@ -109,12 +109,8 @@ export async function POST(request) {
                 .replaceAll('[Direccion]', address || 'Paraná 597');
             };
 
-            const configGlobal = await prisma.configuracion.findUnique({
-              where: { key: 'global_notifications_enabled' }
-            });
-            const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
             const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
-            const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+            const notificationsEnabled = clientNotificationsEnabled;
 
             const wppMsg = parseWppTemplateLocal(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
             

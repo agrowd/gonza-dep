@@ -273,12 +273,6 @@ export async function checkAndSendReminders() {
     
     const reminderTemplate = reminderConfig?.value || '';
     const address = addressConfig?.value || '';
-    const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
-
-    if (!globalNotificationsEnabled) {
-      console.log('[Reminder Cron] Global notifications are paused. Skipping all reminder tasks.');
-      return;
-    }
 
     if (!reminderTemplate) {
       console.warn('[Reminder Cron] Reminder template is empty. Aborting reminders.');

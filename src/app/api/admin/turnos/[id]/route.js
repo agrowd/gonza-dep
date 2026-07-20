@@ -103,7 +103,9 @@ export async function PUT(request, { params }) {
       valorSeña,
       bonificacion,
       observaciones,
-      selectedZoneIds
+      selectedZoneIds,
+      hasOtros,
+      otrosTexto
     } = body;
 
     // Fetch old turn state
@@ -172,18 +174,36 @@ export async function PUT(request, { params }) {
     if (valorTotal !== undefined) updateData.valorTotal = valorTotal;
     if (valorSeña !== undefined) updateData.valorSeña = valorSeña;
     if (bonificacion !== undefined) updateData.bonificacion = Number(bonificacion);
-    if (observaciones !== undefined) updateData.observaciones = observaciones;
+    if (observaciones !== undefined) {
+      updateData.observaciones = observaciones;
+      await prisma.cliente.update({
+        where: { id: oldTurn.clienteId },
+        data: { observaciones }
+      });
+    }
 
     if (selectedZoneIds !== undefined) {
-      const dbZones = await prisma.zona.findMany({
-        where: { id: { in: selectedZoneIds } }
-      });
-      updateData.zonas = JSON.stringify(dbZones.map(z => ({
+      let dbZones = [];
+      if (selectedZoneIds && selectedZoneIds.length > 0) {
+        dbZones = await prisma.zona.findMany({
+          where: { id: { in: selectedZoneIds } }
+        });
+      }
+      const parsedZones = dbZones.map(z => ({
         id: z.id,
         nombre: z.nombre,
         precio: z.precioBase,
         duracion: z.duracionMinutos
-      })));
+      }));
+      if (hasOtros && otrosTexto) {
+        parsedZones.push({
+          id: 'otros',
+          nombre: `Otros: ${otrosTexto}`,
+          precio: 0,
+          duracion: 0
+        });
+      }
+      updateData.zonas = JSON.stringify(parsedZones);
     }
 
     // Recalculate remaining balance
@@ -213,12 +233,8 @@ export async function PUT(request, { params }) {
       return NextResponse.json(updatedTurno);
     }
 
-    const configGlobal = await prisma.configuracion.findUnique({
-      where: { key: 'global_notifications_enabled' }
-    });
-    const globalNotificationsEnabled = configGlobal ? configGlobal.value === 'true' : true;
     const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
-    const notificationsEnabled = globalNotificationsEnabled && clientNotificationsEnabled;
+    const notificationsEnabled = clientNotificationsEnabled;
 
     // WhatsApp Notification Trigger:
     // If state changes to "SEÑADO" (Approved) and old state was "PENDIENTE_AUTORIZACION"

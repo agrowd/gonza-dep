@@ -76,6 +76,13 @@ export async function POST(request) {
 
     await Promise.all(operations);
 
+    if (body.global_notifications_enabled !== undefined) {
+      const enabled = body.global_notifications_enabled === 'true';
+      await prisma.cliente.updateMany({
+        data: { enviarNotificaciones: enabled }
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error saving configurations:', error);

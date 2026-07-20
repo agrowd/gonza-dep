@@ -214,7 +214,9 @@ export default function AgendaPage() {
     descuentoValor: '',
     bonificacion: 0,
     autoTotal: 0,
-    observaciones: ''
+    observaciones: '',
+    hasOtros: false,
+    otrosTexto: ''
   });
 
 
@@ -235,19 +237,82 @@ export default function AgendaPage() {
     bonificacion: 0,
     estado: 'PENDIENTE_PAGO', // Manual creations default to PENDIENTE_PAGO now
     observaciones: '',
-    clienteId: null
+    clienteId: null,
+    hasOtros: false,
+    otrosTexto: ''
   });
+
+  const [tempClientObservaciones, setTempClientObservaciones] = useState('');
+
+  useEffect(() => {
+    if (selectedTurno && selectedTurno.cliente) {
+      setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
+    } else {
+      setTempClientObservaciones('');
+    }
+  }, [selectedTurno]);
+
+  const handleSaveClientObservaciones = async () => {
+    if (!selectedTurno || !selectedTurno.cliente) return;
+    try {
+      const res = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          observaciones: tempClientObservaciones
+        })
+      });
+      if (res.ok) {
+        showToast('Observaciones del cliente guardadas con éxito.');
+        setSelectedTurno(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            cliente: {
+              ...prev.cliente,
+              observaciones: tempClientObservaciones
+            }
+          };
+        });
+        fetchAppointments();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al guardar observaciones.', 'error');
+      }
+    } catch (e) {
+      console.error('Error saving client observations:', e);
+      showToast('Error de red al guardar observaciones.', 'error');
+    }
+  };
 
   // 1. Initialize dates and configurations on mount
   useEffect(() => {
-    const today = new Date();
-    const monday = getStartOfWeek(today);
-    setCurrentWeekStart(monday);
-    setSelectedDate(today);
+    let initialDate = new Date();
+    let initialView = 'week';
 
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setViewMode('day');
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const dateParam = searchParams.get('date');
+      const viewParam = searchParams.get('view');
+      
+      if (dateParam) {
+        const parsedDate = new Date(dateParam + 'T12:00:00');
+        if (!isNaN(parsedDate.getTime())) {
+          initialDate = parsedDate;
+        }
+      }
+      
+      if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
+        initialView = viewParam;
+      } else if (window.innerWidth < 768) {
+        initialView = 'day';
+      }
     }
+
+    const monday = getStartOfWeek(initialDate);
+    setCurrentWeekStart(monday);
+    setSelectedDate(initialDate);
+    setViewMode(initialView);
 
     fetch('/api/admin/configuracion')
       .then(res => res.json())
@@ -589,7 +654,9 @@ export default function AgendaPage() {
           valorSeña: Number(editTurno.valorSeña),
           bonificacion: Number(editTurno.bonificacion || 0),
           observaciones: editTurno.observaciones,
-          selectedZoneIds: editTurno.selectedZoneIds
+          selectedZoneIds: editTurno.selectedZoneIds,
+          hasOtros: editTurno.hasOtros,
+          otrosTexto: editTurno.otrosTexto
         })
       });
       if (res.ok) {
@@ -646,7 +713,7 @@ export default function AgendaPage() {
 
   // Re-calculate pricing/durations when newTurno inputs change
   useEffect(() => {
-    if (newTurno.selectedZoneIds.length === 0) {
+    if (newTurno.selectedZoneIds.length === 0 && !newTurno.hasOtros) {
       const startMin = timeToMinutes(newTurno.horaInicio);
       const endMin = startMin + (newTurno.estado === 'BLOQUEADO' ? 30 : 0);
       const endHour = Math.floor(endMin / 60);
@@ -688,20 +755,20 @@ export default function AgendaPage() {
 
     setNewTurno(prev => ({
       ...prev,
-      horaFin: horaFinStr,
+      horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? finalTotal : prev.valorTotal,
-      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
+      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeena || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
       autoTotal: finalTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor]);
+  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros]);
 
   // Re-calculate pricing/discount for editTurno
   useEffect(() => {
     if (!isEditing || !selectedTurno) return;
     
-    if (!editTurno.selectedZoneIds || editTurno.selectedZoneIds.length === 0) {
+    if ((!editTurno.selectedZoneIds || editTurno.selectedZoneIds.length === 0) && !editTurno.hasOtros) {
       setEditTurno(prev => ({
         ...prev,
         horaFin: prev.horaInicio,
@@ -735,14 +802,14 @@ export default function AgendaPage() {
 
     setEditTurno(prev => ({
       ...prev,
-      horaFin: horaFinStr,
+      horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? finalTotal : prev.valorTotal,
       valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
       autoTotal: finalTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, isEditing]);
+  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, isEditing]);
 
   // Check overlap/availability for newTurno in real-time
   useEffect(() => {
@@ -1454,8 +1521,26 @@ export default function AgendaPage() {
                           </div>
                         );
                       })}
+                      {/* OTROS Checkbox */}
+                      <div onClick={() => setEditTurno(prev => ({ ...prev, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={editTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
+                        <span style={{ fontWeight: 'bold' }}>Otros</span>
+                      </div>
                     </div>
                   </div>
+
+                  {editTurno.hasOtros && (
+                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2', marginTop: '-0.25rem' }}>
+                      <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Espalda Alta o zonas combinadas especiales"
+                        value={editTurno.otrosTexto || ''}
+                        onChange={(e) => setEditTurno({ ...editTurno, otrosTexto: e.target.value })}
+                        required
+                      />
+                    </div>
+                  )}
 
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Hora Fin</label>
@@ -1618,8 +1703,34 @@ export default function AgendaPage() {
                     </span>
                   </div>
                   <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
-                    <span className={styles.detailLabel}>Observaciones</span>
-                    <span className={styles.detailValue}>{selectedTurno.observaciones || 'Sin observaciones'}</span>
+                    <span className={styles.detailLabel}>Observaciones Generales del Cliente</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <textarea
+                        value={tempClientObservaciones}
+                        onChange={(e) => setTempClientObservaciones(e.target.value)}
+                        placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.85rem',
+                          resize: 'vertical'
+                        }}
+                      />
+                      {tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') && (
+                        <button
+                          onClick={handleSaveClientObservaciones}
+                          className="btn btn-primary"
+                          style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.25rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          💾 Guardar Observaciones
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1631,7 +1742,8 @@ export default function AgendaPage() {
                       <>
                         <button
                           onClick={() => {
-                            window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda`;
+                            const dateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
+                            window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
                           }}
                           className="btn btn-secondary"
                           style={{ flex: '1 0 45%', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
@@ -1651,8 +1763,16 @@ export default function AgendaPage() {
                       onClick={() => {
                         const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
                         let preselectedZoneIds = [];
+                        let hasOtros = false;
+                        let otrosTexto = '';
                         try {
-                          preselectedZoneIds = JSON.parse(selectedTurno.zonas).map(z => z.id).filter(Boolean);
+                          const parsed = JSON.parse(selectedTurno.zonas || '[]');
+                          preselectedZoneIds = parsed.map(z => z.id).filter(id => id && id !== 'otros');
+                          const otros = parsed.find(z => z.id === 'otros');
+                          if (otros) {
+                            hasOtros = true;
+                            otrosTexto = otros.nombre ? otros.nombre.replace(/^Otros:\s*/, '') : '';
+                          }
                         } catch (e) {
                           console.error('Error parsing zones for editing:', e);
                         }
@@ -1669,7 +1789,9 @@ export default function AgendaPage() {
                           autoTotal: selectedTurno.valorTotal,
                           autoSeña: selectedTurno.valorSeña,
                           selectedZoneIds: preselectedZoneIds,
-                          observaciones: selectedTurno.observaciones || ''
+                          observaciones: selectedTurno.observaciones || '',
+                          hasOtros,
+                          otrosTexto
                         });
                         setIsEditing(true);
                       }}
@@ -1933,8 +2055,26 @@ export default function AgendaPage() {
                         </div>
                       );
                     })}
+                    {/* OTROS Checkbox */}
+                    <div onClick={() => setNewTurno(prev => ({ ...prev, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <input type="checkbox" checked={newTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
+                      <span style={{ fontWeight: 'bold' }}>Otros</span>
+                    </div>
                   </div>
                 </div>
+
+                {newTurno.hasOtros && (
+                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2', marginTop: '-0.25rem' }}>
+                    <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Espalda Alta o zonas combinadas especiales"
+                      value={newTurno.otrosTexto || ''}
+                      onChange={(e) => setNewTurno({ ...newTurno, otrosTexto: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
 
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Hora Fin (Calculado)</label>
@@ -2066,7 +2206,7 @@ export default function AgendaPage() {
 
               <div className={styles.modalFooter}>
                 <button type="button" onClick={() => setIsNewOpen(false)} className="btn btn-secondary">Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={newTurno.estado !== 'BLOQUEADO' && newTurno.selectedZoneIds.length === 0}>Guardar Turno</button>
+                <button type="submit" className="btn btn-primary" disabled={newTurno.estado !== 'BLOQUEADO' && newTurno.selectedZoneIds.length === 0 && !newTurno.hasOtros}>Guardar Turno</button>
               </div>
             </form>
           </div>
