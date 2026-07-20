@@ -367,3 +367,11 @@
 - Soporte en backend y frontend para la zona extra personalizada "Otros" con un campo de entrada interactivo requerido en los formularios de agendamiento y reprogramación.
 - Conexión del bloque de observaciones del modal de detalles del turno directamente con el campo general del cliente (`cliente.observaciones`), permitiendo su visualización y edición en caliente.
 - Ejecución y verificación exitosa de compilación del bundle de producción (`npm run build`) en local.
+
+## Mensaje del Usuario (2026-07-20 09:09:23-03:00)
+> Ahora aplica estos cambios (con captura indicando que el input del buscador de clientes es demasiado pequeño y no se visualiza al escribir en móvil, y que la búsqueda no detecta clientes).
+
+## Respuesta del Asistente
+- Corrección responsiva del buscador de clientes en `src/app/admin/clientes/clientes.module.css` aplicando `flex-direction: column` y `width: 100%` en pantallas móviles. Esto evita que el campo de texto se achique a dimensiones diminutas y permite que los controles de búsqueda se apilen limpiamente ocupando el 100% de la pantalla.
+- Implementación de búsqueda insensible a mayúsculas/minúsculas (case-insensitive) mediante `mode: 'insensitive'` en la API de consulta de clientes (`src/app/api/admin/clientes/route.js`), solucionando el comportamiento del motor de bases de datos PostgreSQL en producción.
+- Verificación y compilación local exitosa del bundle de producción de Next.js.

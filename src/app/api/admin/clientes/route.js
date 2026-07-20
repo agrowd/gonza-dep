@@ -22,9 +22,9 @@ export async function GET(request) {
     // Search by name, email, or whatsapp
     if (search) {
       whereClause.OR = [
-        { nombreCompleto: { contains: search } },
-        { email: { contains: search } },
-        { whatsapp: { contains: search } }
+        { nombreCompleto: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { whatsapp: { contains: search, mode: 'insensitive' } }
       ];
     }
 

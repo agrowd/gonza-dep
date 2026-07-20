@@ -93,6 +93,8 @@
 - Edición e integración de Observaciones Generales del Cliente en el modal "Detalle del Turno". Se enlazó directamente con `cliente.observaciones` de la base de datos para ver, editar y guardar en cascada para todos sus turnos.
 - Sincronización automática de notificaciones: al pausar o reactivar las notificaciones globales, se actualiza masivamente el estado `enviarNotificaciones` de todos los clientes en la base de datos.
 - Preservación de estado de fecha y vista de la agenda: al hacer clic en "Ver Ficha del Cliente" y cerrar la ficha pulsando la "X", se retorna exactamente al mismo día, semana o mes y modo de vista que se estaba consultando.
+- Diseño responsivo para el buscador de clientes en móviles, apilando los controles de búsqueda verticalmente y asegurando que la barra de texto se exponga y visualice de forma legible al 100% del ancho disponible.
+- Búsqueda insensible a mayúsculas/minúsculas (case-insensitive) en el buscador de la base de datos de clientes, corrigiendo fallos de búsqueda en producción bajo PostgreSQL.
 
 ### Changed
 - Remoción del bloqueo de notificaciones global estricto: ahora las notificaciones se rigen por la preferencia individual de cada cliente (permitiendo envíos selectivos incluso con la pausa global activada).

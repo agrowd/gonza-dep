@@ -429,7 +429,6 @@ function ClientesPageContent() {
           className={styles.filterSelect}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          style={{ width: '220px' }}
         >
           <option value="all">Todos los clientes</option>
           <option value="new">Clientes nuevos (≤ 1 sesión)</option>

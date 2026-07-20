@@ -14,10 +14,24 @@
 
 .searchInput {
   flex: 1;
+  width: 100%;
 }
 
 .filterSelect {
-  width: 200px;
+  width: 220px;
+}
+
+@media (max-width: 768px) {
+  .searchBar {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .filterSelect {
+    width: 100%;
+  }
+  .searchInput {
+    width: 100%;
+  }
 }
 
 /* Clients list table/cards */
