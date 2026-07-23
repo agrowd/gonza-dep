@@ -1861,131 +1861,132 @@ export default function AgendaPage() {
 
             <form onSubmit={handleCreateTurno}>
               <div className={styles.detailGrid}>
-                {/* Personal Info */}
-                <div className={styles.inputGroup} style={{ position: 'relative' }}>
-                  <label className={styles.inputLabel}>Nombre del Cliente *</label>
-                  <input
-                    type="text"
-                    value={newTurno.nombre || ''}
-                    onChange={(e) => {
-                      const n = e.target.value;
-                      setNewTurno(prev => ({
-                        ...prev,
-                        nombre: n,
-                        nombreCompleto: `${n} ${prev.apellido || ''}`.trim(),
-                        clienteId: null
-                      }));
-                      setShowAutocomplete(true);
-                    }}
-                    onFocus={() => setShowAutocomplete(true)}
-                    onBlur={() => {
-                      setTimeout(() => setShowAutocomplete(false), 250);
-                    }}
-                    required
-                    placeholder="Ej. Juan"
-                    autoComplete="off"
-                  />
-                  {showAutocomplete && newTurno.nombre && allClients.filter(c =>
-                    c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase())
-                  ).length > 0 && (
-                    <ul style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      backgroundColor: '#1d1d1d',
-                      border: '1px solid #7a1e1e',
-                      borderRadius: '4px',
-                      zIndex: 1000,
-                      maxHeight: '150px',
-                      overflowY: 'auto',
-                      listStyle: 'none',
-                      margin: 0,
-                      padding: 0,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-                    }}>
-                      {allClients
-                        .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase()))
-                        .map(client => (
-                          <li
-                            key={client.id}
-                            style={{
-                              padding: '8px 12px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid #282a2b',
-                              fontSize: '0.9rem',
-                              color: '#fff',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}
-                            onMouseDown={() => {
-                              let targetDateStr = newTurno.fechaStr;
-                              if (isNextScheduling && client.turnos && client.turnos.length > 0) {
-                                const lastTurno = client.turnos[0];
-                                const lastDate = new Date(lastTurno.fecha);
-                                const freqWeeks = client.frecuencia || 4;
-                                lastDate.setDate(lastDate.getDate() + (freqWeeks * 7));
-                                targetDateStr = lastDate.toISOString().split('T')[0];
-                              }
+                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                  <div className={styles.inputGroup} style={{ flex: 1, position: 'relative' }}>
+                    <label className={styles.inputLabel}>Nombre del Cliente *</label>
+                    <input
+                      type="text"
+                      value={newTurno.nombre || ''}
+                      onChange={(e) => {
+                        const n = e.target.value;
+                        setNewTurno(prev => ({
+                          ...prev,
+                          nombre: n,
+                          nombreCompleto: `${n} ${prev.apellido || ''}`.trim(),
+                          clienteId: null
+                        }));
+                        setShowAutocomplete(true);
+                      }}
+                      onFocus={() => setShowAutocomplete(true)}
+                      onBlur={() => {
+                        setTimeout(() => setShowAutocomplete(false), 250);
+                      }}
+                      required
+                      placeholder="Ej. Juan"
+                      autoComplete="off"
+                    />
+                    {showAutocomplete && newTurno.nombre && allClients.filter(c =>
+                      c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase())
+                    ).length > 0 && (
+                      <ul style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        backgroundColor: '#1d1d1d',
+                        border: '1px solid #7a1e1e',
+                        borderRadius: '4px',
+                        zIndex: 1000,
+                        maxHeight: '150px',
+                        overflowY: 'auto',
+                        listStyle: 'none',
+                        margin: 0,
+                        padding: 0,
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                      }}>
+                        {allClients
+                          .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase()))
+                          .map(client => (
+                            <li
+                              key={client.id}
+                              style={{
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                borderBottom: '1px solid #282a2b',
+                                fontSize: '0.9rem',
+                                color: '#fff',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                              }}
+                              onMouseDown={() => {
+                                let targetDateStr = newTurno.fechaStr;
+                                if (isNextScheduling && client.turnos && client.turnos.length > 0) {
+                                  const lastTurno = client.turnos[0];
+                                  const lastDate = new Date(lastTurno.fecha);
+                                  const freqWeeks = client.frecuencia || 4;
+                                  lastDate.setDate(lastDate.getDate() + (freqWeeks * 7));
+                                  targetDateStr = lastDate.toISOString().split('T')[0];
+                                }
 
-                              const fullName = client.nombreCompleto || '';
-                              let nombreVal = fullName;
-                              let apellidoVal = '';
-                              const lastSpaceIdx = fullName.lastIndexOf(' ');
-                              if (lastSpaceIdx !== -1) {
-                                nombreVal = fullName.substring(0, lastSpaceIdx);
-                                apellidoVal = fullName.substring(lastSpaceIdx + 1);
-                              }
+                                const fullName = client.nombreCompleto || '';
+                                let nombreVal = fullName;
+                                let apellidoVal = '';
+                                const lastSpaceIdx = fullName.lastIndexOf(' ');
+                                if (lastSpaceIdx !== -1) {
+                                  nombreVal = fullName.substring(0, lastSpaceIdx);
+                                  apellidoVal = fullName.substring(lastSpaceIdx + 1);
+                                }
 
-                              setNewTurno(prev => ({
-                                ...prev,
-                                nombreCompleto: fullName,
-                                nombre: nombreVal,
-                                apellido: apellidoVal,
-                                whatsapp: stripPhonePrefix(client.whatsapp),
-                                email: client.email,
-                                dni: client.dni || '',
-                                clienteId: client.id,
-                                fechaStr: targetDateStr
-                              }));
-                              
-                              if (isNextScheduling && targetDateStr) {
-                                setSelectedDate(new Date(targetDateStr + 'T00:00:00'));
-                              }
-                              
-                              setShowAutocomplete(false);
-                            }}
-                          >
-                            <span>{client.nombreCompleto}</span>
-                             <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</span>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
+                                setNewTurno(prev => ({
+                                  ...prev,
+                                  nombreCompleto: fullName,
+                                  nombre: nombreVal,
+                                  apellido: apellidoVal,
+                                  whatsapp: stripPhonePrefix(client.whatsapp),
+                                  email: client.email,
+                                  dni: client.dni || '',
+                                  clienteId: client.id,
+                                  fechaStr: targetDateStr
+                                }));
+                                
+                                if (isNextScheduling && targetDateStr) {
+                                  setSelectedDate(new Date(targetDateStr + 'T00:00:00'));
+                                }
+                                
+                                setShowAutocomplete(false);
+                              }}
+                            >
+                              <span>{client.nombreCompleto}</span>
+                               <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Apellido del Cliente *</label>
+                    <input
+                      type="text"
+                      value={newTurno.apellido || ''}
+                      onChange={(e) => {
+                        const a = e.target.value;
+                        setNewTurno(prev => ({
+                          ...prev,
+                          apellido: a,
+                          nombreCompleto: `${prev.nombre || ''} ${a}`.trim(),
+                          clienteId: null
+                        }));
+                      }}
+                      required
+                      placeholder="Ej. Pérez"
+                      autoComplete="off"
+                    />
+                  </div>
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Apellido del Cliente *</label>
-                  <input
-                    type="text"
-                    value={newTurno.apellido || ''}
-                    onChange={(e) => {
-                      const a = e.target.value;
-                      setNewTurno(prev => ({
-                        ...prev,
-                        apellido: a,
-                        nombreCompleto: `${prev.nombre || ''} ${a}`.trim(),
-                        clienteId: null
-                      }));
-                    }}
-                    required
-                    placeholder="Ej. Pérez"
-                    autoComplete="off"
-                  />
-                </div>
-
-                <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>DNI del Cliente (Opcional)</label>
                   <input
                     type="text"
@@ -1994,7 +1995,8 @@ export default function AgendaPage() {
                     placeholder="Ej. 12345678"
                   />
                 </div>
-                 <div className={styles.inputGroup}>
+
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>WhatsApp *</label>
                   <div className={styles.phoneInputContainer}>
                     <div className={styles.phonePrefix}>
@@ -2007,11 +2009,12 @@ export default function AgendaPage() {
                       onChange={(e) => setNewTurno({ ...newTurno, whatsapp: e.target.value })}
                       required
                       placeholder="Ej. 911223344"
-                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
+                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)', minWidth: 0 }}
                     />
                   </div>
                 </div>
-                <div className={styles.inputGroup}>
+
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>Email *</label>
                   <input
                     type="email"
@@ -2023,23 +2026,25 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Date & Time */}
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Fecha *</label>
-                  <input
-                    type="date"
-                    value={newTurno.fechaStr}
-                    onChange={(e) => setNewTurno({ ...newTurno, fechaStr: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Hora Inicio *</label>
-                  <input
-                    type="time"
-                    value={newTurno.horaInicio}
-                    onChange={(e) => setNewTurno({ ...newTurno, horaInicio: e.target.value })}
-                    required
-                  />
+                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Fecha *</label>
+                    <input
+                      type="date"
+                      value={newTurno.fechaStr}
+                      onChange={(e) => setNewTurno({ ...newTurno, fechaStr: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Hora Inicio *</label>
+                    <input
+                      type="time"
+                      value={newTurno.horaInicio}
+                      onChange={(e) => setNewTurno({ ...newTurno, horaInicio: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
 
                 {/* Zones Checkboxes */}

@@ -88,6 +88,9 @@
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
 ## [1.2.1] - 2026-07-22
+### Fixed
+- Corrección de ancho completo (100% width) para el campo de número de WhatsApp en modales de creación y edición de clientes (`src/app/admin/clientes/page.js` y `src/app/admin/agenda/page.js`): se asignó `grid-column: 1 / -1` y `flex: 1`, `min-width: 0` al contenedor de la bandera `🇦🇷 +54` y el campo numérico. Esto evita que el input quede aplastado en columnas secundarias del 50% de ancho y permite visualizar y cargar el teléfono cómodamente desde celulares y computadoras.
+
 ### Changed
 - Unificación cromática del correo de cancelación y aviso de inasistencia: se reemplazaron los tonos bordó oscuros (`#7a1e1e`) por la paleta dorada `#d4a54d` sobre tarjetas oscuras con bordes de 4px, logrando coherencia estética y máximo contraste con la plantilla de confirmación.
 - Formateo estricto e inline de fechas y horarios en todas las plantillas de correo (`src/lib/email.js`): se agregaron estilos explícitos `style="color: #d4a54d !important; text-decoration: none !important;"` para el horario y `style="color: #ffffff !important; text-decoration: none !important;"` para las fechas. Esto impide que Gmail, iOS Mail y clientes webmail detecten los patrones horarios como hipervínculos azules y los resalta en el color dorado corporativo.

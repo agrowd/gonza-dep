@@ -596,6 +596,11 @@
   width: 100%;
 }
 
+.phoneInputContainer input {
+  min-width: 0;
+  flex: 1;
+}
+
 .phoneInputContainer:focus-within {
   border-color: var(--color-gold);
   box-shadow: 0 0 0 2px rgba(var(--color-gold-rgb), 0.15);
@@ -612,4 +617,5 @@
   font-weight: 600;
   font-size: 0.95rem;
   user-select: none;
+  flex-shrink: 0;
 }

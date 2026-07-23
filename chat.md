@@ -392,3 +392,11 @@
 - Refactorización visual de la plantilla de correo de cancelación (`sendCancellationEmail`) y aviso de inasistencia (`sendNoShowEmail`) en `src/lib/email.js`, sustituyendo los tonos bordó oscuros (`#7a1e1e`) por la paleta dorada `#d4a54d` y bordes de 4px para unificar la estética y maximizar el contraste.
 - Inyección de estilos inline explícitos `style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;"` para la hora y `style="color: #ffffff !important; text-decoration: none !important;"` para la fecha en todas las plantillas de correo para evitar que Gmail, iOS Mail o Outlook las conviertan en enlaces azules desentonados.
 - Verificación exitosa de compilación del proyecto Next.js en local.
+
+## Mensaje del Usuario (2026-07-22 21:20:16-03:00)
+> Mensajes y capturas de Gonzalo sobre la compresión del campo de WhatsApp en modales de carga de clientes desde celulares y computadoras.
+
+## Respuesta del Asistente
+- Reestructuración de la grilla de modales de carga y edición de clientes (`src/app/admin/clientes/page.js` y `src/app/admin/agenda/page.js`) asignando `grid-column: 1 / -1` a los grupos de campos de WhatsApp, Email y DNI.
+- Inyección de estilos de contenedor con `min-width: 0` y `flex: 1` en `clientes.module.css` y `agenda.module.css` para el input del teléfono, permitiendo que el campo de WhatsApp ocupe el 100% del ancho del modal y brinde máximo espacio para tipear el número tanto en dispositivos móviles como en computadoras.
+- Verificación y compilación local exitosa del proyecto Next.js (`npm run build`).

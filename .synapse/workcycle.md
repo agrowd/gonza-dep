@@ -370,4 +370,8 @@
   - Se refactorizaron las plantillas HTML de correo en `src/lib/email.js`:
     - En `sendCancellationEmail` y `sendNoShowEmail` se reemplazaron los tonos bordó por el tema dorado `#d4a54d` con bordes de 4px en los bloques resaltados de detalles del turno.
     - En todas las plantillas (`sendConfirmationEmail`, `sendCancellationEmail`, `sendNoShowEmail`, `sendReceiptEmail`, `sendRescheduleEmail`, `sendReminder7DaysEmail`) se agregaron estilos en línea `style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;"` para la hora y `style="color: #ffffff !important; text-decoration: none !important;"` para las fechas, previniendo que Gmail o iOS Mail las interpreten como enlaces azules.
+- **22 de Julio (09:25 PM)**:
+  - Se analizaron las capturas de Gonzalo sobre los formularios de "Crear Nuevo Cliente" y "Edición de Ficha" donde el campo de WhatsApp con el prefijo `🇦🇷 +54` quedaba comprimido a 50px de ancho debido a que la grilla colocaba el campo en columnas de 50% al lado de otros inputs (como DNI o Email).
+  - Se configuró `grid-column: 1 / -1` en los grupos de campos de WhatsApp, Email y DNI en `src/app/admin/clientes/page.js` y `src/app/admin/agenda/page.js`.
+  - Se asignó `flex: 1` y `min-width: 0` al `input` interno de `phoneInputContainer` en `clientes.module.css` y `agenda.module.css`, garantizando que el campo de WhatsApp ocupe el 100% del ancho del modal y brinde un espacio cómodo para escribir los dígitos tanto en celulares como en computadoras.
   - Se verificó la compilación local del proyecto Next.js (`npm run build`) de forma limpia (34/34 rutas).

@@ -681,28 +681,30 @@ function ClientesPageContent() {
                 <div className={styles.cardSection}>
                   <h3 className={styles.cardSectionTitle}>Datos del Cliente</h3>
                   
-                  <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '1.5rem' }}>
-                    <div className={styles.inputGroup}>
-                      <label className={styles.inputLabel}>Nombre *</label>
-                      <input
-                        type="text"
-                        value={editNotes.nombre || ''}
-                        onChange={(e) => setEditNotes({ ...editNotes, nombre: e.target.value })}
-                        required
-                      />
+                  <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr', marginBottom: '1.5rem' }}>
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Nombre *</label>
+                        <input
+                          type="text"
+                          value={editNotes.nombre || ''}
+                          onChange={(e) => setEditNotes({ ...editNotes, nombre: e.target.value })}
+                          required
+                        />
+                      </div>
+
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Apellido *</label>
+                        <input
+                          type="text"
+                          value={editNotes.apellido || ''}
+                          onChange={(e) => setEditNotes({ ...editNotes, apellido: e.target.value })}
+                          required
+                        />
+                      </div>
                     </div>
 
-                    <div className={styles.inputGroup}>
-                      <label className={styles.inputLabel}>Apellido *</label>
-                      <input
-                        type="text"
-                        value={editNotes.apellido || ''}
-                        onChange={(e) => setEditNotes({ ...editNotes, apellido: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className={styles.inputGroup}>
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                       <label className={styles.inputLabel}>DNI (Opcional)</label>
                       <input
                         type="text"
@@ -712,7 +714,7 @@ function ClientesPageContent() {
                       />
                     </div>
 
-                    <div className={styles.inputGroup}>
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                       <label className={styles.inputLabel}>WhatsApp *</label>
                       <div className={styles.phoneInputContainer}>
                         <div className={styles.phonePrefix}>
@@ -724,12 +726,12 @@ function ClientesPageContent() {
                           value={editNotes.whatsapp}
                           onChange={(e) => setEditNotes({ ...editNotes, whatsapp: e.target.value })}
                           required
-                          style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
+                          style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)', minWidth: 0 }}
                         />
                       </div>
                     </div>
 
-                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                       <label className={styles.inputLabel}>Email *</label>
                       <input
                         type="email"
@@ -739,7 +741,7 @@ function ClientesPageContent() {
                       />
                     </div>
 
-                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                       <input
                         type="checkbox"
                         id="enviarNotificaciones"
@@ -816,7 +818,7 @@ function ClientesPageContent() {
 
             <form onSubmit={handleCreateClient}>
               <div className={agendaStyles.detailGrid} style={{ gridTemplateColumns: '1fr' }}>
-                <div className={styles.inputRow}>
+                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
                   <div className={styles.inputGroup} style={{ flex: 1 }}>
                     <label className={styles.inputLabel}>Nombre *</label>
                     <input
@@ -839,7 +841,7 @@ function ClientesPageContent() {
                   </div>
                 </div>
 
-                <div className={styles.inputGroup}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>DNI (Opcional)</label>
                   <input
                     type="text"
@@ -849,7 +851,7 @@ function ClientesPageContent() {
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>WhatsApp *</label>
                   <div className={styles.phoneInputContainer}>
                     <div className={styles.phonePrefix}>
@@ -862,12 +864,12 @@ function ClientesPageContent() {
                       onChange={(e) => setNewClient({ ...newClient, whatsapp: e.target.value })}
                       required
                       placeholder="Ej. 11 7673 5678"
-                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)' }}
+                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)', minWidth: 0 }}
                     />
                   </div>
                 </div>
 
-                <div className={styles.inputGroup}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>Email *</label>
                   <input
                     type="email"
@@ -878,35 +880,37 @@ function ClientesPageContent() {
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Canal de Adquisición *</label>
-                  <select
-                    value={newClient.canalAdquisicion}
-                    onChange={(e) => setNewClient({ ...newClient, canalAdquisicion: e.target.value })}
-                    required
-                    className={styles.filterSelect}
-                    style={{ width: '100%' }}
-                  >
-                    <option value="MANUAL">Manual</option>
-                    <option value="ORGANICO">Orgánico (Web)</option>
-                    <option value="RECOMENDADO">Recomendado</option>
-                    <option value="REDES_SOCIALES">Redes Sociales</option>
-                  </select>
+                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Canal de Adquisición *</label>
+                    <select
+                      value={newClient.canalAdquisicion}
+                      onChange={(e) => setNewClient({ ...newClient, canalAdquisicion: e.target.value })}
+                      required
+                      className={styles.filterSelect}
+                      style={{ width: '100%' }}
+                    >
+                      <option value="MANUAL">Manual</option>
+                      <option value="ORGANICO">Orgánico (Web)</option>
+                      <option value="RECOMENDADO">Recomendado</option>
+                      <option value="REDES_SOCIALES">Redes Sociales</option>
+                    </select>
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Frecuencia Estimada (Semanas) *</label>
+                    <input
+                      type="number"
+                      value={newClient.frecuencia}
+                      onChange={(e) => setNewClient({ ...newClient, frecuencia: Number(e.target.value) })}
+                      required
+                      min="1"
+                      max="24"
+                    />
+                  </div>
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Frecuencia Estimada (Semanas) *</label>
-                  <input
-                    type="number"
-                    value={newClient.frecuencia}
-                    onChange={(e) => setNewClient({ ...newClient, frecuencia: Number(e.target.value) })}
-                    required
-                    min="1"
-                    max="24"
-                  />
-                </div>
-
-                <div className={styles.inputGroup}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>Observaciones Administrativas</label>
                   <textarea
                     value={newClient.observaciones}
@@ -916,7 +920,7 @@ function ClientesPageContent() {
                   />
                 </div>
 
-                <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                   <input
                     type="checkbox"
                     id="newClient_enviarNotificaciones"
