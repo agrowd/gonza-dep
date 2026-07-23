@@ -375,3 +375,26 @@
   - Se configuró `grid-column: 1 / -1` en los grupos de campos de WhatsApp, Email y DNI en `src/app/admin/clientes/page.js` y `src/app/admin/agenda/page.js`.
   - Se asignó `flex: 1` y `min-width: 0` al `input` interno de `phoneInputContainer` en `clientes.module.css` y `agenda.module.css`, garantizando que el campo de WhatsApp ocupe el 100% del ancho del modal y brinde un espacio cómodo para escribir los dígitos tanto en celulares como en computadoras.
   - Se verificó la compilación local del proyecto Next.js (`npm run build`) de forma limpia (34/34 rutas).
+
+## 📅 Sesión: 23 de Julio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Aplicar alto contraste negro (`color: #111111`) en el texto de zonas e historial de turnos de la ficha del cliente (`clientes.module.css`)
+- [x] Ampliar el portal de autogestión para listar y permitir cancelar/reprogramar individualmente todos los turnos activos del cliente (`/api/clientes/consultar` + `src/app/page.js`)
+- [x] Preservar valores guardados de precio total, seña y duración al abrir el modal de reprogramación de turnos administrativos (`src/app/admin/agenda/page.js`)
+- [x] Corregir desfasaje de la grilla horaria en el calendario y expandir dinámicamente el horario de cierre según turnos agendados pasadas las 20:00 hs (`src/app/admin/agenda/page.js`)
+
+### 📝 Notas / Bitácora
+- **23 de Julio (02:20 PM)**:
+  - Se analizaron las 5 capturas enviadas por Gonzalo con 4 observaciones clave:
+    1. Texto de las zonas en el historial de clientes en blanco sobre fondo claro -> Poner en color negro para lectura óptima.
+    2. Autogestión pública de turnos -> Mostrar todos los turnos activos agendados por el cliente para gestión individual.
+    3. Modal de reprogramación -> Al editar un turno con precio/duración manual ($39.000 / 40 min), no recalcular automáticamente con valores del catálogo ($43.000 / 50 min).
+    4. Desfasaje visual en el calendario de turnos -> Ajustar el mapeo de líneas de fondo de la grilla y expandir el límite nocturno si existen citas hasta las 22:00 hs.
+  - Se elaboró el plan de implementación detallado en `implementation_plan.md` a la espera de aprobación para proceder con la ejecución.
+- **23 de Julio (03:15 PM)**:
+  - Se implementó la clase `.paperZonas`, `.paperDate`, `.paperMeta` en `clientes.module.css` con color `#111111` y fuentes en negrita de alto contraste.
+  - Se actualizó `/api/clientes/consultar` para devolver `activeTurnos: client.turnos` y se modificó `src/app/page.js` renderizando una tarjeta por cada turno activo con acciones independientes.
+  - Se configuró la bandera `isInitialEdit: true` en `setEditTurno` en `src/app/admin/agenda/page.js` impidiendo que se sobrescriban los precios o duraciones guardadas en citas personalizadas al reprogramar.
+  - Se corrigió el mapeo de `.gridLineRow` a `Array.from({ length: endHour - startHour })` alineando las líneas del fondo del calendario a nivel píxel y habilitando el cálculo dinámico de `endHour = maxAppEndHour` para extender el horario si hay turnos hasta las 22:00 hs.
+  - Se verificó la compilación local del proyecto Next.js (`npm run build`) de forma limpia (34/34 rutas).

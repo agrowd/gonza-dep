@@ -87,6 +87,15 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [1.2.2] - 2026-07-23
+### Fixed
+- Alto contraste negro (`color: #111111; font-weight: 600`) para la visualización de zonas e historial de turnos en las tarjetas de la ficha del cliente (`clientes.module.css`).
+- Preservación de precios, seña y duración personalizadas al abrir el modal de reprogramación/edición de turnos administrativos (`src/app/admin/agenda/page.js`).
+- Alineación de grilla horaria en la agenda: se corrigió el conteo de filas de fondo en `gridLines` a `Array.from({ length: endHour - startHour })` y se implementó cálculo dinámico de `endHour = maxAppEndHour` para extender el horario si existen citas agendadas hasta las 22:00 hs.
+
+### Added
+- Gestión de múltiples turnos activos en el portal de autogestión pública (`/api/clientes/consultar` y `src/app/page.js`): ahora los clientes pueden visualizar todos sus turnos agendados y reprogramar o cancelar de forma independiente cada uno de ellos.
+
 ## [1.2.1] - 2026-07-22
 ### Fixed
 - Corrección de ancho completo (100% width) para el campo de número de WhatsApp en modales de creación y edición de clientes (`src/app/admin/clientes/page.js` y `src/app/admin/agenda/page.js`): se asignó `grid-column: 1 / -1` y `flex: 1`, `min-width: 0` al contenedor de la bandera `🇦🇷 +54` y el campo numérico. Esto evita que el input quede aplastado en columnas secundarias del 50% de ancho y permite visualizar y cargar el teléfono cómodamente desde celulares y computadoras.

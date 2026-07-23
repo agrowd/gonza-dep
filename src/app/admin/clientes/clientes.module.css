@@ -171,7 +171,8 @@
 
 .paperDate {
   font-family: var(--font-title);
-  color: var(--text-primary);
+  color: #111111;
+  font-weight: 700;
 }
 
 .paperStatus {
@@ -181,24 +182,25 @@
 
 .paperZonas {
   font-size: 0.9rem;
-  color: #fff;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
+  color: #111111;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
 }
 
 .paperMeta {
   display: flex;
   gap: 1rem;
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: #333333;
+  font-weight: 500;
 }
 
 .paperNotes {
   margin-top: 0.5rem;
   font-size: 0.85rem;
   font-style: italic;
-  color: var(--text-secondary);
-  border-top: 1px dashed var(--border-color);
+  color: #444444;
+  border-top: 1px dashed rgba(0,0,0,0.15);
   padding-top: 0.25rem;
 }
 

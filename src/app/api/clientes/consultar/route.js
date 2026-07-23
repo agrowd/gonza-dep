@@ -73,7 +73,8 @@ export async function GET(request) {
         email: client.email
       },
       hasActiveTurno,
-      activeTurno: hasActiveTurno ? client.turnos[0] : null
+      activeTurno: hasActiveTurno ? client.turnos[0] : null,
+      activeTurnos: client.turnos
     });
 
   } catch (error) {

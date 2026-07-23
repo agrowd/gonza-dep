@@ -153,7 +153,9 @@ export default function Home() {
         }));
 
         if (data.hasActiveTurno) {
-          setActiveTurno(data.activeTurno);
+          const list = data.activeTurnos && data.activeTurnos.length > 0 ? data.activeTurnos : (data.activeTurno ? [data.activeTurno] : []);
+          setActiveTurnos(list);
+          setActiveTurno(list[0] || null);
           setIsSelfManagement(true);
           return;
         }
@@ -171,12 +173,12 @@ export default function Home() {
     }
   };
 
-  const handleCancelActiveTurno = async () => {
-    if (!activeTurno) return;
+  const handleCancelActiveTurno = async (targetTurno = activeTurno) => {
+    if (!targetTurno) return;
     
     const now = new Date();
-    const turnTime = new Date(activeTurno.fecha);
-    const [h, m] = activeTurno.horaInicio.split(':').map(Number);
+    const turnTime = new Date(targetTurno.fecha);
+    const [h, m] = targetTurno.horaInicio.split(':').map(Number);
     turnTime.setUTCHours(h, m, 0, 0);
     const diffMs = turnTime.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
@@ -191,7 +193,7 @@ export default function Home() {
       const res = await fetch('/api/reservas/cancelar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ turnoId: activeTurno.id, email: formData.email })
+        body: JSON.stringify({ turnoId: targetTurno.id, email: formData.email })
       });
       const data = await res.json();
       if (data.error) {
@@ -210,12 +212,13 @@ export default function Home() {
     }
   };
 
-  const handleRescheduleActiveTurno = () => {
-    if (!activeTurno) return;
+  const handleRescheduleActiveTurno = (targetTurno = activeTurno) => {
+    if (!targetTurno) return;
+    setActiveTurno(targetTurno);
     
     const now = new Date();
-    const turnTime = new Date(activeTurno.fecha);
-    const [h, m] = activeTurno.horaInicio.split(':').map(Number);
+    const turnTime = new Date(targetTurno.fecha);
+    const [h, m] = targetTurno.horaInicio.split(':').map(Number);
     turnTime.setUTCHours(h, m, 0, 0);
     const diffMs = turnTime.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
@@ -227,7 +230,7 @@ export default function Home() {
         fetch('/api/reservas/cancelar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ turnoId: activeTurno.id, email: formData.email })
+          body: JSON.stringify({ turnoId: targetTurno.id, email: formData.email })
         })
         .then(res => res.json())
         .then(data => {
@@ -235,6 +238,7 @@ export default function Home() {
             setErrorMessage(data.error);
           } else {
             setActiveTurno(null);
+            setActiveTurnos([]);
             setIsSelfManagement(false);
             setDniChecked(true);
             setStep(2);
@@ -250,7 +254,7 @@ export default function Home() {
       }
     } else {
       try {
-        const turnZones = JSON.parse(activeTurno.zonas).map(z => ({
+        const turnZones = JSON.parse(targetTurno.zonas).map(z => ({
           id: z.id,
           nombre: z.nombre,
           precioBase: z.precio || z.precioBase || 0,
@@ -474,80 +478,93 @@ export default function Home() {
               ) : (
                 <div>
                   <p className={styles.sectionSubtitle}>
-                    Hola <strong>{formData.nombreCompleto || activeTurno.cliente?.nombreCompleto}</strong>, aquí podés consultar y gestionar tu turno activo.
+                    Hola <strong>{formData.nombreCompleto || activeTurno?.cliente?.nombreCompleto}</strong>, aquí podés consultar y gestionar {activeTurnos.length > 1 ? 'tus turnos activos' : 'tu turno activo'}.
                   </p>
 
-                  <div className="glass-card premium-border" style={{ marginBottom: '2rem' }}>
-                    <div className={styles.summaryRow}>
-                      <span>Día del Turno:</span>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                        {new Date(activeTurno.fecha).toLocaleDateString('es-ES', { dateStyle: 'full', timeZone: 'UTC' })}
-                      </span>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span>Horario:</span>
-                      <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                        {activeTurno.horaInicio} a {activeTurno.horaFin}
-                      </span>
-                    </div>
-                    <div className={styles.summaryRow} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <span>Zonas contratadas:</span>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right' }}>
-                        {(() => {
-                          try {
-                            return JSON.parse(activeTurno.zonas).map(z => z.nombre).join(', ');
-                          } catch (e) {
-                            return activeTurno.zonas;
-                          }
-                        })()}
-                      </span>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span>Seña abonada:</span>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                        ${activeTurno.valorSeña.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span>Saldo a pagar en el local:</span>
-                      <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                        ${(activeTurno.valorTotal - activeTurno.valorSeña).toLocaleString()}
-                      </span>
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+                    {(activeTurnos.length > 0 ? activeTurnos : (activeTurno ? [activeTurno] : [])).map((t, idx) => {
+                      let zonasFormatted = '';
+                      try {
+                        zonasFormatted = JSON.parse(t.zonas).map(z => z.nombre).join(', ');
+                      } catch (e) {
+                        zonasFormatted = t.zonas;
+                      }
+
+                      return (
+                        <div key={t.id || idx} className="glass-card premium-border" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {activeTurnos.length > 1 && (
+                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--color-gold)', borderBottom: '1px dashed var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                              Turno {idx + 1} de {activeTurnos.length}
+                            </div>
+                          )}
+                          <div className={styles.summaryRow}>
+                            <span>Día del Turno:</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                              {new Date(t.fecha).toLocaleDateString('es-ES', { dateStyle: 'full', timeZone: 'UTC' })}
+                            </span>
+                          </div>
+                          <div className={styles.summaryRow}>
+                            <span>Horario:</span>
+                            <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
+                              {t.horaInicio} a {t.horaFin}
+                            </span>
+                          </div>
+                          <div className={styles.summaryRow} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <span>Zonas contratadas:</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right' }}>
+                              {zonasFormatted}
+                            </span>
+                          </div>
+                          <div className={styles.summaryRow}>
+                            <span>Seña abonada:</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                              ${t.valorSeña.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className={styles.summaryRow}>
+                            <span>Saldo a pagar en el local:</span>
+                            <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
+                              ${(t.valorTotal - t.valorSeña).toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+                            <button 
+                              onClick={() => handleRescheduleActiveTurno(t)} 
+                              className="btn btn-primary" 
+                              disabled={submittingCancel || submittingReschedule}
+                              style={{ flex: 1 }}
+                            >
+                              🔄 Reprogramar
+                            </button>
+
+                            <button 
+                              onClick={() => handleCancelActiveTurno(t)} 
+                              className="btn btn-secondary" 
+                              disabled={submittingCancel || submittingReschedule}
+                              style={{ flex: 1, borderColor: '#ff5252', color: '#ffb4b4', backgroundColor: 'rgba(255,82,82,0.05)' }}
+                            >
+                              {submittingCancel ? 'Cancelando...' : '❌ Cancelar'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <button 
-                      onClick={handleRescheduleActiveTurno} 
-                      className="btn btn-primary" 
-                      disabled={submittingCancel || submittingReschedule}
-                      style={{ width: '100%' }}
-                    >
-                      🔄 Reprogramar Turno
-                    </button>
-
-                    <button 
-                      onClick={handleCancelActiveTurno} 
-                      className="btn btn-secondary" 
-                      disabled={submittingCancel || submittingReschedule}
-                      style={{ width: '100%', borderColor: '#ff5252', color: '#ffb4b4', backgroundColor: 'rgba(255,82,82,0.05)' }}
-                    >
-                      {submittingCancel ? 'Cancelando...' : '❌ Cancelar Turno'}
-                    </button>
-
-                    <button 
-                      onClick={() => {
-                        setIsSelfManagement(false);
-                        setActiveTurno(null);
-                        setDniChecked(false);
-                        setFormData(prev => ({ ...prev, email: '' }));
-                      }}
-                      className="btn btn-secondary"
-                      style={{ width: '100%', marginTop: '1rem' }}
-                    >
-                      Volver
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => {
+                      setIsSelfManagement(false);
+                      setActiveTurno(null);
+                      setActiveTurnos([]);
+                      setDniChecked(false);
+                      setFormData(prev => ({ ...prev, email: '' }));
+                    }}
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                  >
+                    Volver al inicio
+                  </button>
                 </div>
               )}
             </div>

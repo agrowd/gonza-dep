@@ -767,6 +767,14 @@ export default function AgendaPage() {
   // Re-calculate pricing/discount for editTurno
   useEffect(() => {
     if (!isEditing || !selectedTurno) return;
+
+    if (editTurno.isInitialEdit) {
+      setEditTurno(prev => ({
+        ...prev,
+        isInitialEdit: false
+      }));
+      return;
+    }
     
     if ((!editTurno.selectedZoneIds || editTurno.selectedZoneIds.length === 0) && !editTurno.hasOtros) {
       setEditTurno(prev => ({
@@ -997,7 +1005,18 @@ export default function AgendaPage() {
 
   // Generate hourly labels for time column dynamically
   const startHour = parseInt(config.work_start.split(':')[0]) || 10;
-  const endHour = parseInt(config.work_end.split(':')[0]) || 20;
+  let maxAppEndHour = parseInt(config.work_end.split(':')[0]) || 20;
+  if (appointments && appointments.length > 0) {
+    appointments.forEach(app => {
+      if (app.horaFin) {
+        const [h, m] = app.horaFin.split(':').map(Number);
+        const endH = m > 0 ? h + 1 : h;
+        if (endH > maxAppEndHour) maxAppEndHour = endH;
+      }
+    });
+  }
+
+  const endHour = maxAppEndHour;
   const WORK_START = startHour * 60;
   const totalHalfHours = (endHour - startHour) * 2;
   const dayColumnHeight = (endHour - startHour) * 100;
@@ -1290,7 +1309,7 @@ export default function AgendaPage() {
                     <div className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
                       {/* Background grid lines for hours */}
                       <div className={styles.gridLines}>
-                        {timeLabels.map((_, idx) => (
+                        {Array.from({ length: endHour - startHour }).map((_, idx) => (
                           <div key={idx} className={styles.gridLineRow}></div>
                         ))}
                       </div>
@@ -1366,7 +1385,7 @@ export default function AgendaPage() {
                     <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
                       {/* Background grid lines for hours */}
                       <div className={styles.gridLines}>
-                        {timeLabels.map((_, idx) => (
+                        {Array.from({ length: endHour - startHour }).map((_, idx) => (
                           <div key={idx} className={styles.gridLineRow}></div>
                         ))}
                       </div>
@@ -1777,6 +1796,7 @@ export default function AgendaPage() {
                           console.error('Error parsing zones for editing:', e);
                         }
                         setEditTurno({
+                          isInitialEdit: true,
                           fechaStr: new Date(selectedTurno.fecha).toISOString().split('T')[0],
                           horaInicio: selectedTurno.horaInicio,
                           horaFin: selectedTurno.horaFin,
