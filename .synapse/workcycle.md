@@ -356,3 +356,18 @@
     - Se modificaron todas las llamadas a `sendMail` en `src/lib/email.js` reemplazando la casilla de copia oculta (BCC) `nuevacuenta@depilacionparahombres.com` por la nueva dirección `backup@depilacionparahombres.com` tal como lo solicitó Gonzalo para preparar la posterior creación de la casilla de correos.
     - Se rediseñó el catálogo de zonas y precios en `src/app/admin/configuracion/page.js` agregando atributos `data-label` a los elementos `td` de la tabla.
     - Se implementaron estilos responsivos en `src/app/admin/configuracion/configuracion.module.css` para reestructurar la tabla convirtiéndola en una lista de tarjetas (cards) individuales en pantallas móviles. Esto expone completamente la duración de la zona y los botones de Editar y Eliminar de manera táctil y legible.
+
+## 📅 Sesión: 22 de Julio de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Unificar la croma y el alto contraste del correo de cancelación con la plantilla de confirmación (`#d4a54d` dorados sobre tarjetas oscuras)
+- [x] Eliminar el color azul por defecto de las horas y fechas en todas las plantillas de correo agregando estilos en línea explícitos (`style="color: #d4a54d !important; text-decoration: none !important;"`)
+- [x] Compilar, verificar y desplegar en producción (Hostinger VPS)
+
+### 📝 Notas / Bitácora
+- **22 de Julio (09:00 PM)**:
+  - Se analizó la conversación y audios de Gonzalo donde señalaba que el mail de cancelación de turno usaba tonos bordó/rojos oscuros (`#7a1e1e`) difíciles de leer y con bajo contraste, y que los clientes de correo (Gmail, Apple Mail) renderizaban la hora en azul desentonando con la marca.
+  - Se refactorizaron las plantillas HTML de correo en `src/lib/email.js`:
+    - En `sendCancellationEmail` y `sendNoShowEmail` se reemplazaron los tonos bordó por el tema dorado `#d4a54d` con bordes de 4px en los bloques resaltados de detalles del turno.
+    - En todas las plantillas (`sendConfirmationEmail`, `sendCancellationEmail`, `sendNoShowEmail`, `sendReceiptEmail`, `sendRescheduleEmail`, `sendReminder7DaysEmail`) se agregaron estilos en línea `style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;"` para la hora y `style="color: #ffffff !important; text-decoration: none !important;"` para las fechas, previniendo que Gmail o iOS Mail las interpreten como enlaces azules.
+  - Se verificó la compilación local del proyecto Next.js (`npm run build`) de forma limpia (34/34 rutas).

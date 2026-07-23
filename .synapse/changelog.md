@@ -87,6 +87,11 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [1.2.1] - 2026-07-22
+### Changed
+- Unificación cromática del correo de cancelación y aviso de inasistencia: se reemplazaron los tonos bordó oscuros (`#7a1e1e`) por la paleta dorada `#d4a54d` sobre tarjetas oscuras con bordes de 4px, logrando coherencia estética y máximo contraste con la plantilla de confirmación.
+- Formateo estricto e inline de fechas y horarios en todas las plantillas de correo (`src/lib/email.js`): se agregaron estilos explícitos `style="color: #d4a54d !important; text-decoration: none !important;"` para el horario y `style="color: #ffffff !important; text-decoration: none !important;"` para las fechas. Esto impide que Gmail, iOS Mail y clientes webmail detecten los patrones horarios como hipervínculos azules y los resalta en el color dorado corporativo.
+
 ## [1.2.0] - 2026-07-20
 ### Added
 - Soporte para zona extra "Otros" en formularios de creación y reprogramación de turnos administrativos, permitiendo añadir una zona personalizada y editar manualmente el precio total y la duración.

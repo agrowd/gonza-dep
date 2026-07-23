@@ -74,14 +74,14 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
           max-width: 600px;
           margin: 20px auto;
           background-color: #1d1d1d;
-          border: 1px solid #7a1e1e;
+          border: 1px solid #d4a54d;
           border-radius: 8px;
           overflow: hidden;
           box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
         .header {
           background-color: #282a2b;
-          border-bottom: 2px solid #7a1e1e;
+          border-bottom: 2px solid #d4a54d;
           padding: 30px;
           text-align: center;
         }
@@ -169,11 +169,11 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha:</span>
-                <span class="details-value">${dateFormatted}</span>
+                <span class="details-value" style="color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</span>
               </li>
               <li>
                 <span class="details-label">Horario:</span>
-                <span class="details-value">${horaInicio}</span>
+                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">${horaInicio} hs</span>
               </li>
               <li>
                 <span class="details-label">Zonas:</span>
@@ -347,11 +347,11 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha:</span>
-                <span class="details-value" style="text-transform: capitalize;">${dateFormatted}</span>
+                <span class="details-value" style="text-transform: capitalize; color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</span>
               </li>
               <li>
                 <span class="details-label">Horario:</span>
-                <span class="details-value">${horaInicio} hs</span>
+                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">${horaInicio} hs</span>
               </li>
               <li>
                 <span class="details-label">Zonas:</span>
@@ -445,26 +445,28 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
           max-width: 600px;
           margin: 20px auto;
           background-color: #1d1d1d;
-          border: 1px solid #7a1e1e;
+          border: 1px solid #d4a54d;
           border-radius: 8px;
           overflow: hidden;
           box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
         .header {
           background-color: #282a2b;
-          border-bottom: 2px solid #7a1e1e;
+          border-bottom: 2px solid #d4a54d;
           padding: 30px;
           text-align: center;
         }
         .header h1 {
           margin: 0;
-          color: #7a1e1e;
+          color: #d4a54d;
           font-size: 24px;
-          font-weight: 800;
-          letter-spacing: 2px;
+          font-weight: 700;
+          letter-spacing: 1px;
         }
         .content {
-          padding: 30px;
+          padding: 40px 30px;
+          line-height: 1.6;
+          font-size: 16px;
         }
         .greeting {
           font-size: 18px;
@@ -473,19 +475,18 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
           margin-bottom: 20px;
         }
         .highlight-box {
-          background-color: rgba(122, 30, 30, 0.05);
-          border: 1px solid rgba(122, 30, 30, 0.2);
-          border-radius: 6px;
+          background-color: #282a2b;
+          border-left: 4px solid #d4a54d;
           padding: 20px;
-          margin-bottom: 25px;
+          margin: 25px 0;
+          border-radius: 4px;
         }
         .highlight-title {
-          font-size: 16px;
           font-weight: bold;
-          color: #7a1e1e;
-          margin-bottom: 15px;
+          color: #d4a54d;
+          margin-bottom: 10px;
+          font-size: 15px;
           text-transform: uppercase;
-          letter-spacing: 1px;
         }
         .details-list {
           list-style: none;
@@ -543,11 +544,11 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha:</span>
-                <span class="details-value" style="text-transform: capitalize;">${dateFormatted}</span>
+                <span class="details-value" style="text-transform: capitalize; color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</span>
               </li>
               <li>
                 <span class="details-label">Horario:</span>
-                <span class="details-value">${horaInicio} hs</span>
+                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">${horaInicio} hs</span>
               </li>
               <li>
                 <span class="details-label">Zonas:</span>
@@ -728,11 +729,11 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha del Turno:</span>
-                <span class="details-value" style="text-transform: capitalize;">\${dateFormatted}</span>
+                <span class="details-value" style="text-transform: capitalize; color: #ffffff !important; text-decoration: none !important;">\${dateFormatted}</span>
               </li>
               <li>
                 <span class="details-label">Horario:</span>
-                <span class="details-value">\${horaInicio} hs</span>
+                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">\${horaInicio} hs</span>
               </li>
               <li>
                 <span class="details-label">Zonas Contratadas:</span>
@@ -893,8 +894,8 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
   const replacePlaceholders = (text) => {
     if (!text) return '';
     return text
-      .replaceAll('{fecha}', dateFormatted)
-      .replaceAll('{horario}', `${horaInicio} hs`)
+      .replaceAll('{fecha}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</span>`)
+      .replaceAll('{horario}', `<span style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</span>`)
       .replaceAll('{zonas}', zonesText)
       .replaceAll('{seña}', `$${valorSeña.toLocaleString()}`)
       .replaceAll('{saldo}', `$${(valorTotal - valorSeña).toLocaleString()}`)
@@ -1021,8 +1022,8 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
   const replacePlaceholders = (text) => {
     if (!text) return '';
     return text
-      .replaceAll('{fecha}', dateFormatted)
-      .replaceAll('{horario}', `${horaInicio} hs`)
+      .replaceAll('{fecha}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</span>`)
+      .replaceAll('{horario}', `<span style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</span>`)
       .replaceAll('{zonas}', zonesText)
       .replaceAll('{seña}', `$${valorSeña.toLocaleString()}`)
       .replaceAll('{saldo}', `$${(valorTotal - valorSeña).toLocaleString()}`)

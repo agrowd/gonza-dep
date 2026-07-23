@@ -384,3 +384,11 @@
 - Rediseño del Catálogo de Zonas y Precios en `src/app/admin/configuracion/page.js` agregando atributos `data-label` a los elementos `td` del cuerpo de la tabla.
 - Integración de estilos responsivos avanzados en `src/app/admin/configuracion/configuracion.module.css` para transformar la grilla tabular en un listado de tarjetas (cards) individuales en pantallas móviles. Esto garantiza que las columnas de "Duración" y "Acciones" (con sus respectivos botones de Editar y Eliminar) queden completamente legibles y accesibles al tacto.
 - Verificación y compilación local exitosa del bundle de Next.js en producción.
+
+## Mensaje del Usuario (2026-07-22 20:57:33-03:00)
+> Procede con todo y pedime despues las cosas que necesitas del mail
+
+## Respuesta del Asistente
+- Refactorización visual de la plantilla de correo de cancelación (`sendCancellationEmail`) y aviso de inasistencia (`sendNoShowEmail`) en `src/lib/email.js`, sustituyendo los tonos bordó oscuros (`#7a1e1e`) por la paleta dorada `#d4a54d` y bordes de 4px para unificar la estética y maximizar el contraste.
+- Inyección de estilos inline explícitos `style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;"` para la hora y `style="color: #ffffff !important; text-decoration: none !important;"` para la fecha en todas las plantillas de correo para evitar que Gmail, iOS Mail o Outlook las conviertan en enlaces azules desentonados.
+- Verificación exitosa de compilación del proyecto Next.js en local.
