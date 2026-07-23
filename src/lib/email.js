@@ -10,6 +10,7 @@ function getMailConfig() {
   const secure = process.env.SMTP_SECURE === 'true';
   const user = process.env.SMTP_USER || '';
   const pass = process.env.SMTP_PASS || '';
+  const bcc = process.env.SMTP_BCC || 'backup.gonzalodepilacion@gmail.com';
   
   let from = 'Gonzalo Depilación <turnos@depilacionparahombres.com>';
   if (process.env.SMTP_FROM) {
@@ -25,14 +26,14 @@ function getMailConfig() {
     auth: user && pass ? { user, pass } : undefined
   });
 
-  return { transporter, from };
+  return { transporter, from, bcc };
 }
 
 /**
  * Sends a notification email to a client who did not show up for their scheduled appointment.
  */
 export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
-  const { transporter, from } = getMailConfig();
+  const { transporter, from, bcc } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña } = turnDetails;
   
@@ -206,7 +207,7 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'backup@depilacionparahombres.com',
+    bcc,
     subject: `Aviso de turno no asistido - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -216,7 +217,7 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
  * Sends a confirmation email when an appointment is confirmed (paid or manually booked).
  */
 export async function sendConfirmationEmail(clientEmail, clientName, turnDetails) {
-  const { transporter, from } = getMailConfig();
+  const { transporter, from, bcc } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
   
@@ -391,7 +392,7 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'backup@depilacionparahombres.com',
+    bcc,
     subject: `Confirmación de turno - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -401,7 +402,7 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
  * Sends a cancellation email when an appointment is cancelled.
  */
 export async function sendCancellationEmail(clientEmail, clientName, turnDetails, withLossOfDeposit = false) {
-  const { transporter, from } = getMailConfig();
+  const { transporter, from, bcc } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña } = turnDetails;
   
@@ -579,7 +580,7 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'backup@depilacionparahombres.com',
+    bcc,
     subject: mailSubject,
     html: htmlContent
   });
@@ -589,7 +590,7 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
  * Sends a digital receipt of the appointment / deposit to the client.
  */
 export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
-  const { transporter, from } = getMailConfig();
+  const { transporter, from, bcc } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
   
@@ -770,7 +771,7 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'backup@depilacionparahombres.com',
+    bcc,
     subject: `Comprobante de Turno - Gonzalo Depilación`,
     html: htmlContent
   });
@@ -780,7 +781,7 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
  * Sends a maintenance reminder email to the client.
  */
 export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
-  const { transporter, from } = getMailConfig();
+  const { transporter, from, bcc } = getMailConfig();
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -858,7 +859,7 @@ export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'backup@depilacionparahombres.com',
+    bcc,
     subject: subject,
     html: htmlContent
   });
@@ -868,7 +869,7 @@ export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
  * Sends a rescheduling email to the client when their appointment details are changed.
  */
 export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, subjectTemplate, bodyTemplate) {
-  const { transporter, from } = getMailConfig();
+  const { transporter, from, bcc } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
   
@@ -988,7 +989,7 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'backup@depilacionparahombres.com',
+    bcc,
     subject: subject,
     html: htmlContent
   });
@@ -998,7 +999,7 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
  * Sends a 7-day automated email reminder to the client.
  */
 export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetails, address, subjectTemplate, bodyTemplate) {
-  const { transporter, from } = getMailConfig();
+  const { transporter, from, bcc } = getMailConfig();
 
   const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
   
@@ -1116,7 +1117,7 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
   await transporter.sendMail({
     from,
     to: clientEmail,
-    bcc: 'backup@depilacionparahombres.com',
+    bcc,
     subject: subject,
     html: htmlContent
   });

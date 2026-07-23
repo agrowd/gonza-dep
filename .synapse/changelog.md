@@ -98,6 +98,7 @@
 - Preservación de la posición de scroll (`scrollTop`) de la grilla de la agenda al cerrar modales de turno o al retornar desde la ficha de cliente (`sessionStorage`).
 - Consulta síncrona de rango de fechas en `fetchAppointments()` a partir de `currentWeekStart`, eliminando retrasos o vistas vacías al cambiar de semana.
 - Cálculo de descuentos (porcentaje o monto fijo) basado en la anulación manual del "Total de Venta ($)" cuando el operador modifica manualmente el precio total del turno.
+- Activación oficial de la casilla de correos de respaldo `backup.gonzalodepilacion@gmail.com` en `src/lib/email.js` (BCC en todas las notificaciones por email).
 
 ### Added
 - Gestión de múltiples turnos activos en el portal de autogestión pública (`/api/clientes/consultar` y `src/app/page.js`): ahora los clientes pueden visualizar todos sus turnos agendados y reprogramar o cancelar de forma independiente cada uno de ellos.

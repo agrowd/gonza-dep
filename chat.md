@@ -422,3 +422,11 @@
 - Derivación síncrona de rango de fechas en `fetchAppointments()` a partir de `currentWeekStart`, eliminando retrasos o turnos vacíos al cambiar de semana.
 - Ajuste del cálculo de descuentos en `newTurno` y `editTurno` para utilizar el `manualTotalOverride` especificado en el input "Total de Venta ($)" como la base oficial de descuento, garantizando que el Monto Final de Venta y el Saldo a cobrar sean exactos.
 - Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).
+
+## Mensaje del Usuario (2026-07-23 19:52:32-03:00)
+> "El mail es backup.gonzalodepilacion@gmail.com y la contraseña Gonzalo2026, que mas necesitas?"
+
+## Respuesta del Asistente
+- Configuración oficial de la casilla de copia oculta (BCC) `backup.gonzalodepilacion@gmail.com` en `src/lib/email.js` y `process.env.SMTP_BCC`.
+- Todas las notificaciones transaccionales enviadas a los clientes generan automáticamente un duplicado de respaldo a `backup.gonzalodepilacion@gmail.com`.
+- Compilación local verificada con `npm run build` (34/34 rutas).

@@ -411,9 +411,7 @@
     - Se extendió la ventana del cron de recordatorios de 10:00 a 12:00 hs.
   - Se refactorizó `handleScheduleNextTurn` en `src/app/admin/agenda/page.js`: al hacer clic en "Programar Siguiente Turno", se calcula el lunes de la semana objetivo (`targetDate = currentFecha + freqWeeks * 7`), se cierra el modal y se cambia la vista del calendario a esa semana.
   - Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).
-- **23 de Julio (07:25 PM - 07:45 PM)**:
-  - Se implementó la disposición horizontal en una sola línea (`[Nombre] (16:30 - 17:00)`) para citas con `duracionMinutos <= 30` en las vistas diaria y semanal de `src/app/admin/agenda/page.js`, eliminando colisiones e invasión de bloques inferiores.
-  - Se agregó `savedScrollRef` y almacenamiento en `sessionStorage.setItem('agenda_scroll_pos')` al consultar la ficha de un cliente, restaurando el scroll de la grilla horaria automáticamente al cerrar modales o volver a la agenda.
-  - Se refactorizó `fetchAppointments()` para derivar síncronamente `startStr` y `endStr` desde `currentWeekStart` / `selectedDate`, garantizando que todos los turnos se traigan al instante al cambiar de semana sin presentar grillas vacías.
-  - Se ajustó el cálculo de `bonificacion` en `newTurno` y `editTurno` para utilizar el `manualTotalOverride` especificado por el operador en el campo "Total de Venta ($)" como base de descuento, resolviendo la discrepancia reportada cuando el operador modifica manualmente el precio base.
+- **23 de Julio (07:55 PM)**:
+  - Se configuró la casilla oficial de respaldos (BCC) `backup.gonzalodepilacion@gmail.com` en `src/lib/email.js` y `process.env.SMTP_BCC`.
+  - Todas las notificaciones transaccionales (confirmación, cancelación, aviso inasistencia, recibo, reprogramación, recordatorio 7d) envían copia oculta automáticamente a la nueva casilla de Gmail.
   - Compilación local probada y verificada limpia con `npm run build` (34/34 rutas).
