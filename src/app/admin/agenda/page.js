@@ -244,6 +244,27 @@ export default function AgendaPage() {
 
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
+  const savedScrollRef = useRef(0);
+
+  // Restore scroll position when closing details modal or mounting from client profile
+  useEffect(() => {
+    if (isDetailsOpen) {
+      savedScrollRef.current = window.scrollY;
+    } else if (savedScrollRef.current > 0) {
+      const scrollPos = savedScrollRef.current;
+      setTimeout(() => window.scrollTo({ top: scrollPos, behavior: 'instant' }), 50);
+    }
+  }, [isDetailsOpen]);
+
+  useEffect(() => {
+    if (!loading && appointments.length > 0) {
+      const stored = sessionStorage.getItem('agenda_scroll_pos');
+      if (stored) {
+        window.scrollTo({ top: parseInt(stored, 10), behavior: 'instant' });
+        sessionStorage.removeItem('agenda_scroll_pos');
+      }
+    }
+  }, [loading]);
 
   useEffect(() => {
     if (selectedTurno && selectedTurno.cliente) {
@@ -718,26 +739,33 @@ export default function AgendaPage() {
     const endMins = endMin % 60;
     const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
-    // Calculate discount (bonificacion)
+    // Calculate discount (bonificacion) based on manual total override if present
+    let baseTotalForDiscount = calcs.valorTotal;
+    if (newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '') {
+      baseTotalForDiscount = Number(newTurno.manualTotalOverride);
+    } else if (newTurno.valorTotal !== '' && newTurno.valorTotal !== undefined && !isNaN(Number(newTurno.valorTotal))) {
+      baseTotalForDiscount = Number(newTurno.valorTotal);
+    }
+
     let bonificacion = 0;
     if (newTurno.descuentoTipo === 'PORCENTAJE') {
-      bonificacion = calcs.valorTotal * (Number(newTurno.descuentoValor || 0) / 100);
+      bonificacion = baseTotalForDiscount * (Number(newTurno.descuentoValor || 0) / 100);
     } else if (newTurno.descuentoTipo === 'PESOS') {
       bonificacion = Number(newTurno.descuentoValor || 0);
     }
 
-    const finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+    const finalTotal = Math.max(0, baseTotalForDiscount - bonificacion);
 
     setNewTurno(prev => ({
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
-      valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? finalTotal : prev.valorTotal,
+      valorTotal: finalTotal,
       valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeena || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
       autoTotal: finalTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros]);
+  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.manualTotalOverride, newTurno.hasOtros]);
 
   // Re-calculate pricing/discount for editTurno
   useEffect(() => {
@@ -774,25 +802,32 @@ export default function AgendaPage() {
     const endMins = endMin % 60;
     const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
+    let baseTotalForDiscount = calcs.valorTotal;
+    if (editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '') {
+      baseTotalForDiscount = Number(editTurno.manualTotalOverride);
+    } else if (editTurno.valorTotal !== '' && editTurno.valorTotal !== undefined && !isNaN(Number(editTurno.valorTotal))) {
+      baseTotalForDiscount = Number(editTurno.valorTotal);
+    }
+
     let bonificacion = 0;
     if (editTurno.descuentoTipo === 'PORCENTAJE') {
-      bonificacion = calcs.valorTotal * (Number(editTurno.descuentoValor || 0) / 100);
+      bonificacion = baseTotalForDiscount * (Number(editTurno.descuentoValor || 0) / 100);
     } else if (editTurno.descuentoTipo === 'PESOS') {
       bonificacion = Number(editTurno.descuentoValor || 0);
     }
 
-    const finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+    const finalTotal = Math.max(0, baseTotalForDiscount - bonificacion);
 
     setEditTurno(prev => ({
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
-      valorTotal: prev.valorTotal === '' || prev.valorTotal === prev.autoTotal ? finalTotal : prev.valorTotal,
+      valorTotal: finalTotal,
       valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
       autoTotal: finalTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, isEditing]);
+  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.manualTotalOverride, editTurno.hasOtros, isEditing]);
 
   // Check overlap/availability for newTurno in real-time
   useEffect(() => {
@@ -1334,10 +1369,21 @@ export default function AgendaPage() {
                               setIsDetailsOpen(true);
                             }}
                           >
-                            <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
-                            {app.duracionMinutos > 30 && (
+                            {app.duracionMinutos <= 30 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.3rem', width: '100%', overflow: 'hidden', height: '100%' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.75rem', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {app.cliente?.nombreCompleto || 'Cliente'}
+                                </span>
+                                <span className={styles.appTime} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap', opacity: 0.9, flexShrink: 0 }}>
+                                  {app.horaInicio}-{app.horaFin}
+                                </span>
+                              </div>
+                            ) : (
                               <>
-                                <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                                {app.duracionMinutos > 40 && (
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                )}
                                 <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
                               </>
                             )}
@@ -1410,10 +1456,21 @@ export default function AgendaPage() {
                               setIsDetailsOpen(true);
                             }}
                           >
-                            <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
-                            {app.duracionMinutos > 30 && (
+                            {app.duracionMinutos <= 30 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.3rem', width: '100%', overflow: 'hidden', height: '100%' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.75rem', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {app.cliente?.nombreCompleto || 'Cliente'}
+                                </span>
+                                <span className={styles.appTime} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap', opacity: 0.9, flexShrink: 0 }}>
+                                  {app.horaInicio}-{app.horaFin}
+                                </span>
+                              </div>
+                            ) : (
                               <>
-                                <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                                {app.duracionMinutos > 40 && (
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                )}
                                 <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
                               </>
                             )}
@@ -1551,7 +1608,14 @@ export default function AgendaPage() {
                     <input
                       type="number"
                       value={editTurno.valorTotal}
-                      onChange={(e) => setEditTurno({ ...editTurno, valorTotal: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditTurno(prev => ({
+                          ...prev,
+                          valorTotal: val,
+                          manualTotalOverride: val
+                        }));
+                      }}
                       required
                     />
                   </div>
@@ -1779,6 +1843,9 @@ export default function AgendaPage() {
                       <>
                         <button
                           onClick={() => {
+                            if (typeof window !== 'undefined') {
+                              sessionStorage.setItem('agenda_scroll_pos', window.scrollY.toString());
+                            }
                             const dateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
                             window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
                           }}
@@ -2133,7 +2200,14 @@ export default function AgendaPage() {
                   <input
                     type="number"
                     value={newTurno.valorTotal}
-                    onChange={(e) => setNewTurno({ ...newTurno, valorTotal: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewTurno(prev => ({
+                        ...prev,
+                        valorTotal: val,
+                        manualTotalOverride: val
+                      }));
+                    }}
                     required
                     placeholder="Auto-calculado si está vacío"
                   />

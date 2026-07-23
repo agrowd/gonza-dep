@@ -94,6 +94,10 @@
 - Alineación de grilla horaria en la agenda: se corrigió el conteo de filas de fondo en `gridLines` a `Array.from({ length: endHour - startHour })` y se implementó cálculo dinámico de `endHour = maxAppEndHour` para extender el horario si existen citas agendadas hasta las 22:00 hs.
 - Cálculo dinámico exacto de duración en el modal de detalle del turno (`timeToMinutes(fin) - timeToMinutes(inicio)`) resolviendo desajustes como `20:00 a 20:50 (60 min)`.
 - Corrección de la firma de notificaciones en `src/lib/whatsapp.js`: el chequeo de notificaciones previas de WhatsApp ahora valida explícitamente `[RECORDATORIO_48H]`, impidiendo que las confirmaciones o recibos bloqueen el envío automático de recordatorios. Se añadió plantilla fallback obligatoria para Email a 7 días.
+- Formato compacto en línea única (`Nombre (16:30 - 17:00)`) para citas de $\le 30$ minutos en la grilla del calendario, eliminando desbordes verticales y colisiones entre turnos adyacentes.
+- Preservación de la posición de scroll (`scrollTop`) de la grilla de la agenda al cerrar modales de turno o al retornar desde la ficha de cliente (`sessionStorage`).
+- Consulta síncrona de rango de fechas en `fetchAppointments()` a partir de `currentWeekStart`, eliminando retrasos o vistas vacías al cambiar de semana.
+- Cálculo de descuentos (porcentaje o monto fijo) basado en la anulación manual del "Total de Venta ($)" cuando el operador modifica manualmente el precio total del turno.
 
 ### Added
 - Gestión de múltiples turnos activos en el portal de autogestión pública (`/api/clientes/consultar` y `src/app/page.js`): ahora los clientes pueden visualizar todos sus turnos agendados y reprogramar o cancelar de forma independiente cada uno de ellos.

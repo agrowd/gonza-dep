@@ -412,3 +412,13 @@
 - Corrección del bug del cron de recordatorios en `src/lib/whatsapp.js`: el chequeo de notificaciones previas ahora filtra específicamente por la firma `[RECORDATORIO_48H]`, evitando que las confirmaciones iniciales o recibos bloqueen el envío automático de WhatsApp 48 horas antes. Se añadió plantilla fallback obligatoria para Email 7d.
 - Refactorización de "Programar Siguiente Turno" en `src/app/admin/agenda/page.js`: al hacer clic, calcula la fecha objetivo (`fechaTurno + frecuencia * 7 días`), cierra el modal y ubica al usuario directamente en esa semana del calendario para visualizar la disponibilidad antes de agendar.
 - Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).
+
+## Mensaje del Usuario (2026-07-23 19:26:13-03:00)
+> 5 capturas sobre solape de texto en turnos cortos, pérdida de scroll al cerrar modales/fichas, retraso al cambiar de semana y cálculo de descuentos sobre Total de Venta manual.
+
+## Respuesta del Asistente
+- Reestructuración de tarjetas para citas $\le 30$ min en `src/app/admin/agenda/page.js`, organizando Nombre y Horario en una sola línea horizontal compacta con el horario al lado (`Ezequiel Garcia (18:00 - 18:20)`), evitando colisiones e invasión de bloques inferiores.
+- Implementación de `savedScrollRef` y persistencia en `sessionStorage.setItem('agenda_scroll_pos')` al ingresar a la ficha de cliente, restaurando automáticamente la posición de scroll de la grilla horaria al cerrar modales o volver a la agenda.
+- Derivación síncrona de rango de fechas en `fetchAppointments()` a partir de `currentWeekStart`, eliminando retrasos o turnos vacíos al cambiar de semana.
+- Ajuste del cálculo de descuentos en `newTurno` y `editTurno` para utilizar el `manualTotalOverride` especificado en el input "Total de Venta ($)" como la base oficial de descuento, garantizando que el Monto Final de Venta y el Saldo a cobrar sean exactos.
+- Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).
