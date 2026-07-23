@@ -243,12 +243,15 @@ export default function AgendaPage() {
   });
 
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
+  const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
 
   useEffect(() => {
     if (selectedTurno && selectedTurno.cliente) {
       setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
+      setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
     } else {
       setTempClientObservaciones('');
+      setTempClientFrecuencia(4);
     }
   }, [selectedTurno]);
 
@@ -259,29 +262,31 @@ export default function AgendaPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          observaciones: tempClientObservaciones
+          observaciones: tempClientObservaciones,
+          frecuencia: tempClientFrecuencia
         })
       });
       if (res.ok) {
-        showToast('Observaciones del cliente guardadas con éxito.');
+        showToast('Datos del cliente guardados con éxito.');
         setSelectedTurno(prev => {
           if (!prev) return prev;
           return {
             ...prev,
             cliente: {
               ...prev.cliente,
-              observaciones: tempClientObservaciones
+              observaciones: tempClientObservaciones,
+              frecuencia: tempClientFrecuencia
             }
           };
         });
         fetchAppointments();
       } else {
         const err = await res.json();
-        showToast(err.error || 'Error al guardar observaciones.', 'error');
+        showToast(err.error || 'Error al guardar datos del cliente.', 'error');
       }
     } catch (e) {
-      console.error('Error saving client observations:', e);
-      showToast('Error de red al guardar observaciones.', 'error');
+      console.error('Error saving client observations/frecuencia:', e);
+      showToast('Error de red al guardar datos.', 'error');
     }
   };
 
@@ -583,59 +588,29 @@ export default function AgendaPage() {
     }
   };
 
-  // Schedule next turno based on client's treatment frequency
+  // Schedule next turno based on client's treatment frequency: navigate calendar to target week
   const handleScheduleNextTurn = (turno) => {
     if (!turno || !turno.cliente) return;
-    setIsNextScheduling(true);
     
     const currentFecha = new Date(turno.fecha);
     const freqWeeks = turno.cliente.frecuencia || 4;
     
     const targetDate = new Date(currentFecha);
     targetDate.setDate(targetDate.getDate() + freqWeeks * 7);
-    const targetDateStr = targetDate.toISOString().split('T')[0];
-    
-    let preselectedZoneIds = [];
-    try {
-      preselectedZoneIds = JSON.parse(turno.zonas).map(z => z.id).filter(Boolean);
-    } catch (e) {
-      console.error(e);
-    }
-    
-    const fullName = turno.cliente.nombreCompleto || '';
-    let nombreVal = fullName;
-    let apellidoVal = '';
-    const lastSpaceIdx = fullName.lastIndexOf(' ');
-    if (lastSpaceIdx !== -1) {
-      nombreVal = fullName.substring(0, lastSpaceIdx);
-      apellidoVal = fullName.substring(lastSpaceIdx + 1);
-    }
+
+    // Calculate Monday of that target week
+    const day = targetDate.getDay();
+    const diffToMonday = targetDate.getDate() - day + (day === 0 ? -6 : 1);
+    const mondayOfWeek = new Date(targetDate);
+    mondayOfWeek.setDate(diffToMonday);
 
     setIsDetailsOpen(false);
     setSelectedDate(targetDate);
-    
-    setNewTurno({
-      nombreCompleto: fullName,
-      nombre: nombreVal,
-      apellido: apellidoVal,
-      whatsapp: stripPhonePrefix(turno.cliente.whatsapp || ''),
-      email: turno.cliente.email || '',
-      dni: turno.cliente.dni || '',
-      fechaStr: targetDateStr,
-      horaInicio: turno.horaInicio,
-      horaFin: turno.horaFin,
-      selectedZoneIds: preselectedZoneIds,
-      valorTotal: turno.valorTotal,
-      valorSeña: turno.valorSeña,
-      descuentoTipo: 'NINGUNO',
-      descuentoValor: '',
-      bonificacion: 0,
-      estado: 'PENDIENTE_PAGO',
-      observaciones: '',
-      clienteId: turno.clienteId
-    });
-    
-    setIsNewOpen(true);
+    setCurrentWeekStart(mondayOfWeek);
+    setViewMode('week');
+
+    const formattedTarget = targetDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    showToast(`Navengando a la semana del ${formattedTarget} (${freqWeeks} semanas después). Seleccioná un horario libre para agendar.`);
   };
 
   // Save edited Turno
@@ -1689,7 +1664,14 @@ export default function AgendaPage() {
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Horario</span>
-                    <span className={styles.detailValue}>{selectedTurno.horaInicio} a {selectedTurno.horaFin} ({selectedTurno.duracionMinutos} min)</span>
+                    <span className={styles.detailValue}>
+                      {selectedTurno.horaInicio} a {selectedTurno.horaFin} ({(() => {
+                        const startM = timeToMinutes(selectedTurno.horaInicio);
+                        const endM = timeToMinutes(selectedTurno.horaFin);
+                        const diff = endM - startM;
+                        return diff > 0 ? diff : selectedTurno.duracionMinutos;
+                      })()} min)
+                    </span>
                   </div>
                   <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
                     <span className={styles.detailLabel}>Zonas a depilar</span>
@@ -1721,6 +1703,42 @@ export default function AgendaPage() {
                       {selectedTurno.cliente?.whatsapp ? `🇦🇷 +54 9 ${stripPhonePrefix(selectedTurno.cliente.whatsapp)}` : 'N/A'}
                     </span>
                   </div>
+
+                  {selectedTurno.clienteId && (
+                    <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                      <span className={styles.detailLabel}>Frecuencia Estimada del Tratamiento (Semanas)</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+                        <select
+                          value={tempClientFrecuencia}
+                          onChange={(e) => setTempClientFrecuencia(Number(e.target.value))}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            flex: 1
+                          }}
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(w => (
+                            <option key={w} value={w}>Cada {w} semana{w > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                        {(tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4) || tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '')) && (
+                          <button
+                            onClick={handleSaveClientObservaciones}
+                            className="btn btn-primary"
+                            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          >
+                            💾 Guardar Frecuencia
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
                     <span className={styles.detailLabel}>Observaciones Generales del Cliente</span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
@@ -1740,13 +1758,13 @@ export default function AgendaPage() {
                           resize: 'vertical'
                         }}
                       />
-                      {tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') && (
+                      {(tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') || tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4)) && (
                         <button
                           onClick={handleSaveClientObservaciones}
                           className="btn btn-primary"
                           style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.25rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                         >
-                          💾 Guardar Observaciones
+                          💾 Guardar Cambios
                         </button>
                       )}
                     </div>

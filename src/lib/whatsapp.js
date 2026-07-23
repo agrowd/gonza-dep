@@ -240,8 +240,8 @@ export async function checkAndSendReminders() {
 
     console.log(`[Reminder Cron] Checking: hour=${hour} today=${todayStr} lastRun=${globalThis.lastReminderRunDate}`);
 
-    // Check if within the 10:00 - 11:00 AM Argentina window
-    if (hour !== 10) {
+    // Check if within the 10:00 - 12:00 PM Argentina window
+    if (hour < 10 || hour > 12) {
       return;
     }
 
@@ -295,14 +295,19 @@ export async function checkAndSendReminders() {
       }
     });
 
-    console.log(`[Reminder Cron] Found ${turnos.length} appointments for reminder check.`);
+    console.log(`[Reminder Cron] Found ${turnos.length} appointments for 48h reminder check.`);
 
     for (const t of turnos) {
-      // Check if a WHATSAPP notification has already been sent for this specific appointment
+      // Check specifically if a WHATSAPP REMINDER notification has already been sent for this appointment
       const existingNotification = await prisma.notificacion.findFirst({
         where: {
           turnoId: t.id,
-          canal: 'WHATSAPP'
+          canal: 'WHATSAPP',
+          OR: [
+            { mensaje: { contains: '[RECORDATORIO_48H]' } },
+            { mensaje: { contains: 'NO RESPONDER ESTE MENSAJE' } },
+            { mensaje: { contains: 'Te recuerdo el turno' } }
+          ]
         }
       });
 
@@ -312,16 +317,17 @@ export async function checkAndSendReminders() {
       }
 
       if (existingNotification) {
-        console.log(`[Reminder Cron] Reminder already sent for appointment ${t.id} to ${t.cliente.nombreCompleto}. Skipping.`);
+        console.log(`[Reminder Cron] 48h Reminder already sent for appointment ${t.id} to ${t.cliente.nombreCompleto}. Skipping.`);
         continue;
       }
 
-      const message = parseTemplate(reminderTemplate, t.cliente, t, address);
+      const rawMessage = parseTemplate(reminderTemplate, t.cliente, t, address);
+      const logMessage = `[RECORDATORIO_48H] ${rawMessage}`;
 
       try {
         if (globalThis.whatsappStatus === 'CONNECTED') {
-          console.log(`[Reminder Cron] Sending automated reminder for appointment ${t.id} to ${t.cliente.nombreCompleto}...`);
-          await sendWhatsAppMessage(t.cliente.whatsapp, message);
+          console.log(`[Reminder Cron] Sending automated 48h WhatsApp reminder for appointment ${t.id} to ${t.cliente.nombreCompleto}...`);
+          await sendWhatsAppMessage(t.cliente.whatsapp, rawMessage);
 
           // Save success notification log
           await prisma.notificacion.create({
@@ -329,7 +335,7 @@ export async function checkAndSendReminders() {
               clienteId: t.cliente.id,
               turnoId: t.id,
               canal: 'WHATSAPP',
-              mensaje: message,
+              mensaje: logMessage,
               estado: 'ENVIADO'
             }
           });
@@ -344,7 +350,7 @@ export async function checkAndSendReminders() {
             clienteId: t.cliente.id,
             turnoId: t.id,
             canal: 'WHATSAPP',
-            mensaje: message,
+            mensaje: logMessage,
             estado: 'FALLIDO'
           }
         });
@@ -384,7 +390,8 @@ export async function checkAndSendReminders() {
     const email7SubjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_subject' } });
     const email7BodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_body' } });
     const email7SubjectTemplate = email7SubjectConfig?.value || "Recordatorio de tu turno en 7 días - Gonzalo Depilación";
-    const email7BodyTemplate = email7BodyConfig?.value || "";
+    const default7Body = "¡Hola {cliente}!\n\nTe recordamos que tenés un turno programado para dentro de 7 días:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n- Seña abonada: {seña}\n- Saldo pendiente de cobro: {saldo}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. Si necesitás reprogramar o cancelar, recordá hacerlo con un mínimo de 72 hs de anticipación para conservar tu seña.\n\n¡Te esperamos!";
+    const email7BodyTemplate = email7BodyConfig?.value || default7Body;
 
     if (email7BodyTemplate && turnos7.length > 0) {
       const { sendReminder7DaysEmail } = await import('./email.js');

@@ -92,9 +92,13 @@
 - Alto contraste negro (`color: #111111; font-weight: 600`) para la visualización de zonas e historial de turnos en las tarjetas de la ficha del cliente (`clientes.module.css`).
 - Preservación de precios, seña y duración personalizadas al abrir el modal de reprogramación/edición de turnos administrativos (`src/app/admin/agenda/page.js`).
 - Alineación de grilla horaria en la agenda: se corrigió el conteo de filas de fondo en `gridLines` a `Array.from({ length: endHour - startHour })` y se implementó cálculo dinámico de `endHour = maxAppEndHour` para extender el horario si existen citas agendadas hasta las 22:00 hs.
+- Cálculo dinámico exacto de duración en el modal de detalle del turno (`timeToMinutes(fin) - timeToMinutes(inicio)`) resolviendo desajustes como `20:00 a 20:50 (60 min)`.
+- Corrección de la firma de notificaciones en `src/lib/whatsapp.js`: el chequeo de notificaciones previas de WhatsApp ahora valida explícitamente `[RECORDATORIO_48H]`, impidiendo que las confirmaciones o recibos bloqueen el envío automático de recordatorios. Se añadió plantilla fallback obligatoria para Email a 7 días.
 
 ### Added
 - Gestión de múltiples turnos activos en el portal de autogestión pública (`/api/clientes/consultar` y `src/app/page.js`): ahora los clientes pueden visualizar todos sus turnos agendados y reprogramar o cancelar de forma independiente cada uno de ellos.
+- Selector e input de Frecuencia Estimada (Semanas) directamente en el modal de detalle del turno con guardado instantáneo a la ficha del cliente (`src/app/admin/agenda/page.js`).
+- Redirección automática de la vista del calendario al presionar "Programar Siguiente Turno": ubica al usuario en la semana objetivo (`fechaTurno + frecuencia * 7 días`) permitiendo visualizar los turnos libres antes de agendar.
 
 ## [1.2.1] - 2026-07-22
 ### Fixed

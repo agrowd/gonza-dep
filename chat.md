@@ -402,3 +402,13 @@
 - Preservación de precios totales, seña y duración personalizadas al abrir el modal de edición/reprogramación de turnos administrativos en `src/app/admin/agenda/page.js` usando la bandera `isInitialEdit: true`.
 - Ajuste del cálculo de filas de la grilla horaria en `agenda/page.js` a `Array.from({ length: endHour - startHour })` para alineación perfecta a nivel píxel, e integración de `endHour = maxAppEndHour` para extender automáticamente el cierre nocturno cuando existan citas hasta las 22:00 hs.
 - Compilación local verificada con `npm run build` (34/34 rutas).
+
+## Mensaje del Usuario (2026-07-23 15:25:13-03:00)
+> 5 capturas sobre duración en minutos errónea, frecuencia de cliente en modal, falla en envío de recordatorios 48h/7d y navegación al "Programar Siguiente Turno".
+
+## Respuesta del Asistente
+- Corrección de cálculo de minutos en el detalle del turno (`timeToMinutes(fin) - timeToMinutes(inicio)`) en `src/app/admin/agenda/page.js`, mostrando la duración real (ej. `20:00 a 20:50 (50 min)`).
+- Adición del selector `tempClientFrecuencia` en el modal de detalle del turno conectado con la API `/api/admin/clientes/[id]` para consultar y guardar la frecuencia estimada de tratamiento en semanas.
+- Corrección del bug del cron de recordatorios en `src/lib/whatsapp.js`: el chequeo de notificaciones previas ahora filtra específicamente por la firma `[RECORDATORIO_48H]`, evitando que las confirmaciones iniciales o recibos bloqueen el envío automático de WhatsApp 48 horas antes. Se añadió plantilla fallback obligatoria para Email 7d.
+- Refactorización de "Programar Siguiente Turno" en `src/app/admin/agenda/page.js`: al hacer clic, calcula la fecha objetivo (`fechaTurno + frecuencia * 7 días`), cierra el modal y ubica al usuario directamente en esa semana del calendario para visualizar la disponibilidad antes de agendar.
+- Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).

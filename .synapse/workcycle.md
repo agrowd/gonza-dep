@@ -383,6 +383,10 @@
 - [x] Ampliar el portal de autogestión para listar y permitir cancelar/reprogramar individualmente todos los turnos activos del cliente (`/api/clientes/consultar` + `src/app/page.js`)
 - [x] Preservar valores guardados de precio total, seña y duración al abrir el modal de reprogramación de turnos administrativos (`src/app/admin/agenda/page.js`)
 - [x] Corregir desfasaje de la grilla horaria en el calendario y expandir dinámicamente el horario de cierre según turnos agendados pasadas las 20:00 hs (`src/app/admin/agenda/page.js`)
+- [x] Calcular dinámicamente la duración exacta en minutos (`timeToMinutes(end) - timeToMinutes(start)`) en el modal de detalle del turno para evitar desajustes como `20:00 a 20:50 (60 min)` (`src/app/admin/agenda/page.js`)
+- [x] Agregar campo y botón de guardado para la Frecuencia Estimada (semanas) en el modal de detalle del turno (`src/app/admin/agenda/page.js`)
+- [x] Corregir el bug del cron en `src/lib/whatsapp.js` donde el filtro de notificaciones previas de WhatsApp captaba confirmaciones/recibos impidiendo enviar los recordatorios de 48h, y agregar plantilla fallback obligatoria para Email 7d
+- [x] Cambiar comportamiento de "Programar Siguiente Turno": navegar el calendario a la semana correspondiente para visualizar los huecos libres antes de agendar (`src/app/admin/agenda/page.js`)
 
 ### 📝 Notas / Bitácora
 - **23 de Julio (02:20 PM)**:
@@ -398,3 +402,12 @@
   - Se configuró la bandera `isInitialEdit: true` en `setEditTurno` en `src/app/admin/agenda/page.js` impidiendo que se sobrescriban los precios o duraciones guardadas en citas personalizadas al reprogramar.
   - Se corrigió el mapeo de `.gridLineRow` a `Array.from({ length: endHour - startHour })` alineando las líneas del fondo del calendario a nivel píxel y habilitando el cálculo dinámico de `endHour = maxAppEndHour` para extender el horario si hay turnos hasta las 22:00 hs.
   - Se verificó la compilación local del proyecto Next.js (`npm run build`) de forma limpia (34/34 rutas).
+- **23 de Julio (03:45 PM - 06:45 PM)**:
+  - Se implementó el cálculo dinámico de minutos en el detalle del turno `(50 min)`.
+  - Se integró el selector `tempClientFrecuencia` en la sección de datos del cliente del modal de detalles del turno, conectado con `handleSaveClientObservaciones` para actualizar `/api/admin/clientes/[id]`.
+  - Se refactorizó `checkAndSendReminders` en `src/lib/whatsapp.js`:
+    - Se aisló la búsqueda de notificaciones previas para que valide únicamente mensajes marcados con `[RECORDATORIO_48H]`, eliminando los falsos positivos causados por las confirmaciones iniciales o recibos de pago.
+    - Se agregó `default7Body` como plantilla por defecto para emails de recordatorio a 7 días.
+    - Se extendió la ventana del cron de recordatorios de 10:00 a 12:00 hs.
+  - Se refactorizó `handleScheduleNextTurn` en `src/app/admin/agenda/page.js`: al hacer clic en "Programar Siguiente Turno", se calcula el lunes de la semana objetivo (`targetDate = currentFecha + freqWeeks * 7`), se cierra el modal y se cambia la vista del calendario a esa semana.
+  - Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).
