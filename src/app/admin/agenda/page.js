@@ -1400,7 +1400,9 @@ export default function AgendaPage() {
               {/* Time Column */}
               <div className={styles.timeColumn}>
                 {timeLabels.map((time, idx) => (
-                  <div key={idx} className={styles.timeLabel}>{time}</div>
+                  <div key={idx} className={styles.timeLabel}>
+                    <span className={styles.timeLabelText}>{time}</span>
+                  </div>
                 ))}
               </div>
 
@@ -1469,21 +1471,23 @@ export default function AgendaPage() {
                             }}
                           >
                             {app.duracionMinutos <= 35 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0.15rem 0.35rem', overflow: 'hidden' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0.2rem 0.4rem', boxSizing: 'border-box', overflow: 'hidden' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {app.cliente?.nombreCompleto || 'Cliente'}
                                 </span>
-                                <span className={styles.appTime} style={{ fontSize: '0.71rem', opacity: 0.95, marginTop: '2px', fontWeight: '500' }}>
+                                <span className={styles.appTime} style={{ fontSize: '0.71rem', opacity: 0.95, lineHeight: '1.2', marginTop: '1px', fontWeight: '500' }}>
                                   {app.horaInicio} - {app.horaFin}
                                 </span>
                               </div>
                             ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.35rem', overflow: 'hidden' }}>
-                                <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.3rem 0.4rem', boxSizing: 'border-box', overflow: 'hidden' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.82rem', fontWeight: '700', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {app.cliente?.nombreCompleto || 'Cliente Desconocido'}
+                                </span>
                                 {app.duracionMinutos > 40 && (
-                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
                                 )}
-                                <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
+                                <span className={styles.appTime} style={{ fontSize: '0.72rem', opacity: 0.9, marginTop: 'auto', fontWeight: '500' }}>{app.horaInicio} - {app.horaFin}</span>
                               </div>
                             )}
                           </div>
@@ -1556,21 +1560,23 @@ export default function AgendaPage() {
                             }}
                           >
                             {app.duracionMinutos <= 35 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0.15rem 0.35rem', overflow: 'hidden' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0.2rem 0.4rem', boxSizing: 'border-box', overflow: 'hidden' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {app.cliente?.nombreCompleto || 'Cliente'}
                                 </span>
-                                <span className={styles.appTime} style={{ fontSize: '0.71rem', opacity: 0.95, marginTop: '2px', fontWeight: '500' }}>
+                                <span className={styles.appTime} style={{ fontSize: '0.71rem', opacity: 0.95, lineHeight: '1.2', marginTop: '1px', fontWeight: '500' }}>
                                   {app.horaInicio} - {app.horaFin}
                                 </span>
                               </div>
                             ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.35rem', overflow: 'hidden' }}>
-                                <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
+                              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.3rem 0.4rem', boxSizing: 'border-box', overflow: 'hidden' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.82rem', fontWeight: '700', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {app.cliente?.nombreCompleto || 'Cliente Desconocido'}
+                                </span>
                                 {app.duracionMinutos > 40 && (
-                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
                                 )}
-                                <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
+                                <span className={styles.appTime} style={{ fontSize: '0.72rem', opacity: 0.9, marginTop: 'auto', fontWeight: '500' }}>{app.horaInicio} - {app.horaFin}</span>
                               </div>
                             )}
                           </div>

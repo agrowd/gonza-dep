@@ -100,6 +100,7 @@
 - Texto oscuro de alto contraste (`color: #111111; font-weight: 500`) en el historial de notificaciones enviadas dentro del perfil del cliente (`src/app/admin/clientes/page.js`).
 - Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
 - Auto-completado inteligente de datos de cliente al usar "Programar Siguiente Turno": navegación a la semana objetivo a las 12:00 hs sin desfasaje horaria y precarga automática de cliente, zonas, precios y bonificaciones al pulsar en un horario libre.
+- Alineación vertical centrada de las etiquetas horarias (`.timeLabelText` con `transform: translateY(-50%)`) sobre las líneas de grilla y eliminación de padding externo en `.appointmentBlock` para prevenir superposición de textos y garantizar espacio holgado en citas de 30 minutos.
 
 ## [1.2.2] - 2026-07-23
 ### Fixed
