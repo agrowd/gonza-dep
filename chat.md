@@ -430,3 +430,15 @@
 - Configuración oficial de la casilla de copia oculta (BCC) `backup.gonzalodepilacion@gmail.com` en `src/lib/email.js` y `process.env.SMTP_BCC`.
 - Todas las notificaciones transaccionales enviadas a los clientes generan automáticamente un duplicado de respaldo a `backup.gonzalodepilacion@gmail.com`.
 - Compilación local verificada con `npm run build` (34/34 rutas).
+
+## Mensaje del Usuario (2026-07-29 09:46:46-03:00)
+> 5 capturas sobre turnos de 30 min (nombre arriba, horario abajo), error de email en autogestión, scrollbar en gridBody, contexto de vista al cambiar entre Día/Semana/Mes y botón Hoy, y campos de modal al 100% de ancho.
+
+## Respuesta del Asistente
+- Reestructuración del bloque para turnos de 30 minutos (`duracionMinutos <= 35`), mostrando Nombre arriba en negrita y Horario abajo (`15:40 - 16:10`), sin zonas y sin desbordes laterales.
+- Adición de línea sutil punteada a los 50px de cada fila horaria en `agenda.module.css` para marcar visualmente las medias horas (`:30`).
+- Aplicación de `mode: 'insensitive'` en `/api/clientes/consultar` y mensajes amigables para evitar fallos de verificación de email en el portal público de autogestión.
+- Asignación de `gridBodyRef` al contenedor `<div class="gridBody">` (`overflow-y: auto`), guardando y restaurando `gridBodyRef.current.scrollTop` al salir y entrar de modales o fichas de cliente.
+- Mantenimiento del contexto de fecha al conmutar entre las vistas Día, Semana y Mes, e integración del botón **"📅 Hoy"** para regresar al día actual.
+- Configuración de `gridColumn: '1 / -1'` en Nombre, Apellido, DNI, WhatsApp y Email en modales de agendamiento para ocupar filas completas del 100% de ancho.
+- Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).

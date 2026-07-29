@@ -87,6 +87,15 @@
 - Logotipo de la barra de navegación lateral agrandado a `190px` de ancho.
 - Compilación del bundle de producción local (`npm run build`) verificada de forma exitosa (29/29 rutas).
 
+## [1.2.3] - 2026-07-29
+### Fixed
+- Reestructuración de tarjetas para turnos de 30 minutos (`duracionMinutos <= 35`): se organizó el contenido en dos líneas verticales (Nombre arriba en negrita y Horario abajo, ej. `15:40 - 16:10`), sin zonas y sin desbordes laterales.
+- Adición de línea sutil punteada de guía a los 50px de cada fila horaria en la grilla (`agenda.module.css`) para marcar con precisión visual las medias horas (`:30`).
+- Búsqueda case-insensitive (`mode: 'insensitive'`) en `/api/clientes/consultar` para evitar fallos de verificación en la autogestión pública y despliegue de avisos limpios sin error 500.
+- Preservación y restauración real de la posición de scroll del contenedor `.gridBody` (`gridBodyRef.current.scrollTop`) al cerrar modales o regresar desde la ficha del cliente.
+- Preservación de la fecha en pantalla al conmutar entre las vistas Día, Semana y Mes, agregando un botón dedicado **"📅 Hoy"** para retornar al día actual.
+- Formato de 100% de ancho (filas completas) para los campos Nombre, Apellido, DNI, WhatsApp y Email en los modales de agendamiento.
+
 ## [1.2.2] - 2026-07-23
 ### Fixed
 - Alto contraste negro (`color: #111111; font-weight: 600`) para la visualización de zonas e historial de turnos en las tarjetas de la ficha del cliente (`clientes.module.css`).

@@ -245,26 +245,33 @@ export default function AgendaPage() {
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
   const savedScrollRef = useRef(0);
+  const gridBodyRef = useRef(null);
 
   // Restore scroll position when closing details modal or mounting from client profile
   useEffect(() => {
     if (isDetailsOpen) {
-      savedScrollRef.current = window.scrollY;
+      if (gridBodyRef.current) {
+        savedScrollRef.current = gridBodyRef.current.scrollTop;
+      }
     } else if (savedScrollRef.current > 0) {
       const scrollPos = savedScrollRef.current;
-      setTimeout(() => window.scrollTo({ top: scrollPos, behavior: 'instant' }), 50);
+      setTimeout(() => {
+        if (gridBodyRef.current) {
+          gridBodyRef.current.scrollTop = scrollPos;
+        }
+      }, 50);
     }
   }, [isDetailsOpen]);
 
   useEffect(() => {
     if (!loading && appointments.length > 0) {
       const stored = sessionStorage.getItem('agenda_scroll_pos');
-      if (stored) {
-        window.scrollTo({ top: parseInt(stored, 10), behavior: 'instant' });
+      if (stored && gridBodyRef.current) {
+        gridBodyRef.current.scrollTop = parseInt(stored, 10);
         sessionStorage.removeItem('agenda_scroll_pos');
       }
     }
-  }, [loading]);
+  }, [loading, appointments]);
 
   useEffect(() => {
     if (selectedTurno && selectedTurno.cliente) {
@@ -1060,7 +1067,7 @@ export default function AgendaPage() {
           {/* View Mode Toggle */}
           <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '20px', overflow: 'hidden', backgroundColor: 'var(--bg-secondary)' }}>
             <button 
-              onClick={() => { setSelectedDate(new Date()); setViewMode('day'); }} 
+              onClick={() => { setViewMode('day'); }} 
               className="btn-toggle"
               style={{
                 background: viewMode === 'day' ? 'var(--color-gold)' : 'transparent',
@@ -1076,7 +1083,15 @@ export default function AgendaPage() {
               Día
             </button>
             <button 
-              onClick={() => { setSelectedDate(new Date()); setViewMode('week'); }} 
+              onClick={() => {
+                const target = selectedDate || new Date();
+                const day = target.getDay();
+                const diffToMonday = target.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(target);
+                monday.setDate(diffToMonday);
+                setCurrentWeekStart(monday);
+                setViewMode('week');
+              }} 
               className="btn-toggle"
               style={{
                 background: viewMode === 'week' ? 'var(--color-gold)' : 'transparent',
@@ -1092,7 +1107,7 @@ export default function AgendaPage() {
               Semana
             </button>
             <button 
-              onClick={() => { setSelectedDate(new Date()); setViewMode('month'); }} 
+              onClick={() => { setViewMode('month'); }} 
               className="btn-toggle"
               style={{
                 background: viewMode === 'month' ? 'var(--color-gold)' : 'transparent',
@@ -1108,6 +1123,34 @@ export default function AgendaPage() {
               Mes
             </button>
           </div>
+
+          {/* Quick Return to Today */}
+          <button 
+            onClick={() => {
+              const today = new Date();
+              setSelectedDate(today);
+              const day = today.getDay();
+              const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
+              const monday = new Date(today);
+              monday.setDate(diffToMonday);
+              setCurrentWeekStart(monday);
+            }}
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              borderRadius: '20px',
+              padding: '6px 14px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
+            }}
+          >
+            📅 Hoy
+          </button>
 
           {/* Jump to Date Picker */}
           <input 
@@ -1297,7 +1340,7 @@ export default function AgendaPage() {
             </div>
 
             {/* Scrollable Timeline body */}
-            <div className={styles.gridBody} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr', minWidth: 'auto' } : { minWidth: '800px' }}>
+            <div ref={gridBodyRef} className={styles.gridBody} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr', minWidth: 'auto' } : { minWidth: '800px' }}>
               {/* Time Column */}
               <div className={styles.timeColumn}>
                 {timeLabels.map((time, idx) => (
@@ -1369,23 +1412,23 @@ export default function AgendaPage() {
                               setIsDetailsOpen(true);
                             }}
                           >
-                            {app.duracionMinutos <= 30 ? (
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.3rem', width: '100%', overflow: 'hidden', height: '100%' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.75rem', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {app.duracionMinutos <= 35 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0.15rem 0.35rem', overflow: 'hidden' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {app.cliente?.nombreCompleto || 'Cliente'}
                                 </span>
-                                <span className={styles.appTime} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap', opacity: 0.9, flexShrink: 0 }}>
-                                  {app.horaInicio}-{app.horaFin}
+                                <span className={styles.appTime} style={{ fontSize: '0.71rem', opacity: 0.95, marginTop: '2px', fontWeight: '500' }}>
+                                  {app.horaInicio} - {app.horaFin}
                                 </span>
                               </div>
                             ) : (
-                              <>
+                              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.35rem', overflow: 'hidden' }}>
                                 <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
                                 {app.duracionMinutos > 40 && (
-                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
                                 )}
                                 <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
-                              </>
+                              </div>
                             )}
                           </div>
                         );
@@ -1456,23 +1499,23 @@ export default function AgendaPage() {
                               setIsDetailsOpen(true);
                             }}
                           >
-                            {app.duracionMinutos <= 30 ? (
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.3rem', width: '100%', overflow: 'hidden', height: '100%' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.75rem', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {app.duracionMinutos <= 35 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0.15rem 0.35rem', overflow: 'hidden' }}>
+                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {app.cliente?.nombreCompleto || 'Cliente'}
                                 </span>
-                                <span className={styles.appTime} style={{ fontSize: '0.68rem', whiteSpace: 'nowrap', opacity: 0.9, flexShrink: 0 }}>
-                                  {app.horaInicio}-{app.horaFin}
+                                <span className={styles.appTime} style={{ fontSize: '0.71rem', opacity: 0.95, marginTop: '2px', fontWeight: '500' }}>
+                                  {app.horaInicio} - {app.horaFin}
                                 </span>
                               </div>
                             ) : (
-                              <>
+                              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.35rem', overflow: 'hidden' }}>
                                 <span className={styles.appTitle}>{app.cliente?.nombreCompleto || 'Cliente Desconocido'}</span>
                                 {app.duracionMinutos > 40 && (
-                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{zonasText}</span>
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
                                 )}
                                 <span className={styles.appTime}>{app.horaInicio} - {app.horaFin}</span>
-                              </>
+                              </div>
                             )}
                           </div>
                         );
@@ -1843,8 +1886,8 @@ export default function AgendaPage() {
                       <>
                         <button
                           onClick={() => {
-                            if (typeof window !== 'undefined') {
-                              sessionStorage.setItem('agenda_scroll_pos', window.scrollY.toString());
+                            if (typeof window !== 'undefined' && gridBodyRef.current) {
+                              sessionStorage.setItem('agenda_scroll_pos', gridBodyRef.current.scrollTop.toString());
                             }
                             const dateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
                             window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
@@ -1966,129 +2009,127 @@ export default function AgendaPage() {
 
             <form onSubmit={handleCreateTurno}>
               <div className={styles.detailGrid}>
-                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                  <div className={styles.inputGroup} style={{ flex: 1, position: 'relative' }}>
-                    <label className={styles.inputLabel}>Nombre del Cliente *</label>
-                    <input
-                      type="text"
-                      value={newTurno.nombre || ''}
-                      onChange={(e) => {
-                        const n = e.target.value;
-                        setNewTurno(prev => ({
-                          ...prev,
-                          nombre: n,
-                          nombreCompleto: `${n} ${prev.apellido || ''}`.trim(),
-                          clienteId: null
-                        }));
-                        setShowAutocomplete(true);
-                      }}
-                      onFocus={() => setShowAutocomplete(true)}
-                      onBlur={() => {
-                        setTimeout(() => setShowAutocomplete(false), 250);
-                      }}
-                      required
-                      placeholder="Ej. Juan"
-                      autoComplete="off"
-                    />
-                    {showAutocomplete && newTurno.nombre && allClients.filter(c =>
-                      c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase())
-                    ).length > 0 && (
-                      <ul style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        backgroundColor: '#1d1d1d',
-                        border: '1px solid #7a1e1e',
-                        borderRadius: '4px',
-                        zIndex: 1000,
-                        maxHeight: '150px',
-                        overflowY: 'auto',
-                        listStyle: 'none',
-                        margin: 0,
-                        padding: 0,
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-                      }}>
-                        {allClients
-                          .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase()))
-                          .map(client => (
-                            <li
-                              key={client.id}
-                              style={{
-                                padding: '8px 12px',
-                                cursor: 'pointer',
-                                borderBottom: '1px solid #282a2b',
-                                fontSize: '0.9rem',
-                                color: '#fff',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                              }}
-                              onMouseDown={() => {
-                                let targetDateStr = newTurno.fechaStr;
-                                if (isNextScheduling && client.turnos && client.turnos.length > 0) {
-                                  const lastTurno = client.turnos[0];
-                                  const lastDate = new Date(lastTurno.fecha);
-                                  const freqWeeks = client.frecuencia || 4;
-                                  lastDate.setDate(lastDate.getDate() + (freqWeeks * 7));
-                                  targetDateStr = lastDate.toISOString().split('T')[0];
-                                }
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', position: 'relative' }}>
+                  <label className={styles.inputLabel}>Nombre del Cliente *</label>
+                  <input
+                    type="text"
+                    value={newTurno.nombre || ''}
+                    onChange={(e) => {
+                      const n = e.target.value;
+                      setNewTurno(prev => ({
+                        ...prev,
+                        nombre: n,
+                        nombreCompleto: `${n} ${prev.apellido || ''}`.trim(),
+                        clienteId: null
+                      }));
+                      setShowAutocomplete(true);
+                    }}
+                    onFocus={() => setShowAutocomplete(true)}
+                    onBlur={() => {
+                      setTimeout(() => setShowAutocomplete(false), 250);
+                    }}
+                    required
+                    placeholder="Ej. Juan"
+                    autoComplete="off"
+                  />
+                  {showAutocomplete && newTurno.nombre && allClients.filter(c =>
+                    c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase())
+                  ).length > 0 && (
+                    <ul style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      backgroundColor: '#1d1d1d',
+                      border: '1px solid #7a1e1e',
+                      borderRadius: '4px',
+                      zIndex: 1000,
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      listStyle: 'none',
+                      margin: 0,
+                      padding: 0,
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    }}>
+                      {allClients
+                        .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase()))
+                        .map(client => (
+                          <li
+                            key={client.id}
+                            style={{
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #282a2b',
+                              fontSize: '0.9rem',
+                              color: '#fff',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                            onMouseDown={() => {
+                              let targetDateStr = newTurno.fechaStr;
+                              if (isNextScheduling && client.turnos && client.turnos.length > 0) {
+                                const lastTurno = client.turnos[0];
+                                const lastDate = new Date(lastTurno.fecha);
+                                const freqWeeks = client.frecuencia || 4;
+                                lastDate.setDate(lastDate.getDate() + (freqWeeks * 7));
+                                targetDateStr = lastDate.toISOString().split('T')[0];
+                              }
 
-                                const fullName = client.nombreCompleto || '';
-                                let nombreVal = fullName;
-                                let apellidoVal = '';
-                                const lastSpaceIdx = fullName.lastIndexOf(' ');
-                                if (lastSpaceIdx !== -1) {
-                                  nombreVal = fullName.substring(0, lastSpaceIdx);
-                                  apellidoVal = fullName.substring(lastSpaceIdx + 1);
-                                }
+                              const fullName = client.nombreCompleto || '';
+                              let nombreVal = fullName;
+                              let apellidoVal = '';
+                              const lastSpaceIdx = fullName.lastIndexOf(' ');
+                              if (lastSpaceIdx !== -1) {
+                                nombreVal = fullName.substring(0, lastSpaceIdx);
+                                apellidoVal = fullName.substring(lastSpaceIdx + 1);
+                              }
 
-                                setNewTurno(prev => ({
-                                  ...prev,
-                                  nombreCompleto: fullName,
-                                  nombre: nombreVal,
-                                  apellido: apellidoVal,
-                                  whatsapp: stripPhonePrefix(client.whatsapp),
-                                  email: client.email,
-                                  dni: client.dni || '',
-                                  clienteId: client.id,
-                                  fechaStr: targetDateStr
-                                }));
-                                
-                                if (isNextScheduling && targetDateStr) {
-                                  setSelectedDate(new Date(targetDateStr + 'T00:00:00'));
-                                }
-                                
-                                setShowAutocomplete(false);
-                              }}
-                            >
-                              <span>{client.nombreCompleto}</span>
-                               <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</span>
-                            </li>
-                          ))}
-                      </ul>
-                    )}
-                  </div>
+                              setNewTurno(prev => ({
+                                ...prev,
+                                nombreCompleto: fullName,
+                                nombre: nombreVal,
+                                apellido: apellidoVal,
+                                whatsapp: stripPhonePrefix(client.whatsapp),
+                                email: client.email,
+                                dni: client.dni || '',
+                                clienteId: client.id,
+                                fechaStr: targetDateStr
+                              }));
+                              
+                              if (isNextScheduling && targetDateStr) {
+                                setSelectedDate(new Date(targetDateStr + 'T00:00:00'));
+                              }
+                              
+                              setShowAutocomplete(false);
+                            }}
+                          >
+                            <span>{client.nombreCompleto}</span>
+                             <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
 
-                  <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Apellido del Cliente *</label>
-                    <input
-                      type="text"
-                      value={newTurno.apellido || ''}
-                      onChange={(e) => {
-                        const a = e.target.value;
-                        setNewTurno(prev => ({
-                          ...prev,
-                          apellido: a,
-                          nombreCompleto: `${prev.nombre || ''} ${a}`.trim(),
-                          clienteId: null
-                        }));
-                      }}
-                      required
-                      placeholder="Ej. Pérez"
-                      autoComplete="off"
-                    />
-                  </div>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                  <label className={styles.inputLabel}>Apellido del Cliente *</label>
+                  <input
+                    type="text"
+                    value={newTurno.apellido || ''}
+                    onChange={(e) => {
+                      const a = e.target.value;
+                      setNewTurno(prev => ({
+                        ...prev,
+                        apellido: a,
+                        nombreCompleto: `${prev.nombre || ''} ${a}`.trim(),
+                        clienteId: null
+                      }));
+                    }}
+                    required
+                    placeholder="Ej. Pérez"
+                    autoComplete="off"
+                  />
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>

@@ -415,3 +415,11 @@
   - Se configuró la casilla oficial de respaldos (BCC) `backup.gonzalodepilacion@gmail.com` en `src/lib/email.js` y `process.env.SMTP_BCC`.
   - Todas las notificaciones transaccionales (confirmación, cancelación, aviso inasistencia, recibo, reprogramación, recordatorio 7d) envían copia oculta automáticamente a la nueva casilla de Gmail.
   - Compilación local probada y verificada limpia con `npm run build` (34/34 rutas).
+- **29 de Julio (09:46 AM)**:
+  - Se analizaron 5 nuevas capturas enviadas con las siguientes observaciones:
+    1. Turnos de 30 min: poner Nombre/Apellido arriba y Horario abajo (`15:40 - 16:10`) sin zonas y sin cortar la hora a la derecha; agregar guía punteada de media hora en el fondo.
+    2. Autogestión pública: aplicar `mode: 'insensitive'` en `/api/clientes/consultar` para evitar fallos de verificación de email y mostrar aviso claro cuando no existan turnos activos.
+    3. Scrollbar en `.gridBody`: conectar ref al contenedor gridBody con `overflow-y: auto` para preservar y restaurar el scroll exacto al salir/entrar de modales o fichas de cliente.
+    4. Contexto al cambiar vista: mantener la fecha actual en pantalla al conmutar entre Día, Semana y Mes, y agregar un botón "📅 Hoy" dedicado.
+    5. Modales 100% ancho: desplegar Nombre, Apellido, DNI, WhatsApp y Email en filas completas de 100% de ancho en móviles.
+  - Se creó el plan de implementación en `implementation_plan.md` a la espera de aprobación para su desarrollo y despliegue.

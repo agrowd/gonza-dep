@@ -11,12 +11,16 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Email o DNI es requerido' }, { status: 400 });
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     let client = null;
     if (email) {
       client = await prisma.cliente.findFirst({
         where: {
           email: {
-            equals: email
+            equals: email,
+            mode: 'insensitive'
           }
         },
         include: {
@@ -26,7 +30,7 @@ export async function GET(request) {
                 in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
               },
               fecha: {
-                gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today or future
+                gte: today
               }
             },
             orderBy: [
@@ -46,7 +50,7 @@ export async function GET(request) {
                 in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
               },
               fecha: {
-                gte: new Date(new Date().setHours(0, 0, 0, 0)) // Today or future
+                gte: today
               }
             },
             orderBy: [
