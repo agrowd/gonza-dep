@@ -403,7 +403,31 @@
 .detailGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inputGroup input,
+.inputGroup select,
+.inputGroup textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inputLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
 }
 
 .inputRow {

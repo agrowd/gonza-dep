@@ -101,6 +101,7 @@
 - Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
 - Auto-completado inteligente de datos de cliente al usar "Programar Siguiente Turno": navegación a la semana objetivo a las 12:00 hs sin desfasaje horaria y precarga automática de cliente, zonas, precios y bonificaciones al pulsar en un horario libre.
 - Alineación vertical centrada de las etiquetas horarias (`.timeLabelText` con `transform: translateY(-50%)`) sobre las líneas de grilla y eliminación de padding externo en `.appointmentBlock` para prevenir superposición de textos y garantizar espacio holgado en citas de 30 minutos.
+- Adición de la regla CSS `.inputGroup` y `.inputLabel` con `width: 100%; box-sizing: border-box;` en `agenda.module.css` para resolver el achicamiento a 140px de los campos WhatsApp y Email en iPhones al ingresar nombres/apellidos cortos.
 
 ## [1.2.2] - 2026-07-23
 ### Fixed
