@@ -442,3 +442,14 @@
 - Mantenimiento del contexto de fecha al conmutar entre las vistas Día, Semana y Mes, e integración del botón **"📅 Hoy"** para regresar al día actual.
 - Configuración de `gridColumn: '1 / -1'` en Nombre, Apellido, DNI, WhatsApp y Email en modales de agendamiento para ocupar filas completas del 100% de ancho.
 - Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).
+
+## Mensaje del Usuario (2026-07-29 10:27:22-03:00)
+> "Pone para guardar la sesion de whatsapp entre actualizaciones tambien" + 4 capturas sobre desfasaje de días en "Programar Siguiente Turno", pérdida de % de descuento al reprogramar, texto blanco en historial de notificaciones y bloqueo de turnos pasados del mismo día.
+
+## Respuesta del Asistente
+- Exclusión del directorio `.wwebjs_auth` en `git clean -fd -e .wwebjs_auth -e .wwebjs_cache` en `deploy_vps_workspace.js`, garantizando la permanencia de la sesión de WhatsApp entre despliegues y actualizaciones.
+- Adición de `descuentoTipo` y `descuentoValor` en el modelo `Turno` de Prisma (`schema.prisma` & DB push) y en endpoints `/api/admin/turnos`, preservando los descuentos por porcentaje (`PORCENTAJE` 20%) al reprogramar.
+- Corrección de visibilidad de texto (`color: #111111`) en el historial de notificaciones del perfil de cliente.
+- Modificación de `isPastDateTime` en `/api/admin/turnos/[id]/route.js` para permitir la reprogramación y edición de turnos del día actual durante toda la jornada.
+- Solución al corrimiento de feriados/días en "Programar Siguiente Turno": fijación del horario a mediodía (`12:00 hs`) sin desfasajes UTC/GMT-3 y auto-completado de todos los datos del cliente al tocar una celda vacía.
+- Compilación local verificada limpia con `npm run build` (34/34 rutas).

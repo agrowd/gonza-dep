@@ -48,6 +48,8 @@ model Turno {
   valorSeña        Float
   saldoPendiente   Float
   bonificacion     Float    @default(0)
+  descuentoTipo    String?  @default("NINGUNO")
+  descuentoValor   Float?   @default(0)
   estado           String   @default("PENDIENTE_PAGO") // "SEÑADO", "REALIZADO", "CANCELADO", "REPROGRAMADO", "NO_ASISTIO", "PENDIENTE_AUTORIZACION", "PENDIENTE_PAGO"
   observaciones    String?
   createdAt        DateTime @default(now())

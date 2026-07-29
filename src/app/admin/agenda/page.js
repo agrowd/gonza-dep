@@ -616,21 +616,62 @@ export default function AgendaPage() {
     }
   };
 
+  const [pendingNextScheduleData, setPendingNextScheduleData] = useState(null);
+
   // Schedule next turno based on client's treatment frequency: navigate calendar to target week
   const handleScheduleNextTurn = (turno) => {
     if (!turno || !turno.cliente) return;
     
-    const currentFecha = new Date(turno.fecha);
+    const fechaStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : new Date(turno.fecha).toISOString().split('T')[0];
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const currentFecha = new Date(year, month - 1, day, 12, 0, 0);
     const freqWeeks = turno.cliente.frecuencia || 4;
     
     const targetDate = new Date(currentFecha);
     targetDate.setDate(targetDate.getDate() + freqWeeks * 7);
 
-    // Calculate Monday of that target week
-    const day = targetDate.getDay();
-    const diffToMonday = targetDate.getDate() - day + (day === 0 ? -6 : 1);
+    // Calculate Monday of that target week cleanly at local noon
+    const targetDay = targetDate.getDay();
+    const diffToMonday = targetDate.getDate() - targetDay + (targetDay === 0 ? -6 : 1);
     const mondayOfWeek = new Date(targetDate);
     mondayOfWeek.setDate(diffToMonday);
+    mondayOfWeek.setHours(12, 0, 0, 0);
+
+    let preselectedZoneIds = [];
+    let hasOtros = false;
+    let otrosTexto = '';
+    try {
+      const zonesArray = JSON.parse(turno.zonas);
+      preselectedZoneIds = zonesArray.filter(z => z.id && z.id !== 'otros').map(z => z.id);
+      const otrosItem = zonesArray.find(z => z.isOtros || z.id === 'otros');
+      if (otrosItem) {
+        hasOtros = true;
+        otrosTexto = otrosItem.nombre.replace(/^Otros:\s*/, '');
+      }
+    } catch (e) {}
+
+    const fullName = turno.cliente.nombreCompleto || '';
+    const lastSpaceIdx = fullName.lastIndexOf(' ');
+    const nombreVal = lastSpaceIdx !== -1 ? fullName.substring(0, lastSpaceIdx) : fullName;
+    const apellidoVal = lastSpaceIdx !== -1 ? fullName.substring(lastSpaceIdx + 1) : '';
+
+    setPendingNextScheduleData({
+      clienteId: turno.cliente.id,
+      nombre: nombreVal,
+      apellido: apellidoVal,
+      nombreCompleto: fullName,
+      whatsapp: stripPhonePrefix(turno.cliente.whatsapp),
+      email: turno.cliente.email || '',
+      dni: turno.cliente.dni || '',
+      selectedZoneIds: preselectedZoneIds,
+      hasOtros,
+      otrosTexto,
+      valorTotal: turno.valorTotal,
+      valorSeña: turno.valorSeña,
+      descuentoTipo: turno.descuentoTipo || (turno.bonificacion > 0 ? 'PESOS' : 'NINGUNO'),
+      descuentoValor: turno.descuentoValor || turno.bonificacion || '',
+      manualTotalOverride: turno.valorTotal
+    });
 
     setIsDetailsOpen(false);
     setSelectedDate(targetDate);
@@ -638,7 +679,7 @@ export default function AgendaPage() {
     setViewMode('week');
 
     const formattedTarget = targetDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
-    showToast(`Navengando a la semana del ${formattedTarget} (${freqWeeks} semanas después). Seleccioná un horario libre para agendar.`);
+    showToast(`Navegando a la semana del ${formattedTarget} (${freqWeeks} semanas después). Hace clic en un horario libre para agendar con los datos pre-cargados de ${fullName}.`);
   };
 
   // Save edited Turno
@@ -691,26 +732,41 @@ export default function AgendaPage() {
     const endMins = endMinutes % 60;
     const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
-    setNewTurno({
-      nombreCompleto: '',
-      nombre: '',
-      apellido: '',
-      whatsapp: '',
-      email: '',
-      dni: '',
-      fechaStr: date.toISOString().split('T')[0],
-      horaInicio: timeStr,
-      horaFin: endTimeStr,
-      selectedZoneIds: [],
-      valorTotal: '',
-      valorSeña: '',
-      descuentoTipo: 'NINGUNO',
-      descuentoValor: '',
-      bonificacion: 0,
-      estado: 'PENDIENTE_PAGO',
-      observaciones: '',
-      clienteId: null
-    });
+    const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+
+    if (pendingNextScheduleData) {
+      setNewTurno({
+        ...pendingNextScheduleData,
+        fechaStr: dateStr,
+        horaInicio: timeStr,
+        horaFin: endTimeStr,
+        estado: 'PENDIENTE_PAGO'
+      });
+      setPendingNextScheduleData(null);
+    } else {
+      setNewTurno({
+        nombreCompleto: '',
+        nombre: '',
+        apellido: '',
+        whatsapp: '',
+        email: '',
+        dni: '',
+        fechaStr: dateStr,
+        horaInicio: timeStr,
+        horaFin: endTimeStr,
+        selectedZoneIds: [],
+        valorTotal: '',
+        valorSeña: '',
+        descuentoTipo: 'NINGUNO',
+        descuentoValor: '',
+        bonificacion: 0,
+        estado: 'PENDIENTE_PAGO',
+        observaciones: '',
+        clienteId: null,
+        hasOtros: false,
+        otrosTexto: ''
+      });
+    }
     setIsNewOpen(true);
   };
 

@@ -422,4 +422,10 @@
     3. Scrollbar en `.gridBody`: conectar ref al contenedor gridBody con `overflow-y: auto` para preservar y restaurar el scroll exacto al salir/entrar de modales o fichas de cliente.
     4. Contexto al cambiar vista: mantener la fecha actual en pantalla al conmutar entre Día, Semana y Mes, y agregar un botón "📅 Hoy" dedicado.
     5. Modales 100% ancho: desplegar Nombre, Apellido, DNI, WhatsApp y Email en filas completas de 100% de ancho en móviles.
-  - Se creó el plan de implementación en `implementation_plan.md` a la espera de aprobación para su desarrollo y despliegue.
+- **29 de Julio (10:45 AM)**:
+  - Se configuró `git clean -fd -e .wwebjs_auth -e .wwebjs_cache` en `deploy_vps_workspace.js` para mantener intacta la sesión de WhatsApp en el VPS en cada despliegue.
+  - Se añadieron los campos `descuentoTipo` y `descuentoValor` a Prisma `Turno` (`schema.prisma` & `npx prisma db push`), preservando los descuentos por porcentaje (20%) al reprogramar.
+  - Se ajustó el color de texto en el historial de notificaciones del cliente a `#111111` para alto contraste.
+  - Se actualizó `isPastDateTime` en `/api/admin/turnos/[id]/route.js` para permitir modificar/reprogramar citas del día actual independientemente de si la hora pautada ya transcurrió.
+  - Se optimizó "Programar Siguiente Turno": navegación limpia a medio día (12:00 hs) para evitar corrimiento de feriados/días y auto-completado de todos los datos del cliente al pulsar en un horario libre.
+  - Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).

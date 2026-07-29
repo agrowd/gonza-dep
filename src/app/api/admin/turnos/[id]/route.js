@@ -37,23 +37,15 @@ function timeToMinutes(timeStr) {
   return hours * 60 + minutes;
 }
 
-function isPastDateTime(fechaStr, horaInicio) {
+function isPastDateTime(fechaStr) {
   const now = new Date();
   const offsetBuenosAires = -3;
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
   const todayStr = nowLocal.toISOString().split('T')[0];
   
-  if (fechaStr < todayStr) return true;
-  if (fechaStr === todayStr) {
-    const [hours, minutes] = horaInicio.split(':').map(Number);
-    const nowHours = nowLocal.getHours();
-    const nowMinutes = nowLocal.getMinutes();
-    if (hours < nowHours || (hours === nowHours && minutes < nowMinutes)) {
-      return true;
-    }
-  }
-  return false;
+  // Only block dates strictly before today (yesterday or earlier)
+  return fechaStr < todayStr;
 }
 
 async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null) {
@@ -102,6 +94,8 @@ export async function PUT(request, { params }) {
       valorTotal,
       valorSeña,
       bonificacion,
+      descuentoTipo,
+      descuentoValor,
       observaciones,
       selectedZoneIds,
       hasOtros,
@@ -174,6 +168,8 @@ export async function PUT(request, { params }) {
     if (valorTotal !== undefined) updateData.valorTotal = valorTotal;
     if (valorSeña !== undefined) updateData.valorSeña = valorSeña;
     if (bonificacion !== undefined) updateData.bonificacion = Number(bonificacion);
+    if (descuentoTipo !== undefined) updateData.descuentoTipo = descuentoTipo;
+    if (descuentoValor !== undefined) updateData.descuentoValor = Number(descuentoValor);
     if (observaciones !== undefined) {
       updateData.observaciones = observaciones;
       await prisma.cliente.update({

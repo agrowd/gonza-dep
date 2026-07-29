@@ -667,7 +667,7 @@ function ClientesPageContent() {
                           <span>{new Date(n.fechaEnvio).toLocaleString('es-ES')} | Canal: {n.canal}</span>
                           <span style={{ color: n.estado === 'ENVIADO' ? '#81c784' : '#ff8a8a', fontWeight: 600 }}>{n.estado}</span>
                         </div>
-                        <p style={{ color: '#fff', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{n.mensaje}</p>
+                        <p style={{ color: '#111111', fontSize: '0.9rem', whiteSpace: 'pre-wrap', fontWeight: 500 }}>{n.mensaje}</p>
                       </div>
                     ))}
                   </div>

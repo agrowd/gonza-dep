@@ -121,7 +121,7 @@ export async function POST(request) {
 
     const body = await request.json();
     const {
-      clienteId, // if existing client
+      clienteId,
       nombreCompleto,
       whatsapp,
       email,
@@ -130,8 +130,11 @@ export async function POST(request) {
       horaInicio,
       horaFin,
       selectedZoneIds,
-      valorTotal, // overridden or sum
-      valorSeña,  // overridden or sum
+      valorTotal,
+      valorSeña,
+      descuentoTipo,
+      descuentoValor,
+      bonificacion,
       estado,
       observaciones,
       hasOtros,
@@ -265,6 +268,9 @@ export async function POST(request) {
         valorTotal: finalValorTotal,
         valorSeña: finalValorSeña,
         saldoPendiente: Math.max(0, finalValorTotal - finalValorSeña),
+        bonificacion: Number(bonificacion || 0),
+        descuentoTipo: descuentoTipo || 'NINGUNO',
+        descuentoValor: Number(descuentoValor || 0),
         estado: estado || 'SEÑADO',
         observaciones
       },

@@ -95,6 +95,11 @@
 - Preservación y restauración real de la posición de scroll del contenedor `.gridBody` (`gridBodyRef.current.scrollTop`) al cerrar modales o regresar desde la ficha del cliente.
 - Preservación de la fecha en pantalla al conmutar entre las vistas Día, Semana y Mes, agregando un botón dedicado **"📅 Hoy"** para retornar al día actual.
 - Formato de 100% de ancho (filas completas) para los campos Nombre, Apellido, DNI, WhatsApp y Email en los modales de agendamiento.
+- Exclusión del directorio `.wwebjs_auth` en `git clean -fd` dentro de los scripts de despliegue (`deploy_vps_workspace.js`), preservando la sesión activa de WhatsApp entre actualizaciones sin requerir nuevo escaneo de QR.
+- Almacenamiento y preservación del tipo de descuento (`descuentoTipo` `'PORCENTAJE'` o `'PESOS'`) y valor de bonificación en Prisma `Turno` para conservar el 20% al editar o reprogramar citas.
+- Texto oscuro de alto contraste (`color: #111111; font-weight: 500`) en el historial de notificaciones enviadas dentro del perfil del cliente (`src/app/admin/clientes/page.js`).
+- Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
+- Auto-completado inteligente de datos de cliente al usar "Programar Siguiente Turno": navegación a la semana objetivo a las 12:00 hs sin desfasaje horaria y precarga automática de cliente, zonas, precios y bonificaciones al pulsar en un horario libre.
 
 ## [1.2.2] - 2026-07-23
 ### Fixed
