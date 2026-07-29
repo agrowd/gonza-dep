@@ -317,6 +317,34 @@ export default function AgendaPage() {
       showToast('Error de red al guardar datos.', 'error');
     }
   };
+  // Generate hourly labels for time column dynamically
+  let minAppStartHour = parseInt((config.work_start || '10:00').split(':')[0]) || 10;
+  let maxAppEndHour = parseInt((config.work_end || '20:00').split(':')[0]) || 20;
+
+  if (appointments && appointments.length > 0) {
+    appointments.forEach(app => {
+      if (app.horaInicio) {
+        const [h] = app.horaInicio.split(':').map(Number);
+        if (h < minAppStartHour) minAppStartHour = h;
+      }
+      if (app.horaFin) {
+        const [h, m] = app.horaFin.split(':').map(Number);
+        const endH = m > 0 ? h + 1 : h;
+        if (endH > maxAppEndHour) maxAppEndHour = endH;
+      }
+    });
+  }
+
+  const startHour = minAppStartHour;
+  const endHour = maxAppEndHour;
+  const WORK_START = startHour * 60;
+  const totalHalfHours = (endHour - startHour) * 2;
+  const dayColumnHeight = (endHour - startHour) * 100;
+
+  const timeLabels = [];
+  for (let i = startHour; i <= endHour; i++) {
+    timeLabels.push(`${i.toString().padStart(2, '0')}:00`);
+  }
 
   // 1. Initialize dates and configurations on mount
   useEffect(() => {
@@ -1076,34 +1104,7 @@ export default function AgendaPage() {
     }
   };
 
-  // Generate hourly labels for time column dynamically
-  let minAppStartHour = parseInt((config.work_start || '10:00').split(':')[0]) || 10;
-  let maxAppEndHour = parseInt((config.work_end || '20:00').split(':')[0]) || 20;
 
-  if (appointments && appointments.length > 0) {
-    appointments.forEach(app => {
-      if (app.horaInicio) {
-        const [h] = app.horaInicio.split(':').map(Number);
-        if (h < minAppStartHour) minAppStartHour = h;
-      }
-      if (app.horaFin) {
-        const [h, m] = app.horaFin.split(':').map(Number);
-        const endH = m > 0 ? h + 1 : h;
-        if (endH > maxAppEndHour) maxAppEndHour = endH;
-      }
-    });
-  }
-
-  const startHour = minAppStartHour;
-  const endHour = maxAppEndHour;
-  const WORK_START = startHour * 60;
-  const totalHalfHours = (endHour - startHour) * 2;
-  const dayColumnHeight = (endHour - startHour) * 100;
-
-  const timeLabels = [];
-  for (let i = startHour; i <= endHour; i++) {
-    timeLabels.push(`${i.toString().padStart(2, '0')}:00`);
-  }
 
   // Formatting helper for week name range
   const getWeekRangeName = () => {
