@@ -390,11 +390,11 @@ export default function AgendaPage() {
     const updatePosition = () => {
       const today = new Date();
       const currentMinutes = today.getHours() * 60 + today.getMinutes();
-      const WORK_START = timeToMinutes(config.work_start);
-      const WORK_END = timeToMinutes(config.work_end);
+      const gridStartMins = startHour * 60;
+      const gridEndMins = endHour * 60;
 
-      if (currentMinutes >= WORK_START && currentMinutes <= WORK_END) {
-        const top = (currentMinutes - WORK_START) * (100 / 60);
+      if (currentMinutes >= gridStartMins && currentMinutes <= gridEndMins) {
+        const top = (currentMinutes - gridStartMins) * (100 / 60);
         setNowPosition(top);
       } else {
         setNowPosition(null);
@@ -404,7 +404,7 @@ export default function AgendaPage() {
     updatePosition();
     const interval = setInterval(updatePosition, 60000);
     return () => clearInterval(interval);
-  }, [config.work_start, config.work_end]);
+  }, [startHour, endHour]);
 
   const isToday = (date) => {
     if (!date) return false;
@@ -542,9 +542,9 @@ export default function AgendaPage() {
     const endMin = timeToMinutes(horaFin);
     const duration = endMin - startMin;
 
-    const WORK_START = timeToMinutes(config.work_start);
+    const gridStartMin = startHour * 60;
     
-    const top = Math.max(0, (startMin - WORK_START) * (100 / 60));
+    const top = Math.max(0, (startMin - gridStartMin) * (100 / 60));
     const height = Math.max(20, duration * (100 / 60)); // minimum 20px
 
     const widthPercent = 100 / layout.totalCols;
@@ -1077,10 +1077,15 @@ export default function AgendaPage() {
   };
 
   // Generate hourly labels for time column dynamically
-  const startHour = parseInt(config.work_start.split(':')[0]) || 10;
-  let maxAppEndHour = parseInt(config.work_end.split(':')[0]) || 20;
+  let minAppStartHour = parseInt((config.work_start || '10:00').split(':')[0]) || 10;
+  let maxAppEndHour = parseInt((config.work_end || '20:00').split(':')[0]) || 20;
+
   if (appointments && appointments.length > 0) {
     appointments.forEach(app => {
+      if (app.horaInicio) {
+        const [h] = app.horaInicio.split(':').map(Number);
+        if (h < minAppStartHour) minAppStartHour = h;
+      }
       if (app.horaFin) {
         const [h, m] = app.horaFin.split(':').map(Number);
         const endH = m > 0 ? h + 1 : h;
@@ -1089,6 +1094,7 @@ export default function AgendaPage() {
     });
   }
 
+  const startHour = minAppStartHour;
   const endHour = maxAppEndHour;
   const WORK_START = startHour * 60;
   const totalHalfHours = (endHour - startHour) * 2;
