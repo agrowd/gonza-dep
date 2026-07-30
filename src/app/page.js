@@ -160,10 +160,12 @@ export default function Home() {
           return;
         }
         
+        setErrorMessage('Tu email fue encontrado en el sistema, pero no tenés turnos activos futuros. Podés reservar tu próximo turno a continuación.');
         setDniChecked(true);
         setStep(2);
       } else {
         setDniChecked(true);
+        setStep(2);
       }
     } catch (err) {
       console.error('Error checking Email:', err);

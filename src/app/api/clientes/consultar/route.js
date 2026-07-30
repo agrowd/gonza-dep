@@ -18,10 +18,10 @@ export async function GET(request) {
     if (email) {
       client = await prisma.cliente.findFirst({
         where: {
-          email: {
-            equals: email,
-            mode: 'insensitive'
-          }
+          OR: [
+            { email: { equals: email, mode: 'insensitive' } },
+            { email: { contains: email, mode: 'insensitive' } }
+          ]
         },
         include: {
           turnos: {

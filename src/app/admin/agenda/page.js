@@ -1736,7 +1736,7 @@ export default function AgendaPage() {
                       <label className={styles.inputLabel}>Valor Total ($)</label>
                       <input
                         type="number"
-                        value={editTurno.valorTotal === 0 || editTurno.valorTotal === '0' ? '' : editTurno.valorTotal}
+                        value={editTurno.valorTotal ?? ''}
                         onChange={(e) => {
                           const val = e.target.value;
                           setEditTurno(prev => ({
@@ -1753,22 +1753,12 @@ export default function AgendaPage() {
                       <label className={styles.inputLabel}>Seña Recibida ($)</label>
                       <input
                         type="number"
-                        value={editTurno.valorSeña === 0 || editTurno.valorSeña === '0' ? '' : editTurno.valorSeña}
+                        value={editTurno.valorSeña ?? ''}
                         onChange={(e) => setEditTurno({ ...editTurno, valorSeña: e.target.value })}
                         required
                         placeholder="Auto-calculado al elegir zona"
                       />
                     </div>
-                  </div>
-
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>Seña Recibida ($)</label>
-                    <input
-                      type="number"
-                      value={editTurno.valorSeña}
-                      onChange={(e) => setEditTurno({ ...editTurno, valorSeña: e.target.value })}
-                      required
-                    />
                   </div>
 
                   <div className={styles.inputGroup}>
@@ -2342,7 +2332,7 @@ export default function AgendaPage() {
                     <label className={styles.inputLabel}>Total de Venta ($)</label>
                     <input
                       type="number"
-                      value={newTurno.valorTotal === 0 || newTurno.valorTotal === '0' ? '' : newTurno.valorTotal}
+                      value={newTurno.valorTotal ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
                         setNewTurno(prev => ({
@@ -2359,7 +2349,7 @@ export default function AgendaPage() {
                     <label className={styles.inputLabel}>Seña Recibida ($)</label>
                     <input
                       type="number"
-                      value={newTurno.valorSeña === 0 || newTurno.valorSeña === '0' ? '' : newTurno.valorSeña}
+                      value={newTurno.valorSeña ?? ''}
                       onChange={(e) => setNewTurno({ ...newTurno, valorSeña: e.target.value })}
                       required
                       placeholder="Auto-calculado al elegir zona"
