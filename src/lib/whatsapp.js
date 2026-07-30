@@ -205,6 +205,9 @@ function parseTemplate(template, client, turno, address) {
   const d = new Date(turno.fecha);
   const dateStr = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
   const timeStr = `${turno.horaInicio} a ${turno.horaFin}`;
+
+  const dayNameStr = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const formattedDia = dayNameStr.charAt(0).toUpperCase() + dayNameStr.slice(1);
   
   let zonesStr = '';
   try {
@@ -214,19 +217,21 @@ function parseTemplate(template, client, turno, address) {
     zonesStr = turno.zonas || '';
   }
 
-  const names = client.nombreCompleto.trim().split(/\s+/);
+  const names = (client.nombreCompleto || '').trim().split(/\s+/);
   const nombre = names[0] || '';
   const apellido = names.slice(1).join(' ') || '';
 
   return template
     .replace(/\[Nombre\]/g, nombre)
     .replace(/\[Apellido\]/g, apellido)
+    .replace(/\[Dia\]/g, formattedDia)
+    .replace(/\[Día\]/g, formattedDia)
     .replace(/\[FechaTurno\]/g, dateStr)
     .replace(/\[Horario\]/g, timeStr)
     .replace(/\[Zonas\]/g, zonesStr)
-    .replace(/\[ValorTotal\]/g, turno.valorTotal.toString())
-    .replace(/\[Seña\]/g, turno.valorSeña.toString())
-    .replace(/\[Direccion\]/g, address);
+    .replace(/\[ValorTotal\]/g, (turno.valorTotal || 0).toString())
+    .replace(/\[Seña\]/g, (turno.valorSeña || 0).toString())
+    .replace(/\[Direccion\]/g, address || '');
 }
 
 export async function checkAndSendReminders() {

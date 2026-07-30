@@ -706,6 +706,21 @@ export default function AgendaPage() {
     setCurrentWeekStart(mondayOfWeek);
     setViewMode('week');
 
+    // Pre-fetch target week appointments immediately so they show on screen without delay
+    const startStr = mondayOfWeek.toISOString().split('T')[0];
+    const satDate = new Date(mondayOfWeek);
+    satDate.setDate(satDate.getDate() + 5);
+    const endStr = satDate.toISOString().split('T')[0];
+
+    fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAppointments(data);
+        }
+      })
+      .catch(err => console.error('Error pre-fetching next week appointments:', err));
+
     const formattedTarget = targetDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
     showToast(`Navegando a la semana del ${formattedTarget} (${freqWeeks} semanas después). Hace clic en un horario libre para agendar con los datos pre-cargados de ${fullName}.`);
   };
@@ -856,7 +871,7 @@ export default function AgendaPage() {
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.manualTotalOverride, newTurno.hasOtros]);
+  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros]);
 
   // Re-calculate pricing/discount for editTurno
   useEffect(() => {
@@ -918,7 +933,7 @@ export default function AgendaPage() {
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.manualTotalOverride, editTurno.hasOtros, isEditing]);
+  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, isEditing]);
 
   // Check overlap/availability for newTurno in real-time
   useEffect(() => {
@@ -1048,32 +1063,24 @@ export default function AgendaPage() {
 
   const toggleNewTurnoZone = (zoneId) => {
     const exists = newTurno.selectedZoneIds.includes(zoneId);
-    if (exists) {
-      setNewTurno({
-        ...newTurno,
-        selectedZoneIds: newTurno.selectedZoneIds.filter(id => id !== zoneId)
-      });
-    } else {
-      setNewTurno({
-        ...newTurno,
-        selectedZoneIds: [...newTurno.selectedZoneIds, zoneId]
-      });
-    }
+    setNewTurno(prev => ({
+      ...prev,
+      manualTotalOverride: undefined,
+      selectedZoneIds: exists
+        ? prev.selectedZoneIds.filter(id => id !== zoneId)
+        : [...prev.selectedZoneIds, zoneId]
+    }));
   };
 
   const toggleEditTurnoZone = (zoneId) => {
-    const exists = editTurno.selectedZoneIds?.includes(zoneId) || false;
-    if (exists) {
-      setEditTurno({
-        ...editTurno,
-        selectedZoneIds: (editTurno.selectedZoneIds || []).filter(id => id !== zoneId)
-      });
-    } else {
-      setEditTurno({
-        ...editTurno,
-        selectedZoneIds: [...(editTurno.selectedZoneIds || []), zoneId]
-      });
-    }
+    const exists = editTurno.selectedZoneIds?.includes(zoneId);
+    setEditTurno(prev => ({
+      ...prev,
+      manualTotalOverride: undefined,
+      selectedZoneIds: exists
+        ? prev.selectedZoneIds.filter(id => id !== zoneId)
+        : [...(prev.selectedZoneIds || []), zoneId]
+    }));
   };
 
   const getStatusLabelClass = (status) => {
@@ -1655,28 +1662,39 @@ export default function AgendaPage() {
                     </select>
                   </div>
 
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>Hora Inicio</label>
-                    <input
-                      type="time"
-                      value={editTurno.horaInicio}
-                      onChange={(e) => {
-                        const newStart = e.target.value;
-                        const oldStart = editTurno.horaInicio;
-                        const oldEnd = editTurno.horaFin;
-                        let duration = timeToMinutes(oldEnd) - timeToMinutes(oldStart);
-                        if (isNaN(duration) || duration <= 0) {
-                          duration = 30; // fallback
-                        }
-                        const newEnd = addMinutesToTime(newStart, duration);
-                        setEditTurno({
-                          ...editTurno,
-                          horaInicio: newStart,
-                          horaFin: newEnd
-                        });
-                      }}
-                      required
-                    />
+                  <div className={styles.inputRow} style={{ gridColumn: 'span 2' }}>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Hora Inicio</label>
+                      <input
+                        type="time"
+                        value={editTurno.horaInicio}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          const oldStart = editTurno.horaInicio;
+                          const oldEnd = editTurno.horaFin;
+                          let duration = timeToMinutes(oldEnd) - timeToMinutes(oldStart);
+                          if (isNaN(duration) || duration <= 0) {
+                            duration = 30; // fallback
+                          }
+                          const newEnd = addMinutesToTime(newStart, duration);
+                          setEditTurno({
+                            ...editTurno,
+                            horaInicio: newStart,
+                            horaFin: newEnd
+                          });
+                        }}
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Hora Fin</label>
+                      <input
+                        type="time"
+                        value={editTurno.horaFin}
+                        onChange={(e) => setEditTurno({ ...editTurno, horaFin: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
 
                   {/* Zones Checkboxes */}
@@ -1693,7 +1711,7 @@ export default function AgendaPage() {
                         );
                       })}
                       {/* OTROS Checkbox */}
-                      <div onClick={() => setEditTurno(prev => ({ ...prev, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <div onClick={() => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                         <input type="checkbox" checked={editTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
                         <span style={{ fontWeight: 'bold' }}>Otros</span>
                       </div>
@@ -1713,31 +1731,34 @@ export default function AgendaPage() {
                     </div>
                   )}
 
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>Hora Fin</label>
-                    <input
-                      type="time"
-                      value={editTurno.horaFin}
-                      onChange={(e) => setEditTurno({ ...editTurno, horaFin: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className={styles.inputGroup}>
-                    <label className={styles.inputLabel}>Valor Total ($)</label>
-                    <input
-                      type="number"
-                      value={editTurno.valorTotal}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setEditTurno(prev => ({
-                          ...prev,
-                          valorTotal: val,
-                          manualTotalOverride: val
-                        }));
-                      }}
-                      required
-                    />
+                  <div className={styles.inputRow} style={{ gridColumn: 'span 2' }}>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Valor Total ($)</label>
+                      <input
+                        type="number"
+                        value={editTurno.valorTotal === 0 || editTurno.valorTotal === '0' ? '' : editTurno.valorTotal}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditTurno(prev => ({
+                            ...prev,
+                            valorTotal: val,
+                            manualTotalOverride: val
+                          }));
+                        }}
+                        required
+                        placeholder="Auto-calculado al elegir zona"
+                      />
+                    </div>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Seña Recibida ($)</label>
+                      <input
+                        type="number"
+                        value={editTurno.valorSeña === 0 || editTurno.valorSeña === '0' ? '' : editTurno.valorSeña}
+                        onChange={(e) => setEditTurno({ ...editTurno, valorSeña: e.target.value })}
+                        required
+                        placeholder="Auto-calculado al elegir zona"
+                      />
+                    </div>
                   </div>
 
                   <div className={styles.inputGroup}>
@@ -2248,23 +2269,34 @@ export default function AgendaPage() {
                   />
                 </div>
 
-                {/* Date & Time */}
+                {/* Date on full row */}
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                  <label className={styles.inputLabel}>Fecha *</label>
+                  <input
+                    type="date"
+                    value={newTurno.fechaStr}
+                    onChange={(e) => setNewTurno({ ...newTurno, fechaStr: e.target.value })}
+                    required
+                  />
+                </div>
+
+                {/* Hora Inicio and Hora Fin side-by-side */}
                 <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                  <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Fecha *</label>
-                    <input
-                      type="date"
-                      value={newTurno.fechaStr}
-                      onChange={(e) => setNewTurno({ ...newTurno, fechaStr: e.target.value })}
-                      required
-                    />
-                  </div>
                   <div className={styles.inputGroup} style={{ flex: 1 }}>
                     <label className={styles.inputLabel}>Hora Inicio *</label>
                     <input
                       type="time"
                       value={newTurno.horaInicio}
                       onChange={(e) => setNewTurno({ ...newTurno, horaInicio: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Hora Fin (Calculado)</label>
+                    <input
+                      type="time"
+                      value={newTurno.horaFin}
+                      onChange={(e) => setNewTurno({ ...newTurno, horaFin: e.target.value })}
                       required
                     />
                   </div>
@@ -2284,7 +2316,7 @@ export default function AgendaPage() {
                       );
                     })}
                     {/* OTROS Checkbox */}
-                    <div onClick={() => setNewTurno(prev => ({ ...prev, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                       <input type="checkbox" checked={newTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
                       <span style={{ fontWeight: 'bold' }}>Otros</span>
                     </div>
@@ -2304,41 +2336,35 @@ export default function AgendaPage() {
                   </div>
                 )}
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Hora Fin (Calculado)</label>
-                  <input
-                    type="time"
-                    value={newTurno.horaFin}
-                    onChange={(e) => setNewTurno({ ...newTurno, horaFin: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Total de Venta ($)</label>
-                  <input
-                    type="number"
-                    value={newTurno.valorTotal}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewTurno(prev => ({
-                        ...prev,
-                        valorTotal: val,
-                        manualTotalOverride: val
-                      }));
-                    }}
-                    required
-                    placeholder="Auto-calculado si está vacío"
-                  />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Seña Recibida ($)</label>
-                  <input
-                    type="number"
-                    value={newTurno.valorSeña}
-                    onChange={(e) => setNewTurno({ ...newTurno, valorSeña: e.target.value })}
-                    required
-                    placeholder="Auto-calculado si está vacío"
-                  />
+                {/* Total de Venta and Seña Recibida side-by-side */}
+                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Total de Venta ($)</label>
+                    <input
+                      type="number"
+                      value={newTurno.valorTotal === 0 || newTurno.valorTotal === '0' ? '' : newTurno.valorTotal}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewTurno(prev => ({
+                          ...prev,
+                          valorTotal: val,
+                          manualTotalOverride: val
+                        }));
+                      }}
+                      required
+                      placeholder="Auto-calculado al elegir zona"
+                    />
+                  </div>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Seña Recibida ($)</label>
+                    <input
+                      type="number"
+                      value={newTurno.valorSeña === 0 || newTurno.valorSeña === '0' ? '' : newTurno.valorSeña}
+                      onChange={(e) => setNewTurno({ ...newTurno, valorSeña: e.target.value })}
+                      required
+                      placeholder="Auto-calculado al elegir zona"
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>

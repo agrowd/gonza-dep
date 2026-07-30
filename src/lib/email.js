@@ -892,14 +892,20 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
 
   const address = 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)';
 
+  const dayNameFormatted = dateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const diaFormatted = dayNameFormatted.charAt(0).toUpperCase() + dayNameFormatted.slice(1);
+
   const replacePlaceholders = (text) => {
     if (!text) return '';
     return text
+      .replaceAll('{cliente}', clientName || '')
+      .replaceAll('{día}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
+      .replaceAll('{dia}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
       .replaceAll('{fecha}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</span>`)
       .replaceAll('{horario}', `<span style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</span>`)
       .replaceAll('{zonas}', zonesText)
-      .replaceAll('{seña}', `$${valorSeña.toLocaleString()}`)
-      .replaceAll('{saldo}', `$${(valorTotal - valorSeña).toLocaleString()}`)
+      .replaceAll('{seña}', `$${(valorSeña || 0).toLocaleString()}`)
+      .replaceAll('{saldo}', `$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}`)
       .replaceAll('{direccion}', address);
   };
 
@@ -1020,14 +1026,20 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
     zonesText = zonas || 'Sesión de depilación';
   }
 
+  const dayNameFormatted = dateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const diaFormatted = dayNameFormatted.charAt(0).toUpperCase() + dayNameFormatted.slice(1);
+
   const replacePlaceholders = (text) => {
     if (!text) return '';
     return text
+      .replaceAll('{cliente}', clientName || '')
+      .replaceAll('{día}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
+      .replaceAll('{dia}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
       .replaceAll('{fecha}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</span>`)
       .replaceAll('{horario}', `<span style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</span>`)
       .replaceAll('{zonas}', zonesText)
-      .replaceAll('{seña}', `$${valorSeña.toLocaleString()}`)
-      .replaceAll('{saldo}', `$${(valorTotal - valorSeña).toLocaleString()}`)
+      .replaceAll('{seña}', `$${(valorSeña || 0).toLocaleString()}`)
+      .replaceAll('{saldo}', `$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}`)
       .replaceAll('{direccion}', address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)');
   };
 

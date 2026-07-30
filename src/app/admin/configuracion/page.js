@@ -583,6 +583,7 @@ export default function ConfiguracionPage() {
                 <div className={styles.variableGrid}>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Nombre]')}>[Nombre]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Apellido]')}>[Apellido]</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Día]')}>[Día]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[FechaTurno]')}>[FechaTurno]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Horario]')}>[Horario]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Zonas]')}>[Zonas]</div>
@@ -751,6 +752,7 @@ export default function ConfiguracionPage() {
                 <div className={styles.variableTitle}>Variables Automáticas Email (Toca para copiar):</div>
                 <div className={styles.variableGrid}>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('{cliente}')}>{"{cliente}"}</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('{día}')}>{"{día}"}</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('{fecha}')}>{"{fecha}"}</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('{horario}')}>{"{horario}"}</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('{zonas}')}>{"{zonas}"}</div>
