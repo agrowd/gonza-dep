@@ -103,6 +103,8 @@
 - Alineación vertical centrada de las etiquetas horarias (`.timeLabelText` con `transform: translateY(-50%)`) sobre las líneas de grilla y eliminación de padding externo en `.appointmentBlock` para prevenir superposición de textos y garantizar espacio holgado en citas de 30 minutos.
 - Adición de la regla CSS `.inputGroup` y `.inputLabel` con `width: 100%; box-sizing: border-box;` en `agenda.module.css` para resolver el achicamiento a 140px de los campos WhatsApp y Email en iPhones al ingresar nombres/apellidos cortos.
 - Eliminación del campo duplicado de `Seña Recibida ($)` en el modal de edición de turnos y corrección de la vinculación `value={... ?? ''}` para conservar los turnos pautados sin seña (`$0`) sin forzar recalcular la seña por defecto al reprogramar.
+- Soporte completo para reemplazo dinámico de día de la semana (`[Día]`, `[día]`, `{día}`, `{Dia}`, `{DÍA}`) a su nombre en español (ej. "Sábado") tanto en corchetes como en llaves y sin importar mayúsculas/minúsculas.
+- Preservación de precios personalizados al editar o cambiar horarios en la agenda sin resetear el valor del turno ni la seña acumulada.
 - Configuración de `flex-direction: row` en `.inputRow` para garantizar que los horarios de `Hora Inicio` y `Hora Fin` permanezcan uno al lado del otro (`al lado`) en celulares.
 - Búsqueda insensible a mayúsculas/minúsculas con coincidencia flexible (`equals` / `contains`) y aviso claro en la verificación de email de Autogestión Pública.
 

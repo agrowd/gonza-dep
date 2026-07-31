@@ -2,32 +2,12 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
-import { sendWhatsAppMessage } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, parseTemplate } from '@/lib/whatsapp.js';
 import { sendNoShowEmail, sendCancellationEmail, sendRescheduleEmail } from '@/lib/email.js';
 
 // Helper to format date
 function formatDate(date) {
   return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long', timeZone: 'UTC' });
-}
-
-function parseWppTemplate(template, client, turno, address) {
-  if (!template) return '';
-  let zonesText = '';
-  try {
-    const parsedZonas = JSON.parse(turno.zonas);
-    zonesText = parsedZonas.map(z => z.nombre).join(', ');
-  } catch (e) {
-    zonesText = turno.zonas || 'tratamiento';
-  }
-
-  return template
-    .replaceAll('[Nombre]', client.nombreCompleto)
-    .replaceAll('[FechaTurno]', formatDate(turno.fecha))
-    .replaceAll('[Horario]', `${turno.horaInicio} hs`)
-    .replaceAll('[Zonas]', zonesText)
-    .replaceAll('[ValorTotal]', `$${turno.valorTotal}`)
-    .replaceAll('[Seña]', `$${turno.valorSeña}`)
-    .replaceAll('[Direccion]', address || 'Paraná 597');
 }
 
 // Convert HH:MM to minutes from midnight
@@ -246,26 +226,7 @@ export async function PUT(request, { params }) {
         });
 
         if (templateConfig) {
-          let msg = templateConfig.value;
-          
-          // Parse zones stringified array
-          let zonesText = '';
-          try {
-            const parsedZonas = JSON.parse(updatedTurno.zonas);
-            zonesText = parsedZonas.map(z => z.nombre).join(', ');
-          } catch (e) {
-            zonesText = 'tratamiento';
-          }
-
-          // Replace variables
-          msg = msg
-            .replaceAll('[Nombre]', updatedTurno.cliente.nombreCompleto)
-            .replaceAll('[FechaTurno]', formatDate(updatedTurno.fecha))
-            .replaceAll('[Horario]', `${updatedTurno.horaInicio} hs`)
-            .replaceAll('[Zonas]', zonesText)
-            .replaceAll('[ValorTotal]', `$${updatedTurno.valorTotal}`)
-            .replaceAll('[Seña]', `$${updatedTurno.valorSeña}`)
-            .replaceAll('[Direccion]', addressConfig ? addressConfig.value : 'Paraná 597');
+          const msg = parseTemplate(templateConfig.value, updatedTurno.cliente, updatedTurno, addressConfig?.value || '');
 
           // Send message
           await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, msg);
@@ -343,11 +304,8 @@ export async function PUT(request, { params }) {
         });
         const templateVal = templateConfig?.value || "¡Hola [Nombre]! Lamentamos que no hayas asistido a tu turno del día [FechaTurno] a las [Horario]. Según nuestras políticas, la seña de [Seña] no es reembolsable para cubrir los costos del horario reservado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web.";
         
-        let msg = templateVal
-          .replaceAll('[Nombre]', updatedTurno.cliente.nombreCompleto)
-          .replaceAll('[FechaTurno]', formatDate(updatedTurno.fecha))
-          .replaceAll('[Horario]', `${updatedTurno.horaInicio} hs`)
-          .replaceAll('[Seña]', `$${updatedTurno.valorSeña}`);
+        const addressConfig = await prisma.configuracion.findUnique({ where: { key: 'address' } });
+        const msg = parseTemplate(templateVal, updatedTurno.cliente, updatedTurno, addressConfig?.value || '');
 
         await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, msg);
 

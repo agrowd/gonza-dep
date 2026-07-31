@@ -2,37 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
-import { sendWhatsAppMessage, getWhatsAppStatus } from '@/lib/whatsapp.js';
-
-// Helper to parse templates
-function parseTemplate(template, client, turno, address) {
-  // Turn date formatting (e.g. 16/06/2026)
-  const d = new Date(turno.fecha);
-  const dateStr = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
-  const timeStr = `${turno.horaInicio} a ${turno.horaFin}`;
-  
-  let zonesStr = '';
-  try {
-    const zonesObj = JSON.parse(turno.zonas);
-    zonesStr = zonesObj.map(z => z.nombre).join(', ');
-  } catch (e) {
-    zonesStr = turno.zonas || '';
-  }
-
-  const names = client.nombreCompleto.trim().split(/\s+/);
-  const nombre = names[0] || '';
-  const apellido = names.slice(1).join(' ') || '';
-
-  return template
-    .replace(/\[Nombre\]/g, nombre)
-    .replace(/\[Apellido\]/g, apellido)
-    .replace(/\[FechaTurno\]/g, dateStr)
-    .replace(/\[Horario\]/g, timeStr)
-    .replace(/\[Zonas\]/g, zonesStr)
-    .replace(/\[ValorTotal\]/g, turno.valorTotal.toString())
-    .replace(/\[Seña\]/g, turno.valorSeña.toString())
-    .replace(/\[Direccion\]/g, address);
-}
+import { sendWhatsAppMessage, getWhatsAppStatus, parseTemplate } from '@/lib/whatsapp.js';
 
 // GET: Retrieve turnos for a specific week and notification config
 export async function GET(request) {

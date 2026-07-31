@@ -201,37 +201,50 @@ export async function logoutWhatsApp() {
   globalThis.whatsappQr = '';
 }
 
-function parseTemplate(template, client, turno, address) {
+export function parseTemplate(template, client = {}, turno = {}, address = '') {
+  if (!template) return '';
   const d = new Date(turno.fecha);
   const dateStr = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
-  const timeStr = `${turno.horaInicio} a ${turno.horaFin}`;
+  const timeStr = `${turno.horaInicio || ''} a ${turno.horaFin || ''}`.trim();
 
-  const dayNameStr = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-  const formattedDia = dayNameStr.charAt(0).toUpperCase() + dayNameStr.slice(1);
+  // Day of week name (e.g., "Sábado", "Viernes", "Lunes")
+  const dayOfWeekName = d.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
+  const justDayName = dayOfWeekName ? (dayOfWeekName.charAt(0).toUpperCase() + dayOfWeekName.slice(1)) : '';
+
+  // Full day string (e.g., "Sábado 1 de agosto")
+  const fullDayName = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const formattedFullDia = fullDayName ? (fullDayName.charAt(0).toUpperCase() + fullDayName.slice(1)) : '';
   
   let zonesStr = '';
   try {
-    const zonesObj = JSON.parse(turno.zonas);
-    zonesStr = zonesObj.map(z => z.nombre).join(', ');
+    const zonesObj = typeof turno.zonas === 'string' ? JSON.parse(turno.zonas) : turno.zonas;
+    if (Array.isArray(zonesObj)) {
+      zonesStr = zonesObj.map(z => z.nombre || z).join(', ');
+    } else {
+      zonesStr = turno.zonas || '';
+    }
   } catch (e) {
     zonesStr = turno.zonas || '';
   }
 
-  const names = (client.nombreCompleto || '').trim().split(/\s+/);
+  const names = (client.nombreCompleto || client.nombre || '').trim().split(/\s+/);
   const nombre = names[0] || '';
   const apellido = names.slice(1).join(' ') || '';
 
   return template
-    .replace(/\[Nombre\]/g, nombre)
-    .replace(/\[Apellido\]/g, apellido)
-    .replace(/\[Dia\]/g, formattedDia)
-    .replace(/\[Día\]/g, formattedDia)
-    .replace(/\[FechaTurno\]/g, dateStr)
-    .replace(/\[Horario\]/g, timeStr)
-    .replace(/\[Zonas\]/g, zonesStr)
-    .replace(/\[ValorTotal\]/g, (turno.valorTotal || 0).toString())
-    .replace(/\[Seña\]/g, (turno.valorSeña || 0).toString())
-    .replace(/\[Direccion\]/g, address || '');
+    .replace(/(\[|\{)Nombre(\]|\})/gi, nombre)
+    .replace(/(\[|\{)Apellido(\]|\})/gi, apellido)
+    .replace(/(\[|\{)(Día|Dia|DiaSemana|DíaSemana)(\]|\})/gi, justDayName)
+    .replace(/(\[|\{)DiaCompleto(\]|\})/gi, formattedFullDia)
+    .replace(/(\[|\{)FechaTurno(\]|\})/gi, dateStr)
+    .replace(/(\[|\{)Fecha(\]|\})/gi, dateStr)
+    .replace(/(\[|\{)Horario(\]|\})/gi, timeStr)
+    .replace(/(\[|\{)Hora(\]|\})/gi, timeStr)
+    .replace(/(\[|\{)Zonas(\]|\})/gi, zonesStr)
+    .replace(/(\[|\{)ValorTotal(\]|\})/gi, (turno.valorTotal || 0).toString())
+    .replace(/(\[|\{)Seña(\]|\})/gi, (turno.valorSeña || 0).toString())
+    .replace(/(\[|\{)Direccion(\]|\})/gi, address || '')
+    .replace(/(\[|\{)Dirección(\]|\})/gi, address || '');
 }
 
 export async function checkAndSendReminders() {
