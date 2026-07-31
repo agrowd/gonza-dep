@@ -32,10 +32,10 @@ function getMailConfig() {
 /**
  * Sends a notification email to a client who did not show up for their scheduled appointment.
  */
-export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
+export async function sendNoShowEmail(clientEmail, clientName, turnDetails, customSubject, customBody) {
   const { transporter, from, bcc } = getMailConfig();
 
-  const { fecha, horaInicio, zonas, valorSeña } = turnDetails;
+  const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
   
   // Format Date (e.g. viernes, 19 de junio de 2026)
   const dateObj = new Date(fecha);
@@ -50,18 +50,36 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
   // Try to parse zones string safely
   let zonesText = '';
   try {
-    const zonesArray = JSON.parse(zonas);
-    zonesText = zonesArray.map(z => z.nombre).join(', ');
+    const zonesArray = typeof zonas === 'string' ? JSON.parse(zonas) : zonas;
+    zonesText = Array.isArray(zonesArray) ? zonesArray.map(z => z.nombre || z).join(', ') : (zonas || 'Sesión de depilación');
   } catch (e) {
     zonesText = zonas || 'Sesión de depilación';
   }
+
+  const subject = customSubject || 'Aviso de turno no asistido - Gonzalo Depilación';
+
+  const defaultBody = "Lamentamos informarte que, según nuestras políticas de cancelación y de reserva vigentes, la seña abonada se retiene para cubrir los costos logísticos y operativos de la sesión reservada que no pudimos utilizar.\n\nSi deseas programar una nueva sesión de depilación láser, puedes hacerlo en cualquier momento a través de nuestro portal web ingresando con tu usuario habitual o reservando un nuevo turno.";
+
+  let rawBody = customBody || defaultBody;
+  rawBody = rawBody
+    .replace(/\{cliente\}/gi, clientName || '')
+    .replace(/\{fecha\}/gi, dateFormatted)
+    .replace(/\{horario\}/gi, `${horaInicio} hs`)
+    .replace(/\{zonas\}/gi, zonesText)
+    .replace(/\{seña\}/gi, `$${(valorSeña || 0).toLocaleString()}`)
+    .replace(/\{total\}/gi, `$${(valorTotal || 0).toLocaleString()}`);
+
+  const formattedParagraphs = rawBody
+    .split(/\n\s*\n/)
+    .map(p => `<p style="margin-bottom: 15px;">${p.replace(/\n/g, '<br>')}</p>`)
+    .join('');
 
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Aviso de Turno No Asistido</title>
+      <title>${subject}</title>
       <style>
         body {
           font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -163,7 +181,6 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
         </div>
         <div class="content">
           <div class="greeting">Hola ${clientName},</div>
-          <p>Te escribimos para informarte que hemos registrado tu <strong>inasistencia</strong> al turno programado.</p>
           
           <div class="highlight-box">
             <div class="highlight-title">Detalles del Turno</div>
@@ -182,14 +199,12 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
               </li>
               <li>
                 <span class="details-label">Seña abonada:</span>
-                <span class="details-value" style="color: #ff8a8a;">$${valorSeña.toLocaleString()}</span>
+                <span class="details-value" style="color: #ff8a8a;">$${(valorSeña || 0).toLocaleString()}</span>
               </li>
             </ul>
           </div>
 
-          <p>Lamentamos informarte que, según nuestras políticas de cancelación y de reserva vigentes, <strong>la seña abonada se retiene para cubrir los costos logísticos y operativos</strong> de la sesión reservada que no pudimos utilizar.</p>
-          
-          <p>Si deseas programar una nueva sesión de depilación láser, puedes hacerlo en cualquier momento a través de nuestro portal web ingresando con tu usuario habitual o reservando un nuevo turno.</p>
+          ${formattedParagraphs}
 
           <div class="note">
             Si crees que esto ha sido un error de registro o tuviste un inconveniente de fuerza mayor, por favor contáctanos directamente respondiendo a este correo o escribiéndonos por WhatsApp para que podamos evaluar tu situación.
@@ -208,7 +223,7 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails) {
     from,
     to: clientEmail,
     bcc,
-    subject: `Aviso de turno no asistido - Gonzalo Depilación`,
+    subject,
     html: htmlContent
   });
 }

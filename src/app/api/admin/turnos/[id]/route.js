@@ -262,6 +262,9 @@ export async function PUT(request, { params }) {
       // 1. Send Email
       if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
         try {
+          const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_noshow_subject' } });
+          const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_noshow_body' } });
+
           await sendNoShowEmail(
             updatedTurno.cliente.email,
             updatedTurno.cliente.nombreCompleto,
@@ -269,8 +272,11 @@ export async function PUT(request, { params }) {
               fecha: updatedTurno.fecha,
               horaInicio: updatedTurno.horaInicio,
               zonas: updatedTurno.zonas,
-              valorSeña: updatedTurno.valorSeña
-            }
+              valorSeña: updatedTurno.valorSeña,
+              valorTotal: updatedTurno.valorTotal
+            },
+            subjectConfig?.value,
+            bodyConfig?.value
           );
 
           await prisma.notificacion.create({
