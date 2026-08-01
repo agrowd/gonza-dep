@@ -58,7 +58,19 @@ async function main() {
   const defaultConfigs = [
     { key: "wtsp_reminder_template", value: "NO RESPONDER ESTE MENSAJE\nTe recuerdo el turno de ESTA SEMANA para depilación láser, en el horario acordado.\n\nRecordá que tenés que VENIR AFEITADO AL RAS.\n\nIMPORTANTE: al ser turnos muy cortos, la tolerancia de demora por llegar tarde es de 5 minutos.\n\nDIRECCIÓN:\nParaná 597, piso 8, depto 48." },
     { key: "wtsp_confirmation_template", value: "¡Hola [Nombre]! Tu reserva para el día [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
-    { key: "address", value: "Paraná 597, piso 8, depto 48" }
+    { key: "wtsp_confirmation_manual_template", value: "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] para [Zonas] fue agendado con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
+    { key: "wtsp_noshow_template", value: "¡Hola [Nombre]! Lamentamos que no hayas asistido a tu turno del día [FechaTurno] a las [Horario]. Según nuestras políticas, la seña de [Seña] no es reembolsable para cubrir los costos del horario reservado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web." },
+    { key: "wtsp_cancellation_template", value: "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!" },
+    { key: "wtsp_reschedule_template", value: "¡Hola [Nombre]! Tu turno fue reprogramado con éxito para el día [FechaTurno] a las [Horario] para [Zonas]. Recordá venir afeitado al ras. ¡Te esperamos!" },
+    { key: "address", value: "Paraná 597, piso 8, depto 48" },
+    { key: "email_confirmation_subject", value: "Confirmación de turno - Gonzalo Depilación" },
+    { key: "email_confirmation_body", value: "¡Tu reserva ha sido confirmada con éxito!\n\nA continuación te detallamos los datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n- Seña abonada: {seña}\n- Saldo pendiente de cobro: {saldo}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras de la noche anterior. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.\n\n¡Te esperamos!" },
+    { key: "email_cancellation_subject", value: "Cancelación de turno - Gonzalo Depilación" },
+    { key: "email_cancellation_body", value: "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n\nLamentamos que no puedas asistir. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web." },
+    { key: "email_noshow_subject", value: "Aviso de turno no asistido - Gonzalo Depilación" },
+    { key: "email_noshow_body", value: "Lamentamos informarte que, según nuestras políticas de cancelación y de reserva vigentes, la seña abonada se retiene para cubrir los costos logísticos y operativos de la sesión reservada que no pudimos utilizar.\n\nSi deseas programar una nueva sesión de depilación láser, puedes hacerlo en cualquier momento a través de nuestro portal web ingresando con tu usuario habitual o reservando un nuevo turno." },
+    { key: "email_reprogram_subject", value: "Reprogramación de turno - Gonzalo Depilación" },
+    { key: "email_reprogram_body", value: "Te informamos que tu turno para depilación láser ha sido reprogramado con éxito.\n\nA continuación te detallamos los nuevos datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n- Seña abonada: {seña}\n- Saldo pendiente de cobro: {saldo}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. Si tenés alguna duda, comunicate con nosotros.\n\n¡Te esperamos!" }
   ];
 
   for (const config of defaultConfigs) {
