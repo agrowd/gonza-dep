@@ -103,9 +103,9 @@
 - Alineación vertical centrada de las etiquetas horarias (`.timeLabelText` con `transform: translateY(-50%)`) sobre las líneas de grilla y eliminación de padding externo en `.appointmentBlock` para prevenir superposición de textos y garantizar espacio holgado en citas de 30 minutos.
 - Adición de la regla CSS `.inputGroup` y `.inputLabel` con `width: 100%; box-sizing: border-box;` en `agenda.module.css` para resolver el achicamiento a 140px de los campos WhatsApp y Email en iPhones al ingresar nombres/apellidos cortos.
 - Eliminación del campo duplicado de `Seña Recibida ($)` en el modal de edición de turnos y corrección de la vinculación `value={... ?? ''}` para conservar los turnos pautados sin seña (`$0`) sin forzar recalcular la seña por defecto al reprogramar.
-- Soporte completo para reemplazo dinámico de día de la semana (`[Día]`, `[día]`, `{día}`, `{Dia}`, `{DÍA}`) a su nombre en español (ej. "Sábado") tanto en corchetes como en llaves y sin importar mayúsculas/minúsculas.
-- Eliminación de la visualización de montos totales de la sesión y saldos pendientes en los correos de recordatorio y confirmación previa de turno para prevenir desfasajes o fricciones de precios el día del turno.
-- Rediseño compacto y estilizado de los botones de **Acciones Rápidas** en la agenda (altura reducida, bordes suaves y grilla flexible `minmax(130px, 1fr)`) y eliminación definitiva del juego o desplazamiento horizontal (`overflow-x: hidden`) en el modal para celular.
+- Corrección del error `ReferenceError: sendingReceipt is not defined` definiendo el hook de estado `sendingReceipt` en la agenda.
+- Normalización por cadena (`String(id) === String(z.id)`) en la selección y cálculo automático de total de venta al tildar zonas, garantizando que el precio autocompletado aparezca al instante sin quedar en `$0`.
+- Ajuste definitivo del diseño del modal en celulares reemplazando `gridColumn: 'span 2'` por `gridColumn: '1 / -1'` y `box-sizing: border-box`, eliminando cualquier recorte a la derecha en pantallas estrechas.
 - Configuración de `flex-direction: row` en `.inputRow` para garantizar que los horarios de `Hora Inicio` y `Hora Fin` permanezcan uno al lado del otro (`al lado`) en celulares sin ser sobreescritos por media queries.
 - Búsqueda insensible a mayúsculas/minúsculas con coincidencia flexible (`equals` / `contains`) y aviso claro en la verificación de email de Autogestión Pública.
 

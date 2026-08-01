@@ -243,6 +243,7 @@ export default function AgendaPage() {
   });
 
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
+  const [sendingReceipt, setSendingReceipt] = useState({});
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
   const savedScrollRef = useRef(0);
   const gridBodyRef = useRef(null);
@@ -628,6 +629,7 @@ export default function AgendaPage() {
 
   // Send digital receipt via Email
   const handleSendReceipt = async (turnoId) => {
+    setSendingReceipt(prev => ({ ...prev, [turnoId]: true }));
     try {
       const res = await fetch(`/api/admin/turnos/${turnoId}/enviar-recibo`, {
         method: 'POST'
@@ -641,6 +643,8 @@ export default function AgendaPage() {
     } catch (e) {
       console.error(e);
       showToast('Error de red al enviar el comprobante.', 'error');
+    } finally {
+      setSendingReceipt(prev => ({ ...prev, [turnoId]: false }));
     }
   };
 
@@ -833,7 +837,7 @@ export default function AgendaPage() {
       }));
       return;
     }
-    const selected = zones.filter(z => newTurno.selectedZoneIds.includes(z.id));
+    const selected = zones.filter(z => (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
     
     // Assume regular/new based on form (defaults to new=false for manual scheduler)
     const calcs = calculateTurnDetails(selected, false);
@@ -849,8 +853,6 @@ export default function AgendaPage() {
     let baseTotalForDiscount = calcs.valorTotal;
     if (newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '') {
       baseTotalForDiscount = Number(newTurno.manualTotalOverride);
-    } else if (newTurno.valorTotal !== '' && newTurno.valorTotal !== undefined && !isNaN(Number(newTurno.valorTotal))) {
-      baseTotalForDiscount = Number(newTurno.valorTotal);
     }
 
     let bonificacion = 0;
@@ -866,12 +868,12 @@ export default function AgendaPage() {
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: finalTotal,
-      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeena || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
+      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña || prev.manualSeñaOverride === undefined ? calcs.valorSeña : prev.valorSeña,
       autoTotal: finalTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros]);
+  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros, newTurno.manualTotalOverride]);
 
   // Re-calculate pricing/discount for editTurno
   useEffect(() => {
@@ -898,7 +900,7 @@ export default function AgendaPage() {
       return;
     }
 
-    const selected = zones.filter(z => editTurno.selectedZoneIds.includes(z.id));
+    const selected = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
     const calcs = calculateTurnDetails(selected, false);
 
     // Calculate horaFin based on start time + calculated duration
@@ -911,8 +913,6 @@ export default function AgendaPage() {
     let baseTotalForDiscount = calcs.valorTotal;
     if (editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '') {
       baseTotalForDiscount = Number(editTurno.manualTotalOverride);
-    } else if (editTurno.valorTotal !== '' && editTurno.valorTotal !== undefined && !isNaN(Number(editTurno.valorTotal))) {
-      baseTotalForDiscount = Number(editTurno.valorTotal);
     }
 
     let bonificacion = 0;
@@ -928,12 +928,12 @@ export default function AgendaPage() {
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: finalTotal,
-      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña ? calcs.valorSeña : prev.valorSeña,
+      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña || prev.manualSeñaOverride === undefined ? calcs.valorSeña : prev.valorSeña,
       autoTotal: finalTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, isEditing]);
+  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, editTurno.manualTotalOverride, isEditing]);
 
   // Check overlap/availability for newTurno in real-time
   useEffect(() => {
@@ -1062,23 +1062,25 @@ export default function AgendaPage() {
   };
 
   const toggleNewTurnoZone = (zoneId) => {
-    const exists = newTurno.selectedZoneIds.includes(zoneId);
+    const exists = (newTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
     setNewTurno(prev => ({
       ...prev,
       manualTotalOverride: undefined,
+      manualSeñaOverride: undefined,
       selectedZoneIds: exists
-        ? prev.selectedZoneIds.filter(id => id !== zoneId)
-        : [...prev.selectedZoneIds, zoneId]
+        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
+        : [...(prev.selectedZoneIds || []), zoneId]
     }));
   };
 
   const toggleEditTurnoZone = (zoneId) => {
-    const exists = editTurno.selectedZoneIds?.includes(zoneId);
+    const exists = (editTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
     setEditTurno(prev => ({
       ...prev,
       manualTotalOverride: undefined,
+      manualSeñaOverride: undefined,
       selectedZoneIds: exists
-        ? prev.selectedZoneIds.filter(id => id !== zoneId)
+        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
         : [...(prev.selectedZoneIds || []), zoneId]
     }));
   };
@@ -1628,7 +1630,7 @@ export default function AgendaPage() {
             {isEditing ? (
               <form onSubmit={handleSaveEditTurno}>
                 <div className={styles.detailGrid}>
-                  <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <span className={styles.detailLabel}>Cliente</span>
                     <span className={styles.detailValue} style={{ fontSize: '1.1rem', fontWeight: 700 }}>
                       {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
@@ -1662,7 +1664,7 @@ export default function AgendaPage() {
                     </select>
                   </div>
 
-                  <div className={styles.inputRow} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
                     <div className={styles.inputGroup} style={{ flex: 1 }}>
                       <label className={styles.inputLabel}>Hora Inicio</label>
                       <input
@@ -1698,11 +1700,11 @@ export default function AgendaPage() {
                   </div>
 
                   {/* Zones Checkboxes */}
-                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                     <label className={styles.inputLabel}>Seleccionar Zonas *</label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', opacity: editTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: editTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
                       {zones.map(z => {
-                        const isChecked = editTurno.selectedZoneIds?.includes(z.id) || false;
+                        const isChecked = (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id));
                         return (
                           <div key={z.id} onClick={() => toggleEditTurnoZone(z.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                             <input type="checkbox" checked={isChecked} readOnly style={{ width: 'auto' }} />
@@ -1719,7 +1721,7 @@ export default function AgendaPage() {
                   </div>
 
                   {editTurno.hasOtros && (
-                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2', marginTop: '-0.25rem' }}>
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
                       <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
                       <input
                         type="text"
@@ -1731,7 +1733,7 @@ export default function AgendaPage() {
                     </div>
                   )}
 
-                  <div className={styles.inputRow} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
                     <div className={styles.inputGroup} style={{ flex: 1 }}>
                       <label className={styles.inputLabel}>Valor Total ($)</label>
                       <input
@@ -1786,7 +1788,7 @@ export default function AgendaPage() {
 
                   {/* Resumen de Descuento y Saldo a Pagar */}
                   {editTurno.estado !== 'BLOQUEADO' && (
-                    <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem' }}>
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                         <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
                         <span style={{ fontWeight: '600' }}>
@@ -1817,7 +1819,7 @@ export default function AgendaPage() {
                     </div>
                   )}
 
-                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                     <label className={styles.inputLabel}>Observaciones</label>
                     <textarea
                       value={editTurno.observaciones}
@@ -1868,7 +1870,7 @@ export default function AgendaPage() {
                       })()} min)
                     </span>
                   </div>
-                  <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <span className={styles.detailLabel}>Zonas a depilar</span>
                     <span className={styles.detailValue}>
                       {(() => {
@@ -1900,7 +1902,7 @@ export default function AgendaPage() {
                   </div>
 
                   {selectedTurno.clienteId && (
-                    <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                       <span className={styles.detailLabel}>Frecuencia Estimada del Tratamiento (Semanas)</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
                         <select
@@ -1934,7 +1936,7 @@ export default function AgendaPage() {
                     </div>
                   )}
 
-                  <div className={styles.detailItem} style={{ gridColumn: 'span 2' }}>
+                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <span className={styles.detailLabel}>Observaciones Generales del Cliente</span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
                       <textarea
@@ -2294,11 +2296,11 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Zones Checkboxes */}
-                <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>Seleccionar Zonas *</label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', opacity: newTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: newTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
                     {zones.map(z => {
-                      const isChecked = newTurno.selectedZoneIds.includes(z.id);
+                      const isChecked = (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id));
                       return (
                         <div key={z.id} onClick={() => toggleNewTurnoZone(z.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                           <input type="checkbox" checked={isChecked} readOnly style={{ width: 'auto' }} />
@@ -2315,7 +2317,7 @@ export default function AgendaPage() {
                 </div>
 
                 {newTurno.hasOtros && (
-                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2', marginTop: '-0.25rem' }}>
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
                     <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
                     <input
                       type="text"
@@ -2419,7 +2421,7 @@ export default function AgendaPage() {
 
                 {/* Resumen de Descuento y Saldo a Pagar */}
                 {newTurno.estado !== 'BLOQUEADO' && (
-                  <div className={styles.inputGroup} style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem' }}>
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                       <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
                       <span style={{ fontWeight: '600' }}>${((newTurno.autoTotal || 0) + (newTurno.bonificacion || 0)).toLocaleString('es-ES')}</span>
@@ -2439,7 +2441,7 @@ export default function AgendaPage() {
                   </div>
                 )}
 
-                <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>Observaciones</label>
                   <textarea
                     value={newTurno.observaciones}
