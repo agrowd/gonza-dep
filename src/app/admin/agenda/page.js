@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 
