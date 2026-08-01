@@ -183,7 +183,7 @@ export default function Home() {
       }
     } catch (procErr) {
       console.error('Error processing client data in handleDniCheck:', procErr);
-      setErrorMessage('Ocurrió un error al cargar la información. Por favor intenta nuevamente.');
+      setErrorMessage(`Ocurrió un error al cargar la información (${procErr?.message || String(procErr)}). Por favor intenta nuevamente.`);
     } finally {
       setSearchingDni(false);
     }
