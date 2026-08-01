@@ -1878,6 +1878,14 @@ export default function AgendaPage() {
                     <span className={styles.detailLabel}>Saldo Pendiente</span>
                     <span className={styles.detailValue}>${selectedTurno.saldoPendiente.toLocaleString()}</span>
                   </div>
+                  {Boolean(selectedTurno.bonificacion && selectedTurno.bonificacion > 0) && (
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Descuento Aplicado</span>
+                      <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700 }}>
+                        -${Number(selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((selectedTurno.bonificacion / (selectedTurno.valorTotal + selectedTurno.bonificacion)) * 100)}%` : `$${Number(selectedTurno.descuentoValor || selectedTurno.bonificacion).toLocaleString('es-ES')}`})
+                      </span>
+                    </div>
+                  )}
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>WhatsApp</span>
                     <span className={styles.detailValue}>
@@ -2005,7 +2013,7 @@ export default function AgendaPage() {
                           estado: selectedTurno.estado,
                           valorTotal: selectedTurno.valorTotal,
                           valorSeña: selectedTurno.valorSeña,
-                          manualTotalOverride: selectedTurno.valorTotal,
+                          manualTotalOverride: selectedTurno.bonificacion ? (Number(selectedTurno.valorTotal) + Number(selectedTurno.bonificacion)) : undefined,
                           manualSeñaOverride: selectedTurno.valorSeña,
                           descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
                           descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? selectedTurno.bonificacion : ''),

@@ -563,6 +563,14 @@ export default function Home() {
                               ${saldoAmount.toLocaleString('es-ES')}
                             </span>
                           </div>
+                          {Boolean(t?.bonificacion && t.bonificacion > 0) && (
+                            <div className={styles.summaryRow}>
+                              <span>Descuento aplicado:</span>
+                              <span style={{ color: '#ff5252', fontWeight: 600 }}>
+                                -${Number(t.bonificacion).toLocaleString('es-ES')} ({t.descuentoTipo === 'PORCENTAJE' ? `${t.descuentoValor || Math.round((t.bonificacion / (t.valorTotal + t.bonificacion)) * 100)}%` : `$${Number(t.descuentoValor || t.bonificacion).toLocaleString('es-ES')}`})
+                              </span>
+                            </div>
+                          )}
 
                           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
                             <button 
