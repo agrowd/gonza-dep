@@ -744,6 +744,8 @@ export default function AgendaPage() {
           valorTotal: Number(editTurno.valorTotal),
           valorSeña: Number(editTurno.valorSeña),
           bonificacion: Number(editTurno.bonificacion || 0),
+          descuentoTipo: editTurno.descuentoTipo,
+          descuentoValor: Number(editTurno.descuentoValor || 0),
           observaciones: editTurno.observaciones,
           selectedZoneIds: editTurno.selectedZoneIds,
           hasOtros: editTurno.hasOtros,
