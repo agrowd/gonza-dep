@@ -487,13 +487,32 @@ export default function Home() {
                     {(activeTurnos.length > 0 ? activeTurnos : (activeTurno ? [activeTurno] : [])).map((t, idx) => {
                       let zonasFormatted = '';
                       try {
-                        zonasFormatted = JSON.parse(t.zonas).map(z => z.nombre).join(', ');
+                        const parsed = typeof t?.zonas === 'string' ? JSON.parse(t.zonas) : t?.zonas;
+                        if (Array.isArray(parsed)) {
+                          zonasFormatted = parsed.map(z => z?.nombre || z?.name || String(z || '')).filter(Boolean).join(', ');
+                        } else if (typeof parsed === 'object' && parsed !== null) {
+                          zonasFormatted = parsed.nombre || parsed.name || JSON.stringify(parsed);
+                        } else {
+                          zonasFormatted = String(t?.zonas || '');
+                        }
                       } catch (e) {
-                        zonasFormatted = t.zonas;
+                        zonasFormatted = String(t?.zonas || '');
                       }
 
+                      const fechaTurnoStr = t?.fecha ? (() => {
+                        try {
+                          return new Date(t.fecha).toLocaleDateString('es-ES', { dateStyle: 'full', timeZone: 'UTC' });
+                        } catch (e) {
+                          return String(t.fecha);
+                        }
+                      })() : '';
+
+                      const senaAmount = Number(t?.valorSeña) || 0;
+                      const totalAmount = Number(t?.valorTotal) || 0;
+                      const saldoAmount = Math.max(0, totalAmount - senaAmount);
+
                       return (
-                        <div key={t.id || idx} className="glass-card premium-border" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div key={t?.id || idx} className="glass-card premium-border" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           {activeTurnos.length > 1 && (
                             <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--color-gold)', borderBottom: '1px dashed var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
                               Turno {idx + 1} de {activeTurnos.length}
@@ -502,13 +521,13 @@ export default function Home() {
                           <div className={styles.summaryRow}>
                             <span>Día del Turno:</span>
                             <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                              {new Date(t.fecha).toLocaleDateString('es-ES', { dateStyle: 'full', timeZone: 'UTC' })}
+                              {fechaTurnoStr}
                             </span>
                           </div>
                           <div className={styles.summaryRow}>
                             <span>Horario:</span>
                             <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                              {t.horaInicio} a {t.horaFin}
+                              {t?.horaInicio || ''} a {t?.horaFin || ''}
                             </span>
                           </div>
                           <div className={styles.summaryRow} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -520,13 +539,13 @@ export default function Home() {
                           <div className={styles.summaryRow}>
                             <span>Seña abonada:</span>
                             <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                              ${t.valorSeña.toLocaleString()}
+                              ${senaAmount.toLocaleString('es-ES')}
                             </span>
                           </div>
                           <div className={styles.summaryRow}>
                             <span>Saldo a pagar en el local:</span>
                             <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                              ${(t.valorTotal - t.valorSeña).toLocaleString()}
+                              ${saldoAmount.toLocaleString('es-ES')}
                             </span>
                           </div>
 
