@@ -374,16 +374,8 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
                 <span class="details-value">${zonesText}</span>
               </li>
               <li>
-                <span class="details-label">Valor Total:</span>
-                <span class="details-value">$${valorTotal.toLocaleString()}</span>
-              </li>
-              <li>
                 <span class="details-label">Seña abonada:</span>
                 <span class="details-value" style="color: #a5d6a7;">$${valorSeña.toLocaleString()}</span>
-              </li>
-              <li>
-                <span class="details-label">Saldo restante a pagar en el local:</span>
-                <span class="details-value" style="color: #ffb74d;">$${(valorTotal - valorSeña).toLocaleString()}</span>
               </li>
             </ul>
           </div>
