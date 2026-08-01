@@ -11,7 +11,13 @@ export async function GET(request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    // Calculate current Argentina local date (UTC-3)
     const now = new Date();
+    const offsetBuenosAires = -3;
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+    const todayStr = nowLocal.toISOString().split('T')[0];
+
     const { searchParams } = new URL(request.url);
     const yearParam = searchParams.get('year');
     const monthParam = searchParams.get('month');
@@ -27,26 +33,32 @@ export async function GET(request) {
       year = startOfMonth.getFullYear();
       month = startOfMonth.getMonth() + 1;
     } else {
-      year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
-      month = monthParam ? parseInt(monthParam, 10) : now.getMonth() + 1; // 1-12
-      startOfMonth = new Date(year, month - 1, 1, 0, 0, 0);
-      endOfMonth = new Date(year, month, 0, 23, 59, 59);
+      year = yearParam ? parseInt(yearParam, 10) : nowLocal.getFullYear();
+      month = monthParam ? parseInt(monthParam, 10) : nowLocal.getMonth() + 1; // 1-12
+      const monthStr = String(month).padStart(2, '0');
+      startOfMonth = new Date(`${year}-${monthStr}-01T00:00:00`);
+      const lastDayOfMonth = new Date(year, month, 0).getDate();
+      const lastDayStr = String(lastDayOfMonth).padStart(2, '0');
+      endOfMonth = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59`);
     }
 
-    // Calculate dates for current day and current week for dashboard quick indicators
-    const startOfToday = new Date();
-    startOfToday.setHours(0,0,0,0);
-    const endOfToday = new Date();
-    endOfToday.setHours(23,59,59,999);
+    // Calculate dates for current day and current week for dashboard quick indicators (Argentina time)
+    const startOfToday = new Date(todayStr + 'T00:00:00');
+    const endOfToday = new Date(todayStr + 'T23:59:59.999');
 
-    // Current week (Monday to Sunday)
-    const currentDay = now.getDay();
-    const diffToMonday = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
-    const startOfWeek = new Date(now.setDate(diffToMonday));
-    startOfWeek.setHours(0,0,0,0);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23,59,59,999);
+    // Current week (Monday to Sunday) in Argentina time
+    const dayOfWeek = nowLocal.getDay();
+    const diffToMonday = nowLocal.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const mondayDate = new Date(nowLocal);
+    mondayDate.setDate(diffToMonday);
+    const mondayStr = mondayDate.toISOString().split('T')[0];
+
+    const sundayDate = new Date(mondayDate);
+    sundayDate.setDate(mondayDate.getDate() + 6);
+    const sundayStr = sundayDate.toISOString().split('T')[0];
+
+    const startOfWeek = new Date(mondayStr + 'T00:00:00');
+    const endOfWeek = new Date(sundayStr + 'T23:59:59.999');
 
     // 1. Fetch appointments for the selected month
     const turnosMes = await prisma.turno.findMany({
