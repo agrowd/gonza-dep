@@ -1967,9 +1967,9 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Actions Panel */}
-                <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                  <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.75rem' }}>Acciones Rápidas</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', width: '100%', boxSizing: 'border-box' }}>
+                  <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Acciones Rápidas</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
                     {selectedTurno.clienteId && (
                       <>
                         <button
@@ -1980,17 +1980,17 @@ export default function AgendaPage() {
                             const dateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
                             window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
                           }}
-                          className="btn btn-secondary"
-                          style={{ flex: '1 0 45%', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
+                          className="btn"
+                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
                         >
-                          📁 Ver Ficha del Cliente
+                          📁 Ficha Cliente
                         </button>
                         <button
                           onClick={() => handleScheduleNextTurn(selectedTurno)}
-                          className="btn btn-secondary"
-                          style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}
+                          className="btn"
+                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
                         >
-                          📅 Programar Siguiente Turno
+                          📅 Siguiente Turno
                         </button>
                       </>
                     )}
@@ -2031,52 +2031,53 @@ export default function AgendaPage() {
                         });
                         setIsEditing(true);
                       }}
-                      className="btn btn-primary"
-                      style={{ flex: '1 0 45%', backgroundColor: '#d4a54d', color: '#000', border: 'none' }}
+                      className="btn"
+                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
                     >
-                      ✏️ Editar / Reprogramar
+                      ✏️ Editar Turno
                     </button>
                     {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-primary" style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff', border: 'none' }}>
-                        Aprobar y Confirmar
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                        ✓ Aprobar
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#1565c0', color: '#fff', border: 'none' }}>
-                        Marcar como Realizado
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                        ✓ Realizado
                       </button>
                     )}
                     {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#c62828', color: '#fff', border: 'none' }}>
-                        Cancelar Turno
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                        ✕ Cancelar
                       </button>
                     )}
                     {selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#ef6c00', color: '#fff', border: 'none' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
                         ❌ No Asistió
                       </button>
                     )}
                     {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#2e7d32', color: '#fff', border: 'none' }}>
-                        Re-activar Turno
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                        🔄 Reactivar
                       </button>
                     )}
                     {selectedTurno.estado !== 'BLOQUEADO' && (
-                      <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', backgroundColor: '#25D366', color: '#fff', border: 'none' }}>
-                        💬 Chatear por WhatsApp
+                      <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#25D366', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box', textDecoration: 'none' }}>
+                        💬 WhatsApp
                       </a>
                     )}
-                    {selectedTurno.estado !== 'BLOQUEADO' && selectedTurno.cliente?.email && (
+                    {selectedTurno.cliente?.email && (
                       <button
                         onClick={() => handleSendReceipt(selectedTurno.id)}
-                        className="btn btn-secondary"
-                        style={{ flex: '1 0 45%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', backgroundColor: '#d4a54d', color: '#000', border: 'none' }}
+                        disabled={sendingReceipt[selectedTurno.id]}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#5c6bc0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box', opacity: sendingReceipt[selectedTurno.id] ? 0.7 : 1 }}
                       >
-                        🧾 Enviar Recibo por Mail
+                        {sendingReceipt[selectedTurno.id] ? 'Enviando...' : '🧾 Recibo Email'}
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn btn-secondary" style={{ flex: '1 0 45%', backgroundColor: '#c62828', color: '#fff', border: 'none' }}>
-                      🗑️ Eliminar Registro
+                    <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                      🗑️ Eliminar
                     </button>
                   </div>
                 </div>
