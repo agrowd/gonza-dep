@@ -47,6 +47,7 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState('');
 
   const [activeTurno, setActiveTurno] = useState(null);
+  const [activeTurnos, setActiveTurnos] = useState([]);
   const [isSelfManagement, setIsSelfManagement] = useState(false);
   const [rescheduleMode, setRescheduleMode] = useState(false);
   const [submittingReschedule, setSubmittingReschedule] = useState(false);
@@ -183,7 +184,7 @@ export default function Home() {
       }
     } catch (procErr) {
       console.error('Error processing client data in handleDniCheck:', procErr);
-      setErrorMessage(`Ocurrió un error al cargar la información (${procErr?.message || String(procErr)}). Por favor intenta nuevamente.`);
+      setErrorMessage('Ocurrió un error al cargar la información. Por favor intenta nuevamente.');
     } finally {
       setSearchingDni(false);
     }
