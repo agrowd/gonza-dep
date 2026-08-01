@@ -849,7 +849,7 @@ export default function AgendaPage() {
     const endMins = endMin % 60;
     const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
-    // Calculate discount (bonificacion) based on manual total override if present
+    // Calculate discount (bonificacion) based on manual total override or zone base total
     let baseTotalForDiscount = calcs.valorTotal;
     if (newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '') {
       baseTotalForDiscount = Number(newTurno.manualTotalOverride);
@@ -868,12 +868,12 @@ export default function AgendaPage() {
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: finalTotal,
-      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña || prev.manualSeñaOverride === undefined ? calcs.valorSeña : prev.valorSeña,
-      autoTotal: finalTotal,
+      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
+      autoTotal: calcs.valorTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [newTurno.selectedZoneIds, newTurno.horaInicio, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros, newTurno.manualTotalOverride]);
+  }, [newTurno.selectedZoneIds, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros, newTurno.manualTotalOverride, newTurno.manualSeñaOverride]);
 
   // Re-calculate pricing/discount for editTurno
   useEffect(() => {
@@ -890,7 +890,6 @@ export default function AgendaPage() {
     if ((!editTurno.selectedZoneIds || editTurno.selectedZoneIds.length === 0) && !editTurno.hasOtros) {
       setEditTurno(prev => ({
         ...prev,
-        horaFin: prev.horaInicio,
         valorTotal: 0,
         valorSeña: 0,
         autoTotal: 0,
@@ -902,13 +901,6 @@ export default function AgendaPage() {
 
     const selected = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
     const calcs = calculateTurnDetails(selected, false);
-
-    // Calculate horaFin based on start time + calculated duration
-    const startMin = timeToMinutes(editTurno.horaInicio);
-    const endMin = startMin + calcs.duracionMinutos;
-    const endHour = Math.floor(endMin / 60);
-    const endMins = endMin % 60;
-    const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
     let baseTotalForDiscount = calcs.valorTotal;
     if (editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '') {
@@ -926,14 +918,13 @@ export default function AgendaPage() {
 
     setEditTurno(prev => ({
       ...prev,
-      horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: finalTotal,
-      valorSeña: prev.valorSeña === '' || prev.valorSeña === prev.autoSeña || prev.manualSeñaOverride === undefined ? calcs.valorSeña : prev.valorSeña,
-      autoTotal: finalTotal,
+      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
+      autoTotal: calcs.valorTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
     }));
-  }, [editTurno.selectedZoneIds, editTurno.horaInicio, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, editTurno.manualTotalOverride, isEditing]);
+  }, [editTurno.selectedZoneIds, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, editTurno.manualTotalOverride, editTurno.manualSeñaOverride, isEditing]);
 
   // Check overlap/availability for newTurno in real-time
   useEffect(() => {
@@ -2021,6 +2012,8 @@ export default function AgendaPage() {
                           estado: selectedTurno.estado,
                           valorTotal: selectedTurno.valorTotal,
                           valorSeña: selectedTurno.valorSeña,
+                          manualTotalOverride: selectedTurno.valorTotal,
+                          manualSeñaOverride: selectedTurno.valorSeña,
                           descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
                           descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? selectedTurno.bonificacion : ''),
                           bonificacion: selectedTurno.bonificacion || 0,
