@@ -469,26 +469,38 @@ export default function AgendaPage() {
     setWeekDates(dates);
   }, [currentWeekStart]);
 
-  // 3. Fetch appointments when week dates are ready
-  const fetchAppointments = () => {
+  // 3. Fetch appointments robustly (calculates date boundaries directly to avoid initial render race conditions)
+  const fetchAppointments = useCallback(() => {
+    const baseDate = selectedDate || new Date();
     setLoading(true);
     let startStr, endStr;
     
-    if (viewMode === 'month' && selectedDate) {
-      const monthDates = getMonthGridDates(selectedDate);
-      if (monthDates.length === 0) {
-        setLoading(false);
-        return;
+    if (viewMode === 'month') {
+      const monthDates = getMonthGridDates(baseDate);
+      if (monthDates.length > 0) {
+        startStr = monthDates[0].toISOString().split('T')[0];
+        endStr = monthDates[monthDates.length - 1].toISOString().split('T')[0];
+      } else {
+        const year = baseDate.getFullYear();
+        const month = baseDate.getMonth();
+        startStr = new Date(year, month, 1).toISOString().split('T')[0];
+        endStr = new Date(year, month + 1, 0).toISOString().split('T')[0];
       }
-      startStr = monthDates[0].toISOString().split('T')[0];
-      endStr = monthDates[monthDates.length - 1].toISOString().split('T')[0];
+    } else if (viewMode === 'day') {
+      startStr = baseDate.toISOString().split('T')[0];
+      endStr = baseDate.toISOString().split('T')[0];
     } else {
-      if (weekDates.length === 0) {
-        setLoading(false);
-        return;
-      }
-      startStr = weekDates[0].toISOString().split('T')[0];
-      endStr = weekDates[5].toISOString().split('T')[0];
+      // 'week' view
+      const monday = currentWeekStart || getStartOfWeek(baseDate);
+      const saturday = new Date(monday);
+      saturday.setDate(monday.getDate() + 5);
+      startStr = monday.toISOString().split('T')[0];
+      endStr = saturday.toISOString().split('T')[0];
+    }
+
+    if (!startStr || !endStr) {
+      setLoading(false);
+      return;
     }
 
     fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`)
@@ -500,11 +512,11 @@ export default function AgendaPage() {
       })
       .catch(err => console.error('Error fetching appointments:', err))
       .finally(() => setLoading(false));
-  };
+  }, [viewMode, selectedDate, currentWeekStart]);
 
   useEffect(() => {
     fetchAppointments();
-  }, [weekDates, viewMode, selectedDate]);
+  }, [fetchAppointments]);
 
   // 4. Fetch zones for the new appointment modal
   useEffect(() => {
