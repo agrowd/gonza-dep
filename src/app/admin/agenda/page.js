@@ -1783,16 +1783,7 @@ export default function AgendaPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                         <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
                         <span style={{ fontWeight: '600' }}>
-                          ${(() => {
-                            let baseTotal = 0;
-                            try {
-                              const parsedZonas = JSON.parse(selectedTurno.zonas);
-                              baseTotal = parsedZonas.reduce((sum, z) => sum + (z.precio || z.precioBase || 0), 0);
-                            } catch (e) {
-                              baseTotal = (Number(editTurno.valorTotal) || 0) + (Number(editTurno.bonificacion) || 0);
-                            }
-                            return baseTotal.toLocaleString('es-ES');
-                          })()}
+                          ${(editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '' ? Number(editTurno.manualTotalOverride) : (editTurno.autoTotal || 0)).toLocaleString('es-ES')}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
@@ -2417,7 +2408,7 @@ export default function AgendaPage() {
                   <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                       <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
-                      <span style={{ fontWeight: '600' }}>${((newTurno.autoTotal || 0) + (newTurno.bonificacion || 0)).toLocaleString('es-ES')}</span>
+                      <span style={{ fontWeight: '600' }}>${(newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '' ? Number(newTurno.manualTotalOverride) : (newTurno.autoTotal || 0)).toLocaleString('es-ES')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                       <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Descuento Aplicado:</span>
