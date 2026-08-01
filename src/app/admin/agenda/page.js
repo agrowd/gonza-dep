@@ -714,7 +714,7 @@ export default function AgendaPage() {
       valorSeña: turno.valorSeña,
       descuentoTipo: turno.descuentoTipo || (turno.bonificacion > 0 ? 'PESOS' : 'NINGUNO'),
       descuentoValor: turno.descuentoValor || turno.bonificacion || '',
-      manualTotalOverride: turno.valorTotal
+      manualTotalOverride: turno.bonificacion ? (Number(turno.valorTotal) + Number(turno.bonificacion)) : undefined
     });
 
     setIsDetailsOpen(false);
