@@ -126,18 +126,33 @@ export default function Home() {
     
     setSearchingDni(true);
     setErrorMessage('');
-    
+
+    let data = null;
     try {
       const res = await fetch(`/api/clientes/consultar?email=${encodeURIComponent(formData.email.trim())}`);
-      const data = await res.json();
-      
-      if (data.error) {
-        setErrorMessage(data.error);
-        return;
-      }
-      
+      data = await res.json();
+    } catch (err) {
+      console.error('Error fetching email consultation API:', err);
+      setErrorMessage('Error de conexión al verificar el Email. Por favor intenta nuevamente.');
+      setSearchingDni(false);
+      return;
+    }
+
+    if (!data) {
+      setErrorMessage('No se recibió respuesta del servidor. Intenta nuevamente.');
+      setSearchingDni(false);
+      return;
+    }
+
+    if (data.error) {
+      setErrorMessage(data.error);
+      setSearchingDni(false);
+      return;
+    }
+
+    try {
       if (data.exists) {
-        const fullName = data.client.nombreCompleto || '';
+        const fullName = data.client?.nombreCompleto || '';
         const spaceIndex = fullName.indexOf(' ');
         const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
         const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
@@ -147,9 +162,9 @@ export default function Home() {
           nombre,
           apellido,
           nombreCompleto: fullName,
-          whatsapp: data.client.whatsapp,
-          email: data.client.email,
-          dni: data.client.dni || ''
+          whatsapp: data.client?.whatsapp || '',
+          email: data.client?.email || '',
+          dni: data.client?.dni || ''
         }));
 
         if (data.hasActiveTurno) {
@@ -157,19 +172,18 @@ export default function Home() {
           setActiveTurnos(list);
           setActiveTurno(list[0] || null);
           setIsSelfManagement(true);
-          return;
+        } else {
+          setErrorMessage('Tu email fue encontrado en el sistema, pero no tenés turnos activos futuros. Podés reservar tu próximo turno a continuación.');
+          setDniChecked(true);
+          setStep(2);
         }
-        
-        setErrorMessage('Tu email fue encontrado en el sistema, pero no tenés turnos activos futuros. Podés reservar tu próximo turno a continuación.');
-        setDniChecked(true);
-        setStep(2);
       } else {
         setDniChecked(true);
         setStep(2);
       }
-    } catch (err) {
-      console.error('Error checking Email:', err);
-      setErrorMessage('Error al verificar el Email. Por favor intenta nuevamente.');
+    } catch (procErr) {
+      console.error('Error processing client data in handleDniCheck:', procErr);
+      setErrorMessage('Ocurrió un error al cargar la información. Por favor intenta nuevamente.');
     } finally {
       setSearchingDni(false);
     }
