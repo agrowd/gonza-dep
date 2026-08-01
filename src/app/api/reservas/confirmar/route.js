@@ -2,30 +2,11 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { mpPayment } from '@/lib/mercadopago.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
-import { sendWhatsAppMessage } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, parseWppTemplate } from '@/lib/whatsapp.js';
 
 // Helper to format date
 function formatDate(date) {
   return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long', timeZone: 'UTC' });
-}
-
-function parseWppTemplate(template, client, turno, address) {
-  if (!template) return '';
-  let zonesText = '';
-  try {
-    const parsedZonas = JSON.parse(turno.zonas);
-    zonesText = parsedZonas.map(z => z.nombre).join(', ');
-  } catch (e) {
-    zonesText = turno.zonas || 'tratamiento';
-  }
-  return template
-    .replaceAll('[Nombre]', client.nombreCompleto)
-    .replaceAll('[FechaTurno]', formatDate(turno.fecha))
-    .replaceAll('[Horario]', `${turno.horaInicio} hs`)
-    .replaceAll('[Zonas]', zonesText)
-    .replaceAll('[ValorTotal]', `$${turno.valorTotal}`)
-    .replaceAll('[Seña]', `$${turno.valorSeña}`)
-    .replaceAll('[Direccion]', address || 'Paraná 597');
 }
 
 export async function POST(request) {

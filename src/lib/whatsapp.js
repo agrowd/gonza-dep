@@ -247,6 +247,8 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
     .replace(/(\[|\{)Dirección(\]|\})/gi, address || '');
 }
 
+export const parseWppTemplate = parseTemplate;
+
 export async function checkAndSendReminders() {
   try {
     // Get time in Argentina (GMT-3)

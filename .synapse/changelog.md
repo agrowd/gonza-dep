@@ -99,9 +99,8 @@
 - Almacenamiento y preservación del tipo de descuento (`descuentoTipo` `'PORCENTAJE'` o `'PESOS'`) y valor de bonificación en Prisma `Turno` para conservar el 20% al editar o reprogramar citas.
 - Texto oscuro de alto contraste (`color: #111111; font-weight: 500`) en el historial de notificaciones enviadas dentro del perfil del cliente (`src/app/admin/clientes/page.js`).
 - Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
-- Auto-completado inteligente de datos de cliente al usar "Programar Siguiente Turno": navegación a la semana objetivo a las 12:00 hs sin desfasaje horaria y precarga automática de cliente, zonas, precios y bonificaciones al pulsar en un horario libre.
-- Alineación vertical centrada de las etiquetas horarias (`.timeLabelText` con `transform: translateY(-50%)`) sobre las líneas de grilla y eliminación de padding externo en `.appointmentBlock` para prevenir superposición de textos y garantizar espacio holgado en citas de 30 minutos.
-- Adición de la regla CSS `.inputGroup` y `.inputLabel` con `width: 100%; box-sizing: border-box;` en `agenda.module.css` para resolver el achicamiento a 140px de los campos WhatsApp y Email en iPhones al ingresar nombres/apellidos cortos.
+- Solución del error `parseWppTemplate is not defined` exportando la función centralizada en `src/lib/whatsapp.js` y usándola en todas las rutas de la API de administración y reservas.
+- Soporte completo para reemplazo dinámico de día de la semana (`[Día]`, `[día]`, `{día}`, `{Dia}`, `{DÍA}`) por su nombre en español (ej. "Sábado") tanto en plantillas de WhatsApp como en correos electrónicos.
 - Preservación permanente de la seña personalizada (`manualSeñaOverride`) al modificar el horario de inicio o fin de un turno, evitando que se reinicie al valor predeterminado al cambiar la hora.
 - Corrección del cálculo de descuentos y resumen financiero en la agenda: el descuento por porcentaje o monto fijo se aplica sobre el precio total acordado y se descuenta del **Monto Final de Venta** y del **Saldo a Pagar en Local**.
 - Corrección del error `ReferenceError: sendingReceipt is not defined` definiendo el hook de estado `sendingReceipt` en la agenda.

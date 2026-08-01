@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
-import { sendWhatsAppMessage, parseTemplate } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, parseTemplate, parseWppTemplate } from '@/lib/whatsapp.js';
 import { sendNoShowEmail, sendCancellationEmail, sendRescheduleEmail } from '@/lib/email.js';
 
 // Helper to format date
