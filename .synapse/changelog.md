@@ -99,9 +99,9 @@
 - Almacenamiento y preservación del tipo de descuento (`descuentoTipo` `'PORCENTAJE'` o `'PESOS'`) y valor de bonificación en Prisma `Turno` para conservar el 20% al editar o reprogramar citas.
 - Texto oscuro de alto contraste (`color: #111111; font-weight: 500`) en el historial de notificaciones enviadas dentro del perfil del cliente (`src/app/admin/clientes/page.js`).
 - Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
+- Preservación permanente de la seña al modificar el **Total de Venta ($)** o el **Horario**: la seña configurada o cargada manualmente se conserva exactamente como la definió el usuario y nunca vuelve al valor predeterminado al cambiar el precio total.
 - Solución del error `parseWppTemplate is not defined` exportando la función centralizada en `src/lib/whatsapp.js` y usándola en todas las rutas de la API de administración y reservas.
 - Soporte completo para reemplazo dinámico de día de la semana (`[Día]`, `[día]`, `{día}`, `{Dia}`, `{DÍA}`) por su nombre en español (ej. "Sábado") tanto en plantillas de WhatsApp como en correos electrónicos.
-- Preservación permanente de la seña personalizada (`manualSeñaOverride`) al modificar el horario de inicio o fin de un turno, evitando que se reinicie al valor predeterminado al cambiar la hora.
 - Corrección del cálculo de descuentos y resumen financiero en la agenda: el descuento por porcentaje o monto fijo se aplica sobre el precio total acordado y se descuenta del **Monto Final de Venta** y del **Saldo a Pagar en Local**.
 - Corrección del error `ReferenceError: sendingReceipt is not defined` definiendo el hook de estado `sendingReceipt` en la agenda.
 - Normalización por cadena (`String(id) === String(z.id)`) en la selección y cálculo automático de total de venta al tildar zonas, garantizando que el precio autocompletado aparezca al instante sin quedar en `$0`.

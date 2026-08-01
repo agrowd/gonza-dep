@@ -868,7 +868,7 @@ export default function AgendaPage() {
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: finalTotal,
-      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
+      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : (prev.valorSeña !== '' && prev.valorSeña !== undefined && prev.valorSeña !== null ? prev.valorSeña : calcs.valorSeña),
       autoTotal: calcs.valorTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
@@ -919,7 +919,7 @@ export default function AgendaPage() {
     setEditTurno(prev => ({
       ...prev,
       valorTotal: finalTotal,
-      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
+      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : (prev.valorSeña !== '' && prev.valorSeña !== undefined && prev.valorSeña !== null ? prev.valorSeña : calcs.valorSeña),
       autoTotal: calcs.valorTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
