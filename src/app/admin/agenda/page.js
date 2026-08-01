@@ -1058,6 +1058,7 @@ export default function AgendaPage() {
       ...prev,
       manualTotalOverride: undefined,
       manualSeñaOverride: undefined,
+      valorSeña: '',
       selectedZoneIds: exists
         ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
         : [...(prev.selectedZoneIds || []), zoneId]
@@ -1070,6 +1071,7 @@ export default function AgendaPage() {
       ...prev,
       manualTotalOverride: undefined,
       manualSeñaOverride: undefined,
+      valorSeña: '',
       selectedZoneIds: exists
         ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
         : [...(prev.selectedZoneIds || []), zoneId]
