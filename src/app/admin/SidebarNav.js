@@ -124,7 +124,7 @@ export default function SidebarNav({ user }) {
 
       <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarHeader}>
-          <img src="/logo.png" alt="Gonzalo" style={{ width: '210px', height: 'auto', filter: 'brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5))' }} />
+          <img src="/Logo-Gonzalo-Depilacion-para-hombres-Blanco.png" alt="Gonzalo" style={{ width: '210px', height: 'auto' }} />
 
           {/* Close button for mobile inside sidebar */}
           <button onClick={() => setIsOpen(false)} className={styles.mobileCloseBtn} aria-label="Cerrar menú">
