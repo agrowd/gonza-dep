@@ -450,7 +450,7 @@ function ClientesPageContent() {
           No se encontraron clientes con los filtros aplicados.
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className={styles.tableWrapper}>
           <table className={styles.clientsTable}>
             <thead>
               <tr>

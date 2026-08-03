@@ -3,11 +3,18 @@
   flex-direction: column;
   gap: 2rem;
   padding-bottom: 3rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .header {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .header h2 {
@@ -26,11 +33,16 @@
   grid-template-columns: 350px 1fr;
   gap: 2rem;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 992px) {
   .topLayout {
     grid-template-columns: 1fr;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -40,6 +52,9 @@
   border-radius: var(--border-radius);
   padding: 1.75rem;
   box-shadow: var(--box-shadow);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .cardTitle {
@@ -169,6 +184,9 @@
   padding: 1rem 1.25rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .selectAllWrapper {
@@ -189,8 +207,12 @@
 /* Table */
 .tableWrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-color);
   border-radius: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .table {

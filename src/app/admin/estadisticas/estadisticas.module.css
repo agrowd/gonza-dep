@@ -4,6 +4,10 @@
   gap: 2rem;
   padding-bottom: 3rem;
   color: var(--text-primary);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .header {
@@ -14,6 +18,9 @@
   gap: 1.5rem;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .titleSection h2 {

@@ -3,11 +3,18 @@
   flex-direction: column;
   gap: 2rem;
   padding-bottom: 3rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .header {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .header h2 {
@@ -25,6 +32,11 @@
   display: flex;
   border-bottom: 1px solid var(--border-color);
   gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .tab {
