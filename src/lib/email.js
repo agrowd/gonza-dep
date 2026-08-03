@@ -339,6 +339,13 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
           padding-top: 20px;
           margin-top: 30px;
         }
+        .note p {
+          margin: 0 0 12px 0;
+          line-height: 1.5;
+        }
+        .note p:last-child {
+          margin-bottom: 0;
+        }
         .footer {
           background-color: #121212;
           padding: 20px 30px;
@@ -381,10 +388,10 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
           </div>
 
           <div class="note">
-            <strong>⚠️ Recordatorios importantes:</strong><br>
-            - Recordá venir <strong>afeitado al ras</strong> con maquinita de afeitar (24 horas antes) en las zonas a depilar. No uses cera ni pinza.<br>
-            - Por favor asistí con puntualidad. La tolerancia máxima de demora es de solo <strong>5 minutos</strong>.<br>
-            - Dirección del estudio: <strong>Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong>.
+            <p style="font-weight: bold; color: #d4a54d; margin-bottom: 12px; font-size: 15px;">⚠️ Recordatorios importantes:</p>
+            <p style="margin-bottom: 10px; line-height: 1.5;">- Recordá venir <strong>afeitado al ras</strong> con maquinita de afeitar (24 horas antes) en las zonas a depilar. No uses cera ni pinza.</p>
+            <p style="margin-bottom: 10px; line-height: 1.5;">- Por favor asistí con puntualidad. La tolerancia máxima de demora es de solo <strong>5 minutos</strong>.</p>
+            <p style="margin-bottom: 0; line-height: 1.5;">- Dirección del estudio: <strong>Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong>.</p>
           </div>
         </div>
         <div class="footer">
