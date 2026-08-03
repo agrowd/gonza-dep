@@ -23,7 +23,7 @@ export async function GET() {
 
     // Provide default fallbacks for uninitialized configurations
     const fullConfigs = {
-      wtsp_reminder_template: configs.wtsp_reminder_template || "NO RESPONDER ESTE MENSAJE\nTe recuerdo el turno de ESTA SEMANA para depilación láser, en el horario acordado.\n\nRecordá que tenés que VENIR AFEITADO AL RAS.\n\nIMPORTANTE: al ser turnos muy cortos, la tolerancia de demora por llegar tarde es de 5 minutos.\n\nDIRECCIÓN:\nParaná 597, piso 8, depto 48.",
+      wtsp_reminder_template: configs.wtsp_reminder_template || "NO RESPONDER ESTE MENSAJE\nHola [Nombre], te recuerdo tu turno de depilación láser para el [DiaCompleto] a las [Horario] hs.\n\nRecordá que tenés que VENIR AFEITADO AL RAS.\n\nIMPORTANTE: al ser turnos muy cortos, la tolerancia de demora por llegar tarde es de 5 minutos.\n\nDIRECCIÓN:\n[Direccion]",
       wtsp_confirmation_template: configs.wtsp_confirmation_template || "¡Hola [Nombre]! Tu reserva para el día [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!",
       address: configs.address || "Paraná 597, piso 8, depto 48",
       work_start: configs.work_start || "10:00",

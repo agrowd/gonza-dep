@@ -584,8 +584,11 @@ export default function ConfiguracionPage() {
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Nombre]')}>[Nombre]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Apellido]')}>[Apellido]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Día]')}>[Día]</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('[DiaCompleto]')}>[DiaCompleto]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[FechaTurno]')}>[FechaTurno]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Horario]')}>[Horario]</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('[HoraInicio]')}>[HoraInicio]</div>
+                  <div className={styles.variableBadge} onClick={() => handleCopyVariable('[HoraFin]')}>[HoraFin]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Zonas]')}>[Zonas]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[ValorTotal]')}>[ValorTotal]</div>
                   <div className={styles.variableBadge} onClick={() => handleCopyVariable('[Seña]')}>[Seña]</div>
