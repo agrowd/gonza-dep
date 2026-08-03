@@ -4,13 +4,31 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 
-// Timezone-safe date helper
+// Timezone-safe YYYY-MM-DD formatter (avoids UTC offset shifts)
+const toYYYYMMDD = (dateInput) => {
+  if (!dateInput) return '';
+  if (typeof dateInput === 'string') {
+    return dateInput.split('T')[0];
+  }
+  const year = dateInput.getFullYear();
+  const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+  const day = String(dateInput.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Timezone-safe YYYY-MM-DD parser (avoids UTC offset shifts)
+const parseYYYYMMDD = (dateStr) => {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  const cleanStr = typeof dateStr === 'string' ? dateStr.split('T')[0] : '';
+  if (!cleanStr) return new Date(dateStr);
+  const [year, month, day] = cleanStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 const formatLocalDate = (dateInput) => {
   if (!dateInput) return '';
-  const dateStr = typeof dateInput === 'string' ? dateInput : dateInput.toISOString();
-  const datePart = dateStr.split('T')[0];
-  const [year, month, day] = datePart.split('-').map(Number);
-  const d = new Date(year, month - 1, day);
+  const d = parseYYYYMMDD(dateInput);
   return d.toLocaleDateString('es-ES', { dateStyle: 'long' });
 };
 
@@ -478,24 +496,24 @@ export default function AgendaPage() {
     if (viewMode === 'month') {
       const monthDates = getMonthGridDates(baseDate);
       if (monthDates.length > 0) {
-        startStr = monthDates[0].toISOString().split('T')[0];
-        endStr = monthDates[monthDates.length - 1].toISOString().split('T')[0];
+        startStr = toYYYYMMDD(monthDates[0]);
+        endStr = toYYYYMMDD(monthDates[monthDates.length - 1]);
       } else {
         const year = baseDate.getFullYear();
         const month = baseDate.getMonth();
-        startStr = new Date(year, month, 1).toISOString().split('T')[0];
-        endStr = new Date(year, month + 1, 0).toISOString().split('T')[0];
+        startStr = toYYYYMMDD(new Date(year, month, 1));
+        endStr = toYYYYMMDD(new Date(year, month + 1, 0));
       }
     } else if (viewMode === 'day') {
-      startStr = baseDate.toISOString().split('T')[0];
-      endStr = baseDate.toISOString().split('T')[0];
+      startStr = toYYYYMMDD(baseDate);
+      endStr = toYYYYMMDD(baseDate);
     } else {
       // 'week' view
       const monday = currentWeekStart || getStartOfWeek(baseDate);
       const saturday = new Date(monday);
       saturday.setDate(monday.getDate() + 5);
-      startStr = monday.toISOString().split('T')[0];
-      endStr = saturday.toISOString().split('T')[0];
+      startStr = toYYYYMMDD(monday);
+      endStr = toYYYYMMDD(saturday);
     }
 
     if (!startStr || !endStr) {
@@ -666,7 +684,7 @@ export default function AgendaPage() {
   const handleScheduleNextTurn = (turno) => {
     if (!turno || !turno.cliente) return;
     
-    const fechaStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : new Date(turno.fecha).toISOString().split('T')[0];
+    const fechaStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha);
     const [year, month, day] = fechaStr.split('-').map(Number);
     const currentFecha = new Date(year, month - 1, day, 12, 0, 0);
     const freqWeeks = turno.cliente.frecuencia || 4;
@@ -724,10 +742,10 @@ export default function AgendaPage() {
     setViewMode('week');
 
     // Pre-fetch target week appointments immediately so they show on screen without delay
-    const startStr = mondayOfWeek.toISOString().split('T')[0];
+    const startStr = toYYYYMMDD(mondayOfWeek);
     const satDate = new Date(mondayOfWeek);
     satDate.setDate(satDate.getDate() + 5);
-    const endStr = satDate.toISOString().split('T')[0];
+    const endStr = toYYYYMMDD(satDate);
 
     fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`)
       .then(res => res.json())
@@ -794,7 +812,7 @@ export default function AgendaPage() {
     const endMins = endMinutes % 60;
     const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
-    const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+    const dateStr = typeof date === 'string' ? date.split('T')[0] : toYYYYMMDD(date);
 
     if (pendingNextScheduleData) {
       setNewTurno({
@@ -1233,7 +1251,7 @@ export default function AgendaPage() {
           {/* Jump to Date Picker */}
           <input 
             type="date"
-            value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+            value={selectedDate ? toYYYYMMDD(selectedDate) : ''}
             onChange={handleDateChange}
             style={{
               background: 'var(--bg-secondary)',
@@ -1257,7 +1275,7 @@ export default function AgendaPage() {
           <button 
             onClick={() => {
               if (selectedDate) {
-                const dateStr = selectedDate.toISOString().split('T')[0];
+                const dateStr = toYYYYMMDD(selectedDate);
                 window.open(`/admin/agenda/imprimir?fecha=${dateStr}`, '_blank');
               }
             }} 
@@ -1276,7 +1294,7 @@ export default function AgendaPage() {
               whatsapp: '',
               email: '',
               dni: '',
-              fechaStr: selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
               horaInicio: config.work_start,
               horaFin: addMinutesToTime(config.work_start, 30),
               selectedZoneIds: [],
@@ -1312,7 +1330,7 @@ export default function AgendaPage() {
             {/* Month Body Grid */}
             <div className={styles.monthGrid}>
               {getMonthGridDates(selectedDate).map((date, idx) => {
-                const dateStr = date.toISOString().split('T')[0];
+                const dateStr = toYYYYMMDD(date);
                 const isToday = new Date().toDateString() === date.toDateString();
                 const isOutsideMonth = date.getMonth() !== selectedDate.getMonth();
                 
@@ -1323,7 +1341,7 @@ export default function AgendaPage() {
                 const isPast = cellDate < today;
 
                 const dayAppointments = appointments.filter(app => {
-                  const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                  const appDateStr = typeof app.fecha === 'string' ? app.fecha.split('T')[0] : toYYYYMMDD(app.fecha);
                   return appDateStr === dateStr;
                 });
                 
@@ -1432,9 +1450,9 @@ export default function AgendaPage() {
               {viewMode === 'day' ? (
                 (() => {
                   if (!selectedDate) return null;
-                  const dateStr = selectedDate.toISOString().split('T')[0];
+                  const dateStr = toYYYYMMDD(selectedDate);
                   const dayAppointments = appointments.filter(app => {
-                    const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                    const appDateStr = typeof app.fecha === 'string' ? app.fecha.split('T')[0] : toYYYYMMDD(app.fecha);
                     return appDateStr === dateStr;
                   });
 
@@ -1525,9 +1543,9 @@ export default function AgendaPage() {
                 })()
               ) : (
                 weekDates.map((date, dayIdx) => {
-                  const dateStr = date.toISOString().split('T')[0];
+                  const dateStr = toYYYYMMDD(date);
                   const dayAppointments = appointments.filter(app => {
-                    const appDateStr = new Date(app.fecha).toISOString().split('T')[0];
+                    const appDateStr = typeof app.fecha === 'string' ? app.fecha.split('T')[0] : toYYYYMMDD(app.fecha);
                     return appDateStr === dateStr;
                   });
 
@@ -1984,7 +2002,7 @@ export default function AgendaPage() {
                             if (typeof window !== 'undefined' && gridBodyRef.current) {
                               sessionStorage.setItem('agenda_scroll_pos', gridBodyRef.current.scrollTop.toString());
                             }
-                            const dateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
+                            const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
                             window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
                           }}
                           className="btn"
@@ -2020,7 +2038,7 @@ export default function AgendaPage() {
                         }
                         setEditTurno({
                           isInitialEdit: true,
-                          fechaStr: new Date(selectedTurno.fecha).toISOString().split('T')[0],
+                          fechaStr: typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha),
                           horaInicio: selectedTurno.horaInicio,
                           horaFin: selectedTurno.horaFin,
                           estado: selectedTurno.estado,
@@ -2171,7 +2189,7 @@ export default function AgendaPage() {
                                 const lastDate = new Date(lastTurno.fecha);
                                 const freqWeeks = client.frecuencia || 4;
                                 lastDate.setDate(lastDate.getDate() + (freqWeeks * 7));
-                                targetDateStr = lastDate.toISOString().split('T')[0];
+                                targetDateStr = toYYYYMMDD(lastDate);
                               }
 
                               const fullName = client.nombreCompleto || '';
