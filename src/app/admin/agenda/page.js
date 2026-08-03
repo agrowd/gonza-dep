@@ -26,6 +26,16 @@ const parseYYYYMMDD = (dateStr) => {
   return new Date(year, month - 1, day);
 };
 
+const getAppDateStr = (fechaInput) => {
+  if (!fechaInput) return '';
+  if (typeof fechaInput === 'string' && fechaInput.length === 10 && fechaInput.indexOf('T') === -1) {
+    return fechaInput;
+  }
+  const d = typeof fechaInput === 'string' ? new Date(fechaInput) : fechaInput;
+  if (isNaN(d.getTime())) return '';
+  return toYYYYMMDD(d);
+};
+
 const formatLocalDate = (dateInput) => {
   if (!dateInput) return '';
   const d = parseYYYYMMDD(dateInput);
@@ -376,7 +386,7 @@ export default function AgendaPage() {
       const viewParam = searchParams.get('view');
       
       if (dateParam) {
-        const parsedDate = new Date(dateParam + 'T12:00:00');
+        const parsedDate = parseYYYYMMDD(dateParam);
         if (!isNaN(parsedDate.getTime())) {
           initialDate = parsedDate;
         }
@@ -1341,7 +1351,7 @@ export default function AgendaPage() {
                 const isPast = cellDate < today;
 
                 const dayAppointments = appointments.filter(app => {
-                  const appDateStr = typeof app.fecha === 'string' ? app.fecha.split('T')[0] : toYYYYMMDD(app.fecha);
+                  const appDateStr = getAppDateStr(app.fecha);
                   return appDateStr === dateStr;
                 });
                 
@@ -1452,7 +1462,7 @@ export default function AgendaPage() {
                   if (!selectedDate) return null;
                   const dateStr = toYYYYMMDD(selectedDate);
                   const dayAppointments = appointments.filter(app => {
-                    const appDateStr = typeof app.fecha === 'string' ? app.fecha.split('T')[0] : toYYYYMMDD(app.fecha);
+                    const appDateStr = getAppDateStr(app.fecha);
                     return appDateStr === dateStr;
                   });
 
@@ -1545,7 +1555,7 @@ export default function AgendaPage() {
                 weekDates.map((date, dayIdx) => {
                   const dateStr = toYYYYMMDD(date);
                   const dayAppointments = appointments.filter(app => {
-                    const appDateStr = typeof app.fecha === 'string' ? app.fecha.split('T')[0] : toYYYYMMDD(app.fecha);
+                    const appDateStr = getAppDateStr(app.fecha);
                     return appDateStr === dateStr;
                   });
 
