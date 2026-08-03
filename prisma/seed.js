@@ -39,11 +39,7 @@ async function main() {
   for (const z of zonasDefault) {
     const zona = await prisma.zona.upsert({
       where: { nombre: z.nombre },
-      update: {
-        precioBase: z.precioBase,
-        duracionMinutos: z.duracionMinutos,
-        señaBase: z.señaBase
-      },
+      update: {},
       create: {
         nombre: z.nombre,
         precioBase: z.precioBase,
@@ -63,6 +59,10 @@ async function main() {
     { key: "wtsp_cancellation_template", value: "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!" },
     { key: "wtsp_reschedule_template", value: "¡Hola [Nombre]! Tu turno fue reprogramado con éxito para el día [FechaTurno] a las [Horario] para [Zonas]. Recordá venir afeitado al ras. ¡Te esperamos!" },
     { key: "address", value: "Paraná 597, piso 8, depto 48" },
+    { key: "work_start", value: "12:30" },
+    { key: "work_end", value: "22:00" },
+    { key: "booking_work_start", value: "14:00" },
+    { key: "booking_work_end", value: "22:00" },
     { key: "email_confirmation_subject", value: "Confirmación de turno - Gonzalo Depilación" },
     { key: "email_confirmation_body", value: "¡Tu reserva ha sido confirmada con éxito!\n\nA continuación te detallamos los datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras de la noche anterior. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.\n\n¡Te esperamos!" },
     { key: "email_cancellation_subject", value: "Cancelación de turno - Gonzalo Depilación" },
@@ -76,9 +76,7 @@ async function main() {
   for (const config of defaultConfigs) {
     await prisma.configuracion.upsert({
       where: { key: config.key },
-      update: {
-        value: config.value
-      },
+      update: {},
       create: {
         key: config.key,
         value: config.value

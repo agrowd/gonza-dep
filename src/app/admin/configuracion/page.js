@@ -46,8 +46,10 @@ export default function ConfiguracionPage() {
     wtsp_reminder_template: '',
     wtsp_confirmation_template: '',
     address: '',
-    work_start: '10:00',
-    work_end: '20:00',
+    work_start: '12:30',
+    work_end: '22:00',
+    booking_work_start: '14:00',
+    booking_work_end: '22:00',
     email_confirmation_subject: '',
     email_confirmation_body: '',
     email_cancellation_subject: '',
@@ -93,8 +95,10 @@ export default function ConfiguracionPage() {
             wtsp_reminder_template: data.wtsp_reminder_template || '',
             wtsp_confirmation_template: data.wtsp_confirmation_template || '',
             address: data.address || '',
-            work_start: data.work_start || '10:00',
-            work_end: data.work_end || '20:00',
+            work_start: data.work_start || '12:30',
+            work_end: data.work_end || '22:00',
+            booking_work_start: data.booking_work_start || '14:00',
+            booking_work_end: data.booking_work_end || '22:00',
             email_confirmation_subject: data.email_confirmation_subject || '',
             email_confirmation_body: data.email_confirmation_body || '',
             email_cancellation_subject: data.email_cancellation_subject || '',
@@ -449,9 +453,12 @@ export default function ConfiguracionPage() {
             <div style={{ color: 'var(--color-gold)' }}>Cargando configuraciones...</div>
           ) : (
             <form onSubmit={handleSaveConfigs} className={styles.form}>
+              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.75rem' }}>
+                Agenda Interna (Gonzalo / Admin)
+              </div>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Hora de Inicio de Atención</label>
+                  <label className={styles.label}>Hora Inicio Agenda Interna</label>
                   <select 
                     className={styles.input} 
                     value={configs.work_start}
@@ -464,7 +471,7 @@ export default function ConfiguracionPage() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Hora de Finalización</label>
+                  <label className={styles.label}>Hora Fin Agenda Interna</label>
                   <select 
                     className={styles.input} 
                     value={configs.work_end}
@@ -472,6 +479,39 @@ export default function ConfiguracionPage() {
                   >
                     {hourSlots.map(slot => (
                       <option key={`end-${slot}`} value={slot}>{slot} hs</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.5rem 0' }} />
+
+              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.75rem' }}>
+                Autogestión / Reserva Online de Clientes
+              </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Hora Inicio Reserva Online</label>
+                  <select 
+                    className={styles.input} 
+                    value={configs.booking_work_start}
+                    onChange={(e) => setConfigs({ ...configs, booking_work_start: e.target.value })}
+                  >
+                    {hourSlots.map(slot => (
+                      <option key={`bstart-${slot}`} value={slot}>{slot} hs</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Hora Fin Reserva Online</label>
+                  <select 
+                    className={styles.input} 
+                    value={configs.booking_work_end}
+                    onChange={(e) => setConfigs({ ...configs, booking_work_end: e.target.value })}
+                  >
+                    {hourSlots.map(slot => (
+                      <option key={`bend-${slot}`} value={slot}>{slot} hs</option>
                     ))}
                   </select>
                 </div>

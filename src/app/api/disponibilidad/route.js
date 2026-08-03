@@ -62,12 +62,14 @@ export async function GET(request) {
       end: timeToMinutes(t.horaFin)
     }));
 
-    // 3. Define work hours from database configuration
+    // 3. Define work hours for public booking from database configuration
+    const bookingStartConfig = await prisma.configuracion.findUnique({ where: { key: 'booking_work_start' } });
+    const bookingEndConfig = await prisma.configuracion.findUnique({ where: { key: 'booking_work_end' } });
     const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
     const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
     
-    const workStartStr = startConfig?.value || '10:00';
-    const workEndStr = endConfig?.value || '20:00';
+    const workStartStr = bookingStartConfig?.value || startConfig?.value || '14:00';
+    const workEndStr = bookingEndConfig?.value || endConfig?.value || '22:00';
 
     const WORK_START = timeToMinutes(workStartStr);
     const WORK_END = timeToMinutes(workEndStr);

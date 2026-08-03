@@ -714,7 +714,8 @@ export default function AgendaPage() {
       valorSeña: turno.valorSeña,
       descuentoTipo: turno.descuentoTipo || (turno.bonificacion > 0 ? 'PESOS' : 'NINGUNO'),
       descuentoValor: turno.descuentoValor || turno.bonificacion || '',
-      manualTotalOverride: turno.bonificacion ? (Number(turno.valorTotal) + Number(turno.bonificacion)) : undefined
+      manualTotalOverride: turno.bonificacion ? (Number(turno.valorTotal) + Number(turno.bonificacion)) : Number(turno.valorTotal),
+      manualSeñaOverride: Number(turno.valorSeña)
     });
 
     setIsDetailsOpen(false);
@@ -1071,8 +1072,6 @@ export default function AgendaPage() {
     setNewTurno(prev => ({
       ...prev,
       manualTotalOverride: undefined,
-      manualSeñaOverride: undefined,
-      valorSeña: '',
       selectedZoneIds: exists
         ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
         : [...(prev.selectedZoneIds || []), zoneId]
