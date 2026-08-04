@@ -234,8 +234,8 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
   return template
     .replace(/(\[|\{)Nombre(\]|\})/gi, nombre)
     .replace(/(\[|\{)Apellido(\]|\})/gi, apellido)
+    .replace(/(\[|\{)(Día\s*Completo|Dia\s*Completo|DiaCompleto|DíaCompleto)(\]|\})/gi, formattedFullDia)
     .replace(/(\[|\{)(Día|Dia|DiaSemana|DíaSemana)(\]|\})/gi, justDayName)
-    .replace(/(\[|\{)(DiaCompleto|DíaCompleto)(\]|\})/gi, formattedFullDia)
     .replace(/(\[|\{)FechaTurno(\]|\})/gi, dateStr)
     .replace(/(\[|\{)Fecha(\]|\})/gi, dateStr)
     .replace(/(\[|\{)Horario(\]|\})/gi, timeStr)

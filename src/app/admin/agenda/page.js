@@ -28,12 +28,10 @@ const parseYYYYMMDD = (dateStr) => {
 
 const getAppDateStr = (fechaInput) => {
   if (!fechaInput) return '';
-  if (typeof fechaInput === 'string' && fechaInput.length === 10 && fechaInput.indexOf('T') === -1) {
-    return fechaInput;
+  if (typeof fechaInput === 'string') {
+    return fechaInput.split('T')[0];
   }
-  const d = typeof fechaInput === 'string' ? new Date(fechaInput) : fechaInput;
-  if (isNaN(d.getTime())) return '';
-  return toYYYYMMDD(d);
+  return toYYYYMMDD(fechaInput);
 };
 
 const formatLocalDate = (dateInput) => {
@@ -911,7 +909,7 @@ export default function AgendaPage() {
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: finalTotal,
-      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : (prev.valorSeña !== '' && prev.valorSeña !== undefined && prev.valorSeña !== null ? prev.valorSeña : calcs.valorSeña),
+      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
       autoTotal: calcs.valorTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
@@ -962,7 +960,7 @@ export default function AgendaPage() {
     setEditTurno(prev => ({
       ...prev,
       valorTotal: finalTotal,
-      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : (prev.valorSeña !== '' && prev.valorSeña !== undefined && prev.valorSeña !== null ? prev.valorSeña : calcs.valorSeña),
+      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
       autoTotal: calcs.valorTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
@@ -1790,7 +1788,14 @@ export default function AgendaPage() {
                       <input
                         type="number"
                         value={editTurno.valorSeña ?? ''}
-                        onChange={(e) => setEditTurno({ ...editTurno, valorSeña: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditTurno({
+                            ...editTurno,
+                            valorSeña: val,
+                            manualSeñaOverride: val === '' ? undefined : Number(val)
+                          });
+                        }}
                         required
                         placeholder="Auto-calculado al elegir zona"
                       />
@@ -2388,7 +2393,14 @@ export default function AgendaPage() {
                     <input
                       type="number"
                       value={newTurno.valorSeña ?? ''}
-                      onChange={(e) => setNewTurno({ ...newTurno, valorSeña: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewTurno({
+                          ...newTurno,
+                          valorSeña: val,
+                          manualSeñaOverride: val === '' ? undefined : Number(val)
+                        });
+                      }}
                       required
                       placeholder="Auto-calculado al elegir zona"
                     />
