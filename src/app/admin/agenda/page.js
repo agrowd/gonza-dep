@@ -267,8 +267,8 @@ export default function AgendaPage() {
     hasOtros: false,
     otrosTexto: ''
   });
-
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
+  const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
   const [sendingReceipt, setSendingReceipt] = useState({});
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
   const savedScrollRef = useRef(0);
@@ -280,21 +280,14 @@ export default function AgendaPage() {
       if (gridBodyRef.current) {
         savedScrollRef.current = gridBodyRef.current.scrollTop;
       }
-    } else if (savedScrollRef.current > 0) {
-      const scrollPos = savedScrollRef.current;
-      setTimeout(() => {
-        if (gridBodyRef.current) {
-          gridBodyRef.current.scrollTop = scrollPos;
-        }
-      }, 50);
     }
   }, [isDetailsOpen]);
 
   useEffect(() => {
-    if (!loading && appointments.length > 0) {
-      const stored = sessionStorage.getItem('agenda_scroll_pos');
-      if (stored && gridBodyRef.current) {
-        gridBodyRef.current.scrollTop = parseInt(stored, 10);
+    if (appointments && appointments.length > 0) {
+      const scrollPos = sessionStorage.getItem('agenda_scroll_pos');
+      if (scrollPos && gridBodyRef.current) {
+        gridBodyRef.current.scrollTop = parseInt(scrollPos, 10);
         sessionStorage.removeItem('agenda_scroll_pos');
       }
     }
@@ -304,9 +297,11 @@ export default function AgendaPage() {
     if (selectedTurno && selectedTurno.cliente) {
       setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
       setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
+      setTempClientNotasGonzalo(selectedTurno.cliente.notasGonzalo || '');
     } else {
       setTempClientObservaciones('');
       setTempClientFrecuencia(4);
+      setTempClientNotasGonzalo('');
     }
   }, [selectedTurno]);
 
@@ -318,7 +313,8 @@ export default function AgendaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           observaciones: tempClientObservaciones,
-          frecuencia: tempClientFrecuencia
+          frecuencia: tempClientFrecuencia,
+          notasGonzalo: tempClientNotasGonzalo
         })
       });
       if (res.ok) {
@@ -330,7 +326,8 @@ export default function AgendaPage() {
             cliente: {
               ...prev.cliente,
               observaciones: tempClientObservaciones,
-              frecuencia: tempClientFrecuencia
+              frecuencia: tempClientFrecuencia,
+              notasGonzalo: tempClientNotasGonzalo
             }
           };
         });
@@ -1981,7 +1978,7 @@ export default function AgendaPage() {
                         value={tempClientObservaciones}
                         onChange={(e) => setTempClientObservaciones(e.target.value)}
                         placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
-                        rows={3}
+                        rows={2}
                         style={{
                           width: '100%',
                           padding: '0.6rem',
@@ -1993,11 +1990,37 @@ export default function AgendaPage() {
                           resize: 'vertical'
                         }}
                       />
-                      {(tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') || tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4)) && (
+                    </div>
+                  </div>
+
+                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                    <span className={styles.detailLabel} style={{ color: '#d4a54d', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      🩺 Observaciones del Operador (Potencia, Clínica, Indicaciones)
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <textarea
+                        value={tempClientNotasGonzalo}
+                        onChange={(e) => setTempClientNotasGonzalo(e.target.value)}
+                        placeholder="Potencia utilizada (J), tolerancia al dolor, zonas sensibles o notas clínicas..."
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          padding: '0.6rem',
+                          borderRadius: '8px',
+                          border: '1px solid #d4a54d50',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.85rem',
+                          resize: 'vertical'
+                        }}
+                      />
+                      {(tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') || 
+                        tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4) ||
+                        tempClientNotasGonzalo !== (selectedTurno.cliente?.notasGonzalo || '')) && (
                         <button
                           onClick={handleSaveClientObservaciones}
                           className="btn btn-primary"
-                          style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.25rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                          style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
                         >
                           💾 Guardar Cambios
                         </button>
