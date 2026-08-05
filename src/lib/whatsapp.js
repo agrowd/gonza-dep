@@ -211,10 +211,13 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
   const dayOfWeekName = d.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
   const justDayName = dayOfWeekName ? (dayOfWeekName.charAt(0).toUpperCase() + dayOfWeekName.slice(1)) : '';
 
-  // Full day string (e.g., "Sábado 1 de agosto")
-  const fullDayName = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  // Full day string (e.g., "Viernes 4 de septiembre de 2026")
+  const fullDayName = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
   const formattedFullDia = fullDayName ? (fullDayName.charAt(0).toUpperCase() + fullDayName.slice(1)) : '';
-  
+
+  // Date string with day name (e.g., "Viernes 04/09/2026")
+  const dateStrWithDay = justDayName ? `${justDayName} ${dateStr}` : dateStr;
+
   let zonesStr = '';
   try {
     const zonesObj = typeof turno.zonas === 'string' ? JSON.parse(turno.zonas) : turno.zonas;
@@ -231,13 +234,19 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
   const nombre = names[0] || '';
   const apellido = names.slice(1).join(' ') || '';
 
+  // Check if template explicitly contains [Día] or [Dia] or [DiaCompleto]
+  const hasExplicitDay = /(\[|\{)(Día|Dia|DiaSemana|DíaSemana|Día\s*Completo|Dia\s*Completo|DiaCompleto|DíaCompleto)(\]|\})/i.test(template);
+
+  // If template does not have explicit [Día], use dateStrWithDay (e.g., "Viernes 04/09/2026") for [FechaTurno] / [Fecha]
+  const finalDateForPlaceholder = hasExplicitDay ? dateStr : dateStrWithDay;
+
   return template
     .replace(/(\[|\{)Nombre(\]|\})/gi, nombre)
     .replace(/(\[|\{)Apellido(\]|\})/gi, apellido)
     .replace(/(\[|\{)(Día\s*Completo|Dia\s*Completo|DiaCompleto|DíaCompleto)(\]|\})/gi, formattedFullDia)
     .replace(/(\[|\{)(Día|Dia|DiaSemana|DíaSemana)(\]|\})/gi, justDayName)
-    .replace(/(\[|\{)FechaTurno(\]|\})/gi, dateStr)
-    .replace(/(\[|\{)Fecha(\]|\})/gi, dateStr)
+    .replace(/(\[|\{)FechaTurno(\]|\})/gi, finalDateForPlaceholder)
+    .replace(/(\[|\{)Fecha(\]|\})/gi, finalDateForPlaceholder)
     .replace(/(\[|\{)Horario(\]|\})/gi, timeStr)
     .replace(/(\[|\{)Hora(\]|\})/gi, timeStr)
     .replace(/(\[|\{)HoraInicio(\]|\})/gi, turno.horaInicio || '')

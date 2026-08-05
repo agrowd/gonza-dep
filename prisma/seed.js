@@ -52,12 +52,12 @@ async function main() {
 
   // 3. Create Default configuration variables
   const defaultConfigs = [
-    { key: "wtsp_reminder_template", value: "NO RESPONDER ESTE MENSAJE\nHola [Nombre], te recuerdo tu turno de depilación láser para el [DiaCompleto] a las [Horario] hs.\n\nRecordá que tenés que VENIR AFEITADO AL RAS.\n\nIMPORTANTE: al ser turnos muy cortos, la tolerancia de demora por llegar tarde es de 5 minutos.\n\nDIRECCIÓN:\n[Direccion]" },
-    { key: "wtsp_confirmation_template", value: "¡Hola [Nombre]! Tu reserva para el día [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
-    { key: "wtsp_confirmation_manual_template", value: "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] para [Zonas] fue agendado con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
-    { key: "wtsp_noshow_template", value: "¡Hola [Nombre]! Lamentamos que no hayas asistido a tu turno del día [FechaTurno] a las [Horario]. Según nuestras políticas, la seña de [Seña] no es reembolsable para cubrir los costos del horario reservado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web." },
-    { key: "wtsp_cancellation_template", value: "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!" },
-    { key: "wtsp_reschedule_template", value: "¡Hola [Nombre]! Tu turno fue reprogramado con éxito para el día [FechaTurno] a las [Horario] para [Zonas]. Recordá venir afeitado al ras. ¡Te esperamos!" },
+    { key: "wtsp_reminder_template", value: "NO RESPONDER ESTE MENSAJE\nHola [Nombre], te recuerdo tu turno de depilación láser para el [Día] [FechaTurno] a las [Horario] hs.\n\nRecordá que tenés que VENIR AFEITADO AL RAS.\n\nIMPORTANTE: al ser turnos muy cortos, la tolerancia de demora por llegar tarde es de 5 minutos.\n\nDIRECCIÓN:\n[Direccion]" },
+    { key: "wtsp_confirmation_template", value: "¡Hola [Nombre]! Tu reserva para el día [Día] [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
+    { key: "wtsp_confirmation_manual_template", value: "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] para [Zonas] fue agendado con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
+    { key: "wtsp_noshow_template", value: "¡Hola [Nombre]! Lamentamos que no hayas asistido a tu turno del día [Día] [FechaTurno] a las [Horario]. Según nuestras políticas, la seña de [Seña] no es reembolsable para cubrir los costos del horario reservado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web." },
+    { key: "wtsp_cancellation_template", value: "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!" },
+    { key: "wtsp_reschedule_template", value: "¡Hola [Nombre]! Tu turno fue reprogramado con éxito para el día [Día] [FechaTurno] a las [Horario] para [Zonas]. Recordá venir afeitado al ras. ¡Te esperamos!" },
     { key: "address", value: "Paraná 597, piso 8, depto 48" },
     { key: "work_start", value: "12:30" },
     { key: "work_end", value: "22:00" },
