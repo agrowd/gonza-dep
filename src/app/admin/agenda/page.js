@@ -929,7 +929,7 @@ export default function AgendaPage() {
       setEditTurno(prev => ({
         ...prev,
         valorTotal: 0,
-        valorSeña: 0,
+        valorSeña: prev.initialValorSeña !== undefined ? prev.initialValorSeña : 0,
         autoTotal: 0,
         autoSeña: 0,
         bonificacion: 0
@@ -937,10 +937,22 @@ export default function AgendaPage() {
       return;
     }
 
-    const selected = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
-    const calcs = calculateTurnDetails(selected, false);
+    // Calculate incremental total based on initialValorTotal and zone differences
+    const initialIds = editTurno.initialZoneIds || [];
+    const currentIds = editTurno.selectedZoneIds || [];
 
-    let baseTotalForDiscount = calcs.valorTotal;
+    // Added zones
+    const addedZoneIds = currentIds.filter(id => !initialIds.some(iId => String(iId) === String(id)));
+    const addedZones = zones.filter(z => addedZoneIds.some(id => String(id) === String(z.id)));
+    const addedCatalogSum = addedZones.reduce((sum, z) => sum + (Number(z.precio) || 0), 0);
+
+    // Removed zones
+    const removedZoneIds = initialIds.filter(id => !currentIds.some(cId => String(cId) === String(id)));
+    const removedZones = zones.filter(z => removedZoneIds.some(id => String(id) === String(z.id)));
+    const removedCatalogSum = removedZones.reduce((sum, z) => sum + (Number(z.precio) || 0), 0);
+
+    let baseTotalForDiscount = Math.max(0, (Number(editTurno.initialValorTotal) || 0) + addedCatalogSum - removedCatalogSum);
+    
     if (editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '') {
       baseTotalForDiscount = Number(editTurno.manualTotalOverride);
     }
@@ -954,12 +966,15 @@ export default function AgendaPage() {
 
     const finalTotal = Math.max(0, baseTotalForDiscount - bonificacion);
 
+    // Seña MUST STAY FIXED at initialValorSeña (or manualSeñaOverride if edited by user)
+    const fixedSeña = editTurno.manualSeñaOverride !== undefined 
+      ? Number(editTurno.manualSeñaOverride) 
+      : (editTurno.initialValorSeña !== undefined ? Number(editTurno.initialValorSeña) : Number(editTurno.valorSeña || 0));
+
     setEditTurno(prev => ({
       ...prev,
       valorTotal: finalTotal,
-      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
-      autoTotal: calcs.valorTotal,
-      autoSeña: calcs.valorSeña,
+      valorSeña: fixedSeña,
       bonificacion: bonificacion
     }));
   }, [editTurno.selectedZoneIds, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, editTurno.manualTotalOverride, editTurno.manualSeñaOverride, isEditing]);
@@ -2076,14 +2091,17 @@ export default function AgendaPage() {
                         }
                         setEditTurno({
                           isInitialEdit: true,
+                          initialValorTotal: Number(selectedTurno.valorTotal || 0),
+                          initialValorSeña: Number(selectedTurno.valorSeña || 0),
+                          initialZoneIds: [...preselectedZoneIds],
                           fechaStr: typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha),
                           horaInicio: selectedTurno.horaInicio,
                           horaFin: selectedTurno.horaFin,
                           estado: selectedTurno.estado,
                           valorTotal: selectedTurno.valorTotal,
                           valorSeña: selectedTurno.valorSeña,
-                          manualTotalOverride: selectedTurno.bonificacion ? (Number(selectedTurno.valorTotal) + Number(selectedTurno.bonificacion)) : undefined,
-                          manualSeñaOverride: selectedTurno.valorSeña,
+                          manualTotalOverride: undefined,
+                          manualSeñaOverride: Number(selectedTurno.valorSeña || 0),
                           descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
                           descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? selectedTurno.bonificacion : ''),
                           bonificacion: selectedTurno.bonificacion || 0,
