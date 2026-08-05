@@ -46,12 +46,10 @@
   background-color: #ffffff;
   max-width: 800px;
   margin: 0 auto;
-  padding: 3rem;
+  padding: 2.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-radius: 8px;
-  min-height: 297mm; /* standard A4 height ratio roughly */
-  display: flex;
-  flex-direction: column;
+  min-height: auto;
 }
 
 .header {
@@ -60,7 +58,7 @@
   align-items: center;
   border-bottom: 2px solid #7a1f1e;
   padding-bottom: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .logo {
@@ -103,7 +101,6 @@
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
-  flex: 1;
 }
 
 .printTable th {
@@ -118,22 +115,22 @@
 }
 
 .printTable td {
-  padding: 1rem;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid #e5e5e5;
-  vertical-align: middle;
+  vertical-align: top;
   font-size: 0.95rem;
   color: #000000;
 }
 
 .timeCol {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #7a1f1e;
   white-space: nowrap;
 }
 
 .clientName {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.95rem;
   margin-bottom: 0.15rem;
 }
 
@@ -147,7 +144,7 @@
 }
 
 .footer {
-  margin-top: 3rem;
+  margin-top: 2.5rem;
   border-top: 1px solid #e5e5e5;
   padding-top: 1rem;
   text-align: center;
@@ -209,38 +206,45 @@
     margin: 12mm 15mm;
   }
 
-  body {
+  html, body {
     background-color: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
-  .printWrapper {
+  .printWrapper, .sheet {
     background-color: transparent !important;
     padding: 0 !important;
-    min-height: auto !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    display: block !important;
+    overflow: visible !important;
   }
   
   .actionsBar {
     display: none !important;
   }
-  
-  .sheet {
-    box-shadow: none !important;
-    padding: 0 !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-    min-height: auto !important;
-  }
 
   .printTable {
     width: 100% !important;
     border-collapse: collapse !important;
+    display: table !important;
     page-break-inside: auto !important;
+  }
+
+  .printTable thead {
+    display: table-header-group !important;
   }
 
   .printTable tr {
@@ -251,7 +255,7 @@
   .printTable th {
     border-bottom: 2px solid #000000 !important;
     background-color: #f7f6f2 !important;
-    -webkit-print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
   }
 
   .printTable td {
@@ -259,11 +263,14 @@
   }
 
   .header {
+    display: flex !important;
     border-bottom: 2px solid #000000 !important;
     margin-bottom: 1.5rem !important;
+    padding-bottom: 1rem !important;
   }
 
   .footer {
+    display: block !important;
     position: static !important;
     margin-top: 2rem !important;
     page-break-before: auto !important;
