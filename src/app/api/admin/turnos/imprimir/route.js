@@ -41,13 +41,13 @@ export async function GET(request) {
       }
     });
 
-    // Filter turnos matching exact YYYY-MM-DD date in UTC
+    // Filter turnos matching exact YYYY-MM-DD date in Argentina local time or UTC ISO string
     const filteredTurnos = turnos.filter(t => {
+      if (!t.fecha) return false;
+      const rawIsoStr = typeof t.fecha === 'string' ? t.fecha.split('T')[0] : t.fecha.toISOString().split('T')[0];
       const d = new Date(t.fecha);
-      const year = d.getUTCFullYear();
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
-      return `${year}-${month}-${day}` === fecha;
+      const localDateStr = d.toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+      return rawIsoStr === fecha || localDateStr === fecha;
     });
 
     // Sort chronologically by start time in minutes
