@@ -350,13 +350,16 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1200;
   padding: 1rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .modalContent {
@@ -364,7 +367,11 @@
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  margin: auto;
+  word-break: break-word;
+  overflow-wrap: break-word;
   animation: fadeIn 0.3s ease forwards;
 }
 
@@ -372,22 +379,33 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .closeBtn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 1.6rem;
   cursor: pointer;
   line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.closeBtn:hover {
-  color: var(--text-primary);
+.closeBtn:hover, .closeBtn:active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .modalFooter {
@@ -448,14 +466,30 @@
 @media (max-width: 600px) {
   .modalOverlay {
     padding: 0.5rem;
+    align-items: flex-start;
+    padding-top: 1.5rem;
     box-sizing: border-box;
     overflow-x: hidden;
   }
   .modalContent {
     padding: 1rem !important;
     max-width: 100% !important;
+    width: 100% !important;
     box-sizing: border-box;
     overflow-x: hidden;
+    margin: 0 auto !important;
+  }
+  .modalHeader h3 {
+    font-size: 1.05rem !important;
+    max-width: calc(100% - 48px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .closeBtn {
+    font-size: 1.8rem !important;
+    width: 42px !important;
+    height: 42px !important;
   }
   .inputGroup input,
   .inputGroup select,
@@ -474,6 +508,16 @@
     gap: 0.5rem;
     width: 100%;
     box-sizing: border-box;
+  }
+  .detailItem {
+    width: 100%;
+    box-sizing: border-box;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  .detailValue {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 }
 
