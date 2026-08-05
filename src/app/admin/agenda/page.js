@@ -202,6 +202,7 @@ export default function AgendaPage() {
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCancelled, setShowCancelled] = useState(false);
 
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -1268,6 +1269,28 @@ export default function AgendaPage() {
             📅 Hoy
           </button>
 
+          {/* Toggle Show/Hide Cancelled Appointments */}
+          <button 
+            onClick={() => setShowCancelled(!showCancelled)}
+            style={{
+              background: showCancelled ? 'rgba(239, 83, 80, 0.15)' : 'var(--bg-secondary)',
+              border: showCancelled ? '1px solid #ef5350' : '1px solid var(--border-color)',
+              color: showCancelled ? '#ef5350' : 'var(--text-secondary)',
+              borderRadius: '20px',
+              padding: '6px 12px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              transition: 'all 0.2s ease'
+            }}
+            title="Mostrar u ocultar turnos cancelados en la grilla visual de la agenda"
+          >
+            {showCancelled ? '👁️ Ver Cancelados' : '🙈 Ocultar Cancelados'}
+          </button>
+
           {/* Jump to Date Picker */}
           <input 
             type="date"
@@ -1362,7 +1385,9 @@ export default function AgendaPage() {
 
                 const dayAppointments = appointments.filter(app => {
                   const appDateStr = getAppDateStr(app.fecha);
-                  return appDateStr === dateStr;
+                  if (appDateStr !== dateStr) return false;
+                  if (!showCancelled && app.estado === 'CANCELADO') return false;
+                  return true;
                 });
                 
                 return (
@@ -1473,7 +1498,9 @@ export default function AgendaPage() {
                   const dateStr = toYYYYMMDD(selectedDate);
                   const dayAppointments = appointments.filter(app => {
                     const appDateStr = getAppDateStr(app.fecha);
-                    return appDateStr === dateStr;
+                    if (appDateStr !== dateStr) return false;
+                    if (!showCancelled && app.estado === 'CANCELADO') return false;
+                    return true;
                   });
 
                   return (
@@ -1566,7 +1593,9 @@ export default function AgendaPage() {
                   const dateStr = toYYYYMMDD(date);
                   const dayAppointments = appointments.filter(app => {
                     const appDateStr = getAppDateStr(app.fecha);
-                    return appDateStr === dateStr;
+                    if (appDateStr !== dateStr) return false;
+                    if (!showCancelled && app.estado === 'CANCELADO') return false;
+                    return true;
                   });
 
                   return (
