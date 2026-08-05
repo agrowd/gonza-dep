@@ -76,7 +76,7 @@ async function main() {
   for (const config of defaultConfigs) {
     await prisma.configuracion.upsert({
       where: { key: config.key },
-      update: {},
+      update: { value: config.value },
       create: {
         key: config.key,
         value: config.value
