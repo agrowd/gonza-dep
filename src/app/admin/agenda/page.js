@@ -1993,9 +1993,9 @@ export default function AgendaPage() {
                     </div>
                   </div>
 
-                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
-                    <span className={styles.detailLabel} style={{ color: '#d4a54d', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      🩺 Observaciones del Operador (Potencia, Clínica, Indicaciones)
+                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
+                    <span className={styles.detailLabel}>
+                      Observaciones del Operador (Potencia, Clínica, Indicaciones)
                     </span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
                       <textarea

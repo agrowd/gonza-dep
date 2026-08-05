@@ -30,6 +30,22 @@ function getMailConfig() {
 }
 
 /**
+ * Formats a raw text body into explicit, HTML-safe <p> tags with generous line-height
+ * and bottom margin (16px) so that text NEVER collapses into a single glued block in mobile email clients.
+ */
+export function formatEmailParagraphs(rawText) {
+  if (!rawText) return '';
+  const lines = rawText
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+    
+  return lines
+    .map(line => `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">${line}</p>`)
+    .join('');
+}
+
+/**
  * Sends a notification email to a client who did not show up for their scheduled appointment.
  */
 export async function sendNoShowEmail(clientEmail, clientName, turnDetails, customSubject, customBody) {
@@ -62,17 +78,14 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
 
   let rawBody = customBody || defaultBody;
   rawBody = rawBody
-    .replace(/\{cliente\}/gi, clientName || '')
-    .replace(/\{fecha\}/gi, dateFormatted)
-    .replace(/\{horario\}/gi, `${horaInicio} hs`)
-    .replace(/\{zonas\}/gi, zonesText)
-    .replace(/\{seña\}/gi, `$${(valorSeña || 0).toLocaleString()}`)
-    .replace(/\{total\}/gi, `$${(valorTotal || 0).toLocaleString()}`);
+    .replace(/\{cliente\}/gi, `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
+    .replace(/\{fecha\}/gi, `<strong style="color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</strong>`)
+    .replace(/\{horario\}/gi, `<strong style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</strong>`)
+    .replace(/\{zonas\}/gi, `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
+    .replace(/\{seña\}/gi, `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
+    .replace(/\{total\}/gi, `<strong style="color: #ffffff !important;">$${(valorTotal || 0).toLocaleString()}</strong>`);
 
-  const formattedParagraphs = rawBody
-    .split(/\n\s*\n/)
-    .map(p => `<p style="margin-bottom: 15px;">${p.replace(/\n/g, '<br>')}</p>`)
-    .join('');
+  const formattedParagraphs = formatEmailParagraphs(rawBody);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -438,8 +451,8 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   }
 
   const policyText = withLossOfDeposit
-    ? `<p style="margin-bottom: 1.5rem; line-height: 1.6;">Debido a que la cancelación se realizó con **menos de 72 horas** de anticipación, de acuerdo con nuestras políticas corporativas, la seña abonada de <strong>$${(valorSeña || 0).toLocaleString()}</strong> ha sido retenida para cubrir los costos de reserva del espacio.</p>`
-    : `<p style="margin-bottom: 1.5rem; line-height: 1.6;">Al haberse realizado la cancelación con **más de 72 horas** de anticipación (o por disposición administrativa), tu seña original de <strong>$${(valorSeña || 0).toLocaleString()}</strong> queda registrada <strong>a tu favor</strong>. Por favor, ponte en contacto con nosotros para coordinar la reprogramación de tu cita utilizando esta seña.</p>`;
+    ? `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">Debido a que la cancelación se realizó con <strong style="color: #ff5252;">menos de 72 horas</strong> de anticipación, de acuerdo con nuestras políticas corporativas, la seña abonada de <strong style="color: #ff8a8a;">$${(valorSeña || 0).toLocaleString()}</strong> ha sido retenida para cubrir los costos de reserva del espacio.</p>`
+    : `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">Al haberse realizado la cancelación con <strong style="color: #a5d6a7;">más de 72 horas</strong> de anticipación (o por disposición administrativa), tu seña original de <strong style="color: #a5d6a7;">$${(valorSeña || 0).toLocaleString()}</strong> queda registrada <strong style="color: #ffffff;">a tu favor</strong>. Por favor, ponte en contacto con nosotros para coordinar la reprogramación de tu cita utilizando esta seña.</p>`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -912,19 +925,20 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
   const replacePlaceholders = (text) => {
     if (!text) return '';
     return text
-      .replaceAll('{cliente}', clientName || '')
-      .replaceAll('{día}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
-      .replaceAll('{dia}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
-      .replaceAll('{fecha}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</span>`)
-      .replaceAll('{horario}', `<span style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</span>`)
-      .replaceAll('{zonas}', zonesText)
-      .replaceAll('{seña}', `$${(valorSeña || 0).toLocaleString()}`)
-      .replaceAll('{saldo}', `$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}`)
-      .replaceAll('{direccion}', address);
+      .replaceAll('{cliente}', `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
+      .replaceAll('{día}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
+      .replaceAll('{dia}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
+      .replaceAll('{fecha}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</strong>`)
+      .replaceAll('{horario}', `<strong style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</strong>`)
+      .replaceAll('{zonas}', `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
+      .replaceAll('{seña}', `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
+      .replaceAll('{saldo}', `<strong style="color: #ffb74d !important;">$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}</strong>`)
+      .replaceAll('{direccion}', `<strong style="color: #ffffff !important;">${address}</strong>`);
   };
 
   const subject = replacePlaceholders(subjectTemplate || 'Reprogramación de turno - Gonzalo Depilación');
-  const bodyText = replacePlaceholders(bodyTemplate || 'Tu turno ha sido reprogramado con éxito.');
+  const rawBodyText = replacePlaceholders(bodyTemplate || 'Tu turno ha sido reprogramado con éxito.');
+  const formattedBodyHtml = formatEmailParagraphs(rawBodyText);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -976,7 +990,6 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
         }
         .body-text {
           margin-bottom: 25px;
-          white-space: pre-line;
         }
         .footer {
           background-color: #121212;
@@ -995,7 +1008,7 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
         </div>
         <div class="content">
           <div class="greeting">Hola ${clientName},</div>
-          <div class="body-text">${bodyText}</div>
+          <div class="body-text">${formattedBodyHtml}</div>
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
@@ -1046,19 +1059,20 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
   const replacePlaceholders = (text) => {
     if (!text) return '';
     return text
-      .replaceAll('{cliente}', clientName || '')
-      .replaceAll('{día}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
-      .replaceAll('{dia}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</span>`)
-      .replaceAll('{fecha}', `<span style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</span>`)
-      .replaceAll('{horario}', `<span style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</span>`)
-      .replaceAll('{zonas}', zonesText)
-      .replaceAll('{seña}', `$${(valorSeña || 0).toLocaleString()}`)
-      .replaceAll('{saldo}', `$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}`)
-      .replaceAll('{direccion}', address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)');
+      .replaceAll('{cliente}', `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
+      .replaceAll('{día}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
+      .replaceAll('{dia}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
+      .replaceAll('{fecha}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</strong>`)
+      .replaceAll('{horario}', `<strong style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</strong>`)
+      .replaceAll('{zonas}', `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
+      .replaceAll('{seña}', `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
+      .replaceAll('{saldo}', `<strong style="color: #ffb74d !important;">$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}</strong>`)
+      .replaceAll('{direccion}', `<strong style="color: #ffffff !important;">${address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)'}</strong>`);
   };
 
   const subject = replacePlaceholders(subjectTemplate || 'Recordatorio de tu turno en 7 días - Gonzalo Depilación');
-  const bodyText = replacePlaceholders(bodyTemplate || 'Te recordamos que tenés un turno programado para dentro de 7 días.');
+  const rawBodyText = replacePlaceholders(bodyTemplate || 'Te recordamos que tenés un turno programado para dentro de 7 días.');
+  const formattedBodyHtml = formatEmailParagraphs(rawBodyText);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -1110,7 +1124,6 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
         }
         .body-text {
           margin-bottom: 25px;
-          white-space: pre-line;
         }
         .footer {
           background-color: #121212;
@@ -1129,7 +1142,7 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
         </div>
         <div class="content">
           <div class="greeting">Hola ${clientName},</div>
-          <div class="body-text">${bodyText}</div>
+          <div class="body-text">${formattedBodyHtml}</div>
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
