@@ -158,6 +158,14 @@ export async function PUT(request, { params }) {
       });
     }
 
+    if (body.markClientFinalizado && oldTurn.clienteId) {
+      await prisma.cliente.update({
+        where: { id: oldTurn.clienteId },
+        data: { estado: 'FINALIZADO' }
+      });
+      console.log(`Client ${oldTurn.clienteId} marked as FINALIZADO (Treatment Completed).`);
+    }
+
     if (selectedZoneIds !== undefined) {
       let dbZones = [];
       if (selectedZoneIds && selectedZoneIds.length > 0) {

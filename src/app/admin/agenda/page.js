@@ -623,8 +623,8 @@ export default function AgendaPage() {
     };
   };
 
-  // Handle Turno quick action: CANCEL, REALIZADO, APPROVE
-  const handleUpdateStatus = async (turnoId, newStatus) => {
+  // Handle Turno quick action: CANCEL, REALIZADO, APPROVE, FINALIZADO TRATAMIENTO
+  const handleUpdateStatus = async (turnoId, newStatus, markClientFinalizado = false) => {
     try {
       let preserveDeposit = false;
       if (newStatus === 'CANCELADO') {
@@ -633,10 +633,14 @@ export default function AgendaPage() {
         
         preserveDeposit = confirm('¿Deseas CONSERVAR la seña a favor del cliente?\n\n[Aceptar] = Conservar la seña (no se cobra penalidad)\n[Cancelar] = Retener/perder la seña (se cobra penalidad)');
       }
+      if (markClientFinalizado) {
+        const confirmFin = confirm('¿Marcar el TRATAMIENTO como FINALIZADO para este cliente?\n\nEsto actualizará el estado del cliente a FINALIZADO y programará el recordatorio de mantenimiento de 2 meses.');
+        if (!confirmFin) return;
+      }
       const res = await fetch(`/api/admin/turnos/${turnoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: newStatus, preserveDeposit })
+        body: JSON.stringify({ estado: newStatus, preserveDeposit, markClientFinalizado })
       });
       if (res.ok) {
         setIsDetailsOpen(false);
@@ -2155,7 +2159,12 @@ export default function AgendaPage() {
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
-                        ✓ Finalizado
+                        ✓ Realizado
+                      </button>
+                    )}
+                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && selectedTurno.cliente?.estado !== 'FINALIZADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', true)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                        🏁 Finalizar Tratamiento (Mantenimiento)
                       </button>
                     )}
                     {selectedTurno.estado === 'CANCELADO' && (
