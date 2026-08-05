@@ -204,17 +204,24 @@
 
 /* Print Specific Rules */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
   body {
-    background-color: #ffffff;
-    color: #000000;
-    margin: 0;
-    padding: 0;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .printWrapper {
-    background-color: transparent;
-    padding: 0;
-    min-height: auto;
+    background-color: transparent !important;
+    padding: 0 !important;
+    min-height: auto !important;
   }
   
   .actionsBar {
@@ -222,23 +229,43 @@
   }
   
   .sheet {
-    box-shadow: none;
-    padding: 0;
-    max-width: 100%;
-    margin: 0;
-    border-radius: 0;
-    min-height: auto;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    min-height: auto !important;
+  }
+
+  .printTable {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+  }
+
+  .printTable tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .printTable th {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid #000000 !important;
+    background-color: #f7f6f2 !important;
+    -webkit-print-color-adjust: exact;
   }
 
   .printTable td {
-    border-bottom: 1px solid #cccccc;
+    border-bottom: 1px solid #cccccc !important;
   }
 
   .header {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid #000000 !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .footer {
+    position: static !important;
+    margin-top: 2rem !important;
+    page-break-before: auto !important;
   }
 }

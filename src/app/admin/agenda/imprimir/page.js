@@ -61,16 +61,22 @@ function PrintPageContent() {
     return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
-  const getZonasList = (zonasJson) => {
+  const getZonasList = (zonasJson, otrosTexto) => {
+    let text = '';
     try {
       const parsed = JSON.parse(zonasJson);
       if (Array.isArray(parsed)) {
-        return parsed.map(z => z.nombre || z.nombreBase).join(', ');
+        text = parsed.map(z => z.nombre || z.nombreBase || z).join(', ');
+      } else {
+        text = zonasJson || '';
       }
     } catch (e) {
-      console.error('Error parsing zones:', e);
+      text = zonasJson || '';
     }
-    return 'Sin zonas especificadas';
+    if (otrosTexto) {
+      text = text ? `${text} (Otros: ${otrosTexto})` : `Otros: ${otrosTexto}`;
+    }
+    return text || 'Sin zonas especificadas';
   };
 
   if (loading) {
@@ -125,9 +131,9 @@ function PrintPageContent() {
           <table className={styles.printTable}>
             <thead>
               <tr>
-                <th style={{ width: '15%' }}>Horario</th>
+                <th style={{ width: '18%' }}>Horario</th>
                 <th style={{ width: '35%' }}>Cliente</th>
-                <th style={{ width: '50%' }}>Zonas a Realizar</th>
+                <th style={{ width: '47%' }}>Zonas a Realizar</th>
               </tr>
             </thead>
             <tbody>
@@ -137,11 +143,16 @@ function PrintPageContent() {
                     <strong>{turno.horaInicio} - {turno.horaFin}</strong>
                   </td>
                   <td className={styles.clientCol}>
-                    <div className={styles.clientName}>{turno.cliente.nombreCompleto}</div>
-                    <div className={styles.clientPhone}>WhatsApp: +{turno.cliente.whatsapp}</div>
+                    <div className={styles.clientName}>{turno.cliente?.nombreCompleto || 'Cliente'}</div>
+                    <div className={styles.clientPhone}>WhatsApp: +{turno.cliente?.whatsapp || ''}</div>
                   </td>
                   <td className={styles.zonesCol}>
-                    {getZonasList(turno.zonas)}
+                    <div>{getZonasList(turno.zonas, turno.otrosTexto)}</div>
+                    {turno.observaciones && (
+                      <div style={{ fontSize: '0.8rem', color: '#555', marginTop: '4px', fontStyle: 'italic' }}>
+                        Obs: {turno.observaciones}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
