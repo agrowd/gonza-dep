@@ -2125,8 +2125,41 @@ export default function AgendaPage() {
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
-                        ✓ Realizado
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                        ✓ Finalizado
+                      </button>
+                    )}
+                    {selectedTurno.estado === 'CANCELADO' && (
+                      <button
+                        onClick={() => {
+                          const dateStr = typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha);
+                          setNewTurno({
+                            clienteId: '',
+                            nombreCompleto: '',
+                            whatsapp: '',
+                            email: '',
+                            dni: '',
+                            fechaStr: dateStr,
+                            horaInicio: selectedTurno.horaInicio,
+                            horaFin: selectedTurno.horaFin,
+                            selectedZoneIds: [],
+                            valorTotal: 0,
+                            valorSeña: 0,
+                            descuentoTipo: 'NINGUNO',
+                            descuentoValor: '',
+                            bonificacion: 0,
+                            estado: 'SEÑADO',
+                            observaciones: '',
+                            hasOtros: false,
+                            otrosTexto: ''
+                          });
+                          setIsDetailsOpen(false);
+                          setIsNewOpen(true);
+                        }}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
+                      >
+                        ➕ Agendar Nuevo Turno en este Horario
                       </button>
                     )}
                     {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (

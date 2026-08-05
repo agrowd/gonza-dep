@@ -4,7 +4,7 @@ import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
-import { normalizeWhatsApp, sendWhatsAppMessage } from '@/lib/whatsapp.js';
+import { normalizeWhatsApp, sendWhatsAppMessage, parseTemplate } from '@/lib/whatsapp.js';
 
 // Convert HH:MM to minutes from midnight
 function timeToMinutes(timeStr) {
@@ -344,22 +344,7 @@ export async function POST(request) {
         const templateVal = templateConfig?.value || "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] para [Zonas] fue agendado con éxito. Recordá venir afeitado al ras. ¡Te esperamos!";
         const addressVal = addressConfig?.value || "Paraná 597, piso 8, depto 48";
 
-        let zonesText = '';
-        try {
-          const parsedZonas = JSON.parse(newTurno.zonas);
-          zonesText = parsedZonas.map(z => z.nombre).join(', ');
-        } catch (e) {
-          zonesText = 'tratamiento';
-        }
-
-        let msg = templateVal
-          .replaceAll('[Nombre]', newTurno.cliente.nombreCompleto)
-          .replaceAll('[FechaTurno]', formatDate(newTurno.fecha))
-          .replaceAll('[Horario]', `${newTurno.horaInicio} hs`)
-          .replaceAll('[Zonas]', zonesText)
-          .replaceAll('[ValorTotal]', `$${newTurno.valorTotal}`)
-          .replaceAll('[Seña]', `$${newTurno.valorSeña}`)
-          .replaceAll('[Direccion]', addressVal);
+        const msg = parseTemplate(templateVal, newTurno.cliente, newTurno, addressVal);
 
         await sendWhatsAppMessage(newTurno.cliente.whatsapp, msg);
 
