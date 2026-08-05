@@ -102,6 +102,22 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
           padding: 0;
           -webkit-font-smoothing: antialiased;
         }
+        a, a:link, a:visited, a:hover, a:active {
+          color: #ffffff !important;
+          text-decoration: none !important;
+        }
+        x-apple-data-detectors,
+        x-apple-data-detectors a,
+        .x-apple-data-detectors a,
+        a[x-apple-data-detectors],
+        a[href^="x-apple-data-detectors"] {
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          line-height: inherit !important;
+        }
         .container {
           max-width: 600px;
           margin: 20px auto;
@@ -281,6 +297,22 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
           padding: 0;
           -webkit-font-smoothing: antialiased;
         }
+        a, a:link, a:visited, a:hover, a:active {
+          color: #ffffff !important;
+          text-decoration: none !important;
+        }
+        x-apple-data-detectors,
+        x-apple-data-detectors a,
+        .x-apple-data-detectors a,
+        a[x-apple-data-detectors],
+        a[href^="x-apple-data-detectors"] {
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          line-height: inherit !important;
+        }
         .container {
           max-width: 600px;
           margin: 20px auto;
@@ -376,35 +408,35 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
         </div>
         <div class="content">
           <div class="greeting">Hola ${clientName},</div>
-          <p>¡Tu reserva ha sido confirmada con éxito! A continuación te detallamos los datos de tu turno:</p>
+          <p style="color: #f0ede6; line-height: 1.6;">¡Tu reserva ha sido confirmada con éxito! A continuación te detallamos los datos de tu turno:</p>
           
           <div class="highlight-box">
             <div class="highlight-title">Detalles del Turno</div>
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha:</span>
-                <span class="details-value" style="text-transform: capitalize; color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</span>
+                <span class="details-value"><a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong></a></span>
               </li>
               <li>
                 <span class="details-label">Horario:</span>
-                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">${horaInicio} hs</span>
+                <span class="details-value"><a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">${horaInicio} hs</strong></a></span>
               </li>
               <li>
                 <span class="details-label">Zonas:</span>
-                <span class="details-value">${zonesText}</span>
+                <span class="details-value" style="color: #ffffff !important;">${zonesText}</span>
               </li>
               <li>
                 <span class="details-label">Seña abonada:</span>
-                <span class="details-value" style="color: #a5d6a7;">$${valorSeña.toLocaleString()}</span>
+                <span class="details-value" style="color: #a5d6a7 !important; font-weight: bold;">$${valorSeña.toLocaleString()}</span>
               </li>
             </ul>
           </div>
 
           <div class="note">
             <p style="font-weight: bold; color: #d4a54d; margin-bottom: 12px; font-size: 15px;">⚠️ Recordatorios importantes:</p>
-            <p style="margin-bottom: 10px; line-height: 1.5;">- Recordá venir <strong>afeitado al ras</strong> con maquinita de afeitar (24 horas antes) en las zonas a depilar. No uses cera ni pinza.</p>
-            <p style="margin-bottom: 10px; line-height: 1.5;">- Por favor asistí con puntualidad. La tolerancia máxima de demora es de solo <strong>5 minutos</strong>.</p>
-            <p style="margin-bottom: 0; line-height: 1.5;">- Dirección del estudio: <strong>Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong>.</p>
+            <p style="margin-bottom: 10px; line-height: 1.5; color: #e0e0e0;">- Recordá venir <strong style="color: #ffffff;">afeitado al ras</strong> con maquinita de afeitar (24 horas antes) en las zonas a depilar. No uses cera ni pinza.</p>
+            <p style="margin-bottom: 10px; line-height: 1.5; color: #e0e0e0;">- Por favor asistí con puntualidad. La tolerancia máxima de demora es de solo <strong style="color: #ffffff;">5 minutos</strong>.</p>
+            <p style="margin-bottom: 0; line-height: 1.5; color: #e0e0e0;">- Dirección del estudio: <a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important;">Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong></a>.</p>
           </div>
         </div>
         <div class="footer">
@@ -468,6 +500,22 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
           margin: 0;
           padding: 0;
           -webkit-font-smoothing: antialiased;
+        }
+        a, a:link, a:visited, a:hover, a:active {
+          color: #ffffff !important;
+          text-decoration: none !important;
+        }
+        x-apple-data-detectors,
+        x-apple-data-detectors a,
+        .x-apple-data-detectors a,
+        a[x-apple-data-detectors],
+        a[href^="x-apple-data-detectors"] {
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          line-height: inherit !important;
         }
         .container {
           max-width: 600px;
@@ -565,22 +613,22 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
         </div>
         <div class="content">
           <div class="greeting">Hola ${clientName},</div>
-          <p style="margin-bottom: 1rem; line-height: 1.6;">Te informamos que tu turno para depilación láser ha sido <strong>cancelado</strong>:</p>
+          <p style="margin-bottom: 1rem; line-height: 1.6; color: #f0ede6;">Te informamos que tu turno para depilación láser ha sido <strong style="color: #ffffff;">cancelado</strong>:</p>
           
           <div class="highlight-box">
             <div class="highlight-title">Detalles del Turno Cancelado</div>
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha:</span>
-                <span class="details-value" style="text-transform: capitalize; color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</span>
+                <span class="details-value"><a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong></a></span>
               </li>
               <li>
                 <span class="details-label">Horario:</span>
-                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">${horaInicio} hs</span>
+                <span class="details-value"><a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">${horaInicio} hs</strong></a></span>
               </li>
               <li>
                 <span class="details-label">Zonas:</span>
-                <span class="details-value">${zonesText}</span>
+                <span class="details-value" style="color: #ffffff !important;">${zonesText}</span>
               </li>
             </ul>
           </div>
@@ -652,6 +700,22 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
           margin: 0;
           padding: 0;
           -webkit-font-smoothing: antialiased;
+        }
+        a, a:link, a:visited, a:hover, a:active {
+          color: #ffffff !important;
+          text-decoration: none !important;
+        }
+        x-apple-data-detectors,
+        x-apple-data-detectors a,
+        .x-apple-data-detectors a,
+        a[x-apple-data-detectors],
+        a[href^="x-apple-data-detectors"] {
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          line-height: inherit !important;
         }
         .container {
           max-width: 600px;
@@ -750,34 +814,34 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
           <div class="greeting">Comprobante de Turno y Pago</div>
           <div class="receipt-badge">Recibo Digital Emitido</div>
           
-          <p>Hola <strong>\${clientName}</strong>, te adjuntamos el comprobante detallado de tu reserva y los importes facturados:</p>
+          <p style="color: #f0ede6;">Hola <strong style="color: #ffffff;">${clientName}</strong>, te adjuntamos el comprobante detallado de tu reserva y los importes facturados:</p>
           
           <div class="highlight-box">
             <div class="highlight-title">Detalle de Facturación</div>
             <ul class="details-list">
               <li>
                 <span class="details-label">Fecha del Turno:</span>
-                <span class="details-value" style="text-transform: capitalize; color: #ffffff !important; text-decoration: none !important;">\${dateFormatted}</span>
+                <span class="details-value"><a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong></a></span>
               </li>
               <li>
                 <span class="details-label">Horario:</span>
-                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">\${horaInicio} hs</span>
+                <span class="details-value"><a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">${horaInicio} hs</strong></a></span>
               </li>
               <li>
                 <span class="details-label">Zonas Contratadas:</span>
-                <span class="details-value">\${zonesText}</span>
+                <span class="details-value" style="color: #ffffff !important;">${zonesText}</span>
               </li>
               <li style="border-top: 1px solid #3d3d3d; padding-top: 10px; margin-top: 10px;">
                 <span class="details-label">Valor Total del Servicio:</span>
-                <span class="details-value">\$\${valorTotal.toLocaleString()}</span>
+                <span class="details-value" style="color: #ffffff !important;">$${valorTotal.toLocaleString()}</span>
               </li>
               <li>
                 <span class="details-label">Monto de Seña Abonado:</span>
-                <span class="details-value" style="color: #a5d6a7;">\$\${valorSeña.toLocaleString()}</span>
+                <span class="details-value" style="color: #a5d6a7 !important;">$${valorSeña.toLocaleString()}</span>
               </li>
               <li>
                 <span class="details-label">Saldo Pendiente de Pago:</span>
-                <span class="details-value" style="color: #ffb74d;">\$\${(valorTotal - valorSeña).toLocaleString()}</span>
+                <span class="details-value" style="color: #ffb74d !important;">$${(valorTotal - valorSeña).toLocaleString()}</span>
               </li>
             </ul>
           </div>
@@ -926,14 +990,14 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
     if (!text) return '';
     return text
       .replaceAll('{cliente}', `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
-      .replaceAll('{día}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
-      .replaceAll('{dia}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
-      .replaceAll('{fecha}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</strong>`)
-      .replaceAll('{horario}', `<strong style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</strong>`)
+      .replaceAll('{día}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
+      .replaceAll('{dia}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
+      .replaceAll('{fecha}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; font-weight: bold; text-transform: capitalize;">${dateFormatted}</strong></a>`)
+      .replaceAll('{horario}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaInicio} hs</strong></a>`)
       .replaceAll('{zonas}', `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
       .replaceAll('{seña}', `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
       .replaceAll('{saldo}', `<strong style="color: #ffb74d !important;">$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}</strong>`)
-      .replaceAll('{direccion}', `<strong style="color: #ffffff !important;">${address}</strong>`);
+      .replaceAll('{direccion}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important;">${address}</strong></a>`);
   };
 
   const subject = replacePlaceholders(subjectTemplate || 'Reprogramación de turno - Gonzalo Depilación');
@@ -954,6 +1018,22 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
           margin: 0;
           padding: 0;
           -webkit-font-smoothing: antialiased;
+        }
+        a, a:link, a:visited, a:hover, a:active {
+          color: #ffffff !important;
+          text-decoration: none !important;
+        }
+        x-apple-data-detectors,
+        x-apple-data-detectors a,
+        .x-apple-data-detectors a,
+        a[x-apple-data-detectors],
+        a[href^="x-apple-data-detectors"] {
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          line-height: inherit !important;
         }
         .container {
           max-width: 600px;
