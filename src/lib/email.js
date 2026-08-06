@@ -990,9 +990,9 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
     if (!text) return '';
     return text
       .replaceAll('{cliente}', `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
-      .replaceAll('{día}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
-      .replaceAll('{dia}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
-      .replaceAll('{fecha}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; font-weight: bold; text-transform: capitalize;">${dateFormatted}</strong></a>`)
+      .replaceAll('{día}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
+      .replaceAll('{dia}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
+      .replaceAll('{fecha}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${dateFormatted}</strong></a>`)
       .replaceAll('{horario}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaInicio} hs</strong></a>`)
       .replaceAll('{zonas}', `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
       .replaceAll('{seña}', `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
@@ -1020,15 +1020,16 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
           -webkit-font-smoothing: antialiased;
         }
         a, a:link, a:visited, a:hover, a:active {
-          color: #ffffff !important;
+          color: #d4a54d !important;
           text-decoration: none !important;
         }
         x-apple-data-detectors,
         x-apple-data-detectors a,
         .x-apple-data-detectors a,
         a[x-apple-data-detectors],
-        a[href^="x-apple-data-detectors"] {
-          color: #ffffff !important;
+        a[href^="x-apple-data-detectors"],
+        a[href^="calendar:"] {
+          color: #d4a54d !important;
           text-decoration: none !important;
           font-size: inherit !important;
           font-family: inherit !important;
@@ -1140,14 +1141,16 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
     if (!text) return '';
     return text
       .replaceAll('{cliente}', `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
-      .replaceAll('{día}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
-      .replaceAll('{dia}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${diaFormatted}</strong>`)
-      .replaceAll('{fecha}', `<strong style="color: #ffffff !important; font-weight: bold; text-decoration: none !important;">${dateFormatted}</strong>`)
-      .replaceAll('{horario}', `<strong style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</strong>`)
+      .replaceAll('{día}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
+      .replaceAll('{dia}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
+      .replaceAll('{fecha}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${dateFormatted}</strong></a>`)
+      .replaceAll('{horario}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaInicio} hs</strong></a>`)
       .replaceAll('{zonas}', `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
       .replaceAll('{seña}', `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
       .replaceAll('{saldo}', `<strong style="color: #ffb74d !important;">$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}</strong>`)
-      .replaceAll('{direccion}', `<strong style="color: #ffffff !important;">${address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)'}</strong>`);
+      .replaceAll('{direccion}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important;">${address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)'}</strong></a>`)
+      .replaceAll('dentro de 7 días', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">dentro de 7 días</strong></a>`)
+      .replaceAll('dentro de 24 horas', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">dentro de 24 horas</strong></a>`);
   };
 
   const subject = replacePlaceholders(subjectTemplate || 'Recordatorio de tu turno en 7 días - Gonzalo Depilación');
@@ -1168,6 +1171,23 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
           margin: 0;
           padding: 0;
           -webkit-font-smoothing: antialiased;
+        }
+        a, a:link, a:visited, a:hover, a:active {
+          color: #d4a54d !important;
+          text-decoration: none !important;
+        }
+        x-apple-data-detectors,
+        x-apple-data-detectors a,
+        .x-apple-data-detectors a,
+        a[x-apple-data-detectors],
+        a[href^="x-apple-data-detectors"],
+        a[href^="calendar:"] {
+          color: #d4a54d !important;
+          text-decoration: none !important;
+          font-size: inherit !important;
+          font-family: inherit !important;
+          font-weight: inherit !important;
+          line-height: inherit !important;
         }
         .container {
           max-width: 600px;
