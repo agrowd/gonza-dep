@@ -966,7 +966,6 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
   
   const dateObj = new Date(fecha);
   const dateFormatted = dateObj.toLocaleDateString('es-ES', {
-    weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -983,8 +982,8 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
 
   const address = 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)';
 
-  const dayNameFormatted = dateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-  const diaFormatted = dayNameFormatted.charAt(0).toUpperCase() + dayNameFormatted.slice(1);
+  const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
+  const diaFormatted = rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1);
 
   const replacePlaceholders = (text) => {
     if (!text) return '';
@@ -1119,7 +1118,6 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
   
   const dateObj = new Date(fecha);
   const dateFormatted = dateObj.toLocaleDateString('es-ES', {
-    weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -1134,8 +1132,8 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
     zonesText = zonas || 'Sesión de depilación';
   }
 
-  const dayNameFormatted = dateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-  const diaFormatted = dayNameFormatted.charAt(0).toUpperCase() + dayNameFormatted.slice(1);
+  const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
+  const diaFormatted = rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1);
 
   const replacePlaceholders = (text) => {
     if (!text) return '';
