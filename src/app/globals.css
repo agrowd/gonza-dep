@@ -224,6 +224,17 @@ input::placeholder, textarea::placeholder {
   padding: 1.5rem;
 }
 
+@media (max-width: 600px) {
+  .glass-card {
+    padding: 0.85rem;
+  }
+  select, input, textarea {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+}
+
 .premium-border {
   border: 1px solid rgba(var(--color-gold-rgb), 0.2);
   position: relative;
