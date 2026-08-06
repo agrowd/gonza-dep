@@ -2244,7 +2244,7 @@ export default function AgendaPage() {
       {/* MODAL 2: New Manual Turno */}
       {isNewOpen && (
         <div className={styles.modalOverlay}>
-          <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '550px' }}>
+          <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '550px', width: '100%', boxSizing: 'border-box' }}>
             <div className={styles.modalHeader}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>Agendar Nuevo Turno</h3>
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewOpen(false); }} className={styles.closeBtn}>&times;</button>
