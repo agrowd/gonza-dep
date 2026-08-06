@@ -2080,7 +2080,7 @@ export default function AgendaPage() {
                 {/* Actions Panel */}
                 <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', width: '100%', boxSizing: 'border-box' }}>
                   <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Acciones Rápidas</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
                     {selectedTurno.clienteId && (
                       <>
                         <button
@@ -2092,14 +2092,14 @@ export default function AgendaPage() {
                             window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
                           }}
                           className="btn"
-                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
+                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
                         >
                           📁 Ficha Cliente
                         </button>
                         <button
                           onClick={() => handleScheduleNextTurn(selectedTurno)}
                           className="btn"
-                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
+                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
                         >
                           📅 Siguiente Turno
                         </button>
@@ -2148,23 +2148,23 @@ export default function AgendaPage() {
                         setIsEditing(true);
                       }}
                       className="btn"
-                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
+                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
                     >
                       ✏️ Editar Turno
                     </button>
                     {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✓ Aprobar
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✓ Realizado
                       </button>
                     )}
                     {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && selectedTurno.cliente?.estado !== 'FINALIZADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', true)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
-                        🏁 Finalizar Tratamiento (Mantenimiento)
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', true)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                        🏁 Finalizar Tratamiento
                       </button>
                     )}
                     {selectedTurno.estado === 'CANCELADO' && (
@@ -2195,28 +2195,28 @@ export default function AgendaPage() {
                           setIsNewOpen(true);
                         }}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 100%', minWidth: 0, boxSizing: 'border-box' }}
                       >
                         ➕ Agendar Nuevo Turno en este Horario
                       </button>
                     )}
                     {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✕ Cancelar
                       </button>
                     )}
                     {selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ❌ No Asistió
                       </button>
                     )}
                     {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         🔄 Reactivar
                       </button>
                     )}
                     {selectedTurno.estado !== 'BLOQUEADO' && (
-                      <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#25D366', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box', textDecoration: 'none' }}>
+                      <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#25D366', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box', textDecoration: 'none' }}>
                         💬 WhatsApp
                       </a>
                     )}
@@ -2225,7 +2225,7 @@ export default function AgendaPage() {
                         onClick={() => handleSendReceipt(selectedTurno.id)}
                         disabled={sendingReceipt[selectedTurno.id]}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#5c6bc0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box', opacity: sendingReceipt[selectedTurno.id] ? 0.7 : 1 }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#5c6bc0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box', opacity: sendingReceipt[selectedTurno.id] ? 0.7 : 1 }}
                       >
                         {sendingReceipt[selectedTurno.id] ? 'Enviando...' : '🧾 Recibo Email'}
                       </button>
