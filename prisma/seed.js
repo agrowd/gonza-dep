@@ -35,22 +35,25 @@ async function main() {
   });
   console.log(`Admin user upserted: ${admin.usuario}`);
 
-  // 2. Create Default Zones
-  for (const z of zonasDefault) {
-    const zona = await prisma.zona.upsert({
-      where: { nombre: z.nombre },
-      update: {},
-      create: {
-        nombre: z.nombre,
-        precioBase: z.precioBase,
-        duracionMinutos: z.duracionMinutos,
-        señaBase: z.señaBase
-      }
-    });
-    console.log(`Zona upserted: ${zona.nombre} ($${zona.precioBase} - ${zona.duracionMinutos} min)`);
+  // 2. Create Default Zones ONLY if table is completely empty
+  const countZones = await prisma.zona.count();
+  if (countZones === 0) {
+    for (const z of zonasDefault) {
+      await prisma.zona.create({
+        data: {
+          nombre: z.nombre,
+          precioBase: z.precioBase,
+          duracionMinutos: z.duracionMinutos,
+          señaBase: z.señaBase
+        }
+      });
+      console.log(`Zona created: ${z.nombre} ($${z.precioBase} - ${z.duracionMinutos} min)`);
+    }
+  } else {
+    console.log(`Zones already exist (${countZones} zones found), skipping default zone seed.`);
   }
 
-  // 3. Create Default configuration variables
+  // 3. Create Default configuration variables ONLY if key does not exist yet
   const defaultConfigs = [
     { key: "wtsp_reminder_template", value: "NO RESPONDER ESTE MENSAJE\nHola [Nombre], te recuerdo tu turno de depilación láser para el [Día] [FechaTurno] a las [Horario] hs.\n\nRecordá que tenés que VENIR AFEITADO AL RAS.\n\nIMPORTANTE: al ser turnos muy cortos, la tolerancia de demora por llegar tarde es de 5 minutos.\n\nDIRECCIÓN:\n[Direccion]" },
     { key: "wtsp_confirmation_template", value: "¡Hola [Nombre]! Tu reserva para el día [Día] [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
@@ -74,15 +77,16 @@ async function main() {
   ];
 
   for (const config of defaultConfigs) {
-    await prisma.configuracion.upsert({
-      where: { key: config.key },
-      update: { value: config.value },
-      create: {
-        key: config.key,
-        value: config.value
-      }
-    });
-    console.log(`Config upserted: ${config.key}`);
+    const existing = await prisma.configuracion.findUnique({ where: { key: config.key } });
+    if (!existing) {
+      await prisma.configuracion.create({
+        data: {
+          key: config.key,
+          value: config.value
+        }
+      });
+      console.log(`Config created: ${config.key}`);
+    }
   }
 
   console.log("Seeding finished successfully.");
