@@ -134,15 +134,10 @@ function PrintPageContent() {
           </div>
         ) : (
           <table className={styles.printTable}>
-            <colgroup>
-              <col style={{ width: '22%' }} />
-              <col style={{ width: '38%' }} />
-              <col style={{ width: '40%' }} />
-            </colgroup>
             <thead>
               <tr>
-                <th>Horario</th>
-                <th>Cliente</th>
+                <th style={{ width: '1%', whiteSpace: 'nowrap', minWidth: '100px' }}>Horario</th>
+                <th style={{ minWidth: '110px' }}>Cliente</th>
                 <th>Zonas a Realizar</th>
               </tr>
             </thead>

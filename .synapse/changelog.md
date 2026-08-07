@@ -99,6 +99,10 @@
 - Almacenamiento y preservación del tipo de descuento (`descuentoTipo` `'PORCENTAJE'` o `'PESOS'`) y valor de bonificación en Prisma `Turno` para conservar el 20% al editar o reprogramar citas.
 - Texto oscuro de alto contraste (`color: #111111; font-weight: 500`) en el historial de notificaciones enviadas dentro del perfil del cliente (`src/app/admin/clientes/page.js`).
 - Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
+- Corrección de colisión y superposición de texto en celulares Motorola/Android (`src/app/admin/agenda/imprimir/page.js` e `imprimir.module.css`):
+  1. Se eliminó la restricción rígida de `table-layout: fixed` con porcentajes pequeños (22%) que provocaba que la hora (ej. `14:00`) se montara encima del nombre del cliente (ej. `Walter Di Camillo`).
+  2. Se implementó `table-layout: auto` con ancho mínimo asegurado para el horario (`min-width: 100px; white-space: nowrap`), permitiendo que el navegador del celular calcule el espacio natural de cada celda sin ninguna colisión de texto.
+  3. En la exportación a PDF se conservan los márgenes compactos de `4mm 6mm` y altura de fila de 22px para que los 13 a 18 turnos del día sigan entrando completos en 1 sola carilla A4.
 - Rediseño responsive y motor de exportación PDF A4 ultra-compacto (`src/app/admin/agenda/imprimir/page.js` y `imprimir.module.css`):
   1. Vista en pantalla móvil: se agregaron reglas `@media screen and (max-width: 768px)` con reducción de padding de 144px a 8px y anchos de columna proporcionales (`22%`, `38%`, `40%`), eliminando el desbordamiento horizontal y el recorte de las zonas a la derecha en celulares.
   2. Exportación a PDF en celulares y PC: se redujo la altura de fila a 24px, paddings a `2.5px 5px`, y márgenes A4 a `4mm 6mm`, garantizando que hasta 18-20 turnos diarios entren holgadamente en una sola carilla sin cortarse jamás los turnos de la noche (20:30 y 21:00 hs) en iOS Safari ni Android.
