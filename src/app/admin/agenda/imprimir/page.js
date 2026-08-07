@@ -119,7 +119,12 @@ function PrintPageContent() {
           </div>
           <div className={styles.headerTitle}>
             <h1>Turnos Programados</h1>
-            <p className={styles.date}>{formatDateLabel(fecha)}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.2rem' }}>
+              <p className={styles.date}>{formatDateLabel(fecha)}</p>
+              <span style={{ backgroundColor: '#7a1f1e', color: '#ffffff', padding: '0.15rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700 }}>
+                {turnos.length} turno{turnos.length === 1 ? '' : 's'}
+              </span>
+            </div>
           </div>
         </header>
 
