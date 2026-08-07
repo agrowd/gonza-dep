@@ -738,12 +738,10 @@ export default function AgendaPage() {
       selectedZoneIds: preselectedZoneIds,
       hasOtros,
       otrosTexto,
-      valorTotal: turno.valorTotal,
-      valorSeña: turno.valorSeña,
       descuentoTipo: turno.descuentoTipo || (turno.bonificacion > 0 ? 'PESOS' : 'NINGUNO'),
       descuentoValor: turno.descuentoValor || turno.bonificacion || '',
-      manualTotalOverride: turno.bonificacion ? (Number(turno.valorTotal) + Number(turno.bonificacion)) : Number(turno.valorTotal),
-      manualSeñaOverride: Number(turno.valorSeña)
+      manualTotalOverride: undefined,
+      manualSeñaOverride: undefined
     });
 
     setIsDetailsOpen(false);
