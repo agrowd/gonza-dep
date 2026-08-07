@@ -270,6 +270,8 @@ export default function AgendaPage() {
   });
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
+  const [tempValorTotal, setTempValorTotal] = useState('');
+  const [tempValorSeña, setTempValorSeña] = useState('');
   const [sendingReceipt, setSendingReceipt] = useState({});
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
   const savedScrollRef = useRef(0);
@@ -295,16 +297,63 @@ export default function AgendaPage() {
   }, [loading, appointments]);
 
   useEffect(() => {
-    if (selectedTurno && selectedTurno.cliente) {
-      setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
-      setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
-      setTempClientNotasGonzalo(selectedTurno.cliente.notasGonzalo || '');
+    if (selectedTurno) {
+      setTempValorTotal(selectedTurno.valorTotal !== undefined ? String(selectedTurno.valorTotal) : '');
+      setTempValorSeña(selectedTurno.valorSeña !== undefined ? String(selectedTurno.valorSeña) : '');
+      if (selectedTurno.cliente) {
+        setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
+        setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
+        setTempClientNotasGonzalo(selectedTurno.cliente.notasGonzalo || '');
+      } else {
+        setTempClientObservaciones('');
+        setTempClientFrecuencia(4);
+        setTempClientNotasGonzalo('');
+      }
     } else {
+      setTempValorTotal('');
+      setTempValorSeña('');
       setTempClientObservaciones('');
       setTempClientFrecuencia(4);
       setTempClientNotasGonzalo('');
     }
   }, [selectedTurno]);
+
+  const handleSaveTurnoAmounts = async () => {
+    if (!selectedTurno) return;
+    try {
+      const vTotal = Number(tempValorTotal);
+      const vSeña = Number(tempValorSeña);
+      const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          valorTotal: vTotal,
+          valorSeña: vSeña,
+          manualTotalOverride: vTotal,
+          manualSeñaOverride: vSeña
+        })
+      });
+      if (res.ok) {
+        showToast('Importes del turno guardados con éxito.');
+        setSelectedTurno(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            valorTotal: vTotal,
+            valorSeña: vSeña,
+            saldoPendiente: Math.max(0, vTotal - vSeña)
+          };
+        });
+        fetchAppointments();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al guardar importes del turno.', 'error');
+      }
+    } catch (e) {
+      console.error('Error saving turno amounts:', e);
+      showToast('Error de red al guardar importes.', 'error');
+    }
+  };
 
   const handleSaveClientObservaciones = async () => {
     if (!selectedTurno || !selectedTurno.cliente) return;
@@ -1955,24 +2004,79 @@ export default function AgendaPage() {
                       })()}
                     </span>
                   </div>
+                  {Boolean(selectedTurno.bonificacion && selectedTurno.bonificacion > 0) && (
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.08)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.25)', marginBottom: '0.25rem' }}>
+                      <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 600, fontSize: '0.8rem' }}>Valor Original (Sin Descuento)</span>
+                      <span className={styles.detailValue} style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+                        ${(Number(selectedTurno.valorTotal || 0) + Number(selectedTurno.bonificacion || 0)).toLocaleString('es-ES')}
+                      </span>
+                    </div>
+                  )}
+
                   <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Valor Total</span>
-                    <span className={styles.detailValue}>${selectedTurno.valorTotal.toLocaleString()}</span>
+                    <span className={styles.detailLabel}>Valor Total ($)</span>
+                    <input
+                      type="number"
+                      value={tempValorTotal}
+                      onChange={(e) => setTempValorTotal(e.target.value)}
+                      style={{
+                        padding: '0.4rem 0.6rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        marginTop: '0.25rem'
+                      }}
+                    />
                   </div>
                   <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Seña Cobrada</span>
-                    <span className={styles.detailValue} style={{ color: '#81c784' }}>${selectedTurno.valorSeña.toLocaleString()}</span>
+                    <span className={styles.detailLabel}>Seña Cobrada ($)</span>
+                    <input
+                      type="number"
+                      value={tempValorSeña}
+                      onChange={(e) => setTempValorSeña(e.target.value)}
+                      style={{
+                        padding: '0.4rem 0.6rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        color: '#81c784',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        marginTop: '0.25rem'
+                      }}
+                    />
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Saldo Pendiente</span>
-                    <span className={styles.detailValue}>${selectedTurno.saldoPendiente.toLocaleString()}</span>
+                    <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.4rem' }}>
+                      ${(Math.max(0, Number(tempValorTotal || 0) - Number(tempValorSeña || 0))).toLocaleString('es-ES')}
+                    </span>
                   </div>
                   {Boolean(selectedTurno.bonificacion && selectedTurno.bonificacion > 0) && (
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>Descuento Aplicado</span>
-                      <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700 }}>
+                      <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, marginTop: '0.4rem' }}>
                         -${Number(selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((selectedTurno.bonificacion / (selectedTurno.valorTotal + selectedTurno.bonificacion)) * 100)}%` : `$${Number(selectedTurno.descuentoValor || selectedTurno.bonificacion).toLocaleString('es-ES')}`})
                       </span>
+                    </div>
+                  )}
+
+                  {(Number(tempValorTotal) !== Number(selectedTurno.valorTotal) || Number(tempValorSeña) !== Number(selectedTurno.valorSeña)) && (
+                    <div style={{ gridColumn: '1 / -1', marginTop: '0.25rem' }}>
+                      <button
+                        onClick={handleSaveTurnoAmounts}
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, width: '100%' }}
+                      >
+                        💾 Guardar Importes de Turno
+                      </button>
                     </div>
                   )}
                   <div className={styles.detailItem}>

@@ -142,6 +142,21 @@ function ClientesPageContent() {
       .finally(() => setLoading(false));
   };
 
+  const [globalNotifEnabled, setGlobalNotifEnabled] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/admin/configuracion')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.global_notifications_enabled !== undefined) {
+          const isEnabled = data.global_notifications_enabled === 'true';
+          setGlobalNotifEnabled(isEnabled);
+          setNewClient(prev => ({ ...prev, enviarNotificaciones: isEnabled }));
+        }
+      })
+      .catch(err => console.error('Error fetching global notif config:', err));
+  }, []);
+
   useEffect(() => {
     fetchClients();
   }, [filter]);
