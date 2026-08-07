@@ -1,24 +1,28 @@
 .printWrapper {
   background-color: #f5f5f5;
   min-height: 100vh;
-  padding: 1.5rem 1rem;
+  padding: 1rem 0.5rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #1d1d1d;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .actionsBar {
   max-width: 800px;
-  margin: 0 auto 1rem auto;
+  margin: 0 auto 0.75rem auto;
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  padding: 0 0.25rem;
 }
 
 .printBtn, .closeBtn, .noPrintBtn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.85rem;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -47,11 +51,13 @@
   background-color: #ffffff;
   max-width: 800px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.25rem 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   min-height: auto;
   box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .header {
@@ -59,42 +65,72 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid #7a1f1e;
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.75rem;
-  gap: 0.75rem;
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.6rem;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+.logoArea {
+  flex-shrink: 0;
 }
 
 .logo {
-  height: 44px;
+  height: 40px;
   width: auto;
+  max-width: 110px;
+  object-fit: contain;
+  display: block;
 }
 
 .headerTitle {
   text-align: right;
+  flex: 1;
+  min-width: 0;
 }
 
 .headerTitle h1 {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   color: #7a1f1e;
   margin: 0 0 0.15rem 0;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.dateRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .date {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #555555;
   margin: 0;
   font-weight: 600;
   text-transform: capitalize;
+  line-height: 1.2;
+}
+
+.countBadge {
+  background-color: #7a1f1e;
+  color: #ffffff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .emptyState {
   text-align: center;
   padding: 3rem 1rem;
   color: #666666;
-  font-size: 1rem;
+  font-size: 0.95rem;
   border: 1px dashed #cccccc;
   border-radius: 6px;
   margin-top: 1rem;
@@ -102,134 +138,99 @@
 
 .printTable {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  margin-top: 0.5rem;
-  table-layout: auto;
+  margin-top: 0.4rem;
+  box-sizing: border-box;
 }
 
 .printTable th {
   background-color: #f7f6f2;
   color: #7a1f1e;
   text-align: left;
-  padding: 0.5rem 0.6rem;
+  padding: 0.45rem 0.35rem;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   border-bottom: 2px solid #dcd9d0;
   box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .printTable td {
-  padding: 0.5rem 0.6rem;
+  padding: 0.45rem 0.35rem;
   border-bottom: 1px solid #e5e5e5;
   vertical-align: top;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #000000;
   box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .timeCol {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #7a1f1e;
-  white-space: nowrap;
   font-weight: 700;
-  width: 1%;
-  min-width: 110px;
-  padding-right: 1rem !important;
+  line-height: 1.2;
 }
 
 .clientCol {
   vertical-align: top;
-  min-width: 120px;
 }
 
 .clientName {
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   margin-bottom: 0.1rem;
   color: #111111;
+  line-height: 1.2;
 }
 
 .clientPhone {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #555555;
+  line-height: 1.15;
 }
 
 .zonesCol {
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+
+.obsText {
+  font-size: 0.72rem;
+  color: #555555;
+  margin-top: 3px;
+  font-style: italic;
+  line-height: 1.15;
 }
 
 .footer {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
   border-top: 1px solid #e5e5e5;
-  padding-top: 0.75rem;
+  padding-top: 0.5rem;
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #777777;
 }
 
-/* Loader Styles */
-.loaderContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background-color: #f5f5f5;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(122, 31, 30, 0.1);
-  border-left-color: #7a1f1e;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Error Container */
-.errorContainer {
-  max-width: 400px;
-  margin: 10vh auto;
-  padding: 2rem;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  text-align: center;
-  border-top: 4px solid #f44336;
-}
-
-.errorContainer h3 {
-  color: #f44336;
-  margin-bottom: 0.5rem;
-}
-
-.errorContainer p {
-  color: #555555;
-  margin-bottom: 1.5rem;
-}
-
-/* Screen Mobile Rules (Zero horizontal overlap on Motorola, iPhone, and Android) */
-@media screen and (max-width: 768px) {
+/* Screen Mobile Rules (100% Width, Zero Cutoff on 320px-450px Screens) */
+@media screen and (max-width: 600px) {
   .printWrapper {
-    padding: 0.5rem 0.25rem !important;
+    padding: 0.25rem 0 !important;
     background-color: #ffffff !important;
   }
 
   .actionsBar {
-    padding: 0 0.5rem !important;
-    margin-bottom: 0.5rem !important;
+    padding: 0.25rem 0.4rem !important;
+    margin-bottom: 0.25rem !important;
   }
 
   .sheet {
-    padding: 0.5rem 0.4rem !important;
+    padding: 0.4rem 0.3rem !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     width: 100% !important;
@@ -237,66 +238,60 @@
   }
 
   .header {
-    padding-bottom: 0.4rem !important;
-    margin-bottom: 0.4rem !important;
-    flex-wrap: wrap !important;
-    gap: 0.5rem !important;
+    padding-bottom: 0.35rem !important;
+    margin-bottom: 0.35rem !important;
+    gap: 0.35rem !important;
   }
 
   .logo {
     height: 32px !important;
-  }
-
-  .headerTitle {
-    text-align: right !important;
-    flex: 1 !important;
+    max-width: 85px !important;
   }
 
   .headerTitle h1 {
-    font-size: 1.1rem !important;
+    font-size: 0.98rem !important;
+    letter-spacing: 0 !important;
   }
 
   .date {
-    font-size: 0.75rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .countBadge {
+    font-size: 0.68rem !important;
+    padding: 0.1rem 0.4rem !important;
   }
 
   .printTable {
     width: 100% !important;
-    table-layout: auto !important;
+    table-layout: fixed !important;
   }
 
   .printTable th {
-    padding: 0.35rem 0.4rem !important;
-    font-size: 0.72rem !important;
-  }
-
-  .printTable td {
-    padding: 0.4rem 0.4rem !important;
-    font-size: 0.78rem !important;
-  }
-
-  .timeCol {
-    font-size: 0.78rem !important;
-    min-width: 95px !important;
-    width: 95px !important;
-    padding-right: 0.5rem !important;
-    white-space: nowrap !important;
-  }
-
-  .clientCol {
-    min-width: 95px !important;
-  }
-
-  .clientName {
-    font-size: 0.8rem !important;
-  }
-
-  .clientPhone {
+    padding: 0.3rem 0.2rem !important;
     font-size: 0.68rem !important;
   }
 
+  .printTable td {
+    padding: 0.35rem 0.2rem !important;
+    font-size: 0.74rem !important;
+  }
+
+  .timeCol {
+    font-size: 0.74rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .clientName {
+    font-size: 0.76rem !important;
+  }
+
+  .clientPhone {
+    font-size: 0.64rem !important;
+  }
+
   .zonesCol {
-    font-size: 0.75rem !important;
+    font-size: 0.72rem !important;
   }
 }
 
@@ -356,29 +351,34 @@
   }
 
   .logo {
-    height: 30px !important;
+    height: 28px !important;
   }
 
   .headerTitle h1 {
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
     margin-bottom: 0 !important;
     color: #7a1f1e !important;
   }
 
   .date {
-    font-size: 0.72rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  .countBadge {
+    font-size: 0.65rem !important;
+    padding: 0.1rem 0.35rem !important;
   }
 
   .header {
     display: flex !important;
     border-bottom: 2px solid #7a1f1e !important;
-    margin-bottom: 0.25rem !important;
-    padding-bottom: 0.2rem !important;
+    margin-bottom: 0.2rem !important;
+    padding-bottom: 0.15rem !important;
   }
 
   .printTable {
     width: 100% !important;
-    table-layout: auto !important;
+    table-layout: fixed !important;
     border-collapse: collapse !important;
     margin-top: 0.15rem !important;
     margin-bottom: 0 !important;
@@ -396,40 +396,37 @@
   .printTable th {
     border-bottom: 2px solid #000000 !important;
     background-color: #f7f6f2 !important;
-    padding: 2.5px 4px !important;
-    font-size: 0.7rem !important;
+    padding: 2px 3px !important;
+    font-size: 0.68rem !important;
     -webkit-print-color-adjust: exact !important;
   }
 
   .printTable td {
     border-bottom: 1px solid #e0e0e0 !important;
-    padding: 2px 4px !important;
-    font-size: 0.74rem !important;
-    line-height: 1.15 !important;
+    padding: 1.8px 3px !important;
+    font-size: 0.72rem !important;
+    line-height: 1.12 !important;
   }
 
   .timeCol {
-    font-size: 0.74rem !important;
+    font-size: 0.72rem !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
-    width: 1% !important;
-    min-width: 90px !important;
-    padding-right: 0.5rem !important;
   }
 
   .clientName {
-    font-size: 0.76rem !important;
+    font-size: 0.74rem !important;
     margin-bottom: 0 !important;
     font-weight: 700 !important;
   }
 
   .clientPhone {
-    font-size: 0.65rem !important;
+    font-size: 0.62rem !important;
     color: #444444 !important;
   }
 
   .zonesCol {
-    font-size: 0.72rem !important;
+    font-size: 0.7rem !important;
   }
 
   .footer {

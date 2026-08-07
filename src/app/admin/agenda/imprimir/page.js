@@ -1,48 +1,43 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import styles from './imprimir.module.css';
 
-function PrintPageContent() {
+function PrintContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const fecha = searchParams.get('fecha');
 
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!fecha) {
-      setError('Fecha no especificada.');
+      setError('Fecha no especificada');
       setLoading(false);
       return;
     }
 
-    fetch(`/api/admin/turnos/imprimir?fecha=${fecha}`)
-      .then(res => {
-        if (res.status === 401) {
-          router.push('/login');
-          return;
+    async function fetchTurnos() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/admin/turnos/imprimir?fecha=${fecha}`);
+        if (!res.ok) {
+          throw new Error('Error al obtener los turnos del día');
         }
-        return res.json();
-      })
-      .then(data => {
-        if (data && !data.error) {
-          setTurnos(data);
-        } else if (data && data.error) {
-          setError(data.error);
-        }
-      })
-      .catch(err => {
+        const data = await res.json();
+        setTurnos(data);
+      } catch (err) {
         console.error('Error fetching printable turnos:', err);
-        setError('Error al conectar con el servidor.');
-      })
-      .finally(() => {
+        setError(err.message || 'No se pudieron cargar los turnos');
+      } finally {
         setLoading(false);
-      });
-  }, [fecha, router]);
+      }
+    }
+
+    fetchTurnos();
+  }, [fecha]);
 
   // Trigger print dialog automatically once loaded
   useEffect(() => {
@@ -56,34 +51,46 @@ function PrintPageContent() {
 
   const formatDateLabel = (dateStr) => {
     if (!dateStr) return '';
-    const [year, month, day] = dateStr.split('-');
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    try {
+      const [year, month, day] = dateStr.split('-');
+      const d = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+      return d.toLocaleDateString('es-AR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
   };
 
   const getZonasList = (zonasJson, otrosTexto) => {
-    let text = '';
+    let zones = [];
     try {
-      const parsed = JSON.parse(zonasJson);
-      if (Array.isArray(parsed)) {
-        text = parsed.map(z => z.nombre || z.nombreBase || z).join(', ');
-      } else {
-        text = zonasJson || '';
+      if (typeof zonasJson === 'string') {
+        zones = JSON.parse(zonasJson);
+      } else if (Array.isArray(zonasJson)) {
+        zones = zonasJson;
       }
-    } catch (e) {
-      text = zonasJson || '';
+    } catch {
+      zones = [];
     }
+
+    const names = zones.map((z) => (typeof z === 'string' ? z : z.nombre || z.name)).filter(Boolean);
     if (otrosTexto) {
-      text = text ? `${text} (Otros: ${otrosTexto})` : `Otros: ${otrosTexto}`;
+      names.push(`Otros: ${otrosTexto}`);
     }
-    return text || 'Sin zonas especificadas';
+
+    if (names.length === 0) return 'Sin zonas especificadas';
+    return names.join(', ');
   };
 
   if (loading) {
     return (
       <div className={styles.loaderContainer}>
         <div className={styles.spinner}></div>
-        <p>Cargando agenda del día para impresión...</p>
+        <p>Cargando lista de turnos...</p>
       </div>
     );
   }
@@ -91,16 +98,18 @@ function PrintPageContent() {
   if (error) {
     return (
       <div className={styles.errorContainer}>
-        <h3>⚠️ Error</h3>
+        <h3>Ocurrió un error</h3>
         <p>{error}</p>
-        <button onClick={() => window.close()} className={styles.noPrintBtn}>Cerrar Ventana</button>
+        <button onClick={() => window.close()} className={styles.closeBtn}>
+          Cerrar ventana
+        </button>
       </div>
     );
   }
 
   return (
     <div className={styles.printWrapper}>
-      {/* Action Bar (hidden when printing) */}
+      {/* Action buttons (hidden when printing) */}
       <div className={styles.actionsBar}>
         <button onClick={() => window.print()} className={styles.printBtn}>
           🖨️ Imprimir / Guardar PDF
@@ -119,9 +128,9 @@ function PrintPageContent() {
           </div>
           <div className={styles.headerTitle}>
             <h1>Turnos Programados</h1>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.2rem' }}>
+            <div className={styles.dateRow}>
               <p className={styles.date}>{formatDateLabel(fecha)}</p>
-              <span style={{ backgroundColor: '#7a1f1e', color: '#ffffff', padding: '0.15rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700 }}>
+              <span className={styles.countBadge}>
                 {turnos.length} turno{turnos.length === 1 ? '' : 's'}
               </span>
             </div>
@@ -134,10 +143,15 @@ function PrintPageContent() {
           </div>
         ) : (
           <table className={styles.printTable}>
+            <colgroup>
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '37%' }} />
+              <col style={{ width: '38%' }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ width: '1%', whiteSpace: 'nowrap', minWidth: '100px' }}>Horario</th>
-                <th style={{ minWidth: '110px' }}>Cliente</th>
+                <th>Horario</th>
+                <th>Cliente</th>
                 <th>Zonas a Realizar</th>
               </tr>
             </thead>
@@ -154,7 +168,7 @@ function PrintPageContent() {
                   <td className={styles.zonesCol}>
                     <div>{getZonasList(turno.zonas, turno.otrosTexto)}</div>
                     {turno.observaciones && (
-                      <div style={{ fontSize: '0.8rem', color: '#555', marginTop: '4px', fontStyle: 'italic' }}>
+                      <div className={styles.obsText}>
                         Obs: {turno.observaciones}
                       </div>
                     )}
@@ -173,10 +187,17 @@ function PrintPageContent() {
   );
 }
 
-export default function PrintPage() {
+export default function ImprimirTurnosPage() {
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
-      <PrintPageContent />
+    <Suspense
+      fallback={
+        <div className={styles.loaderContainer}>
+          <div className={styles.spinner}></div>
+          <p>Preparando vista de impresión...</p>
+        </div>
+      }
+    >
+      <PrintContent />
     </Suspense>
   );
 }
