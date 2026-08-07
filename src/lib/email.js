@@ -483,8 +483,8 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   }
 
   const policyText = withLossOfDeposit
-    ? `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">Debido a que la cancelación se realizó con <strong style="color: #ff5252;">menos de 72 horas</strong> de anticipación, de acuerdo con nuestras políticas corporativas, la seña abonada de <strong style="color: #ff8a8a;">$${(valorSeña || 0).toLocaleString()}</strong> ha sido retenida para cubrir los costos de reserva del espacio.</p>`
-    : `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">Al haberse realizado la cancelación con <strong style="color: #a5d6a7;">más de 72 horas</strong> de anticipación (o por disposición administrativa), tu seña original de <strong style="color: #a5d6a7;">$${(valorSeña || 0).toLocaleString()}</strong> queda registrada <strong style="color: #ffffff;">a tu favor</strong>. Por favor, ponte en contacto con nosotros para coordinar la reprogramación de tu cita utilizando esta seña.</p>`;
+    ? `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">De acuerdo con nuestras políticas corporativas de reserva y cancelación, la seña abonada de <strong style="color: #ff8a8a;">$${(valorSeña || 0).toLocaleString()}</strong> ha sido retenida para cubrir los costos de reserva del espacio.</p>`
+    : `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">Al haberse realizado la cancelación con más de 72 horas de anticipación (o por disposición administrativa), tu seña original de <strong style="color: #a5d6a7;">$${(valorSeña || 0).toLocaleString()}</strong> queda registrada <strong style="color: #ffffff;">a tu favor</strong>. Por favor, ponte en contacto con nosotros para coordinar la reprogramación de tu cita utilizando esta seña.</p>`;
 
   const htmlContent = `
     <!DOCTYPE html>

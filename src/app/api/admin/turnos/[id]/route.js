@@ -351,15 +351,13 @@ export async function PUT(request, { params }) {
     // If state changes to "CANCELADO" and old state was not "CANCELADO"
     if (notificationsEnabled && estado === 'CANCELADO' && oldTurn.estado !== 'CANCELADO') {
       try {
-        const now = new Date();
-        const turnTime = new Date(oldTurn.fecha);
-        const [h, m] = oldTurn.horaInicio.split(':').map(Number);
-        turnTime.setUTCHours(h, m, 0, 0);
-        const diffMs = turnTime.getTime() - now.getTime();
-        const diffHours = diffMs / (1000 * 60 * 60);
-
-        // Deposit is lost if within 72 hours AND we are NOT preserving it
-        const withLossOfDeposit = diffHours < 72 && !body.preserveDeposit;
+        // Deposit is lost if admin explicitly set preserveDeposit to false, or if cancelled within 72h on web
+        let withLossOfDeposit = false;
+        if (typeof body.preserveDeposit === 'boolean') {
+          withLossOfDeposit = !body.preserveDeposit;
+        } else {
+          withLossOfDeposit = diffHours < 72;
+        }
 
         if (updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
           await sendCancellationEmail(
