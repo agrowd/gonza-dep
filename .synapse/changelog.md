@@ -99,10 +99,12 @@
 - Almacenamiento y preservación del tipo de descuento (`descuentoTipo` `'PORCENTAJE'` o `'PESOS'`) y valor de bonificación en Prisma `Turno` para conservar el 20% al editar o reprogramar citas.
 - Texto oscuro de alto contraste (`color: #111111; font-weight: 500`) en el historial de notificaciones enviadas dentro del perfil del cliente (`src/app/admin/clientes/page.js`).
 - Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
+- Ajuste equilibrado del tamaño y tipografía de la hoja de impresión A4 (`src/app/admin/agenda/imprimir/imprimir.module.css`):
+  1. Se restableció la tipografía corporativa a un tamaño legible y generoso (`1.35rem` en título, `0.92rem` en celdas, `0.94rem` en cliente y `0.88rem` en zonas con interlineado de `1.35` y padding de `0.45rem 0.55rem`), de modo que el contenido ocupe el 85% natural de la hoja A4 en lugar de verse diminuto en "media hoja".
+  2. Se mantienen los márgenes A4 de `8mm 10mm` para garantizar que la jornada completa de hasta 16-18 turnos diarios entre holgada y perfectamente en 1 sola carilla sin dividirse en dos páginas ni recortar texto.
 - Adaptación 100% fluida a pantallas de celular sin corte lateral (`src/app/admin/agenda/imprimir/page.js` e `imprimir.module.css`):
   1. Se ajustaron los anchos de columna al 25% (Horario), 37% (Cliente) y 38% (Zonas) con ajuste `overflow-wrap: anywhere` y `padding: 0.35rem 0.2rem` en pantallas móviles (320px a 450px).
   2. Se configuró el contenedor de la hoja para ocupar el 100% exacto del ancho de la pantalla (`100vw; box-sizing: border-box; overflow-x: hidden;`), eliminando por completo el desbordamiento hacia la derecha de la columna "ZONAS A REALIZAR" en teléfonos Motorola y Android.
-  3. En la exportación a PDF se conservan los márgenes ultra-compactos para que los 13 a 18 turnos del día sigan entrando completos en 1 sola carilla A4.
 - Corrección de colisión y superposición de texto en celulares Motorola/Android (`src/app/admin/agenda/imprimir/page.js` e `imprimir.module.css`):
   1. Se eliminó la restricción rígida de `table-layout: fixed` con porcentajes pequeños (22%) que provocaba que la hora (ej. `14:00`) se montara encima del nombre del cliente (ej. `Walter Di Camillo`).
   2. Se implementó `table-layout: auto` con ancho mínimo asegurado para el horario (`min-width: 100px; white-space: nowrap`), permitiendo que el navegador del celular calcule el espacio natural de cada celda sin ninguna colisión de texto.
