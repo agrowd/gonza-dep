@@ -296,9 +296,98 @@ export default function AgendaPage() {
     }
   }, [loading, appointments]);
 
+  // Helper to recalculate updated prices based on current zone list
+  const getUpdatedTurnoPrices = (turno) => {
+    if (!turno) return { valorOriginal: 0, valorTotal: 0, bonificacion: 0, hasPriceUpdate: false, oldValorTotal: 0 };
+    
+    const storedBase = Number(turno.valorTotal || 0) + Number(turno.bonificacion || 0);
+
+    if (!zones || zones.length === 0) {
+      return {
+        valorOriginal: storedBase,
+        valorTotal: Number(turno.valorTotal || 0),
+        bonificacion: Number(turno.bonificacion || 0),
+        hasPriceUpdate: false,
+        oldValorTotal: Number(turno.valorTotal || 0)
+      };
+    }
+
+    let parsedZones = [];
+    try {
+      if (typeof turno.zonas === 'string') {
+        parsedZones = JSON.parse(turno.zonas);
+      } else if (Array.isArray(turno.zonas)) {
+        parsedZones = turno.zonas;
+      }
+    } catch {
+      parsedZones = [];
+    }
+
+    if (parsedZones.length === 0) {
+      return {
+        valorOriginal: storedBase,
+        valorTotal: Number(turno.valorTotal || 0),
+        bonificacion: Number(turno.bonificacion || 0),
+        hasPriceUpdate: false,
+        oldValorTotal: Number(turno.valorTotal || 0)
+      };
+    }
+
+    let currentBaseTotal = 0;
+    let matchedAny = false;
+
+    for (const pz of parsedZones) {
+      const zName = typeof pz === 'string' ? pz : (pz.nombre || pz.name || '');
+      const zId = pz.id;
+      const matched = zones.find(z => 
+        (zId && String(z.id) === String(zId)) || 
+        (zName && z.nombre && z.nombre.trim().toLowerCase() === zName.trim().toLowerCase())
+      );
+      if (matched) {
+        currentBaseTotal += Number(matched.precioBase || 0);
+        matchedAny = true;
+      } else {
+        currentBaseTotal += Number(pz.precio || pz.precioBase || 0);
+      }
+    }
+
+    if (!matchedAny || currentBaseTotal <= 0) {
+      currentBaseTotal = storedBase;
+    }
+
+    // Determine discount
+    let bonificacion = 0;
+    if (turno.descuentoTipo === 'PORCENTAJE' && Number(turno.descuentoValor) > 0) {
+      bonificacion = Math.round(currentBaseTotal * (Number(turno.descuentoValor) / 100));
+    } else if (turno.descuentoTipo === 'PESOS' && Number(turno.descuentoValor) > 0) {
+      bonificacion = Math.min(currentBaseTotal, Number(turno.descuentoValor));
+    } else if (turno.bonificacion > 0) {
+      if (storedBase > 0) {
+        const impliedPct = Math.round((Number(turno.bonificacion) / storedBase) * 100);
+        if (impliedPct > 0 && impliedPct < 100) {
+          bonificacion = Math.round(currentBaseTotal * (impliedPct / 100));
+        } else {
+          bonificacion = Math.min(currentBaseTotal, Number(turno.bonificacion));
+        }
+      }
+    }
+
+    const valorTotal = Math.max(0, currentBaseTotal - bonificacion);
+    const hasPriceUpdate = currentBaseTotal !== storedBase || valorTotal !== Number(turno.valorTotal || 0);
+
+    return {
+      valorOriginal: currentBaseTotal,
+      valorTotal,
+      bonificacion,
+      hasPriceUpdate,
+      oldValorTotal: Number(turno.valorTotal || 0)
+    };
+  };
+
   useEffect(() => {
     if (selectedTurno) {
-      setTempValorTotal(selectedTurno.valorTotal !== undefined ? String(selectedTurno.valorTotal) : '');
+      const updated = getUpdatedTurnoPrices(selectedTurno);
+      setTempValorTotal(String(updated.valorTotal !== undefined ? updated.valorTotal : (selectedTurno.valorTotal || '')));
       setTempValorSeña(selectedTurno.valorSeña !== undefined ? String(selectedTurno.valorSeña) : '');
       if (selectedTurno.cliente) {
         setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
@@ -316,7 +405,7 @@ export default function AgendaPage() {
       setTempClientFrecuencia(4);
       setTempClientNotasGonzalo('');
     }
-  }, [selectedTurno]);
+  }, [selectedTurno, zones]);
 
   const handleSaveTurnoAmounts = async () => {
     if (!selectedTurno) return;
@@ -1992,81 +2081,89 @@ export default function AgendaPage() {
                       })()} min)
                     </span>
                   </div>
-                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <span className={styles.detailLabel}>Zonas a depilar</span>
-                    <span className={styles.detailValue}>
-                      {(() => {
-                        try {
-                          return JSON.parse(selectedTurno.zonas).map(z => z.nombre).join(', ') || 'Ninguna (Bloqueo)';
-                        } catch(e) {
-                          return selectedTurno.zonas || 'Ninguna (Bloqueo)';
-                        }
-                      })()}
-                    </span>
-                  </div>
-                  {Boolean(selectedTurno.bonificacion && selectedTurno.bonificacion > 0) && (
-                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.08)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.25)', marginBottom: '0.25rem' }}>
-                      <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 600, fontSize: '0.8rem' }}>Valor Original (Sin Descuento)</span>
-                      <span className={styles.detailValue} style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
-                        ${(Number(selectedTurno.valorTotal || 0) + Number(selectedTurno.bonificacion || 0)).toLocaleString('es-ES')}
-                      </span>
-                    </div>
-                  )}
+                  {(() => {
+                    const dynPrices = getUpdatedTurnoPrices(selectedTurno);
+                    return (
+                      <>
+                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
+                          <span className={styles.detailLabel}>Zonas a depilar</span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                            {(() => {
+                              try {
+                                return JSON.parse(selectedTurno.zonas).map(z => z.nombre || z.name).filter(Boolean).join(', ') || 'Ninguna (Bloqueo)';
+                              } catch(e) {
+                                return selectedTurno.zonas || 'Ninguna (Bloqueo)';
+                              }
+                            })()}
+                          </span>
+                        </div>
 
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Valor Total ($)</span>
-                    <input
-                      type="number"
-                      value={tempValorTotal}
-                      onChange={(e) => setTempValorTotal(e.target.value)}
-                      style={{
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-secondary)',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.95rem',
-                        fontWeight: 700,
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        marginTop: '0.25rem'
-                      }}
-                    />
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Seña Cobrada ($)</span>
-                    <input
-                      type="number"
-                      value={tempValorSeña}
-                      onChange={(e) => setTempValorSeña(e.target.value)}
-                      style={{
-                        padding: '0.4rem 0.6rem',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-secondary)',
-                        color: '#81c784',
-                        fontSize: '0.95rem',
-                        fontWeight: 700,
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        marginTop: '0.25rem'
-                      }}
-                    />
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Saldo Pendiente</span>
-                    <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.4rem' }}>
-                      ${(Math.max(0, Number(tempValorTotal || 0) - Number(tempValorSeña || 0))).toLocaleString('es-ES')}
-                    </span>
-                  </div>
-                  {Boolean(selectedTurno.bonificacion && selectedTurno.bonificacion > 0) && (
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Descuento Aplicado</span>
-                      <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, marginTop: '0.4rem' }}>
-                        -${Number(selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((selectedTurno.bonificacion / (selectedTurno.valorTotal + selectedTurno.bonificacion)) * 100)}%` : `$${Number(selectedTurno.descuentoValor || selectedTurno.bonificacion).toLocaleString('es-ES')}`})
-                      </span>
-                    </div>
-                  )}
+                        {Boolean(dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0)) && (
+                          <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.12)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.35)', marginBottom: '0.25rem' }}>
+                            <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.82rem' }}>Valor Original (Sin Descuento)</span>
+                            <span className={styles.detailValue} style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>
+                              ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className={styles.detailItem}>
+                          <span className={styles.detailLabel}>Valor Total ($)</span>
+                          <input
+                            type="number"
+                            value={tempValorTotal}
+                            onChange={(e) => setTempValorTotal(e.target.value)}
+                            style={{
+                              padding: '0.4rem 0.6rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-secondary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.95rem',
+                              fontWeight: 700,
+                              width: '100%',
+                              boxSizing: 'border-box',
+                              marginTop: '0.25rem'
+                            }}
+                          />
+                        </div>
+                        <div className={styles.detailItem}>
+                          <span className={styles.detailLabel}>Seña Cobrada ($)</span>
+                          <input
+                            type="number"
+                            value={tempValorSeña}
+                            onChange={(e) => setTempValorSeña(e.target.value)}
+                            style={{
+                              padding: '0.4rem 0.6rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-secondary)',
+                              color: '#81c784',
+                              fontSize: '0.95rem',
+                              fontWeight: 700,
+                              width: '100%',
+                              boxSizing: 'border-box',
+                              marginTop: '0.25rem'
+                            }}
+                          />
+                        </div>
+                        <div className={styles.detailItem}>
+                          <span className={styles.detailLabel}>Saldo Pendiente</span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.4rem' }}>
+                            ${(Math.max(0, Number(tempValorTotal || 0) - Number(tempValorSeña || 0))).toLocaleString('es-ES')}
+                          </span>
+                        </div>
+                        {Boolean(dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0)) && (
+                          <div className={styles.detailItem}>
+                            <span className={styles.detailLabel}>Descuento Aplicado</span>
+                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, marginTop: '0.4rem' }}>
+                              -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-ES')}`})
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   {(Number(tempValorTotal) !== Number(selectedTurno.valorTotal) || Number(tempValorSeña) !== Number(selectedTurno.valorSeña)) && (
                     <div style={{ gridColumn: '1 / -1', marginTop: '0.25rem' }}>
