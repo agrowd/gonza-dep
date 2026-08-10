@@ -181,6 +181,20 @@ export async function PUT(request, { params }) {
       console.log(`Client ${oldTurn.clienteId} marked as Va a avisar.`);
     }
 
+    if (estado === 'CANCELADO' && body.preserveDeposit && oldTurn.clienteId && Number(oldTurn.valorSeña) > 0) {
+      const clientCurrent = await prisma.cliente.findUnique({ where: { id: oldTurn.clienteId } });
+      const currentObs = clientCurrent?.observaciones || '';
+      const dateStr = oldTurn.fecha ? new Date(oldTurn.fecha).toLocaleDateString('es-ES') : '';
+      const creditTag = `[Seña a favor: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Guardada por cancelación ${dateStr})]`;
+      const updatedObs = currentObs.includes(creditTag) ? currentObs : `${currentObs ? currentObs + ' | ' : ''}${creditTag}`;
+      
+      await prisma.cliente.update({
+        where: { id: oldTurn.clienteId },
+        data: { observaciones: updatedObs }
+      });
+      console.log(`Client ${oldTurn.clienteId} registered preserved deposit: ${creditTag}`);
+    }
+
     if (selectedZoneIds !== undefined) {
       let dbZones = [];
       if (selectedZoneIds && selectedZoneIds.length > 0) {
