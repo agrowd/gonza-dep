@@ -717,28 +717,52 @@ export default function AgendaPage() {
     };
   };
 
-  // Handle Turno quick action: CANCEL, REALIZADO, APPROVE, FINALIZADO TRATAMIENTO
-  const handleUpdateStatus = async (turnoId, newStatus, markClientFinalizado = false) => {
+  // Handle Turno quick action: CANCEL, REALIZADO, APPROVE, MANTENIMIENTO, VA_A_AVISAR, NO_ASISTIO
+  const handleUpdateStatus = async (turnoId, newStatus, actionType = null) => {
     try {
       let preserveDeposit = false;
+      let markClientFinalizado = false;
+      let markClientVaAAvisar = false;
+
       if (newStatus === 'CANCELADO') {
         const confirmCancel = confirm('¿Estás seguro de que deseas cancelar este turno?');
         if (!confirmCancel) return; // Abort cancellation entirely
         
         preserveDeposit = confirm('¿Deseas CONSERVAR la seña a favor del cliente?\n\n[Aceptar] = Conservar la seña (no se cobra penalidad)\n[Cancelar] = Retener/perder la seña (se cobra penalidad)');
       }
-      if (markClientFinalizado) {
-        const confirmFin = confirm('¿Marcar el TRATAMIENTO como FINALIZADO para este cliente?\n\nEsto actualizará el estado del cliente a FINALIZADO y programará el recordatorio de mantenimiento de 2 meses.');
+      
+      if (actionType === 'FINALIZADO' || actionType === 'MANTENIMIENTO') {
+        const confirmFin = confirm('¿Marcar al cliente en MANTENIMIENTO?\n\nEsto marcará el turno como Realizado, el estado del cliente en Mantenimiento y programará el recordatorio de mantenimiento de 2 meses.');
         if (!confirmFin) return;
+        markClientFinalizado = true;
       }
+
+      if (actionType === 'VA_A_AVISAR') {
+        const confirmAviso = confirm('¿Registrar que el cliente "Va a avisar"?\n\nEsto marcará el turno como Realizado y dejará una nota para que avise cuando desee agendar su próximo turno.');
+        if (!confirmAviso) return;
+        markClientVaAAvisar = true;
+      }
+
       const res = await fetch(`/api/admin/turnos/${turnoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: newStatus, preserveDeposit, markClientFinalizado })
+        body: JSON.stringify({ 
+          estado: newStatus, 
+          preserveDeposit, 
+          markClientFinalizado,
+          markClientVaAAvisar 
+        })
       });
       if (res.ok) {
         setIsDetailsOpen(false);
         fetchAppointments();
+        if (actionType === 'MANTENIMIENTO' || actionType === 'FINALIZADO') {
+          showToast('Cliente marcado en Mantenimiento.');
+        } else if (actionType === 'VA_A_AVISAR') {
+          showToast('Registrado: El cliente va a avisar para el próximo turno.');
+        } else {
+          showToast(`Turno actualizado a ${newStatus}.`);
+        }
       }
     } catch (e) {
       console.error('Error updating status:', e);
@@ -2271,52 +2295,24 @@ export default function AgendaPage() {
                         ✓ Realizado
                       </button>
                     )}
-                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && selectedTurno.cliente?.estado !== 'FINALIZADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', true)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
-                        🏁 Finalizar Tratamiento
+                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'MANTENIMIENTO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                        🛠️ Mantenimiento
                       </button>
                     )}
-                    {selectedTurno.estado === 'CANCELADO' && (
-                      <button
-                        onClick={() => {
-                          const dateStr = typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha);
-                          setNewTurno({
-                            clienteId: '',
-                            nombreCompleto: '',
-                            whatsapp: '',
-                            email: '',
-                            dni: '',
-                            fechaStr: dateStr,
-                            horaInicio: selectedTurno.horaInicio,
-                            horaFin: selectedTurno.horaFin,
-                            selectedZoneIds: [],
-                            valorTotal: 0,
-                            valorSeña: 0,
-                            descuentoTipo: 'NINGUNO',
-                            descuentoValor: '',
-                            bonificacion: 0,
-                            estado: 'SEÑADO',
-                            observaciones: '',
-                            hasOtros: false,
-                            otrosTexto: ''
-                          });
-                          setIsDetailsOpen(false);
-                          setIsNewOpen(true);
-                        }}
-                        className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 100%', minWidth: 0, boxSizing: 'border-box' }}
-                      >
-                        ➕ Agendar Nuevo Turno en este Horario
+                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'VA_A_AVISAR')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d97706', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                        ⏳ Va a Avisar
+                      </button>
+                    )}
+                    {selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                        ❌ No Asistió
                       </button>
                     )}
                     {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✕ Cancelar
-                      </button>
-                    )}
-                    {selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
-                        ❌ No Asistió
                       </button>
                     )}
                     {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && (

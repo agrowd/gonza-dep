@@ -158,12 +158,27 @@ export async function PUT(request, { params }) {
       });
     }
 
-    if (body.markClientFinalizado && oldTurn.clienteId) {
+    if ((body.markClientFinalizado || body.markClientMantenimiento) && oldTurn.clienteId) {
       await prisma.cliente.update({
         where: { id: oldTurn.clienteId },
         data: { estado: 'FINALIZADO' }
       });
-      console.log(`Client ${oldTurn.clienteId} marked as FINALIZADO (Treatment Completed).`);
+      console.log(`Client ${oldTurn.clienteId} marked as FINALIZADO / MANTENIMIENTO.`);
+    }
+
+    if (body.markClientVaAAvisar && oldTurn.clienteId) {
+      const clientCurrent = await prisma.cliente.findUnique({ where: { id: oldTurn.clienteId } });
+      const currentObs = clientCurrent?.observaciones || '';
+      const noticeTag = '[Va a avisar próximo turno]';
+      const updatedObs = currentObs.includes(noticeTag) ? currentObs : `${currentObs ? currentObs + ' | ' : ''}${noticeTag}`;
+      
+      await prisma.cliente.update({
+        where: { id: oldTurn.clienteId },
+        data: { 
+          observaciones: updatedObs
+        }
+      });
+      console.log(`Client ${oldTurn.clienteId} marked as Va a avisar.`);
     }
 
     if (selectedZoneIds !== undefined) {
