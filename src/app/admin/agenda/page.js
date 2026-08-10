@@ -1041,20 +1041,20 @@ export default function AgendaPage() {
     const endMins = endMin % 60;
     const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
-    // Calculate discount (bonificacion) based on manual total override or zone base total
-    let baseTotalForDiscount = calcs.valorTotal;
-    if (newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '') {
-      baseTotalForDiscount = Number(newTurno.manualTotalOverride);
-    }
-
+    let finalTotal = 0;
     let bonificacion = 0;
-    if (newTurno.descuentoTipo === 'PORCENTAJE') {
-      bonificacion = baseTotalForDiscount * (Number(newTurno.descuentoValor || 0) / 100);
-    } else if (newTurno.descuentoTipo === 'PESOS') {
-      bonificacion = Number(newTurno.descuentoValor || 0);
-    }
 
-    const finalTotal = Math.max(0, baseTotalForDiscount - bonificacion);
+    if (newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '') {
+      finalTotal = Number(newTurno.manualTotalOverride);
+      bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
+    } else {
+      if (newTurno.descuentoTipo === 'PORCENTAJE') {
+        bonificacion = Math.round(calcs.valorTotal * (Number(newTurno.descuentoValor || 0) / 100));
+      } else if (newTurno.descuentoTipo === 'PESOS') {
+        bonificacion = Math.min(calcs.valorTotal, Number(newTurno.descuentoValor || 0));
+      }
+      finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+    }
 
     setNewTurno(prev => ({
       ...prev,
@@ -1094,19 +1094,20 @@ export default function AgendaPage() {
     const currentSelectedZones = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
     const calcs = calculateTurnDetails(currentSelectedZones, false);
 
-    let baseTotalForDiscount = calcs.valorTotal;
-    if (editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '') {
-      baseTotalForDiscount = Number(editTurno.manualTotalOverride);
-    }
-
+    let finalTotal = 0;
     let bonificacion = 0;
-    if (editTurno.descuentoTipo === 'PORCENTAJE') {
-      bonificacion = Math.round(baseTotalForDiscount * (Number(editTurno.descuentoValor || 0) / 100));
-    } else if (editTurno.descuentoTipo === 'PESOS') {
-      bonificacion = Math.min(baseTotalForDiscount, Number(editTurno.descuentoValor || 0));
-    }
 
-    const finalTotal = Math.max(0, baseTotalForDiscount - bonificacion);
+    if (editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '') {
+      finalTotal = Number(editTurno.manualTotalOverride);
+      bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
+    } else {
+      if (editTurno.descuentoTipo === 'PORCENTAJE') {
+        bonificacion = Math.round(calcs.valorTotal * (Number(editTurno.descuentoValor || 0) / 100));
+      } else if (editTurno.descuentoTipo === 'PESOS') {
+        bonificacion = Math.min(calcs.valorTotal, Number(editTurno.descuentoValor || 0));
+      }
+      finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+    }
 
     // Seña MUST STAY FIXED at initial deposit or manual override
     const fixedSeña = editTurno.manualSeñaOverride !== undefined 
@@ -1994,7 +1995,7 @@ export default function AgendaPage() {
                     <label className={styles.inputLabel}>Tipo de Descuento</label>
                     <select
                       value={editTurno.descuentoTipo}
-                      onChange={(e) => setEditTurno({ ...editTurno, descuentoTipo: e.target.value })}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoTipo: e.target.value }))}
                     >
                       <option value="NINGUNO">Sin Descuento</option>
                       <option value="PORCENTAJE">Porcentaje (%)</option>
@@ -2007,7 +2008,7 @@ export default function AgendaPage() {
                     <input
                       type="number"
                       value={editTurno.descuentoValor}
-                      onChange={(e) => setEditTurno({ ...editTurno, descuentoValor: e.target.value })}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoValor: e.target.value }))}
                       placeholder="Ej. 10 o 500"
                       disabled={editTurno.descuentoTipo === 'NINGUNO'}
                     />
@@ -2661,7 +2662,7 @@ export default function AgendaPage() {
                   <label className={styles.inputLabel}>Tipo de Descuento</label>
                   <select
                     value={newTurno.descuentoTipo}
-                    onChange={(e) => setNewTurno({ ...newTurno, descuentoTipo: e.target.value })}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoTipo: e.target.value }))}
                   >
                     <option value="NINGUNO">Sin Descuento</option>
                     <option value="PORCENTAJE">Porcentaje (%)</option>
@@ -2674,7 +2675,7 @@ export default function AgendaPage() {
                   <input
                     type="number"
                     value={newTurno.descuentoValor}
-                    onChange={(e) => setNewTurno({ ...newTurno, descuentoValor: e.target.value })}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoValor: e.target.value }))}
                     placeholder="Ej. 10 o 500"
                     disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />
