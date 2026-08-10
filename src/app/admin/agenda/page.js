@@ -934,7 +934,8 @@ export default function AgendaPage() {
       descuentoTipo: turno.descuentoTipo || (turno.bonificacion > 0 ? 'PESOS' : 'NINGUNO'),
       descuentoValor: turno.descuentoValor || turno.bonificacion || '',
       manualTotalOverride: undefined,
-      manualSeñaOverride: undefined
+      valorSeña: Number(turno.valorSeña || 0),
+      manualSeñaOverride: Number(turno.valorSeña || 0)
     });
 
     setIsDetailsOpen(false);
@@ -2631,6 +2632,9 @@ export default function AgendaPage() {
                                 apellidoVal = fullName.substring(lastSpaceIdx + 1);
                               }
 
+                              const lastTurno = client.turnos && client.turnos.length > 0 ? client.turnos[0] : null;
+                              const clientLastSeña = lastTurno && lastTurno.valorSeña !== undefined ? Number(lastTurno.valorSeña) : undefined;
+
                               setNewTurno(prev => ({
                                 ...prev,
                                 nombreCompleto: fullName,
@@ -2640,7 +2644,8 @@ export default function AgendaPage() {
                                 email: client.email,
                                 dni: client.dni || '',
                                 clienteId: client.id,
-                                fechaStr: targetDateStr
+                                fechaStr: targetDateStr,
+                                ...(clientLastSeña !== undefined ? { valorSeña: clientLastSeña, manualSeñaOverride: clientLastSeña } : {})
                               }));
                               
                               if (isNextScheduling && targetDateStr) {
