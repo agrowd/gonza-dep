@@ -1108,7 +1108,9 @@ export default function AgendaPage() {
       ...prev,
       horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
       valorTotal: finalTotal,
-      valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : calcs.valorSeña,
+      valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
+        ? prev.manualSeñaOverride
+        : calcs.valorSeña,
       autoTotal: calcs.valorTotal,
       autoSeña: calcs.valorSeña,
       bonificacion: bonificacion
@@ -2032,11 +2034,11 @@ export default function AgendaPage() {
                         value={editTurno.valorSeña ?? ''}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setEditTurno({
-                            ...editTurno,
+                          setEditTurno(prev => ({
+                            ...prev,
                             valorSeña: val,
-                            manualSeñaOverride: val === '' ? undefined : Number(val)
-                          });
+                            manualSeñaOverride: val
+                          }));
                         }}
                         required
                         placeholder="Auto-calculado al elegir zona"
@@ -2815,11 +2817,11 @@ export default function AgendaPage() {
                       value={newTurno.valorSeña ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setNewTurno({
-                          ...newTurno,
+                        setNewTurno(prev => ({
+                          ...prev,
                           valorSeña: val,
-                          manualSeñaOverride: val === '' ? undefined : Number(val)
-                        });
+                          manualSeñaOverride: val
+                        }));
                       }}
                       required
                       placeholder="Auto-calculado al elegir zona"
