@@ -99,10 +99,10 @@
 - Almacenamiento y preservación del tipo de descuento (`descuentoTipo` `'PORCENTAJE'` o `'PESOS'`) y valor de bonificación en Prisma `Turno` para conservar el 20% al editar o reprogramar citas.
 - Texto oscuro de alto contraste (`color: #111111; font-weight: 500`) en el historial de notificaciones enviadas dentro del perfil del cliente (`src/app/admin/clientes/page.js`).
 - Permiso habilitado para modificar y reprogramar turnos del día actual (mismo día), independientemente de si la hora pautada ya transcurrió, bloqueándose únicamente al finalizar la jornada a medianoche.
-- Incorporación de botones de acción rápida 'Mantenimiento' y 'Va a avisar' y corrección de 'No asistió' (`src/app/admin/agenda/page.js` y `src/app/api/admin/turnos/[id]/route.js`):
-  1. Botón 'Mantenimiento' (`#1565c0`): marca el turno actual como Realizado, el estado del cliente en Mantenimiento y programa el recordatorio de mantenimiento de 2 meses.
-  2. Botón 'Va a avisar' (`#d97706`): marca el turno actual como Realizado y añade la anotación en las observaciones del cliente indicando que avisará para agendar su próximo turno.
-  3. Botón 'No asistió' (`#ef6c00`): garantizada su disponibilidad permanente para cualquier turno activo.
+- Unificación y sincronización de precios entre vista 'Detalle del Turno' y modal 'Editar' (`src/app/admin/agenda/page.js`):
+  1. Detección y macheo robusto de zonas en `getUpdatedTurnoPrices`: ahora machea con precisión cada zona del turno (incluso turnos con zonas en strings compuestos como 'Otros: ...') utilizando el motor `calculateTurnDetails`.
+  2. Vista de Detalle y Edición 100% consistentes: el Valor Total, la Seña Cobrada y el Saldo a Cobrar en Local muestran el valor exacto y actualizado ($105.000) en ambas pantallas.
+  3. Sincronización con el Arqueo de Caja y Estadísticas: al marcar un turno como 'Realizado', 'Mantenimiento' o 'Va a avisar', el sistema persiste automáticamente el monto actualizado en la base de datos para que los reportes de caja diaria y mensual sean 100% exactos.
 - Corrección en la edición de zonas y protección contra guardados accidentales (`src/app/admin/agenda/page.js`):
   1. Recálculo dinámico al modificar zonas: al tildar o destildar zonas en el modal de edición, el sistema consulta `precioBase` de cada zona y recalcula inmediatamente el Valor Total, la bonificación/descuento aplicable y la duración estimada (`horaFin`), conservando intacta la seña ya pagada por el cliente.
   2. Eliminación de campos de texto editables en la vista de sólo lectura: se reemplazaron los inputs del modal Detalle por tarjetas de texto de sólo lectura, asegurando que ninguna modificación se guarde a menos que el operador entre explícitamente a "Editar Turno" y presione el botón "Guardar Cambios".

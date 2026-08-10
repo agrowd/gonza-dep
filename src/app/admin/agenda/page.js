@@ -295,6 +295,7 @@ export default function AgendaPage() {
   }, [loading, appointments]);
 
   // Helper to recalculate updated prices based on current zone list
+  // Helper to recalculate updated prices based on current zone list
   const getUpdatedTurnoPrices = (turno) => {
     if (!turno) return { valorOriginal: 0, valorTotal: 0, bonificacion: 0, hasPriceUpdate: false, oldValorTotal: 0 };
     
@@ -313,43 +314,65 @@ export default function AgendaPage() {
     let parsedZones = [];
     try {
       if (typeof turno.zonas === 'string') {
-        parsedZones = JSON.parse(turno.zonas);
+        const trimmed = turno.zonas.trim();
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          const raw = JSON.parse(trimmed);
+          parsedZones = Array.isArray(raw) ? raw : [raw];
+        } else {
+          parsedZones = trimmed.split(',').map(s => ({ nombre: s.trim() }));
+        }
       } else if (Array.isArray(turno.zonas)) {
         parsedZones = turno.zonas;
       }
     } catch {
-      parsedZones = [];
+      if (typeof turno.zonas === 'string') {
+        parsedZones = turno.zonas.split(',').map(s => ({ nombre: s.trim() }));
+      } else {
+        parsedZones = [];
+      }
     }
 
-    if (parsedZones.length === 0) {
-      return {
-        valorOriginal: storedBase,
-        valorTotal: Number(turno.valorTotal || 0),
-        bonificacion: Number(turno.bonificacion || 0),
-        hasPriceUpdate: false,
-        oldValorTotal: Number(turno.valorTotal || 0)
-      };
-    }
-
-    let currentBaseTotal = 0;
-    let matchedAny = false;
+    const matchedZoneObjs = [];
+    const matchedZoneIds = new Set();
 
     for (const pz of parsedZones) {
-      const zName = typeof pz === 'string' ? pz : (pz.nombre || pz.name || '');
+      if (!pz) continue;
       const zId = pz.id;
+      const zName = typeof pz === 'string' ? pz : (pz.nombre || pz.name || '');
+
+      if (zId === 'otros' || (zName && zName.toLowerCase().startsWith('otros:'))) {
+        continue;
+      }
+
       const matched = zones.find(z => 
         (zId && String(z.id) === String(zId)) || 
         (zName && z.nombre && z.nombre.trim().toLowerCase() === zName.trim().toLowerCase())
       );
-      if (matched) {
-        currentBaseTotal += Number(matched.precioBase || 0);
-        matchedAny = true;
-      } else {
-        currentBaseTotal += Number(pz.precio || pz.precioBase || 0);
+
+      if (matched && !matchedZoneIds.has(matched.id)) {
+        matchedZoneIds.add(matched.id);
+        matchedZoneObjs.push(matched);
       }
     }
 
-    if (!matchedAny || currentBaseTotal <= 0) {
+    // Fallback: match by substring across full text if no objects matched
+    if (matchedZoneObjs.length === 0) {
+      const fullText = (typeof turno.zonas === 'string' ? turno.zonas : JSON.stringify(turno.zonas || '')).toLowerCase();
+      for (const z of zones) {
+        if (z.nombre && fullText.includes(z.nombre.toLowerCase().trim())) {
+          if (!matchedZoneIds.has(z.id)) {
+            matchedZoneIds.add(z.id);
+            matchedZoneObjs.push(z);
+          }
+        }
+      }
+    }
+
+    let currentBaseTotal = 0;
+    if (matchedZoneObjs.length > 0) {
+      const calcs = calculateTurnDetails(matchedZoneObjs, false);
+      currentBaseTotal = calcs.valorTotal;
+    } else {
       currentBaseTotal = storedBase;
     }
 
@@ -743,15 +766,25 @@ export default function AgendaPage() {
         markClientVaAAvisar = true;
       }
 
+      const updateBody = { 
+        estado: newStatus, 
+        preserveDeposit, 
+        markClientFinalizado,
+        markClientVaAAvisar 
+      };
+
+      if (selectedTurno && (newStatus === 'REALIZADO' || actionType === 'MANTENIMIENTO' || actionType === 'VA_A_AVISAR')) {
+        const dynPrices = getUpdatedTurnoPrices(selectedTurno);
+        if (dynPrices && dynPrices.hasPriceUpdate) {
+          updateBody.valorTotal = dynPrices.valorTotal;
+          updateBody.bonificacion = dynPrices.bonificacion;
+        }
+      }
+
       const res = await fetch(`/api/admin/turnos/${turnoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          estado: newStatus, 
-          preserveDeposit, 
-          markClientFinalizado,
-          markClientVaAAvisar 
-        })
+        body: JSON.stringify(updateBody)
       });
       if (res.ok) {
         setIsDetailsOpen(false);
