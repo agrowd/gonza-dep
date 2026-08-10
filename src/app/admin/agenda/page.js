@@ -376,24 +376,31 @@ export default function AgendaPage() {
       currentBaseTotal = storedBase;
     }
 
-    // Determine discount
+    // Determine discount and round final total to nearest round thousand for percentage discounts
+    let valorTotal = currentBaseTotal;
     let bonificacion = 0;
+
     if (turno.descuentoTipo === 'PORCENTAJE' && Number(turno.descuentoValor) > 0) {
-      bonificacion = Math.round(currentBaseTotal * (Number(turno.descuentoValor) / 100));
+      const rawDiscounted = currentBaseTotal * (1 - Number(turno.descuentoValor) / 100);
+      valorTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
+      bonificacion = Math.max(0, currentBaseTotal - valorTotal);
     } else if (turno.descuentoTipo === 'PESOS' && Number(turno.descuentoValor) > 0) {
       bonificacion = Math.min(currentBaseTotal, Number(turno.descuentoValor));
+      valorTotal = Math.max(0, currentBaseTotal - bonificacion);
     } else if (turno.bonificacion > 0) {
       if (storedBase > 0) {
         const impliedPct = Math.round((Number(turno.bonificacion) / storedBase) * 100);
         if (impliedPct > 0 && impliedPct < 100) {
-          bonificacion = Math.round(currentBaseTotal * (impliedPct / 100));
+          const rawDiscounted = currentBaseTotal * (1 - impliedPct / 100);
+          valorTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
+          bonificacion = Math.max(0, currentBaseTotal - valorTotal);
         } else {
           bonificacion = Math.min(currentBaseTotal, Number(turno.bonificacion));
+          valorTotal = Math.max(0, currentBaseTotal - bonificacion);
         }
       }
     }
 
-    const valorTotal = Math.max(0, currentBaseTotal - bonificacion);
     const hasPriceUpdate = currentBaseTotal !== storedBase || valorTotal !== Number(turno.valorTotal || 0);
 
     return {
@@ -1049,11 +1056,16 @@ export default function AgendaPage() {
       bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
     } else {
       if (newTurno.descuentoTipo === 'PORCENTAJE') {
-        bonificacion = Math.round(calcs.valorTotal * (Number(newTurno.descuentoValor || 0) / 100));
+        const rawDiscounted = calcs.valorTotal * (1 - Number(newTurno.descuentoValor || 0) / 100);
+        finalTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
+        bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
       } else if (newTurno.descuentoTipo === 'PESOS') {
         bonificacion = Math.min(calcs.valorTotal, Number(newTurno.descuentoValor || 0));
+        finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+      } else {
+        finalTotal = calcs.valorTotal;
+        bonificacion = 0;
       }
-      finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
     }
 
     setNewTurno(prev => ({
@@ -1102,11 +1114,16 @@ export default function AgendaPage() {
       bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
     } else {
       if (editTurno.descuentoTipo === 'PORCENTAJE') {
-        bonificacion = Math.round(calcs.valorTotal * (Number(editTurno.descuentoValor || 0) / 100));
+        const rawDiscounted = calcs.valorTotal * (1 - Number(editTurno.descuentoValor || 0) / 100);
+        finalTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
+        bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
       } else if (editTurno.descuentoTipo === 'PESOS') {
         bonificacion = Math.min(calcs.valorTotal, Number(editTurno.descuentoValor || 0));
+        finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+      } else {
+        finalTotal = calcs.valorTotal;
+        bonificacion = 0;
       }
-      finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
     }
 
     // Seña MUST STAY FIXED at initial deposit or manual override
