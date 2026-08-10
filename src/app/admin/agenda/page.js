@@ -272,6 +272,8 @@ export default function AgendaPage() {
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
   const [sendingReceipt, setSendingReceipt] = useState({});
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
+  const [cancelModalTurno, setCancelModalTurno] = useState(null);
+  const [isCanceling, setIsCanceling] = useState(false);
   const savedScrollRef = useRef(0);
   const gridBodyRef = useRef(null);
 
@@ -747,6 +749,39 @@ export default function AgendaPage() {
     };
   };
 
+  // Dedicated cancellation execution
+  const executeCancelTurno = async (turnoId, preserveDeposit) => {
+    try {
+      setIsCanceling(true);
+      const res = await fetch(`/api/admin/turnos/${turnoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          estado: 'CANCELADO', 
+          preserveDeposit 
+        })
+      });
+      if (res.ok) {
+        setCancelModalTurno(null);
+        setIsDetailsOpen(false);
+        fetchAppointments();
+        if (preserveDeposit) {
+          showToast('Turno cancelado. Seña conservada a favor del cliente.');
+        } else {
+          showToast('Turno cancelado. Seña retenida según políticas.');
+        }
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al cancelar turno.', 'error');
+      }
+    } catch (e) {
+      console.error('Error canceling turno:', e);
+      showToast('Error de red al cancelar turno.', 'error');
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
   // Handle Turno quick action: CANCEL, REALIZADO, APPROVE, MANTENIMIENTO, VA_A_AVISAR, NO_ASISTIO
   const handleUpdateStatus = async (turnoId, newStatus, actionType = null) => {
     try {
@@ -755,10 +790,10 @@ export default function AgendaPage() {
       let markClientVaAAvisar = false;
 
       if (newStatus === 'CANCELADO') {
-        const confirmCancel = confirm('¿Estás seguro de que deseas cancelar este turno?');
-        if (!confirmCancel) return; // Abort cancellation entirely
-        
-        preserveDeposit = confirm('¿Deseas CONSERVAR la seña a favor del cliente?\n\n[Aceptar] = Conservar la seña (no se cobra penalidad)\n[Cancelar] = Retener/perder la seña (se cobra penalidad)');
+        if (selectedTurno) {
+          setCancelModalTurno(selectedTurno);
+        }
+        return;
       }
       
       if (actionType === 'FINALIZADO' || actionType === 'MANTENIMIENTO') {
@@ -2393,6 +2428,118 @@ export default function AgendaPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* CANCELLATION MODAL */}
+      {cancelModalTurno && (
+        <div className={styles.modalOverlay} style={{ zIndex: 10000 }}>
+          <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '480px', width: '100%', boxSizing: 'border-box' }}>
+            <div className={styles.modalHeader}>
+              <h3 style={{ fontSize: '1.2rem', color: '#e53935', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <span>✕</span> Cancelar Turno
+              </h3>
+              <button type="button" onClick={() => setCancelModalTurno(null)} className={styles.closeBtn}>&times;</button>
+            </div>
+
+            <div style={{ padding: '0.5rem 0 1rem 0', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                  {cancelModalTurno.cliente?.nombreCompleto || cancelModalTurno.nombre || 'Cliente'}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  📅 {formatLocalDate(cancelModalTurno.fecha)} — ⏰ {cancelModalTurno.horaInicio} a {cancelModalTurno.horaFin} hs
+                </div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2e7d32', marginTop: '0.5rem' }}>
+                  Seña Abonada: ${Number(cancelModalTurno.valorSeña || 0).toLocaleString('es-ES')}
+                </div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                ¿Cómo deseas proceder con la seña abonada por el cliente?
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  disabled={isCanceling}
+                  onClick={() => executeCancelTurno(cancelModalTurno.id, true)}
+                  className="btn"
+                  style={{
+                    backgroundColor: '#1b5e20',
+                    color: '#ffffff',
+                    border: '1px solid #2e7d32',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '0.25rem',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
+                    🟢 Conservar Seña a Favor del Cliente
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', fontWeight: 400 }}>
+                    Excepción: la seña de ${Number(cancelModalTurno.valorSeña || 0).toLocaleString('es-ES')} queda guardada en su ficha para su próxima sesión.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isCanceling}
+                  onClick={() => executeCancelTurno(cancelModalTurno.id, false)}
+                  className="btn"
+                  style={{
+                    backgroundColor: '#b71c1c',
+                    color: '#ffffff',
+                    border: '1px solid #c62828',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '0.25rem',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
+                    🔴 Retener Seña (Sin Reembolso)
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', fontWeight: 400 }}>
+                    Cancelación habitual: la seña se retiene para cubrir el costo de reserva según las políticas.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isCanceling}
+                  onClick={() => setCancelModalTurno(null)}
+                  className="btn"
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-color)',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    marginTop: '0.25rem'
+                  }}
+                >
+                  Volver sin Cancelar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
