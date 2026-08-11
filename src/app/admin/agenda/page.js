@@ -256,6 +256,7 @@ export default function AgendaPage() {
     fechaStr: '',
     horaInicio: '10:00',
     horaFin: '10:30',
+    autoHoraFin: '10:30',
     selectedZoneIds: [],
     valorTotal: '',
     valorSeña: '',
@@ -378,33 +379,34 @@ export default function AgendaPage() {
       currentBaseTotal = storedBase;
     }
 
-    // Determine discount and round final total to nearest round thousand for percentage discounts
-    let valorTotal = currentBaseTotal;
-    let bonificacion = 0;
+    const hasDiscount = turno.descuentoTipo && turno.descuentoTipo !== 'NINGUNO' && turno.descuentoTipo !== 'SIN_DESCUENTO';
 
-    if (turno.descuentoTipo === 'PORCENTAJE' && Number(turno.descuentoValor) > 0) {
-      const rawDiscounted = currentBaseTotal * (1 - Number(turno.descuentoValor) / 100);
-      valorTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
-      bonificacion = Math.max(0, currentBaseTotal - valorTotal);
-    } else if (turno.descuentoTipo === 'PESOS' && Number(turno.descuentoValor) > 0) {
-      bonificacion = Math.min(currentBaseTotal, Number(turno.descuentoValor));
-      valorTotal = Math.max(0, currentBaseTotal - bonificacion);
-    } else if (turno.bonificacion > 0) {
-      if (storedBase > 0) {
-        const impliedPct = Math.round((Number(turno.bonificacion) / storedBase) * 100);
-        if (impliedPct > 0 && impliedPct < 100) {
-          const rawDiscounted = currentBaseTotal * (1 - impliedPct / 100);
-          valorTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
-          bonificacion = Math.max(0, currentBaseTotal - valorTotal);
-        } else {
-          bonificacion = Math.min(currentBaseTotal, Number(turno.bonificacion));
-          valorTotal = Math.max(0, currentBaseTotal - bonificacion);
+    if (hasDiscount) {
+      if (turno.descuentoTipo === 'PORCENTAJE' && Number(turno.descuentoValor) > 0) {
+        const rawDiscounted = currentBaseTotal * (1 - Number(turno.descuentoValor) / 100);
+        valorTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
+        bonificacion = Math.max(0, currentBaseTotal - valorTotal);
+      } else if (turno.descuentoTipo === 'PESOS' && Number(turno.descuentoValor) > 0) {
+        bonificacion = Math.min(currentBaseTotal, Number(turno.descuentoValor));
+        valorTotal = Math.max(0, currentBaseTotal - bonificacion);
+      } else if (turno.bonificacion > 0) {
+        if (storedBase > 0) {
+          const impliedPct = Math.round((Number(turno.bonificacion) / storedBase) * 100);
+          if (impliedPct > 0 && impliedPct < 100) {
+            const rawDiscounted = currentBaseTotal * (1 - impliedPct / 100);
+            valorTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
+            bonificacion = Math.max(0, currentBaseTotal - valorTotal);
+          } else {
+            bonificacion = Math.min(currentBaseTotal, Number(turno.bonificacion));
+            valorTotal = Math.max(0, currentBaseTotal - bonificacion);
+          }
         }
       }
-    } else if (turno.valorTotal !== undefined && turno.valorTotal !== null && Number(turno.valorTotal) > 0) {
-      // Respect explicitly saved custom price in DB
-      valorTotal = Number(turno.valorTotal);
-      bonificacion = Math.max(0, currentBaseTotal - valorTotal);
+    } else {
+      if (turno.valorTotal !== undefined && turno.valorTotal !== null && Number(turno.valorTotal) > 0) {
+        valorTotal = Number(turno.valorTotal);
+      }
+      bonificacion = 0;
     }
 
     const hasPriceUpdate = currentBaseTotal !== storedBase || valorTotal !== Number(turno.valorTotal || 0);
@@ -1068,6 +1070,7 @@ export default function AgendaPage() {
       setNewTurno(prev => ({
         ...prev,
         horaFin: horaFinStr,
+        autoHoraFin: horaFinStr,
         valorTotal: 0,
         valorSeña: 0,
         autoTotal: 0,
@@ -1108,17 +1111,21 @@ export default function AgendaPage() {
       }
     }
 
-    setNewTurno(prev => ({
-      ...prev,
-      horaFin: calcs.duracionMinutos > 0 ? horaFinStr : prev.horaFin,
-      valorTotal: finalTotal,
-      valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
-        ? prev.manualSeñaOverride
-        : calcs.valorSeña,
-      autoTotal: calcs.valorTotal,
-      autoSeña: calcs.valorSeña,
-      bonificacion: bonificacion
-    }));
+    setNewTurno(prev => {
+      const shouldUpdateHoraFin = !prev.horaFin || prev.horaFin === prev.autoHoraFin;
+      return {
+        ...prev,
+        horaFin: (shouldUpdateHoraFin && calcs.duracionMinutos > 0) ? horaFinStr : prev.horaFin,
+        autoHoraFin: horaFinStr,
+        valorTotal: finalTotal,
+        valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
+          ? prev.manualSeñaOverride
+          : calcs.valorSeña,
+        autoTotal: calcs.valorTotal,
+        autoSeña: calcs.valorSeña,
+        bonificacion: bonificacion
+      };
+    });
   }, [newTurno.selectedZoneIds, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros, newTurno.manualTotalOverride, newTurno.manualSeñaOverride]);
 
   // Re-calculate pricing/discount and duration for editTurno
@@ -1334,7 +1341,8 @@ export default function AgendaPage() {
         ...prev,
         manualTotalOverride: newOverride,
         selectedZoneIds: newZoneIds,
-        horaFin: newHoraFin
+        horaFin: newHoraFin,
+        autoHoraFin: newHoraFin
       };
     });
   };
@@ -2205,7 +2213,7 @@ export default function AgendaPage() {
                           </span>
                         </div>
 
-                        {Boolean(dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0)) && (
+                        {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.12)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.35)', marginBottom: '0.25rem' }}>
                             <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.82rem' }}>Valor Original (Sin Descuento)</span>
                             <span className={styles.detailValue} style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>
@@ -2232,7 +2240,7 @@ export default function AgendaPage() {
                             ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
                           </span>
                         </div>
-                        {Boolean(dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0)) && (
+                        {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailItem}>
                             <span className={styles.detailLabel}>Descuento Aplicado</span>
                             <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, marginTop: '0.3rem' }}>
@@ -2786,7 +2794,22 @@ export default function AgendaPage() {
                     <input
                       type="time"
                       value={newTurno.horaInicio}
-                      onChange={(e) => setNewTurno({ ...newTurno, horaInicio: e.target.value })}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        const oldStart = newTurno.horaInicio;
+                        const oldEnd = newTurno.horaFin;
+                        let duration = timeToMinutes(oldEnd) - timeToMinutes(oldStart);
+                        if (isNaN(duration) || duration <= 0) {
+                          duration = 30; // fallback
+                        }
+                        const newEnd = addMinutesToTime(newStart, duration);
+                        setNewTurno(prev => ({
+                          ...prev,
+                          horaInicio: newStart,
+                          horaFin: newEnd,
+                          autoHoraFin: newEnd
+                        }));
+                      }}
                       required
                     />
                   </div>

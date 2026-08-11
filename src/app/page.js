@@ -563,7 +563,7 @@ export default function Home() {
                               ${senaAmount.toLocaleString('es-ES')}
                             </span>
                           </div>
-                          {Boolean(t?.bonificacion && t.bonificacion > 0) && (
+                          {Boolean(t?.bonificacion && t.bonificacion > 0 && t.descuentoTipo && t.descuentoTipo !== 'NINGUNO' && t.descuentoTipo !== 'SIN_DESCUENTO') && (
                             <div className={styles.summaryRow}>
                               <span>Descuento aplicado:</span>
                               <span style={{ color: '#ff5252', fontWeight: 600 }}>
