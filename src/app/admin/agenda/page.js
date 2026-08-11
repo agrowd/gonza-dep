@@ -1169,19 +1169,12 @@ export default function AgendaPage() {
     }
 
     // Seña MUST STAY FIXED at initial deposit or manual override
-    const fixedSeña = editTurno.manualSeñaOverride !== undefined 
-      ? Number(editTurno.manualSeñaOverride) 
-      : (editTurno.initialValorSeña !== undefined ? Number(editTurno.initialValorSeña) : Number(editTurno.valorSeña || 0));
-
-    // Calculate new end time if duration changed
-    let horaFinCalculada = editTurno.horaFin;
-    if (editTurno.horaInicio && calcs.duracionMinutos > 0) {
-      horaFinCalculada = addMinutesToTime(editTurno.horaInicio, calcs.duracionMinutos);
-    }
+    const fixedSeña = (editTurno.manualSeñaOverride !== undefined && editTurno.manualSeñaOverride !== null)
+      ? editTurno.manualSeñaOverride 
+      : (editTurno.initialValorSeña !== undefined ? editTurno.initialValorSeña : editTurno.valorSeña);
 
     setEditTurno(prev => ({
       ...prev,
-      horaFin: horaFinCalculada,
       valorTotal: finalTotal,
       valorSeña: fixedSeña,
       autoTotal: calcs.valorTotal,
@@ -1326,12 +1319,22 @@ export default function AgendaPage() {
         const currentNum = Number(newOverride);
         newOverride = exists ? Math.max(0, currentNum - zonePrice) : currentNum + zonePrice;
       }
+      const newZoneIds = exists
+        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
+        : [...(prev.selectedZoneIds || []), zoneId];
+
+      const newZones = zones.filter(z => newZoneIds.some(id => String(id) === String(z.id)));
+      const calcs = calculateTurnDetails(newZones, false);
+      let newHoraFin = prev.horaFin;
+      if (prev.horaInicio && calcs.duracionMinutos > 0) {
+        newHoraFin = addMinutesToTime(prev.horaInicio, calcs.duracionMinutos);
+      }
+
       return {
         ...prev,
         manualTotalOverride: newOverride,
-        selectedZoneIds: exists
-          ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
-          : [...(prev.selectedZoneIds || []), zoneId]
+        selectedZoneIds: newZoneIds,
+        horaFin: newHoraFin
       };
     });
   };
@@ -1354,12 +1357,22 @@ export default function AgendaPage() {
         newOverride = exists ? Math.max(0, currentNum - zonePrice) : currentNum + zonePrice;
       }
 
+      const newZoneIds = exists
+        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
+        : [...(prev.selectedZoneIds || []), zoneId];
+
+      const newZones = zones.filter(z => newZoneIds.some(id => String(id) === String(z.id)));
+      const calcs = calculateTurnDetails(newZones, false);
+      let newHoraFin = prev.horaFin;
+      if (prev.horaInicio && calcs.duracionMinutos > 0) {
+        newHoraFin = addMinutesToTime(prev.horaInicio, calcs.duracionMinutos);
+      }
+
       return {
         ...prev,
         manualTotalOverride: newOverride,
-        selectedZoneIds: exists
-          ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
-          : [...(prev.selectedZoneIds || []), zoneId]
+        selectedZoneIds: newZoneIds,
+        horaFin: newHoraFin
       };
     });
   };
