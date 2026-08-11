@@ -431,6 +431,13 @@ export async function PUT(request, { params }) {
 
       // WhatsApp Cancellation Trigger
       try {
+        const wppCancelConfig = await prisma.configuracion.findUnique({
+          where: { key: 'wtsp_cancellation_template' }
+        });
+        const addressConfig = await prisma.configuracion.findUnique({
+          where: { key: 'address' }
+        });
+
         let templateVal = wppCancelConfig?.value || "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!";
         if (body.preserveDeposit && Number(updatedTurno.valorSeña) > 0) {
           templateVal = "¡Hola [Nombre]! Te informamos que tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Tu seña de $[Seña] queda registrada A TU FAVOR para tu próxima sesión. Comunicate con nosotros cuando desees coordinar tu nueva cita. ¡Saludos!";

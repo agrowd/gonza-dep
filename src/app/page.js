@@ -552,15 +552,15 @@ export default function Home() {
                             </span>
                           </div>
                           <div className={styles.summaryRow}>
-                            <span>Seña abonada:</span>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                              ${senaAmount.toLocaleString('es-ES')}
+                            <span>Valor total del turno:</span>
+                            <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
+                              ${totalAmount.toLocaleString('es-ES')}
                             </span>
                           </div>
                           <div className={styles.summaryRow}>
-                            <span>Saldo a pagar en el local:</span>
-                            <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                              ${saldoAmount.toLocaleString('es-ES')}
+                            <span>Seña abonada:</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                              ${senaAmount.toLocaleString('es-ES')}
                             </span>
                           </div>
                           {Boolean(t?.bonificacion && t.bonificacion > 0) && (

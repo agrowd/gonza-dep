@@ -401,6 +401,10 @@ export default function AgendaPage() {
           valorTotal = Math.max(0, currentBaseTotal - bonificacion);
         }
       }
+    } else if (turno.valorTotal !== undefined && turno.valorTotal !== null && Number(turno.valorTotal) > 0) {
+      // Respect explicitly saved custom price in DB
+      valorTotal = Number(turno.valorTotal);
+      bonificacion = Math.max(0, currentBaseTotal - valorTotal);
     }
 
     const hasPriceUpdate = currentBaseTotal !== storedBase || valorTotal !== Number(turno.valorTotal || 0);
@@ -1313,24 +1317,51 @@ export default function AgendaPage() {
 
   const toggleNewTurnoZone = (zoneId) => {
     const exists = (newTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
-    setNewTurno(prev => ({
-      ...prev,
-      manualTotalOverride: undefined,
-      selectedZoneIds: exists
-        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
-        : [...(prev.selectedZoneIds || []), zoneId]
-    }));
+    const targetZone = zones.find(z => String(z.id) === String(zoneId));
+    const zonePrice = targetZone ? Number(targetZone.precioBase || 0) : 0;
+
+    setNewTurno(prev => {
+      let newOverride = prev.manualTotalOverride;
+      if (newOverride !== undefined && newOverride !== null && newOverride !== '') {
+        const currentNum = Number(newOverride);
+        newOverride = exists ? Math.max(0, currentNum - zonePrice) : currentNum + zonePrice;
+      }
+      return {
+        ...prev,
+        manualTotalOverride: newOverride,
+        selectedZoneIds: exists
+          ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
+          : [...(prev.selectedZoneIds || []), zoneId]
+      };
+    });
   };
 
   const toggleEditTurnoZone = (zoneId) => {
     const exists = (editTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
-    setEditTurno(prev => ({
-      ...prev,
-      manualTotalOverride: undefined,
-      selectedZoneIds: exists
-        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
-        : [...(prev.selectedZoneIds || []), zoneId]
-    }));
+    const targetZone = zones.find(z => String(z.id) === String(zoneId));
+    const zonePrice = targetZone ? Number(targetZone.precioBase || 0) : 0;
+
+    setEditTurno(prev => {
+      let newOverride = prev.manualTotalOverride;
+      if (newOverride === undefined || newOverride === null || newOverride === '') {
+        if (prev.valorTotal !== undefined && prev.valorTotal !== null && (prev.hasOtros || Number(prev.valorTotal) !== Number(prev.autoTotal))) {
+          newOverride = prev.valorTotal;
+        }
+      }
+
+      if (newOverride !== undefined && newOverride !== null && newOverride !== '') {
+        const currentNum = Number(newOverride);
+        newOverride = exists ? Math.max(0, currentNum - zonePrice) : currentNum + zonePrice;
+      }
+
+      return {
+        ...prev,
+        manualTotalOverride: newOverride,
+        selectedZoneIds: exists
+          ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
+          : [...(prev.selectedZoneIds || []), zoneId]
+      };
+    });
   };
 
   const getStatusLabelClass = (status) => {
