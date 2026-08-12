@@ -446,3 +446,21 @@
   - Se modificó el evento `onChange` de `horaInicio` en el formulario de creación manual (`newTurno`) para calcular y desplazar la hora de fin respetando la duración previamente elegida o ingresada por el usuario (emulando el comportamiento del modal de edición).
   - Se compiló localmente con éxito, se resolvieron conflictos de configuración del proveedor Prisma (SQLite/PostgreSQL) en el VPS, se ejecutó `npm install` de dependencias pendientes (`nodemailer`) y se desplegó en producción reiniciando el servicio PM2 `gonzalo-agenda`.
 
+## 📅 Sesión: 12 de Agosto de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Agregar campo dedicado "Valor Zonas Extras ($)" al activar la casilla "Otros" en Nuevo Turno, Editar Turno y Siguiente Turno
+- [x] Implementar desglose de precios claro: Valor Zonas Normales (lista dinámica) + Valor Zonas Extras (fijo) = Total Base
+- [x] Mantener herencia exacta del valor de zonas extras al programar el siguiente turno
+- [x] Extraer lista de clientes y turnos futuros que tienen "Otros" para control de Gonzalo
+- [x] Desplegar en producción en Hostinger VPS y reiniciar PM2
+
+### 📝 Notas / Bitácora
+- **12 de Agosto (10:35 AM)**:
+  - Se incorporó el input numérico `Valor Zonas Extras ($)` (`otrosPrecio`) al tildar la opción "Otros" en `newTurno` y `editTurno`.
+  - Se diseñó el desglose visual en dos bloques: `Zonas Normales ($)` (auto-calculado de lista) y `Valor Zonas Extras ($)` (monto manual), calculando automáticamente el `Total Turno Base ($)` y la seña correspondiente.
+  - Se actualizó el guardado en la API (`/api/admin/turnos` y `/api/admin/turnos/[id]`) persistiendo `precio` en el objeto `{ id: 'otros', nombre: 'Otros: ...', precio: X, duracion: 0 }`.
+  - Se actualizó `getUpdatedTurnoPrices` para incluir `otrosPrice` en la base total del turno.
+  - Al hacer clic en "Programar Siguiente Turno", se transfieren intactos el texto de Otros y el `otrosPrecio` previo, recalculando las zonas normales a precios vigentes.
+  - Se ejecutó script en el VPS extrayendo los 75 turnos activos con zonas "Otros" para facilitarle el listado a Gonzalo.
+

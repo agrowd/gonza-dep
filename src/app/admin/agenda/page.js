@@ -241,9 +241,11 @@ export default function AgendaPage() {
     descuentoValor: '',
     bonificacion: 0,
     autoTotal: 0,
+    autoTotalZonas: 0,
     observaciones: '',
     hasOtros: false,
-    otrosTexto: ''
+    otrosTexto: '',
+    otrosPrecio: ''
   });
 
 
@@ -263,11 +265,14 @@ export default function AgendaPage() {
     descuentoTipo: 'NINGUNO',
     descuentoValor: '',
     bonificacion: 0,
+    autoTotal: 0,
+    autoTotalZonas: 0,
     estado: 'PENDIENTE_PAGO', // Manual creations default to PENDIENTE_PAGO now
     observaciones: '',
     clienteId: null,
     hasOtros: false,
-    otrosTexto: ''
+    otrosTexto: '',
+    otrosPrecio: ''
   });
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
@@ -371,10 +376,21 @@ export default function AgendaPage() {
       }
     }
 
+    let otrosPrice = 0;
+    try {
+      const parsed = typeof turno.zonas === 'string' ? JSON.parse(turno.zonas) : turno.zonas;
+      if (Array.isArray(parsed)) {
+        const o = parsed.find(z => z.id === 'otros' || (z.nombre && z.nombre.startsWith('Otros:')));
+        if (o) {
+          otrosPrice = Number(o.precio || 0);
+        }
+      }
+    } catch (e) {}
+
     let currentBaseTotal = 0;
     if (matchedZoneObjs.length > 0) {
       const calcs = calculateTurnDetails(matchedZoneObjs, false);
-      currentBaseTotal = calcs.valorTotal;
+      currentBaseTotal = calcs.valorTotal + otrosPrice;
     } else {
       currentBaseTotal = storedBase;
     }
@@ -911,13 +927,15 @@ export default function AgendaPage() {
     let preselectedZoneIds = [];
     let hasOtros = false;
     let otrosTexto = '';
+    let otrosPrecio = 0;
     try {
-      const zonesArray = JSON.parse(turno.zonas);
+      const zonesArray = typeof turno.zonas === 'string' ? JSON.parse(turno.zonas) : turno.zonas;
       preselectedZoneIds = zonesArray.filter(z => z.id && z.id !== 'otros').map(z => z.id);
-      const otrosItem = zonesArray.find(z => z.isOtros || z.id === 'otros');
+      const otrosItem = zonesArray.find(z => z.isOtros || z.id === 'otros' || (z.nombre && z.nombre.startsWith('Otros:')));
       if (otrosItem) {
         hasOtros = true;
-        otrosTexto = otrosItem.nombre.replace(/^Otros:\s*/, '');
+        otrosTexto = (otrosItem.nombre || '').replace(/^Otros:\s*/, '');
+        otrosPrecio = Number(otrosItem.precio || 0);
       }
     } catch (e) {}
 
@@ -937,6 +955,7 @@ export default function AgendaPage() {
       selectedZoneIds: preselectedZoneIds,
       hasOtros,
       otrosTexto,
+      otrosPrecio: otrosPrecio || '',
       descuentoTipo: turno.descuentoTipo || (turno.bonificacion > 0 ? 'PESOS' : 'NINGUNO'),
       descuentoValor: turno.descuentoValor || turno.bonificacion || '',
       manualTotalOverride: undefined,
@@ -988,7 +1007,8 @@ export default function AgendaPage() {
           observaciones: editTurno.observaciones,
           selectedZoneIds: editTurno.selectedZoneIds,
           hasOtros: editTurno.hasOtros,
-          otrosTexto: editTurno.otrosTexto
+          otrosTexto: editTurno.otrosTexto,
+          otrosPrecio: Number(editTurno.otrosPrecio || 0)
         })
       });
       if (res.ok) {
@@ -1074,6 +1094,7 @@ export default function AgendaPage() {
         valorTotal: 0,
         valorSeña: 0,
         autoTotal: 0,
+        autoTotalZonas: 0,
         autoSeña: 0,
         bonificacion: 0
       }));
@@ -1091,22 +1112,26 @@ export default function AgendaPage() {
     const endMins = endMin % 60;
     const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
+    const baseZonasTotal = calcs.valorTotal;
+    const otrosExtra = newTurno.hasOtros ? Number(newTurno.otrosPrecio || 0) : 0;
+    const totalBaseCombinado = baseZonasTotal + otrosExtra;
+
     let finalTotal = 0;
     let bonificacion = 0;
 
     if (newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '') {
       finalTotal = Number(newTurno.manualTotalOverride);
-      bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
+      bonificacion = Math.max(0, totalBaseCombinado - finalTotal);
     } else {
       if (newTurno.descuentoTipo === 'PORCENTAJE') {
-        const rawDiscounted = calcs.valorTotal * (1 - Number(newTurno.descuentoValor || 0) / 100);
+        const rawDiscounted = totalBaseCombinado * (1 - Number(newTurno.descuentoValor || 0) / 100);
         finalTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
-        bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
+        bonificacion = Math.max(0, totalBaseCombinado - finalTotal);
       } else if (newTurno.descuentoTipo === 'PESOS') {
-        bonificacion = Math.min(calcs.valorTotal, Number(newTurno.descuentoValor || 0));
-        finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+        bonificacion = Math.min(totalBaseCombinado, Number(newTurno.descuentoValor || 0));
+        finalTotal = Math.max(0, totalBaseCombinado - bonificacion);
       } else {
-        finalTotal = calcs.valorTotal;
+        finalTotal = totalBaseCombinado;
         bonificacion = 0;
       }
     }
@@ -1120,13 +1145,14 @@ export default function AgendaPage() {
         valorTotal: finalTotal,
         valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
           ? prev.manualSeñaOverride
-          : calcs.valorSeña,
-        autoTotal: calcs.valorTotal,
-        autoSeña: calcs.valorSeña,
+          : (calcs.valorSeña + Math.round(otrosExtra * 0.5)),
+        autoTotal: totalBaseCombinado,
+        autoTotalZonas: baseZonasTotal,
+        autoSeña: calcs.valorSeña + Math.round(otrosExtra * 0.5),
         bonificacion: bonificacion
       };
     });
-  }, [newTurno.selectedZoneIds, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros, newTurno.manualTotalOverride, newTurno.manualSeñaOverride]);
+  }, [newTurno.selectedZoneIds, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros, newTurno.otrosPrecio, newTurno.manualTotalOverride, newTurno.manualSeñaOverride]);
 
   // Re-calculate pricing/discount and duration for editTurno
   useEffect(() => {
@@ -1146,6 +1172,7 @@ export default function AgendaPage() {
         valorTotal: 0,
         valorSeña: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : (prev.initialValorSeña !== undefined ? prev.initialValorSeña : 0),
         autoTotal: 0,
+        autoTotalZonas: 0,
         autoSeña: 0,
         bonificacion: 0
       }));
@@ -1155,22 +1182,26 @@ export default function AgendaPage() {
     const currentSelectedZones = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
     const calcs = calculateTurnDetails(currentSelectedZones, false);
 
+    const baseZonasTotal = calcs.valorTotal;
+    const otrosExtra = editTurno.hasOtros ? Number(editTurno.otrosPrecio || 0) : 0;
+    const totalBaseCombinado = baseZonasTotal + otrosExtra;
+
     let finalTotal = 0;
     let bonificacion = 0;
 
     if (editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '') {
       finalTotal = Number(editTurno.manualTotalOverride);
-      bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
+      bonificacion = Math.max(0, totalBaseCombinado - finalTotal);
     } else {
       if (editTurno.descuentoTipo === 'PORCENTAJE') {
-        const rawDiscounted = calcs.valorTotal * (1 - Number(editTurno.descuentoValor || 0) / 100);
+        const rawDiscounted = totalBaseCombinado * (1 - Number(editTurno.descuentoValor || 0) / 100);
         finalTotal = Math.max(0, Math.round(rawDiscounted / 1000) * 1000);
-        bonificacion = Math.max(0, calcs.valorTotal - finalTotal);
+        bonificacion = Math.max(0, totalBaseCombinado - finalTotal);
       } else if (editTurno.descuentoTipo === 'PESOS') {
-        bonificacion = Math.min(calcs.valorTotal, Number(editTurno.descuentoValor || 0));
-        finalTotal = Math.max(0, calcs.valorTotal - bonificacion);
+        bonificacion = Math.min(totalBaseCombinado, Number(editTurno.descuentoValor || 0));
+        finalTotal = Math.max(0, totalBaseCombinado - bonificacion);
       } else {
-        finalTotal = calcs.valorTotal;
+        finalTotal = totalBaseCombinado;
         bonificacion = 0;
       }
     }
@@ -1184,10 +1215,11 @@ export default function AgendaPage() {
       ...prev,
       valorTotal: finalTotal,
       valorSeña: fixedSeña,
-      autoTotal: calcs.valorTotal,
+      autoTotal: totalBaseCombinado,
+      autoTotalZonas: baseZonasTotal,
       bonificacion: bonificacion
     }));
-  }, [editTurno.selectedZoneIds, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, editTurno.manualTotalOverride, editTurno.manualSeñaOverride, isEditing]);
+  }, [editTurno.selectedZoneIds, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, editTurno.otrosPrecio, editTurno.manualTotalOverride, editTurno.manualSeñaOverride, isEditing]);
 
   // Check overlap/availability for newTurno in real-time
   useEffect(() => {
@@ -2049,54 +2081,119 @@ export default function AgendaPage() {
                   </div>
 
                   {editTurno.hasOtros && (
-                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
-                      <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Espalda Alta o zonas combinadas especiales"
-                        value={editTurno.otrosTexto || ''}
-                        onChange={(e) => setEditTurno({ ...editTurno, otrosTexto: e.target.value })}
-                        required
-                      />
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
+                      <div className={styles.inputGroup} style={{ flex: 2 }}>
+                        <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Cintura, Nuca o zonas combinadas"
+                          value={editTurno.otrosTexto || ''}
+                          onChange={(e) => setEditTurno({ ...editTurno, otrosTexto: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Valor Zonas Extras ($)</label>
+                        <input
+                          type="number"
+                          placeholder="Ej. 15000"
+                          value={editTurno.otrosPrecio ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditTurno(prev => ({
+                              ...prev,
+                              otrosPrecio: val,
+                              manualTotalOverride: undefined
+                            }));
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
 
-                  <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                    <div className={styles.inputGroup} style={{ flex: 1 }}>
-                      <label className={styles.inputLabel}>Valor Total ($)</label>
-                      <input
-                        type="number"
-                        value={editTurno.valorTotal ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setEditTurno(prev => ({
-                            ...prev,
-                            valorTotal: val,
-                            manualTotalOverride: val
-                          }));
-                        }}
-                        required
-                        placeholder="Auto-calculado al elegir zona"
-                      />
+                  {editTurno.hasOtros ? (
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Zonas Normales ($)</label>
+                        <input
+                          type="text"
+                          value={`$${Number(editTurno.autoTotalZonas || 0).toLocaleString('es-ES')}`}
+                          disabled
+                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 }}
+                        />
+                      </div>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Valor Total ($)</label>
+                        <input
+                          type="number"
+                          value={editTurno.valorTotal ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditTurno(prev => ({
+                              ...prev,
+                              valorTotal: val,
+                              manualTotalOverride: val
+                            }));
+                          }}
+                          required
+                        />
+                      </div>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Seña Recibida ($)</label>
+                        <input
+                          type="number"
+                          value={editTurno.valorSeña ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditTurno(prev => ({
+                              ...prev,
+                              valorSeña: val,
+                              manualSeñaOverride: val
+                            }));
+                          }}
+                          required
+                          placeholder="Auto-calculado al elegir zona"
+                        />
+                      </div>
                     </div>
-                    <div className={styles.inputGroup} style={{ flex: 1 }}>
-                      <label className={styles.inputLabel}>Seña Recibida ($)</label>
-                      <input
-                        type="number"
-                        value={editTurno.valorSeña ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setEditTurno(prev => ({
-                            ...prev,
-                            valorSeña: val,
-                            manualSeñaOverride: val
-                          }));
-                        }}
-                        required
-                        placeholder="Auto-calculado al elegir zona"
-                      />
+                  ) : (
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Valor Total ($)</label>
+                        <input
+                          type="number"
+                          value={editTurno.valorTotal ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditTurno(prev => ({
+                              ...prev,
+                              valorTotal: val,
+                              manualTotalOverride: val
+                            }));
+                          }}
+                          required
+                          placeholder="Auto-calculado al elegir zona"
+                        />
+                      </div>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Seña Recibida ($)</label>
+                        <input
+                          type="number"
+                          value={editTurno.valorSeña ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditTurno(prev => ({
+                              ...prev,
+                              valorSeña: val,
+                              manualSeñaOverride: val
+                            }));
+                          }}
+                          required
+                          placeholder="Auto-calculado al elegir zona"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Tipo de Descuento</label>
@@ -2385,13 +2482,15 @@ export default function AgendaPage() {
                         let preselectedZoneIds = [];
                         let hasOtros = false;
                         let otrosTexto = '';
+                        let otrosPrecio = 0;
                         try {
-                          const parsed = JSON.parse(selectedTurno.zonas || '[]');
-                          preselectedZoneIds = parsed.map(z => z.id).filter(id => id && id !== 'otros');
-                          const otros = parsed.find(z => z.id === 'otros');
+                          const parsed = typeof selectedTurno.zonas === 'string' ? JSON.parse(selectedTurno.zonas || '[]') : selectedTurno.zonas;
+                          preselectedZoneIds = (parsed || []).map(z => z.id).filter(id => id && id !== 'otros');
+                          const otros = (parsed || []).find(z => z.id === 'otros' || (z.nombre && z.nombre.startsWith('Otros:')));
                           if (otros) {
                             hasOtros = true;
                             otrosTexto = otros.nombre ? otros.nombre.replace(/^Otros:\s*/, '') : '';
+                            otrosPrecio = Number(otros.precio || 0);
                           }
                         } catch (e) {
                           console.error('Error parsing zones for editing:', e);
@@ -2413,11 +2512,13 @@ export default function AgendaPage() {
                           descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? selectedTurno.bonificacion : ''),
                           bonificacion: selectedTurno.bonificacion || 0,
                           autoTotal: selectedTurno.valorTotal,
+                          autoTotalZonas: selectedTurno.valorTotal,
                           autoSeña: selectedTurno.valorSeña,
                           selectedZoneIds: preselectedZoneIds,
                           observaciones: selectedTurno.observaciones || '',
                           hasOtros,
-                          otrosTexto
+                          otrosTexto,
+                          otrosPrecio: otrosPrecio || ''
                         });
                         setIsEditing(true);
                       }}
@@ -2846,55 +2947,120 @@ export default function AgendaPage() {
                 </div>
 
                 {newTurno.hasOtros && (
-                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
-                    <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej: Espalda Alta o zonas combinadas especiales"
-                      value={newTurno.otrosTexto || ''}
-                      onChange={(e) => setNewTurno({ ...newTurno, otrosTexto: e.target.value })}
-                      required
-                    />
+                  <div className={styles.inputRow} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
+                    <div className={styles.inputGroup} style={{ flex: 2 }}>
+                      <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Cintura, Nuca o zonas combinadas"
+                        value={newTurno.otrosTexto || ''}
+                        onChange={(e) => setNewTurno({ ...newTurno, otrosTexto: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Valor Zonas Extras ($)</label>
+                      <input
+                        type="number"
+                        placeholder="Ej. 15000"
+                        value={newTurno.otrosPrecio ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewTurno(prev => ({
+                            ...prev,
+                            otrosPrecio: val,
+                            manualTotalOverride: undefined
+                          }));
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
 
-                {/* Total de Venta and Seña Recibida side-by-side */}
-                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                  <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Total de Venta ($)</label>
-                    <input
-                      type="number"
-                      value={newTurno.valorTotal ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewTurno(prev => ({
-                          ...prev,
-                          valorTotal: val,
-                          manualTotalOverride: val
-                        }));
-                      }}
-                      required
-                      placeholder="Auto-calculado al elegir zona"
-                    />
+                {/* Total de Venta and Seña Recibida */}
+                {newTurno.hasOtros ? (
+                  <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Zonas Normales ($)</label>
+                      <input
+                        type="text"
+                        value={`$${Number(newTurno.autoTotalZonas || 0).toLocaleString('es-ES')}`}
+                        disabled
+                        style={{ backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 }}
+                      />
+                    </div>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Total Turno Base ($)</label>
+                      <input
+                        type="number"
+                        value={newTurno.valorTotal ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewTurno(prev => ({
+                            ...prev,
+                            valorTotal: val,
+                            manualTotalOverride: val
+                          }));
+                        }}
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Seña Recibida ($)</label>
+                      <input
+                        type="number"
+                        value={newTurno.valorSeña ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewTurno(prev => ({
+                            ...prev,
+                            valorSeña: val,
+                            manualSeñaOverride: val
+                          }));
+                        }}
+                        required
+                        placeholder="Auto-calculado al elegir zona"
+                      />
+                    </div>
                   </div>
-                  <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Seña Recibida ($)</label>
-                    <input
-                      type="number"
-                      value={newTurno.valorSeña ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setNewTurno(prev => ({
-                          ...prev,
-                          valorSeña: val,
-                          manualSeñaOverride: val
-                        }));
-                      }}
-                      required
-                      placeholder="Auto-calculado al elegir zona"
-                    />
+                ) : (
+                  <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Total de Venta ($)</label>
+                      <input
+                        type="number"
+                        value={newTurno.valorTotal ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewTurno(prev => ({
+                            ...prev,
+                            valorTotal: val,
+                            manualTotalOverride: val
+                          }));
+                        }}
+                        required
+                        placeholder="Auto-calculado al elegir zona"
+                      />
+                    </div>
+                    <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <label className={styles.inputLabel}>Seña Recibida ($)</label>
+                      <input
+                        type="number"
+                        value={newTurno.valorSeña ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewTurno(prev => ({
+                            ...prev,
+                            valorSeña: val,
+                            manualSeñaOverride: val
+                          }));
+                        }}
+                        required
+                        placeholder="Auto-calculado al elegir zona"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Tipo de Descuento</label>

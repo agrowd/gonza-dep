@@ -138,7 +138,8 @@ export async function POST(request) {
       estado,
       observaciones,
       hasOtros,
-      otrosTexto
+      otrosTexto,
+      otrosPrecio
     } = body;
 
     if (estado !== 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin || ((!selectedZoneIds || selectedZoneIds.length === 0) && !hasOtros))) {
@@ -236,7 +237,7 @@ export async function POST(request) {
       }
       const parsedZones = dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precioBase, duracion: z.duracionMinutos }));
       if (hasOtros && otrosTexto) {
-        parsedZones.push({ id: 'otros', nombre: `Otros: ${otrosTexto}`, precio: 0, duracion: 0 });
+        parsedZones.push({ id: 'otros', nombre: `Otros: ${otrosTexto}`, precio: Number(otrosPrecio || 0), duracion: 0 });
       }
       zonasJson = JSON.stringify(parsedZones);
       

@@ -79,7 +79,8 @@ export async function PUT(request, { params }) {
       observaciones,
       selectedZoneIds,
       hasOtros,
-      otrosTexto
+      otrosTexto,
+      otrosPrecio
     } = body;
 
     // Fetch old turn state
@@ -212,7 +213,7 @@ export async function PUT(request, { params }) {
         parsedZones.push({
           id: 'otros',
           nombre: `Otros: ${otrosTexto}`,
-          precio: 0,
+          precio: Number(otrosPrecio || 0),
           duracion: 0
         });
       }
