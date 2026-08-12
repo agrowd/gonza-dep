@@ -454,12 +454,25 @@
 - Solución al corrimiento de feriados/días en "Programar Siguiente Turno": fijación del horario a mediodía (`12:00 hs`) sin desfasajes UTC/GMT-3 y auto-completado de todos los datos del cliente al tocar una celda vacía.
 - Compilación local verificada limpia con `npm run build` (34/34 rutas).
 
-## Mensaje del Usuario (2026-08-11 20:31:00-03:00)
-> 2 capturas sobre: 1) descuento aplicado que aparece siempre aunque no se haya puesto descuento (por cambios de precio de las zonas de catálogo), y 2) la duración (horaFin) que se restablece al cambiar el tipo de descuento.
+## Mensaje del Usuario (2026-08-12 10:35:00-03:00)
+> Casilla dedicada para "Valor Zonas Extras ($)" al activar la opción "Otros" en turnos nuevos y existentes, desglose en ticket, y preservación en siguiente turno.
 
 ## Respuesta del Asistente
-- Corrección de `getUpdatedTurnoPrices` en `src/app/admin/agenda/page.js` para forzar `bonificacion: 0` si `descuentoTipo` es `'NINGUNO'` o indefinido.
-- Condicionado de visualización de descuentos en el ticket (`page.js`) y en la autogestión de clientes (`src/app/page.js`) para que solo se rendericen cuando el descuento sea diferente de `'NINGUNO'`.
-- Implementación de `autoHoraFin` en el estado de `newTurno` y `toggleNewTurnoZone` para realizar el seguimiento del horario de fin sugerido por el sistema, previniendo que `newTurno` `useEffect` restablezca la duración manual ingresada por el usuario al cambiar la bonificación.
-- Modificación del `onChange` de `horaInicio` en el formulario de creación manual (`newTurno`) para recalcular `horaFin` y `autoHoraFin` preservando la duración elegida previamente.
-- Despliegue exitoso en el VPS, ejecución de `npm install` de dependencias pendientes y reinicio del servicio PM2 `gonzalo-agenda`.
+- Implementación del campo `Valor Zonas Extras ($)` (`otrosPrecio`) en Nuevo Turno, Editar Turno y Programar Siguiente Turno en `src/app/admin/agenda/page.js`.
+- Desglose visual en el resumen: `Zonas Normales ($)` (calculado) + `Valor Zonas Extras ($)` (fijo) = `Total Turno Base ($)`.
+- Persistencia de `precio` en la zona 'otros' en `/api/admin/turnos` y `/api/admin/turnos/[id]`.
+- Corrección de `ReferenceError: valorTotal is not defined` (ERR-09) en `getUpdatedTurnoPrices`.
+- Ajuste responsivo de la sincronización de WhatsApp QR en móviles (`notificaciones.module.css`).
+
+## Mensaje del Usuario (2026-08-12 12:40:00-03:00)
+> 1. Permitir elegir el código de país internacional en los inputs de WhatsApp (ej. España `+34` en vez de forzar `+54`): "Me está pidiendo turno un chico que como número de WhatsApp es de afuera, no tengo cómo cargárselo, no me deja cambiar el 54 de país. Necesito cambiar la característica de 54 x 34".
+> 2. Búsqueda de cliente por email `elfuria73@hotmai.com` en la base de datos y revisión del buscador de clientes.
+
+## Respuesta del Asistente
+- Localización del cliente en PostgreSQL de producción: **Pablo Vazquez**, WhatsApp `5491155665821`, DNI `265`, email cargado `elfuria73@hotmai.com` (con error de tipeo sin la 'l'), próximo turno el 19/08/2026 a las 14:00 hs.
+- Corrección del buscador de clientes en `/api/admin/clientes`: agregado de `mode: 'insensitive'` en PostgreSQL y búsqueda sobre `dni`, `email`, `whatsapp` y `nombreCompleto`.
+- Búsqueda reactiva con debounce (300ms) en `/admin/clientes`.
+- Creación de `src/lib/countryCodes.js` y componente `src/components/PhoneInput.js` con selector de códigos de país (Argentina 🇦🇷 `+54`, España 🇪🇸 `+34`, Uruguay 🇺🇾 `+598`, Chile 🇨🇱 `+56`, EE.UU. 🇺🇸 `+1`, Brasil 🇧🇷 `+55`, etc. y código personalizado 🌐).
+- Integración del selector internacional en `/admin/clientes` (Nuevo Cliente y Editar Ficha), `/admin/agenda` (Nuevo Turno y Autocompletado) y reserva pública `src/app/page.js`.
+- Compilación verificada con `npm run build` y despliegue exitoso en producción (Hostinger VPS) con PM2 reiniciado.
+
