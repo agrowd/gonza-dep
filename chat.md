@@ -475,4 +475,15 @@
 - Creación de `src/lib/countryCodes.js` y componente `src/components/PhoneInput.js` con selector de códigos de país (Argentina 🇦🇷 `+54`, España 🇪🇸 `+34`, Uruguay 🇺🇾 `+598`, Chile 🇨🇱 `+56`, EE.UU. 🇺🇸 `+1`, Brasil 🇧🇷 `+55`, etc. y código personalizado 🌐).
 - Integración del selector internacional en `/admin/clientes` (Nuevo Cliente y Editar Ficha), `/admin/agenda` (Nuevo Turno y Autocompletado) y reserva pública `src/app/page.js`.
 - Compilación verificada con `npm run build` y despliegue exitoso en producción (Hostinger VPS) con PM2 reiniciado.
+## Mensaje del Usuario (2026-08-12 13:12:30-03:00)
+> "¿Se puede editar el mail para que se le vuelva a reenviar el aviso ante estas situaciones?"
 
+## Respuesta del Asistente
+- Creación del endpoint `POST /api/admin/turnos/[id]/enviar-aviso` con soporte para actualizar la casilla de correo del cliente en la base de datos automáticamente si fue corregida en el formulario y enviar inmediatamente el aviso por correo.
+- Soporte para 3 tipos de aviso por email:
+  1. Recordatorio de Turno (Plantilla de 7 días con fecha, hora, zonas, seña abonada, saldo pendiente y dirección).
+  2. Confirmación de Turno (Aviso de turno agendado / señado).
+  3. Comprobante / Recibo de Pago (Detalle de seña y saldo).
+- Incorporación del botón "✏️ Reenviar / Editar" junto al Email del cliente y del botón "📧 Reenviar Aviso Email" en el modal de detalle del turno (`/admin/agenda`).
+- Incorporación de botón "📧 Reenviar Aviso de Turno" en la ficha del cliente (`/admin/clientes`), tanto en la tarjeta de Próximo Turno como en la pestaña de Notificaciones.
+- Despliegue en producción en el VPS de Hostinger y reinicio de PM2 verificado con éxito.
