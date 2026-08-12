@@ -463,4 +463,17 @@
   - Se actualizó `getUpdatedTurnoPrices` para incluir `otrosPrice` en la base total del turno.
   - Al hacer clic en "Programar Siguiente Turno", se transfieren intactos el texto de Otros y el `otrosPrecio` previo, recalculando las zonas normales a precios vigentes.
   - Se ejecutó script en el VPS extrayendo los 75 turnos activos con zonas "Otros" para facilitarle el listado a Gonzalo.
+- **12 de Agosto (01:00 PM)**:
+  - Localización en base de datos PostgreSQL de producción del cliente con email `elfuria73@hotmai.com`: Cliente **Pablo Vazquez**, WhatsApp `5491155665821`, DNI `265`, turno el 19/08/2026 a las 14:00 hs.
+  - Corrección del buscador de clientes en `/api/admin/clientes`: agregado de `mode: 'insensitive'` en PostgreSQL y soporte de búsqueda por campo `dni`.
+  - Agregado de búsqueda reactiva debounce (300ms) en la barra de búsqueda de clientes.
+  - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
+  - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios:
+    1. Modal de Creación de Cliente (`/admin/clientes`).
+    2. Pestaña de Edición de Ficha del Cliente (`/admin/clientes`).
+    3. Modal de Creación de Nuevo Turno / Autocompletado (`/admin/agenda`).
+    4. Formulario de Reserva Pública (`src/app/page.js`).
+  - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
+  - Compilación exitosa verificada con `npm run build`.
+
 

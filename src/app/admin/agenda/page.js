@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
+import PhoneInput from '@/components/PhoneInput.js';
+import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
 
 // Timezone-safe YYYY-MM-DD formatter (avoids UTC offset shifts)
 const toYYYYMMDD = (dateInput) => {
@@ -54,20 +56,7 @@ const stripPhonePrefix = (phone) => {
 
 const getWhatsAppLink = (phone) => {
   if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  if (!cleaned.startsWith('54')) {
-    if (cleaned.length === 10) {
-      cleaned = `549${cleaned}`;
-    } else if (cleaned.length === 11 && cleaned.startsWith('9')) {
-      cleaned = `54${cleaned}`;
-    } else {
-      cleaned = `549${cleaned}`;
-    }
-  } else {
-    if (cleaned.length === 12 && !cleaned.startsWith('549')) {
-      cleaned = `549${cleaned.slice(2)}`;
-    }
-  }
+  const cleaned = phone.replace(/\D/g, '');
   return `https://wa.me/${cleaned}`;
 };
 
@@ -253,6 +242,8 @@ export default function AgendaPage() {
   const [newTurno, setNewTurno] = useState({
     nombreCompleto: '',
     whatsapp: '',
+    whatsappCountry: '54',
+    whatsappCustomCode: '',
     email: '',
     dni: '',
     fechaStr: '',
@@ -947,12 +938,16 @@ export default function AgendaPage() {
     const nombreVal = lastSpaceIdx !== -1 ? fullName.substring(0, lastSpaceIdx) : fullName;
     const apellidoVal = lastSpaceIdx !== -1 ? fullName.substring(lastSpaceIdx + 1) : '';
 
+    const { countryCode, number, customCode } = parsePhoneCountryAndNumber(turno.cliente.whatsapp);
+
     setPendingNextScheduleData({
       clienteId: turno.cliente.id,
       nombre: nombreVal,
       apellido: apellidoVal,
       nombreCompleto: fullName,
-      whatsapp: stripPhonePrefix(turno.cliente.whatsapp),
+      whatsapp: number,
+      whatsappCountry: countryCode,
+      whatsappCustomCode: customCode,
       email: turno.cliente.email || '',
       dni: turno.cliente.dni || '',
       selectedZoneIds: preselectedZoneIds,
@@ -1327,11 +1322,13 @@ export default function AgendaPage() {
   const handleCreateTurno = async (e) => {
     e.preventDefault();
     try {
+      const fullPhone = buildFullPhone(newTurno.whatsappCountry, newTurno.whatsappCustomCode, newTurno.whatsapp);
       const res = await fetch('/api/admin/turnos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newTurno,
+          whatsapp: fullPhone,
           valorTotal: Number(newTurno.valorTotal),
           valorSeña: Number(newTurno.valorSeña)
         })
@@ -2354,7 +2351,7 @@ export default function AgendaPage() {
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>WhatsApp</span>
                     <span className={styles.detailValue}>
-                      {selectedTurno.cliente?.whatsapp ? `🇦🇷 +54 9 ${stripPhonePrefix(selectedTurno.cliente.whatsapp)}` : 'N/A'}
+                      {selectedTurno.cliente?.whatsapp ? formatDisplayPhone(selectedTurno.cliente.whatsapp) : 'N/A'}
                     </span>
                   </div>
 
@@ -2792,13 +2789,16 @@ export default function AgendaPage() {
 
                               const lastTurno = client.turnos && client.turnos.length > 0 ? client.turnos[0] : null;
                               const clientLastSeña = lastTurno && lastTurno.valorSeña !== undefined ? Number(lastTurno.valorSeña) : undefined;
+                              const { countryCode, number, customCode } = parsePhoneCountryAndNumber(client.whatsapp);
 
                               setNewTurno(prev => ({
                                 ...prev,
                                 nombreCompleto: fullName,
                                 nombre: nombreVal,
                                 apellido: apellidoVal,
-                                whatsapp: stripPhonePrefix(client.whatsapp),
+                                whatsapp: number,
+                                whatsappCountry: countryCode,
+                                whatsappCustomCode: customCode,
                                 email: client.email,
                                 dni: client.dni || '',
                                 clienteId: client.id,
@@ -2814,7 +2814,7 @@ export default function AgendaPage() {
                             }}
                           >
                             <span>{client.nombreCompleto}</span>
-                             <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</span>
+                             <span style={{ fontSize: '0.75rem', color: '#d4a54d' }}>{formatDisplayPhone(client.whatsapp)}</span>
                           </li>
                         ))}
                     </ul>
@@ -2853,20 +2853,15 @@ export default function AgendaPage() {
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>WhatsApp *</label>
-                  <div className={styles.phoneInputContainer}>
-                    <div className={styles.phonePrefix}>
-                      <span className={styles.flagIcon}>🇦🇷</span>
-                      <span>+54</span>
-                    </div>
-                    <input
-                      type="tel"
-                      value={newTurno.whatsapp}
-                      onChange={(e) => setNewTurno({ ...newTurno, whatsapp: e.target.value })}
-                      required
-                      placeholder="Ej. 911223344"
-                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)', minWidth: 0 }}
-                    />
-                  </div>
+                  <PhoneInput
+                    countryCode={newTurno.whatsappCountry || '54'}
+                    onCountryChange={(code) => setNewTurno({ ...newTurno, whatsappCountry: code })}
+                    customCode={newTurno.whatsappCustomCode || ''}
+                    onCustomCodeChange={(code) => setNewTurno({ ...newTurno, whatsappCustomCode: code })}
+                    phoneNumber={newTurno.whatsapp || ''}
+                    onPhoneChange={(num) => setNewTurno({ ...newTurno, whatsapp: num })}
+                    required
+                  />
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>

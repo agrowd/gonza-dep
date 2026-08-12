@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './page.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
+import PhoneInput from '@/components/PhoneInput.js';
+import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
 
 // Custom icons using standard SVG tags for simplicity and reliability
 const CalendarIcon = () => (
@@ -28,6 +30,8 @@ export default function Home() {
     apellido: '',
     nombreCompleto: '',
     whatsapp: '',
+    whatsappCountry: '54',
+    whatsappCustomCode: '',
     email: '',
     dni: '',
     observaciones: '',
@@ -157,13 +161,16 @@ export default function Home() {
         const spaceIndex = fullName.indexOf(' ');
         const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
         const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
+        const { countryCode, number, customCode } = parsePhoneCountryAndNumber(data.client?.whatsapp || '');
 
         setFormData(prev => ({
           ...prev,
           nombre,
           apellido,
           nombreCompleto: fullName,
-          whatsapp: data.client?.whatsapp || '',
+          whatsapp: number,
+          whatsappCountry: countryCode,
+          whatsappCustomCode: customCode,
           email: data.client?.email || '',
           dni: data.client?.dni || ''
         }));
@@ -393,12 +400,13 @@ export default function Home() {
     }
 
     try {
+      const fullPhone = buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp);
       const res = await fetch('/api/reservas/crear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombreCompleto: formData.nombreCompleto,
-          whatsapp: formData.whatsapp,
+          whatsapp: fullPhone,
           email: formData.email,
           dni: formData.dni,
           fechaStr: dateStr,
@@ -687,20 +695,15 @@ export default function Home() {
 
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Teléfono / WhatsApp *</label>
-                  <div className={styles.phoneInputContainer}>
-                    <div className={styles.phonePrefix}>
-                      <span className={styles.flagIcon}>🇦🇷</span>
-                      <span>+54</span>
-                    </div>
-                    <input
-                      type="tel"
-                      placeholder="Ej. 11 7673 5678 (Celular sin 0 ni 15)"
-                      value={formData.whatsapp}
-                      onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                      required
-                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent' }}
-                    />
-                  </div>
+                  <PhoneInput
+                    countryCode={formData.whatsappCountry || '54'}
+                    onCountryChange={(code) => setFormData({ ...formData, whatsappCountry: code })}
+                    customCode={formData.whatsappCustomCode || ''}
+                    onCustomCodeChange={(code) => setFormData({ ...formData, whatsappCustomCode: code })}
+                    phoneNumber={formData.whatsapp || ''}
+                    onPhoneChange={(num) => setFormData({ ...formData, whatsapp: num })}
+                    required
+                  />
                 </div>
 
                 <div className={styles.inputGroup}>
@@ -910,7 +913,9 @@ export default function Home() {
               </div>
               <div className={styles.summaryRow}>
                 <span>WhatsApp:</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formData.whatsapp}</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                  {formatDisplayPhone(buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp))}
+                </span>
               </div>
               <div className={styles.summaryRow}>
                 <span>Día del Turno:</span>

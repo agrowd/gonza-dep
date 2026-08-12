@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import styles from './clientes.module.css';
 import agendaStyles from '../agenda/agenda.module.css';
+import PhoneInput from '@/components/PhoneInput.js';
+import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
 
 // Timezone-safe date helpers
 const formatLocalDate = (dateInput) => {
@@ -24,35 +26,10 @@ const formatLocalDateMedium = (dateInput) => {
   return d.toLocaleDateString('es-ES', { dateStyle: 'medium' });
 };
 
-const stripPhonePrefix = (phone) => {
-  if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  if (cleaned.startsWith('549') && cleaned.length > 3) {
-    return cleaned.slice(3);
-  }
-  if (cleaned.startsWith('54') && cleaned.length > 2) {
-    return cleaned.slice(2);
-  }
-  return cleaned;
-};
-
 // SVG Icons
 const getWhatsAppLink = (phone) => {
   if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  if (!cleaned.startsWith('54')) {
-    if (cleaned.length === 10) {
-      cleaned = `549${cleaned}`;
-    } else if (cleaned.length === 11 && cleaned.startsWith('9')) {
-      cleaned = `54${cleaned}`;
-    } else {
-      cleaned = `549${cleaned}`;
-    }
-  } else {
-    if (cleaned.length === 12 && !cleaned.startsWith('549')) {
-      cleaned = `549${cleaned.slice(2)}`;
-    }
-  }
+  const cleaned = phone.replace(/\D/g, '');
   return `https://wa.me/${cleaned}`;
 };
 
@@ -104,6 +81,8 @@ function ClientesPageContent() {
     apellido: '',
     nombreCompleto: '',
     whatsapp: '',
+    whatsappCountry: '54',
+    whatsappCustomCode: '',
     email: '',
     dni: '',
     frecuencia: 4,
@@ -119,6 +98,8 @@ function ClientesPageContent() {
     apellido: '',
     nombreCompleto: '',
     whatsapp: '',
+    whatsappCountry: '54',
+    whatsappCustomCode: '',
     email: '',
     dni: '',
     frecuencia: 4,
@@ -129,9 +110,9 @@ function ClientesPageContent() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   // Fetch clients list
-  const fetchClients = () => {
+  const fetchClients = (customSearch = search) => {
     setLoading(true);
-    fetch(`/api/admin/clientes?search=${search}&filter=${filter}`)
+    fetch(`/api/admin/clientes?search=${encodeURIComponent(customSearch)}&filter=${filter}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -177,12 +158,16 @@ function ClientesPageContent() {
           const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
           const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
 
+          const { countryCode, number, customCode } = parsePhoneCountryAndNumber(data.whatsapp || '');
+
           setSelectedClient(data);
           setEditNotes({
             nombre,
             apellido,
             nombreCompleto: fullName,
-            whatsapp: stripPhonePrefix(data.whatsapp || ''),
+            whatsapp: number,
+            whatsappCountry: countryCode,
+            whatsappCustomCode: customCode,
             email: data.email || '',
             dni: data.dni || '',
             frecuencia: data.frecuencia,
@@ -206,6 +191,14 @@ function ClientesPageContent() {
       setSelectedClient(null);
     }
   }, [initialClientId]);
+
+  // Debounced live search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchClients(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Handle modal close
   const handleCloseProfile = () => {
@@ -250,8 +243,10 @@ function ClientesPageContent() {
   const handleCreateClient = async (e) => {
     e.preventDefault();
     try {
+      const fullPhone = buildFullPhone(newClient.whatsappCountry, newClient.whatsappCustomCode, newClient.whatsapp);
       const payload = {
         ...newClient,
+        whatsapp: fullPhone,
         nombreCompleto: `${newClient.nombre.trim()} ${newClient.apellido.trim()}`.trim()
       };
       const res = await fetch('/api/admin/clientes', {
@@ -266,6 +261,8 @@ function ClientesPageContent() {
           apellido: '',
           nombreCompleto: '',
           whatsapp: '',
+          whatsappCountry: '54',
+          whatsappCustomCode: '',
           email: '',
           dni: '',
           frecuencia: 4,
@@ -288,7 +285,7 @@ function ClientesPageContent() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchClients();
+    fetchClients(search);
   };
 
   // Navigate to individual profile via search param
@@ -301,8 +298,10 @@ function ClientesPageContent() {
     e.preventDefault();
     setIsSavingNotes(true);
     try {
+      const fullPhone = buildFullPhone(editNotes.whatsappCountry, editNotes.whatsappCustomCode, editNotes.whatsapp);
       const payload = {
         ...editNotes,
+        whatsapp: fullPhone,
         nombreCompleto: `${editNotes.nombre.trim()} ${editNotes.apellido.trim()}`.trim()
       };
       const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
@@ -312,6 +311,7 @@ function ClientesPageContent() {
       });
       const data = await res.json();
       if (res.ok) {
+        const parsedSaved = parsePhoneCountryAndNumber(data.whatsapp || '');
         setSelectedClient({
           ...selectedClient,
           nombreCompleto: data.nombreCompleto,
@@ -325,7 +325,9 @@ function ClientesPageContent() {
         });
         setEditNotes(prev => ({
           ...prev,
-          whatsapp: stripPhonePrefix(data.whatsapp || ''),
+          whatsapp: parsedSaved.number,
+          whatsappCountry: parsedSaved.countryCode,
+          whatsappCustomCode: parsedSaved.customCode,
           enviarNotificaciones: data.enviarNotificaciones
         }));
         showToast('Ficha del cliente actualizada correctamente.');
@@ -485,7 +487,7 @@ function ClientesPageContent() {
                     <td onClick={() => handleClientClick(client.id)} className={styles.clientName}>
                       {client.nombreCompleto}
                     </td>
-                    <td className={styles.metaText}>🇦🇷 +54 9 {stripPhonePrefix(client.whatsapp)}</td>
+                    <td className={styles.metaText}>{formatDisplayPhone(client.whatsapp)}</td>
                     <td className={styles.metaText}>{client.email}</td>
                     <td style={{ fontWeight: 600 }}>{realizadosCount}</td>
                     <td className={styles.metaText} style={{ textTransform: 'capitalize' }}>
@@ -731,19 +733,15 @@ function ClientesPageContent() {
 
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                       <label className={styles.inputLabel}>WhatsApp *</label>
-                      <div className={styles.phoneInputContainer}>
-                        <div className={styles.phonePrefix}>
-                          <span className={styles.flagIcon}>🇦🇷</span>
-                          <span>+54</span>
-                        </div>
-                        <input
-                          type="tel"
-                          value={editNotes.whatsapp}
-                          onChange={(e) => setEditNotes({ ...editNotes, whatsapp: e.target.value })}
-                          required
-                          style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)', minWidth: 0 }}
-                        />
-                      </div>
+                      <PhoneInput
+                        countryCode={editNotes.whatsappCountry || '54'}
+                        onCountryChange={(code) => setEditNotes({ ...editNotes, whatsappCountry: code })}
+                        customCode={editNotes.whatsappCustomCode || ''}
+                        onCustomCodeChange={(code) => setEditNotes({ ...editNotes, whatsappCustomCode: code })}
+                        phoneNumber={editNotes.whatsapp || ''}
+                        onPhoneChange={(num) => setEditNotes({ ...editNotes, whatsapp: num })}
+                        required
+                      />
                     </div>
 
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
@@ -868,20 +866,15 @@ function ClientesPageContent() {
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                   <label className={styles.inputLabel}>WhatsApp *</label>
-                  <div className={styles.phoneInputContainer}>
-                    <div className={styles.phonePrefix}>
-                      <span className={styles.flagIcon}>🇦🇷</span>
-                      <span>+54</span>
-                    </div>
-                    <input
-                      type="tel"
-                      value={newClient.whatsapp}
-                      onChange={(e) => setNewClient({ ...newClient, whatsapp: e.target.value })}
-                      required
-                      placeholder="Ej. 11 7673 5678"
-                      style={{ border: 'none', borderRadius: 0, flex: 1, padding: '0.75rem', outline: 'none', backgroundColor: 'transparent', color: 'var(--text-primary)', minWidth: 0 }}
-                    />
-                  </div>
+                  <PhoneInput
+                    countryCode={newClient.whatsappCountry || '54'}
+                    onCountryChange={(code) => setNewClient({ ...newClient, whatsappCountry: code })}
+                    customCode={newClient.whatsappCustomCode || ''}
+                    onCustomCodeChange={(code) => setNewClient({ ...newClient, whatsappCustomCode: code })}
+                    phoneNumber={newClient.whatsapp || ''}
+                    onPhoneChange={(num) => setNewClient({ ...newClient, whatsapp: num })}
+                    required
+                  />
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>

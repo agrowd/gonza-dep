@@ -13,18 +13,19 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
+    const search = (searchParams.get('search') || '').trim();
     const filter = searchParams.get('filter') || 'all'; // all, new, recurrent, upcoming, no_upcoming, canceled, no_show
 
     // Query builder
     let whereClause = {};
 
-    // Search by name, email, or whatsapp
+    // Search by name, email, whatsapp, or dni
     if (search) {
       whereClause.OR = [
-        { nombreCompleto: { contains: search } },
-        { email: { contains: search } },
-        { whatsapp: { contains: search } }
+        { nombreCompleto: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { whatsapp: { contains: search, mode: 'insensitive' } },
+        { dni: { contains: search, mode: 'insensitive' } }
       ];
     }
 
