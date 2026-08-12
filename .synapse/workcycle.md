@@ -429,3 +429,20 @@
   - Se actualizó `isPastDateTime` en `/api/admin/turnos/[id]/route.js` para permitir modificar/reprogramar citas del día actual independientemente de si la hora pautada ya transcurrió.
   - Se optimizó "Programar Siguiente Turno": navegación limpia a medio día (12:00 hs) para evitar corrimiento de feriados/días y auto-completado de todos los datos del cliente al pulsar en un horario libre.
   - Compilación local probada y verificada de forma limpia con `npm run build` (34/34 rutas).
+
+## 📅 Sesión: 11 de Agosto de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Respetar la selección "Sin Descuento" en la visualización del ticket y evitar mostrar descuentos ficticios causados por cambios de precios en el catálogo de zonas
+- [x] Preservar la duración personalizada (horaFin) de los turnos en el formulario de creación manual de la agenda al cambiar el tipo/valor de descuento
+- [x] Ajustar la modificación de Hora de Inicio en el formulario de creación para que desplace Hora de Fin respetando la duración previa (como en el de edición)
+- [x] Desplegar en producción sobre el VPS con PostgreSQL y reiniciar PM2
+
+### 📝 Notas / Bitácora
+- **11 de Agosto (09:00 PM)**:
+  - Se modificó `getUpdatedTurnoPrices` en `src/app/admin/agenda/page.js` para que si `turno.descuentoTipo === 'NINGUNO'` o falsy, el valor de `bonificacion` sea forzado a `0`, evitando que se calcule un descuento implícito si cambió el precio base de las zonas de depilación en el catálogo.
+  - Se condicionaron los bloques de "Descuento Aplicado" y "Valor Original" en el ticket detalle de la agenda (`src/app/admin/agenda/page.js`) y en la página de autogestión de clientes (`src/app/page.js`) para que se rendericen únicamente si `descuentoTipo` no es `'NINGUNO'`.
+  - Se incorporó `autoHoraFin` en el estado de `newTurno` en `src/app/admin/agenda/page.js` para realizar el seguimiento del horario de fin calculado por el sistema, permitiendo al `useEffect` omitir la sobreescritura de `horaFin` si el usuario ha establecido un valor personalizado (override manual) al modificar el tipo/valor de descuento.
+  - Se modificó el evento `onChange` de `horaInicio` en el formulario de creación manual (`newTurno`) para calcular y desplazar la hora de fin respetando la duración previamente elegida o ingresada por el usuario (emulando el comportamiento del modal de edición).
+  - Se compiló localmente con éxito, se resolvieron conflictos de configuración del proveedor Prisma (SQLite/PostgreSQL) en el VPS, se ejecutó `npm install` de dependencias pendientes (`nodemailer`) y se desplegó en producción reiniciando el servicio PM2 `gonzalo-agenda`.
+

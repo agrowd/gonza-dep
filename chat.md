@@ -453,3 +453,13 @@
 - Modificación de `isPastDateTime` en `/api/admin/turnos/[id]/route.js` para permitir la reprogramación y edición de turnos del día actual durante toda la jornada.
 - Solución al corrimiento de feriados/días en "Programar Siguiente Turno": fijación del horario a mediodía (`12:00 hs`) sin desfasajes UTC/GMT-3 y auto-completado de todos los datos del cliente al tocar una celda vacía.
 - Compilación local verificada limpia con `npm run build` (34/34 rutas).
+
+## Mensaje del Usuario (2026-08-11 20:31:00-03:00)
+> 2 capturas sobre: 1) descuento aplicado que aparece siempre aunque no se haya puesto descuento (por cambios de precio de las zonas de catálogo), y 2) la duración (horaFin) que se restablece al cambiar el tipo de descuento.
+
+## Respuesta del Asistente
+- Corrección de `getUpdatedTurnoPrices` en `src/app/admin/agenda/page.js` para forzar `bonificacion: 0` si `descuentoTipo` es `'NINGUNO'` o indefinido.
+- Condicionado de visualización de descuentos en el ticket (`page.js`) y en la autogestión de clientes (`src/app/page.js`) para que solo se rendericen cuando el descuento sea diferente de `'NINGUNO'`.
+- Implementación de `autoHoraFin` en el estado de `newTurno` y `toggleNewTurnoZone` para realizar el seguimiento del horario de fin sugerido por el sistema, previniendo que `newTurno` `useEffect` restablezca la duración manual ingresada por el usuario al cambiar la bonificación.
+- Modificación del `onChange` de `horaInicio` en el formulario de creación manual (`newTurno`) para recalcular `horaFin` y `autoHoraFin` preservando la duración elegida previamente.
+- Despliegue exitoso en el VPS, ejecución de `npm install` de dependencias pendientes y reinicio del servicio PM2 `gonzalo-agenda`.
