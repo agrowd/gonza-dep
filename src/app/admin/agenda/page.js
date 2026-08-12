@@ -395,6 +395,9 @@ export default function AgendaPage() {
       currentBaseTotal = storedBase;
     }
 
+    let valorTotal = currentBaseTotal;
+    let bonificacion = 0;
+
     const hasDiscount = turno.descuentoTipo && turno.descuentoTipo !== 'NINGUNO' && turno.descuentoTipo !== 'SIN_DESCUENTO';
 
     if (hasDiscount) {

@@ -46,3 +46,9 @@
 **Root Cause:** La API de disponibilidad (`/api/disponibilidad`) calculaba los slots con `calculateTurnDetails(zones, false)` (sin bonus de nuevo cliente = 30 min para Brazos), pero la pantalla de resumen usaba `calculateTurnDetails(zones, true)` (con bonus = 40 min). El `horaFin` del slot era correcto (14:30) pero la duración mostrada era la del cálculo con bonus (40 min). Además, la API de creación de reservas (`/api/reservas/crear`) también usaba el flag `isNewClient` basado en si el cliente era nuevo en la DB, lo que generaba un `horaFin` diferente al que se mostraba al usuario.
 **Solución:** Se unificó el cálculo usando `isNewClient=false` consistentemente en: (1) la búsqueda de disponibilidad, (2) el resumen del frontend, y (3) la API de creación de reservas. El bonus de nuevo cliente es un margen operativo interno, no debe afectar lo que ve el cliente.
 **Estado:** ✅ FIXED
+
+## ERR-09: ReferenceError: valorTotal is not defined al abrir turno en la Agenda (2026-08-12)
+**Síntoma:** Cartel rojo de "Ocurrió un error en el sistema" con "Error: valorTotal is not defined" al hacer clic en cualquier turno de la agenda.
+**Root Cause:** En la función `getUpdatedTurnoPrices` de `src/app/admin/agenda/page.js`, las variables `valorTotal` y `bonificacion` no estaban declaradas con `let` antes del bloque condicional `if (hasDiscount) ... else ...`, provocando un ReferenceError en tiempo de ejecución de React al abrir el detalle del turno.
+**Solución:** Se declararon explícitamente `let valorTotal = currentBaseTotal;` y `let bonificacion = 0;` al inicio del cálculo de precios actualizados.
+**Estado:** ✅ FIXED
