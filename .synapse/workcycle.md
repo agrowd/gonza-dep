@@ -468,12 +468,11 @@
   - Corrección del buscador de clientes en `/api/admin/clientes`: agregado de `mode: 'insensitive'` en PostgreSQL y soporte de búsqueda por campo `dni`.
   - Agregado de búsqueda reactiva debounce (300ms) en la barra de búsqueda de clientes.
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
-  - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios:
-    1. Modal de Creación de Cliente (`/admin/clientes`).
-    2. Pestaña de Edición de Ficha del Cliente (`/admin/clientes`).
-    3. Modal de Creación de Nuevo Turno / Autocompletado (`/admin/agenda`).
-    4. Formulario de Reserva Pública (`src/app/page.js`).
+  - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-  - Compilación exitosa verificada con `npm run build`.
+  - Creación del endpoint `POST /api/admin/turnos/[id]/enviar-aviso` para corregir la casilla de correo del cliente sobre la marcha y reenviar Recordatorio (plantilla de 7 días con seña, saldo, zonas, ubicación), Confirmación o Recibo.
+  - Integración de modal y botón "✏️ Reenviar / Editar Email" en `/admin/agenda` (Detalle de Turno) y en `/admin/clientes` (Próximo Turno y Pestaña de Notificaciones).
+  - Verificación exitosa de compilación local con `npm run build`.
+
 
 

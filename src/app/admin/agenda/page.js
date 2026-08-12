@@ -271,6 +271,10 @@ export default function AgendaPage() {
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
   const [cancelModalTurno, setCancelModalTurno] = useState(null);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [resendEmailModalTurno, setResendEmailModalTurno] = useState(null);
+  const [resendEmailAddress, setResendEmailAddress] = useState('');
+  const [resendEmailType, setResendEmailType] = useState('RECORDATORIO');
+  const [sendingEmailNotice, setSendingEmailNotice] = useState(false);
   const savedScrollRef = useRef(0);
   const gridBodyRef = useRef(null);
 
@@ -894,6 +898,57 @@ export default function AgendaPage() {
       showToast('Error de red al enviar el comprobante.', 'error');
     } finally {
       setSendingReceipt(prev => ({ ...prev, [turnoId]: false }));
+    }
+  };
+
+  // Open modal to edit email and resend appointment notice
+  const handleOpenResendEmail = (turno) => {
+    setResendEmailModalTurno(turno);
+    setResendEmailAddress(turno.cliente?.email || '');
+    setResendEmailType('RECORDATORIO');
+  };
+
+  // Send selected email notice (and update client email in DB if changed)
+  const handleSendEmailNotice = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!resendEmailModalTurno) return;
+    if (!resendEmailAddress.trim() || !resendEmailAddress.includes('@')) {
+      showToast('Por favor, ingresa una casilla de correo válida.', 'error');
+      return;
+    }
+
+    setSendingEmailNotice(true);
+    try {
+      const res = await fetch(`/api/admin/turnos/${resendEmailModalTurno.id}/enviar-aviso`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resendEmailAddress.trim(),
+          tipo: resendEmailType
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || `Aviso enviado correctamente a ${resendEmailAddress}.`);
+        if (selectedTurno && selectedTurno.id === resendEmailModalTurno.id) {
+          setSelectedTurno(prev => ({
+            ...prev,
+            cliente: {
+              ...(prev.cliente || {}),
+              email: data.updatedEmail || resendEmailAddress.trim()
+            }
+          }));
+        }
+        setResendEmailModalTurno(null);
+        fetchAppointments();
+      } else {
+        showToast(data.error || 'Error al enviar el aviso por correo.', 'error');
+      }
+    } catch (err) {
+      console.error('Error sending email notice:', err);
+      showToast('Error de red al enviar el aviso.', 'error');
+    } finally {
+      setSendingEmailNotice(false);
     }
   };
 
@@ -2355,6 +2410,38 @@ export default function AgendaPage() {
                     </span>
                   </div>
 
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Email</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                      <span className={styles.detailValue} style={{ fontSize: '0.9rem', wordBreak: 'break-all' }}>
+                        {selectedTurno.cliente?.email || 'Sin email'}
+                      </span>
+                      {selectedTurno.cliente && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenResendEmail(selectedTurno)}
+                          title="Editar correo y reenviar aviso"
+                          style={{
+                            backgroundColor: 'rgba(212, 165, 77, 0.15)',
+                            border: '1px solid var(--color-gold)',
+                            color: 'var(--color-gold)',
+                            borderRadius: '6px',
+                            padding: '0.2rem 0.45rem',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          ✏️ Reenviar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {selectedTurno.clienteId && (
                     <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                       <span className={styles.detailLabel}>Frecuencia Estimada del Tratamiento (Semanas)</span>
@@ -2566,6 +2653,16 @@ export default function AgendaPage() {
                       <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#25D366', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box', textDecoration: 'none' }}>
                         💬 WhatsApp
                       </a>
+                    )}
+                    {selectedTurno.cliente && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenResendEmail(selectedTurno)}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#4f46e5', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                      >
+                        📧 Reenviar Aviso Email
+                      </button>
                     )}
                     {selectedTurno.cliente?.email && (
                       <button
@@ -3161,6 +3258,116 @@ export default function AgendaPage() {
               <div className={styles.modalFooter}>
                 <button type="button" onClick={() => setIsNewOpen(false)} className="btn btn-secondary">Cancelar</button>
                 <button type="submit" className="btn btn-primary" disabled={newTurno.estado !== 'BLOQUEADO' && newTurno.selectedZoneIds.length === 0 && !newTurno.hasOtros}>Guardar Turno</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* RESEND EMAIL NOTICE MODAL */}
+      {resendEmailModalTurno && (
+        <div className={styles.modalOverlay} style={{ zIndex: 10000 }}>
+          <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '520px', width: '100%', boxSizing: 'border-box' }}>
+            <div className={styles.modalHeader}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <span>📧</span> Reenviar Aviso por Email
+              </h3>
+              <button type="button" onClick={() => setResendEmailModalTurno(null)} className={styles.closeBtn}>&times;</button>
+            </div>
+
+            <form onSubmit={handleSendEmailNotice} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', padding: '0.5rem 0 1rem 0' }}>
+              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {resendEmailModalTurno.cliente?.nombreCompleto || 'Cliente'}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                  📅 {formatLocalDate(resendEmailModalTurno.fecha)} — ⏰ {resendEmailModalTurno.horaInicio} a {resendEmailModalTurno.horaFin} hs
+                </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel} style={{ fontWeight: 600 }}>
+                  Casilla de Correo Electrónico *
+                </label>
+                <input
+                  type="email"
+                  value={resendEmailAddress}
+                  onChange={(e) => setResendEmailAddress(e.target.value)}
+                  placeholder="ejemplo@correo.com"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.95rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.3rem', display: 'block' }}>
+                  ℹ️ Si corriges el email aquí, se actualizará automáticamente en la ficha del cliente.
+                </small>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel} style={{ fontWeight: 600 }}>
+                  Tipo de Aviso a Reenviar
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendEmailType === 'RECORDATORIO' ? 'rgba(212, 165, 77, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendEmailType === 'RECORDATORIO' ? 'var(--color-gold)' : 'var(--border-color)' }}>
+                    <input
+                      type="radio"
+                      name="emailType"
+                      value="RECORDATORIO"
+                      checked={resendEmailType === 'RECORDATORIO'}
+                      onChange={(e) => setResendEmailType(e.target.value)}
+                    />
+                    <span><strong>Recordatorio de Turno</strong> (Plantilla de 7 días con zonas, seña y ubicación)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendEmailType === 'CONFIRMACION' ? 'rgba(212, 165, 77, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendEmailType === 'CONFIRMACION' ? 'var(--color-gold)' : 'var(--border-color)' }}>
+                    <input
+                      type="radio"
+                      name="emailType"
+                      value="CONFIRMACION"
+                      checked={resendEmailType === 'CONFIRMACION'}
+                      onChange={(e) => setResendEmailType(e.target.value)}
+                    />
+                    <span><strong>Confirmación de Turno</strong> (Aviso inicial de reserva / seña confirmada)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendEmailType === 'RECIBO' ? 'rgba(212, 165, 77, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendEmailType === 'RECIBO' ? 'var(--color-gold)' : 'var(--border-color)' }}>
+                    <input
+                      type="radio"
+                      name="emailType"
+                      value="RECIBO"
+                      checked={resendEmailType === 'RECIBO'}
+                      onChange={(e) => setResendEmailType(e.target.value)}
+                    />
+                    <span><strong>Comprobante / Recibo de Pago</strong> (Detalle de pago y saldo)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className={styles.modalFooter} style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setResendEmailModalTurno(null)}
+                  className="btn btn-secondary"
+                  disabled={sendingEmailNotice}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={sendingEmailNotice}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#4f46e5', borderColor: '#4f46e5', color: '#fff' }}
+                >
+                  {sendingEmailNotice ? 'Enviando...' : '🚀 Enviar Correo Ahora'}
+                </button>
               </div>
             </form>
           </div>
