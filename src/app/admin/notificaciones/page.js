@@ -309,7 +309,7 @@ export default function NotificacionesPage() {
       <div className={styles.topLayout}>
         
         {/* Left Column: WhatsApp Connection status & Config */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0, width: '100%' }}>
           <div className={styles.card}>
             <div className={styles.cardTitle}>Sincronización WhatsApp</div>
             {renderWppStatusBox()}
@@ -350,7 +350,7 @@ export default function NotificacionesPage() {
         </div>
 
         {/* Right Column: Weekly reminders list */}
-        <div className={styles.card}>
+        <div className={styles.card} style={{ minWidth: 0, width: '100%' }}>
           <div className={styles.cardTitle}>Listado de Recordatorios Semanales</div>
 
           {/* Week selection tabs */}
