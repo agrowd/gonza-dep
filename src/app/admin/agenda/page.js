@@ -1004,6 +1004,19 @@ export default function AgendaPage() {
 
     const { countryCode, number, customCode } = parsePhoneCountryAndNumber(turno.cliente.whatsapp);
 
+    let previousDuration = 30;
+    if (turno.horaInicio && turno.horaFin) {
+      const s = timeToMinutes(turno.horaInicio);
+      const e = timeToMinutes(turno.horaFin);
+      if (e > s) {
+        previousDuration = e - s;
+      }
+    } else if (preselectedZoneIds.length > 0) {
+      const selectedZ = zones.filter(z => preselectedZoneIds.some(id => String(id) === String(z.id)));
+      const calcsZ = calculateTurnDetails(selectedZ, false);
+      if (calcsZ.duracionMinutos > 0) previousDuration = calcsZ.duracionMinutos;
+    }
+
     setPendingNextScheduleData({
       clienteId: turno.cliente.id,
       nombre: nombreVal,
@@ -1022,7 +1035,8 @@ export default function AgendaPage() {
       descuentoValor: turno.descuentoValor || turno.bonificacion || '',
       manualTotalOverride: undefined,
       valorSeña: Number(turno.valorSeña || 0),
-      manualSeñaOverride: Number(turno.valorSeña || 0)
+      manualSeñaOverride: Number(turno.valorSeña || 0),
+      inheritedDuration: previousDuration
     });
 
     setIsDetailsOpen(false);
@@ -1099,12 +1113,16 @@ export default function AgendaPage() {
     const dateStr = typeof date === 'string' ? date.split('T')[0] : toYYYYMMDD(date);
 
     if (pendingNextScheduleData) {
-      let durationMins = 30;
-      if (pendingNextScheduleData.selectedZoneIds && pendingNextScheduleData.selectedZoneIds.length > 0) {
-        const selectedZ = zones.filter(z => (pendingNextScheduleData.selectedZoneIds || []).some(id => String(id) === String(z.id)));
-        const calcsZ = calculateTurnDetails(selectedZ, false);
-        if (calcsZ.duracionMinutos > 0) durationMins = calcsZ.duracionMinutos;
+      let durationMins = pendingNextScheduleData.inheritedDuration;
+      if (!durationMins || durationMins <= 0) {
+        if (pendingNextScheduleData.selectedZoneIds && pendingNextScheduleData.selectedZoneIds.length > 0) {
+          const selectedZ = zones.filter(z => (pendingNextScheduleData.selectedZoneIds || []).some(id => String(id) === String(z.id)));
+          const calcsZ = calculateTurnDetails(selectedZ, false);
+          if (calcsZ.duracionMinutos > 0) durationMins = calcsZ.duracionMinutos;
+        }
       }
+      if (!durationMins || durationMins <= 0) durationMins = 30;
+
       const endMinutes = startMin + durationMins;
       const endHour = Math.floor(endMinutes / 60);
       const endMins = endMinutes % 60;
