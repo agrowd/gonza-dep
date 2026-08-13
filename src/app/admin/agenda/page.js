@@ -817,7 +817,10 @@ export default function AgendaPage() {
       }
       
       if (actionType === 'FINALIZADO' || actionType === 'MANTENIMIENTO') {
-        const confirmFin = confirm('¿Marcar al cliente en MANTENIMIENTO?\n\nEsto marcará el turno como Realizado, el estado del cliente en Mantenimiento y programará el recordatorio de mantenimiento de 2 meses.');
+        const isFin = actionType === 'FINALIZADO';
+        const confirmFin = confirm(isFin 
+          ? '¿Finalizar tratamiento del cliente?\n\nEsto marcará el turno como Realizado, el estado del cliente como Finalizado y activará el seguimiento de mantenimiento.'
+          : '¿Marcar al cliente en Mantenimiento?\n\nEsto marcará el turno como Realizado, el estado del cliente en Mantenimiento y programará el recordatorio de mantenimiento de 2 meses.');
         if (!confirmFin) return;
         markClientFinalizado = true;
       }
@@ -835,7 +838,7 @@ export default function AgendaPage() {
         markClientVaAAvisar 
       };
 
-      if (selectedTurno && (newStatus === 'REALIZADO' || actionType === 'MANTENIMIENTO' || actionType === 'VA_A_AVISAR')) {
+      if (selectedTurno && (newStatus === 'REALIZADO' || actionType === 'FINALIZADO' || actionType === 'MANTENIMIENTO' || actionType === 'VA_A_AVISAR')) {
         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
         if (dynPrices && dynPrices.hasPriceUpdate) {
           updateBody.valorTotal = dynPrices.valorTotal;
@@ -851,7 +854,9 @@ export default function AgendaPage() {
       if (res.ok) {
         setIsDetailsOpen(false);
         fetchAppointments();
-        if (actionType === 'MANTENIMIENTO' || actionType === 'FINALIZADO') {
+        if (actionType === 'FINALIZADO') {
+          showToast('Tratamiento del cliente marcado como Finalizado.');
+        } else if (actionType === 'MANTENIMIENTO') {
           showToast('Cliente marcado en Mantenimiento.');
         } else if (actionType === 'VA_A_AVISAR') {
           showToast('Registrado: El cliente va a avisar para el próximo turno.');
@@ -2617,6 +2622,11 @@ export default function AgendaPage() {
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✓ Realizado
+                      </button>
+                    )}
+                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'FINALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1e40af', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                        🏁 Finalizar
                       </button>
                     )}
                     {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
