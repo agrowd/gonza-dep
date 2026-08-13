@@ -532,6 +532,10 @@ export default function AgendaPage() {
         if (!isNaN(parsedDate.getTime())) {
           initialDate = parsedDate;
         }
+        // Clean URL so subsequent page reloads or mobile browser tab restores don't lock onto the old date
+        try {
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch (e) {}
       }
       
       if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
@@ -1588,11 +1592,11 @@ export default function AgendaPage() {
             onClick={() => {
               const today = new Date();
               setSelectedDate(today);
-              const day = today.getDay();
-              const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
-              const monday = new Date(today);
-              monday.setDate(diffToMonday);
+              const monday = getStartOfWeek(today);
               setCurrentWeekStart(monday);
+              try {
+                window.history.replaceState({}, '', window.location.pathname);
+              } catch (e) {}
             }}
             style={{
               background: 'var(--bg-secondary)',
