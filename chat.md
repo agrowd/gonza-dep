@@ -486,4 +486,16 @@
   3. Comprobante / Recibo de Pago (Detalle de seña y saldo).
 - Incorporación del botón "✏️ Reenviar / Editar" junto al Email del cliente y del botón "📧 Reenviar Aviso Email" en el modal de detalle del turno (`/admin/agenda`).
 - Incorporación de botón "📧 Reenviar Aviso de Turno" en la ficha del cliente (`/admin/clientes`), tanto en la tarjeta de Próximo Turno como en la pestaña de Notificaciones.
-- Despliegue en producción en el VPS de Hostinger y reinicio de PM2 verificado con éxito.
+## Mensaje del Usuario (2026-08-13 11:25:00-03:00)
+> 4 capturas de WhatsApp con los siguientes reportes:
+> 1. Al dar siguiente turno y elegir horario, no respeta la duración del turno y queda fijado en 30 minutos sin importar las zonas.
+> 2. En celular, al seleccionar el código de país en PhoneInput, el desplegable expandido ocultaba/bloqueaba la casilla de texto del número de teléfono.
+> 3. En autocompletado de clientes, parecía que no salía el número por el colapso del input.
+> 4. Al seleccionar/agregar zonas en un turno con descuento del 20%, el total marcaba $90.000 en vez de $87.000 porque sumaba la nueva zona a precio de lista sin aplicarle el 20% de descuento a la nueva base combinada.
+
+## Respuesta del Asistente
+- Corrección de `PhoneInput.js` y reglas CSS en `agenda.module.css` aislando `.inputGroup > input/select` y estableciendo `flex: 1 1 0%` y `min-width: 0` para garantizar que la caja de texto del teléfono siempre sea 100% visible, editable y cómoda en móviles iOS/Android.
+- Corrección del agendamiento en "Programar Siguiente Turno": `handleEmptySlotClick` ahora calcula e inicializa la duración y `horaFin`/`autoHoraFin` basándose en las zonas precargadas del cliente en lugar de forzar 30 minutos.
+- Corrección del recálculo de descuentos en `toggleNewTurnoZone` y `toggleEditTurnoZone`: al marcar/desmarcar zonas, se eliminó el override estático y se recalcula dinámicamente el descuento (ej. 20%) sobre el nuevo total base de zonas seleccionadas, dando exactamente $87.000.
+- Compilación verificada con `npm run build` (34/34 rutas).
+- Despliegue en producción en VPS Hostinger y reinicio de PM2.

@@ -1087,34 +1087,48 @@ export default function AgendaPage() {
     const startHour = Math.floor(startMin / 60);
     const startMins = startMin % 60;
     const timeStr = `${startHour.toString().padStart(2, '0')}:${startMins.toString().padStart(2, '0')}`;
-    
-    const endMinutes = startMin + 30;
-    const endHour = Math.floor(endMinutes / 60);
-    const endMins = endMinutes % 60;
-    const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-
     const dateStr = typeof date === 'string' ? date.split('T')[0] : toYYYYMMDD(date);
 
     if (pendingNextScheduleData) {
+      let durationMins = 30;
+      if (pendingNextScheduleData.selectedZoneIds && pendingNextScheduleData.selectedZoneIds.length > 0) {
+        const selectedZ = zones.filter(z => (pendingNextScheduleData.selectedZoneIds || []).some(id => String(id) === String(z.id)));
+        const calcsZ = calculateTurnDetails(selectedZ, false);
+        if (calcsZ.duracionMinutos > 0) durationMins = calcsZ.duracionMinutos;
+      }
+      const endMinutes = startMin + durationMins;
+      const endHour = Math.floor(endMinutes / 60);
+      const endMins = endMinutes % 60;
+      const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+
       setNewTurno({
         ...pendingNextScheduleData,
         fechaStr: dateStr,
         horaInicio: timeStr,
         horaFin: endTimeStr,
+        autoHoraFin: endTimeStr,
         estado: 'PENDIENTE_PAGO'
       });
       setPendingNextScheduleData(null);
     } else {
+      const endMinutes = startMin + 30;
+      const endHour = Math.floor(endMinutes / 60);
+      const endMins = endMinutes % 60;
+      const endTimeStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+
       setNewTurno({
         nombreCompleto: '',
         nombre: '',
         apellido: '',
         whatsapp: '',
+        whatsappCountry: '54',
+        whatsappCustomCode: '',
         email: '',
         dni: '',
         fechaStr: dateStr,
         horaInicio: timeStr,
         horaFin: endTimeStr,
+        autoHoraFin: endTimeStr,
         selectedZoneIds: [],
         valorTotal: '',
         valorSeña: '',
@@ -1125,7 +1139,8 @@ export default function AgendaPage() {
         observaciones: '',
         clienteId: null,
         hasOtros: false,
-        otrosTexto: ''
+        otrosTexto: '',
+        otrosPrecio: ''
       });
     }
     setIsNewOpen(true);
@@ -1160,7 +1175,7 @@ export default function AgendaPage() {
     
     // Calculate horaFin based on start time + calculated duration
     const startMin = timeToMinutes(newTurno.horaInicio);
-    const endMin = startMin + calcs.duracionMinutos;
+    const endMin = startMin + (calcs.duracionMinutos > 0 ? calcs.duracionMinutos : 30);
     const endHour = Math.floor(endMin / 60);
     const endMins = endMin % 60;
     const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
@@ -1190,10 +1205,10 @@ export default function AgendaPage() {
     }
 
     setNewTurno(prev => {
-      const shouldUpdateHoraFin = !prev.horaFin || prev.horaFin === prev.autoHoraFin;
+      const shouldUpdateHoraFin = !prev.horaFin || prev.horaFin === prev.autoHoraFin || !prev.autoHoraFin;
       return {
         ...prev,
-        horaFin: (shouldUpdateHoraFin && calcs.duracionMinutos > 0) ? horaFinStr : prev.horaFin,
+        horaFin: (shouldUpdateHoraFin && calcs.duracionMinutos > 0) ? horaFinStr : (prev.horaFin || horaFinStr),
         autoHoraFin: horaFinStr,
         valorTotal: finalTotal,
         valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
@@ -1404,15 +1419,8 @@ export default function AgendaPage() {
 
   const toggleNewTurnoZone = (zoneId) => {
     const exists = (newTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
-    const targetZone = zones.find(z => String(z.id) === String(zoneId));
-    const zonePrice = targetZone ? Number(targetZone.precioBase || 0) : 0;
 
     setNewTurno(prev => {
-      let newOverride = prev.manualTotalOverride;
-      if (newOverride !== undefined && newOverride !== null && newOverride !== '') {
-        const currentNum = Number(newOverride);
-        newOverride = exists ? Math.max(0, currentNum - zonePrice) : currentNum + zonePrice;
-      }
       const newZoneIds = exists
         ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
         : [...(prev.selectedZoneIds || []), zoneId];
@@ -1426,7 +1434,7 @@ export default function AgendaPage() {
 
       return {
         ...prev,
-        manualTotalOverride: newOverride,
+        manualTotalOverride: undefined,
         selectedZoneIds: newZoneIds,
         horaFin: newHoraFin,
         autoHoraFin: newHoraFin
@@ -1436,22 +1444,8 @@ export default function AgendaPage() {
 
   const toggleEditTurnoZone = (zoneId) => {
     const exists = (editTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
-    const targetZone = zones.find(z => String(z.id) === String(zoneId));
-    const zonePrice = targetZone ? Number(targetZone.precioBase || 0) : 0;
 
     setEditTurno(prev => {
-      let newOverride = prev.manualTotalOverride;
-      if (newOverride === undefined || newOverride === null || newOverride === '') {
-        if (prev.valorTotal !== undefined && prev.valorTotal !== null && (prev.hasOtros || Number(prev.valorTotal) !== Number(prev.autoTotal))) {
-          newOverride = prev.valorTotal;
-        }
-      }
-
-      if (newOverride !== undefined && newOverride !== null && newOverride !== '') {
-        const currentNum = Number(newOverride);
-        newOverride = exists ? Math.max(0, currentNum - zonePrice) : currentNum + zonePrice;
-      }
-
       const newZoneIds = exists
         ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
         : [...(prev.selectedZoneIds || []), zoneId];
@@ -1465,9 +1459,10 @@ export default function AgendaPage() {
 
       return {
         ...prev,
-        manualTotalOverride: newOverride,
+        manualTotalOverride: undefined,
         selectedZoneIds: newZoneIds,
-        horaFin: newHoraFin
+        horaFin: newHoraFin,
+        autoHoraFin: newHoraFin
       };
     });
   };

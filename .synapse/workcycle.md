@@ -470,9 +470,12 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-  - Creación del endpoint `POST /api/admin/turnos/[id]/enviar-aviso` para corregir la casilla de correo del cliente sobre la marcha y reenviar Recordatorio (plantilla de 7 días con seña, saldo, zonas, ubicación), Confirmación o Recibo.
-  - Integración de modal y botón "✏️ Reenviar / Editar Email" en `/admin/agenda` (Detalle de Turno) y en `/admin/clientes` (Próximo Turno y Pestaña de Notificaciones).
-  - Verificación exitosa de compilación local con `npm run build`.
+- **13 de Agosto (11:30 AM)**:
+  - Fix de `PhoneInput`: se corrigieron las reglas flex y se aislaron los selectores `.inputGroup > input/select` para evitar que el `<select>` de países tome 100% de ancho en iOS Safari y colapse la casilla de texto del número de teléfono.
+  - Fix de Duración en "Programar Siguiente Turno": se corrigió `handleEmptySlotClick` y el cálculo de `horaFin`/`autoHoraFin` para calcular e inicializar la duración real en base a las zonas seleccionadas del cliente en lugar de forzar 30 minutos.
+  - Fix de Recálculo de Descuentos (% y $): se actualizó `toggleNewTurnoZone` y `toggleEditTurnoZone` para que al agregar o quitar zonas en turnos con descuento, se recalcule dinámicamente el importe total aplicando el porcentaje (ej. 20%) sobre la nueva base combinada en vez de sumar zonas a precio de lista.
+  - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
+
 
 
 

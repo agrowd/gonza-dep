@@ -437,9 +437,9 @@
   box-sizing: border-box;
 }
 
-.inputGroup input,
-.inputGroup select,
-.inputGroup textarea {
+.inputGroup > input,
+.inputGroup > select,
+.inputGroup > textarea {
   width: 100%;
   box-sizing: border-box;
 }
@@ -497,9 +497,9 @@
     width: 42px !important;
     height: 42px !important;
   }
-  .inputGroup input,
-  .inputGroup select,
-  .inputGroup textarea {
+  .inputGroup > input,
+  .inputGroup > select,
+  .inputGroup > textarea {
     font-size: 0.9rem !important;
     padding: 0.6rem 0.75rem !important;
     box-sizing: border-box;
