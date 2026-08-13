@@ -67,6 +67,8 @@ export default function PhoneInput({
           <span style={{ color: 'var(--text-secondary, #999)', fontSize: '0.85rem', fontWeight: 600 }}>+</span>
           <input
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             placeholder="Cod"
             value={customCode}
             onChange={(e) => onCustomCodeChange && onCustomCodeChange(e.target.value.replace(/\D/g, ''))}
@@ -88,8 +90,13 @@ export default function PhoneInput({
 
       <input
         type="tel"
+        inputMode="numeric"
+        pattern="[0-9]*"
         value={phoneNumber}
-        onChange={(e) => onPhoneChange && onPhoneChange(e.target.value)}
+        onChange={(e) => {
+          const cleanNum = e.target.value.replace(/\D/g, '');
+          if (onPhoneChange) onPhoneChange(cleanNum);
+        }}
         required={required}
         placeholder={placeholder || defaultPlaceholder}
         style={{
