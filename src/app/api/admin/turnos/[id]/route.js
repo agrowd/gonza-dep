@@ -474,13 +474,14 @@ export async function PUT(request, { params }) {
     }
 
     // Email and WhatsApp Notification Trigger for Rescheduling:
-    // If date, time, or state is rescheduled, and it is not CANCELADO / BLOQUEADO
+    // Only send notification when Fecha (Day) OR HoraInicio (Start Time) changes, or explicit status REPROGRAMADO.
+    // Modifying only horaFin (duration), zones, prices, or observations will NOT send notifications.
     if (updatedTurno.estado !== 'CANCELADO' && updatedTurno.estado !== 'BLOQUEADO') {
       const isDateChanged = updatedTurno.fecha.toISOString().split('T')[0] !== oldTurn.fecha.toISOString().split('T')[0];
-      const isTimeChanged = updatedTurno.horaInicio !== oldTurn.horaInicio || updatedTurno.horaFin !== oldTurn.horaFin;
+      const isStartTimeChanged = updatedTurno.horaInicio !== oldTurn.horaInicio;
       const isStateReprogrammed = updatedTurno.estado === 'REPROGRAMADO' && oldTurn.estado !== 'REPROGRAMADO';
 
-      if (notificationsEnabled && (isDateChanged || isTimeChanged || isStateReprogrammed)) {
+      if (notificationsEnabled && (isDateChanged || isStartTimeChanged || isStateReprogrammed)) {
         try {
           const subjectConfig = await prisma.configuracion.findUnique({
             where: { key: 'email_reprogram_subject' }

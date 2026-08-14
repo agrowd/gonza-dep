@@ -24,6 +24,8 @@
 | D-20 | **Búsqueda Insensitive en PostgreSQL y por DNI en Clientes** | En PostgreSQL las búsquedas con Prisma `contains` son case-sensitive por defecto; se añadió `mode: 'insensitive'` en `nombreCompleto`, `email`, `whatsapp` y `dni` con auto-búsqueda debounce en el panel de clientes. | 🔒 LOCKED |
 | D-21 | **Reenvío Manual de Avisos por Email y Corrección de Casilla** | Implementamos el endpoint `POST /api/admin/turnos/[id]/enviar-aviso` y modal interactivo para permitir a Gonzalo editar la casilla de correo del cliente ante rebotes/errores de tipeo, actualizando la ficha del cliente en PostgreSQL y disparando inmediatamente el reenvío de Recordatorio (7 días), Confirmación o Recibo. | 🔒 LOCKED |
 | D-22 | **Cálculo Dinámico de Descuentos y Duración en Siguiente Turno y PhoneInput Aislado** | Corregimos la herencia de duración al agendar siguiente turno calculando la duración total a partir de las zonas precargadas. Asimismo, al agregar o quitar zonas en turnos con descuento (% o $), se eliminó la suma fija a precio de lista y se recalcula dinámicamente el descuento sobre la nueva base total. Se aisló el CSS de `PhoneInput` para evitar que el `<select>` colapse el input de teléfono en móviles. | 🔒 LOCKED |
+| D-23 | **Exclusión de horaFin en Notificaciones de Reprogramación** | Modificamos el disparador de notificaciones de reprogramación (`PUT /api/admin/turnos/[id]`) para que evalúe estrictamente cambios en la fecha (`fecha`) o en el horario de inicio (`horaInicio`). Los ajustes en el horario de fin (`horaFin` / duración) no disparan avisos por WhatsApp ni por correo electrónico al cliente para evitar spam cuando el administrador solo corrige la duración del turno. | 🔒 LOCKED |
+
 
 
 

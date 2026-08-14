@@ -497,5 +497,16 @@
 - Corrección de `PhoneInput.js` y reglas CSS en `agenda.module.css` aislando `.inputGroup > input/select` y estableciendo `flex: 1 1 0%` y `min-width: 0` para garantizar que la caja de texto del teléfono siempre sea 100% visible, editable y cómoda en móviles iOS/Android.
 - Corrección del agendamiento en "Programar Siguiente Turno": `handleEmptySlotClick` ahora calcula e inicializa la duración y `horaFin`/`autoHoraFin` basándose en las zonas precargadas del cliente en lugar de forzar 30 minutos.
 - Corrección del recálculo de descuentos en `toggleNewTurnoZone` y `toggleEditTurnoZone`: al marcar/desmarcar zonas, se eliminó el override estático y se recalcula dinámicamente el descuento (ej. 20%) sobre el nuevo total base de zonas seleccionadas, dando exactamente $87.000.
+## Mensaje del Usuario (2026-08-14 20:36:00-03:00)
+> "Te voy a pedir un cambio de la agenda,
+> Viste que pusimos que los mensajes de reprogramacion se manden únicamente cuando se modifique el día y el horario, pero no en todo lo demás?
+> Bueno además vamos a sumar que no se mande ninguna notificación cuando se cambie el horario de fin de turno.
+> Solo cuando se cambie la fecha y el horario de inicio de turno se mandará notificacion.
+> Así si nos equivocamos con la duración de un turno, no mandé mensaje cada vez que cambiemos eso"
+
+## Respuesta del Asistente
+- Modificación en `src/app/api/admin/turnos/[id]/route.js`: se actualizó la condición de envío de avisos automáticos de reprogramación para evaluar únicamente cambios en la **Fecha** (`fecha`) o en el **Horario de Inicio** (`horaInicio`) o cambio explícito de estado a `REPROGRAMADO`.
+- Los ajustes de duración / horario de fin (`horaFin`), zonas, importes u observaciones ya no disparan notificaciones al cliente.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
+
