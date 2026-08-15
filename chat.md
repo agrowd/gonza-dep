@@ -507,6 +507,12 @@
 ## Respuesta del Asistente
 - Modificación en `src/app/api/admin/turnos/[id]/route.js`: se actualizó la condición de envío de avisos automáticos de reprogramación para evaluar únicamente cambios en la **Fecha** (`fecha`) o en el **Horario de Inicio** (`horaInicio`) o cambio explícito de estado a `REPROGRAMADO`.
 - Los ajustes de duración / horario de fin (`horaFin`), zonas, importes u observaciones ya no disparan notificaciones al cliente.
-- Compilación verificada con `npm run build` (34/34 rutas).
-- Despliegue en producción en VPS Hostinger y reinicio de PM2.
+## Mensaje del Usuario (2026-08-14 21:52:00-03:00)
+> Audio de Gonzalo reportando que en la agenda aparecieron zonas duplicadas con nombres y precios no oficiales (detectado por Luciano).
+
+## Respuesta del Asistente
+- Diagnóstico en el servidor VPS: el proyecto del bot de IA (`/srv/ia-gonzadep`) compartía la misma base de datos PostgreSQL `agenda_db`, y su script de inicialización (`seed.js`) insertaba 8 zonas genéricas de ejemplo ("Espalda Completa", "Pecho", "Abdomen", "Piernas Completas", "Barba y Cuello", "Tira de Cola", etc.).
+- Eliminación inmediata de las 8 zonas duplicadas de la base de datos PostgreSQL.
+- Neutralización del seeding de zonas en `/srv/ia-gonzadep/prisma/seed.js` para que nunca vuelva a insertar zonas.
+- Verificación de la API `/api/zonas` confirmando únicamente las 10 zonas oficiales de Gonzalo con sus precios y duraciones originales.
 

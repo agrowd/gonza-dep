@@ -52,3 +52,10 @@
 **Root Cause:** En la función `getUpdatedTurnoPrices` de `src/app/admin/agenda/page.js`, las variables `valorTotal` y `bonificacion` no estaban declaradas con `let` antes del bloque condicional `if (hasDiscount) ... else ...`, provocando un ReferenceError en tiempo de ejecución de React al abrir el detalle del turno.
 **Solución:** Se declararon explícitamente `let valorTotal = currentBaseTotal;` y `let bonificacion = 0;` al inicio del cálculo de precios actualizados.
 **Estado:** ✅ FIXED
+
+## ERR-10: Inyección de Zonas Duplicadas por Seed de Proyecto IA (`ia-gonzadep`) (2026-08-14)
+**Síntoma:** En la agenda aparecieron zonas duplicadas ("Espalda Completa", "Pecho", "Abdomen", "Piernas Completas", "Barba y Cuello", etc.) con precios y nombres no oficiales.
+**Root Cause:** El nuevo proyecto `/srv/ia-gonzadep` se conectaba a la misma base de datos PostgreSQL `agenda_db` y su `seed.js` ejecutaba un catálogo de zonas genéricas en cada inicio/despliegue.
+**Solución:** Se eliminaron las 8 zonas duplicadas de la base de datos PostgreSQL, se desactivó el seeding de zonas en `/srv/ia-gonzadep/prisma/seed.js` y se reinició la aplicación. La base de datos ahora contiene exclusivamente las 10 zonas oficiales.
+**Estado:** ✅ FIXED
+
