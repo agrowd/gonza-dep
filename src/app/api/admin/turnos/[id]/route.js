@@ -151,11 +151,18 @@ export async function PUT(request, { params }) {
     if (bonificacion !== undefined) updateData.bonificacion = Number(bonificacion);
     if (descuentoTipo !== undefined) updateData.descuentoTipo = descuentoTipo;
     if (descuentoValor !== undefined) updateData.descuentoValor = Number(descuentoValor);
-    if (observaciones !== undefined) {
-      updateData.observaciones = observaciones;
+    if (observaciones !== undefined) updateData.observaciones = observaciones;
+
+    // Sync client-level observations, operator notes and frequency
+    const clientUpdateData = {};
+    if (observaciones !== undefined) clientUpdateData.observaciones = observaciones;
+    if (body.notasGonzalo !== undefined) clientUpdateData.notasGonzalo = body.notasGonzalo;
+    if (body.frecuencia !== undefined) clientUpdateData.frecuencia = Number(body.frecuencia);
+    
+    if (Object.keys(clientUpdateData).length > 0 && oldTurn.clienteId) {
       await prisma.cliente.update({
         where: { id: oldTurn.clienteId },
-        data: { observaciones }
+        data: clientUpdateData
       });
     }
 

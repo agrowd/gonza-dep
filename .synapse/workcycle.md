@@ -470,9 +470,10 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **14 de Agosto (8:35 PM)**:
-  - Modificación del disparador de notificaciones automáticas de reprogramación (`PUT /api/admin/turnos/[id]`): se excluyó `horaFin` (duración) de la condición de envío de avisos.
-  - Los mensajes de reprogramación por WhatsApp y correo electrónico ahora se envían **únicamente** cuando cambia la **Fecha** (`fecha`) o el **Horario de Inicio** (`horaInicio`), o si se cambia explícitamente el estado a `REPROGRAMADO`.
+- **18 de Agosto (8:45 PM)**:
+  - Fix integral de persistencia de Observaciones Generales y del Operador en la Agenda (`src/app/admin/agenda/page.js` y `src/app/api/admin/turnos/[id]/route.js`).
+  - Se añadió sincronización en `PUT /api/admin/turnos/[id]` para actualizar automáticamente `cliente.observaciones`, `cliente.notasGonzalo` y `cliente.frecuencia`.
+  - Se agregó auto-guardado en `onBlur` en los textareas del modal de turno y persistencia automática en todos los botones de acción (`✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `Va a avisar`, `Programar Siguiente Turno` y `Editar Turno`).
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

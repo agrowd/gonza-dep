@@ -452,7 +452,7 @@ export default function AgendaPage() {
     }
   }, [selectedTurno]);
 
-  const handleSaveClientObservaciones = async () => {
+  const handleSaveClientObservaciones = async (silent = false) => {
     if (!selectedTurno || !selectedTurno.cliente) return;
     try {
       const res = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
@@ -465,7 +465,7 @@ export default function AgendaPage() {
         })
       });
       if (res.ok) {
-        showToast('Datos del cliente guardados con éxito.');
+        if (!silent) showToast('Observaciones del cliente guardadas.');
         setSelectedTurno(prev => {
           if (!prev) return prev;
           return {
@@ -481,11 +481,11 @@ export default function AgendaPage() {
         fetchAppointments();
       } else {
         const err = await res.json();
-        showToast(err.error || 'Error al guardar datos del cliente.', 'error');
+        if (!silent) showToast(err.error || 'Error al guardar datos del cliente.', 'error');
       }
     } catch (e) {
       console.error('Error saving client observations/frecuencia:', e);
-      showToast('Error de red al guardar datos.', 'error');
+      if (!silent) showToast('Error de red al guardar datos.', 'error');
     }
   };
   // Generate hourly labels for time column dynamically
@@ -838,8 +838,11 @@ export default function AgendaPage() {
       const updateBody = { 
         estado: newStatus, 
         preserveDeposit, 
-        markClientFinalizado,
-        markClientVaAAvisar 
+        markClientFinalizado, 
+        markClientVaAAvisar,
+        observaciones: tempClientObservaciones,
+        notasGonzalo: tempClientNotasGonzalo,
+        frecuencia: tempClientFrecuencia
       };
 
       if (selectedTurno && (newStatus === 'REALIZADO' || actionType === 'FINALIZADO' || actionType === 'MANTENIMIENTO' || actionType === 'VA_A_AVISAR')) {
@@ -1039,6 +1042,15 @@ export default function AgendaPage() {
       inheritedDuration: previousDuration
     });
 
+    // If observations were edited in the modal before clicking next turn, persist them silently
+    if (turno.cliente?.id && (
+      tempClientObservaciones !== (turno.cliente?.observaciones || '') ||
+      tempClientNotasGonzalo !== (turno.cliente?.notasGonzalo || '') ||
+      tempClientFrecuencia !== (turno.cliente?.frecuencia || 4)
+    )) {
+      handleSaveClientObservaciones(true);
+    }
+
     setIsDetailsOpen(false);
     setSelectedDate(targetDate);
     setCurrentWeekStart(mondayOfWeek);
@@ -1081,6 +1093,8 @@ export default function AgendaPage() {
           descuentoTipo: editTurno.descuentoTipo,
           descuentoValor: Number(editTurno.descuentoValor || 0),
           observaciones: editTurno.observaciones,
+          notasGonzalo: editTurno.notasGonzalo,
+          frecuencia: editTurno.frecuencia,
           selectedZoneIds: editTurno.selectedZoneIds,
           hasOtros: editTurno.hasOtros,
           otrosTexto: editTurno.otrosTexto,
@@ -1090,7 +1104,7 @@ export default function AgendaPage() {
       if (res.ok) {
         setIsEditing(false);
         setIsDetailsOpen(false);
-        showToast('Turno reprogramado con éxito.');
+        showToast('Turno guardado con éxito.');
         fetchAppointments();
       } else {
         const errData = await res.json();
@@ -2320,10 +2334,23 @@ export default function AgendaPage() {
                   )}
 
                   <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                    <label className={styles.inputLabel}>Observaciones</label>
+                    <label className={styles.inputLabel}>Observaciones Generales del Cliente</label>
                     <textarea
-                      value={editTurno.observaciones}
+                      value={editTurno.observaciones || ''}
                       onChange={(e) => setEditTurno({ ...editTurno, observaciones: e.target.value })}
+                      placeholder="Observaciones generales del cliente que se guardarán para todos sus turnos..."
+                      rows="2"
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                    <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>
+                      🛡️ Observaciones del Operador (Potencia, Clínica, Indicaciones)
+                    </label>
+                    <textarea
+                      value={editTurno.notasGonzalo || ''}
+                      onChange={(e) => setEditTurno({ ...editTurno, notasGonzalo: e.target.value })}
+                      placeholder="Potencia utilizada (J), tolerancia al dolor, zonas sensibles o notas clínicas..."
                       rows="2"
                     />
                   </div>
@@ -2505,6 +2532,7 @@ export default function AgendaPage() {
                       <textarea
                         value={tempClientObservaciones}
                         onChange={(e) => setTempClientObservaciones(e.target.value)}
+                        onBlur={() => handleSaveClientObservaciones(true)}
                         placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
                         rows={2}
                         style={{
@@ -2529,6 +2557,7 @@ export default function AgendaPage() {
                       <textarea
                         value={tempClientNotasGonzalo}
                         onChange={(e) => setTempClientNotasGonzalo(e.target.value)}
+                        onBlur={() => handleSaveClientObservaciones(true)}
                         placeholder="Potencia utilizada (J), tolerancia al dolor, zonas sensibles o notas clínicas..."
                         rows={3}
                         style={{
@@ -2624,7 +2653,9 @@ export default function AgendaPage() {
                           autoTotalZonas: selectedTurno.valorTotal,
                           autoSeña: selectedTurno.valorSeña,
                           selectedZoneIds: preselectedZoneIds,
-                          observaciones: selectedTurno.observaciones || '',
+                          observaciones: tempClientObservaciones || selectedTurno.cliente?.observaciones || selectedTurno.observaciones || '',
+                          notasGonzalo: tempClientNotasGonzalo || selectedTurno.cliente?.notasGonzalo || '',
+                          frecuencia: tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4,
                           hasOtros,
                           otrosTexto,
                           otrosPrecio: otrosPrecio || ''

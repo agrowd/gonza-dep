@@ -512,7 +512,15 @@
 
 ## Respuesta del Asistente
 - Diagnóstico en el servidor VPS: el proyecto del bot de IA (`/srv/ia-gonzadep`) compartía la misma base de datos PostgreSQL `agenda_db`, y su script de inicialización (`seed.js`) insertaba 8 zonas genéricas de ejemplo ("Espalda Completa", "Pecho", "Abdomen", "Piernas Completas", "Barba y Cuello", "Tira de Cola", etc.).
-- Eliminación inmediata de las 8 zonas duplicadas de la base de datos PostgreSQL.
-- Neutralización del seeding de zonas en `/srv/ia-gonzadep/prisma/seed.js` para que nunca vuelva a insertar zonas.
-- Verificación de la API `/api/zonas` confirmando únicamente las 10 zonas oficiales de Gonzalo con sus precios y duraciones originales.
+## Mensaje del Usuario (2026-08-18 20:40:00-03:00)
+> Captura de WhatsApp de Luciano/Gonzalo: "En la agenda, viene pasando que Gonza realiza cambios en la info del turno (en observaciones generales y de operador principalmente) y pone para guardar los cambios pero después cuando vuelve a ver no están cargados..."
+
+## Respuesta del Asistente
+- Diagnóstico: al editar turnos o cambiar estados rápidos (Realizado, Finalizado, Mantenimiento, Siguiente Turno), si no se presionaba el botón manual pequeño de guardar notas o si se abría el formulario de edición, las observaciones del operador no se enviaban en el payload o se pisaban con el valor previo del turno.
+- Implementación de auto-guardado en `onBlur` en los campos de Observaciones Generales y Observaciones del Operador.
+- Sincronización en `PUT /api/admin/turnos/[id]` para actualizar automáticamente `cliente.observaciones` y `cliente.notasGonzalo`.
+- Persistencia automática de observaciones y notas en todas las acciones rápidas (`✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `Va a avisar`, `Programar Siguiente Turno`).
+- Inclusión de ambos campos de observaciones en el formulario de edición de turno.
+- Compilación verificada con `npm run build` (34/34 rutas).
+- Despliegue en producción en VPS Hostinger y reinicio de PM2.
 
