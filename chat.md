@@ -525,11 +525,14 @@
 ## Mensaje del Usuario (2026-08-20 14:08:00-03:00)
 > Mensaje del cliente: "Con la agenda, gonza me está diciendo que parece que se están borrando las observaciones del operador, no sabe si es por el último cambio al actualizar los precios de los turnos"
 
+## Mensaje del Usuario (2026-08-20 14:41:00-03:00)
+> Mensaje de Luciano: "Dale, también a Gonza le pasó con los turnos de cuerpo completo, que al poner 'agendar siguiente turno' no le guarda la zona y aparece como si no tuviera zona"
+
 ## Respuesta del Asistente
-- Diagnóstico: En la actualización de estado/precio rápido de los turnos (`handleUpdateStatus`), el objeto `updateBody` incluía incondicionalmente `notasGonzalo: tempClientNotasGonzalo`. Si la variable no había sido editada o estaba vacía en el cliente de estado local, enviaba `notasGonzalo: ""` en la petición `PUT /api/admin/turnos/[id]`, lo cual sobrescribía y borraba la nota del operador en la base de datos PostgreSQL.
+- Diagnóstico: En `handleScheduleNextTurn`, el filtrado de zonas para precargar en el formulario del siguiente turno asumía que `turno.zonas` contenía un array de objetos con la propiedad `.id`. Para turnos agendados con zonas en formato de solo nombre (o nombres de zonas como "Cuerpo Completo" sin ID de catálogo explicito o strings plain text), `z.id` resultaba `undefined`, devolviendo `preselectedZoneIds = []`. Al abrir la agenda de la siguiente sesión, el turno aparecía sin zonas seleccionadas.
 - Solución:
-  1. En `src/app/admin/agenda/page.js`: Se añadió chequeo de modificación (dirty check) en `handleUpdateStatus` para enviar `observaciones` y `notasGonzalo` ÚNICAMENTE cuando hayan sido modificadas explícitamente por el usuario.
-  2. En `src/app/api/admin/turnos/[id]/route.js`: Se blindó la actualización de la tabla `Cliente` para ignorar valores vacíos (`""`) a menos que exista un flag explícito de borrado (`forceClearNotasGonzalo`), previniendo así cualquier borrado accidental durante actualizaciones de estado o precio.
+  - Creación del helper universal `extractZoneSelection` en `src/app/admin/agenda/page.js`: Parsea zonas en cualquier formato (JSON con ID, JSON con solo nombre, texto libre), emparejándolas por ID o por coincidencia de nombre (case-insensitive) contra el catálogo activo (`zones`).
+  - Integración en `handleScheduleNextTurn` y en `setEditTurno` para precargar siempre las zonas seleccionadas.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
 

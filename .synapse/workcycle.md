@@ -470,10 +470,9 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **20 de Agosto (2:15 PM)**:
-  - Corrección en `handleUpdateStatus` (`src/app/admin/agenda/page.js`) y `PUT /api/admin/turnos/[id]` (`src/app/api/admin/turnos/[id]/route.js`).
-  - Se agregó verificación "dirty" para incluir observaciones/notas del operador en el body únicamente si fueron modificadas explícitamente por el usuario.
-  - Se previno que los payloads con strings vacías sobrescriban o borren accidentalmente `cliente.notasGonzalo` en PostgreSQL al cambiar de estado o actualizar precios.
+- **20 de Agosto (2:40 PM)**:
+  - Creación del helper `extractZoneSelection` en `src/app/admin/agenda/page.js` para parsear zonas de turnos multiformato (JSON con `id`, JSON con solo `nombre`, o texto libre).
+  - Integración de `extractZoneSelection` en `handleScheduleNextTurn` y en `setEditTurno`, garantizando que zonas como *Cuerpo Completo* se reconozcan y precarguen siempre al agendar el siguiente turno o al editar.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

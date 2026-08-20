@@ -297,6 +297,79 @@ export default function AgendaPage() {
     }
   }, [loading, appointments]);
 
+  // Helper to robustly extract selected zone IDs and custom "otros" info from any format of turno.zonas
+  const extractZoneSelection = (zonasInput, zonesCatalog = []) => {
+    let preselectedZoneIds = [];
+    let hasOtros = false;
+    let otrosTexto = '';
+    let otrosPrecio = 0;
+
+    if (!zonasInput) {
+      return { preselectedZoneIds: [], hasOtros: false, otrosTexto: '', otrosPrecio: 0 };
+    }
+
+    let parsedZones = [];
+    try {
+      if (typeof zonasInput === 'string') {
+        const trimmed = zonasInput.trim();
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          const raw = JSON.parse(trimmed);
+          parsedZones = Array.isArray(raw) ? raw : [raw];
+        } else {
+          parsedZones = trimmed.split(',').map(s => ({ nombre: s.trim() }));
+        }
+      } else if (Array.isArray(zonasInput)) {
+        parsedZones = zonasInput;
+      }
+    } catch (e) {
+      if (typeof zonasInput === 'string') {
+        parsedZones = zonasInput.split(',').map(s => ({ nombre: s.trim() }));
+      } else {
+        parsedZones = [];
+      }
+    }
+
+    const matchedZoneIds = new Set();
+
+    for (const pz of parsedZones) {
+      if (!pz) continue;
+      const zId = pz.id;
+      const zName = typeof pz === 'string' ? pz : (pz.nombre || pz.name || '');
+
+      if (zId === 'otros' || pz.isOtros || (zName && zName.toLowerCase().startsWith('otros:'))) {
+        hasOtros = true;
+        otrosTexto = zName ? zName.replace(/^Otros:\s*/i, '') : '';
+        otrosPrecio = Number(pz.precio || 0);
+        continue;
+      }
+
+      // Try matching by ID first, then by exact name (case-insensitive)
+      const matched = (zonesCatalog || []).find(z => 
+        (zId && String(z.id) === String(zId)) || 
+        (zName && z.nombre && z.nombre.trim().toLowerCase() === zName.trim().toLowerCase())
+      );
+
+      if (matched && !matchedZoneIds.has(matched.id)) {
+        matchedZoneIds.add(matched.id);
+      } else if (zId && zId !== 'otros') {
+        matchedZoneIds.add(zId);
+      }
+    }
+
+    // Fallback: match by substring across full text if no objects matched yet
+    if (matchedZoneIds.size === 0 && zonesCatalog && zonesCatalog.length > 0) {
+      const fullText = (typeof zonasInput === 'string' ? zonasInput : JSON.stringify(zonasInput || '')).toLowerCase();
+      for (const z of zonesCatalog) {
+        if (z.nombre && fullText.includes(z.nombre.toLowerCase().trim())) {
+          matchedZoneIds.add(z.id);
+        }
+      }
+    }
+
+    preselectedZoneIds = Array.from(matchedZoneIds);
+    return { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio };
+  };
+
   // Helper to recalculate updated prices based on current zone list
   const getUpdatedTurnoPrices = (turno) => {
     if (!turno) return { valorOriginal: 0, valorTotal: 0, bonificacion: 0, hasPriceUpdate: false, oldValorTotal: 0 };
@@ -1005,20 +1078,7 @@ export default function AgendaPage() {
     mondayOfWeek.setDate(diffToMonday);
     mondayOfWeek.setHours(12, 0, 0, 0);
 
-    let preselectedZoneIds = [];
-    let hasOtros = false;
-    let otrosTexto = '';
-    let otrosPrecio = 0;
-    try {
-      const zonesArray = typeof turno.zonas === 'string' ? JSON.parse(turno.zonas) : turno.zonas;
-      preselectedZoneIds = zonesArray.filter(z => z.id && z.id !== 'otros').map(z => z.id);
-      const otrosItem = zonesArray.find(z => z.isOtros || z.id === 'otros' || (z.nombre && z.nombre.startsWith('Otros:')));
-      if (otrosItem) {
-        hasOtros = true;
-        otrosTexto = (otrosItem.nombre || '').replace(/^Otros:\s*/, '');
-        otrosPrecio = Number(otrosItem.precio || 0);
-      }
-    } catch (e) {}
+    const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
 
     const fullName = turno.cliente.nombreCompleto || '';
     const lastSpaceIdx = fullName.lastIndexOf(' ');
@@ -2637,22 +2697,7 @@ export default function AgendaPage() {
                     <button
                       onClick={() => {
                         const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
-                        let preselectedZoneIds = [];
-                        let hasOtros = false;
-                        let otrosTexto = '';
-                        let otrosPrecio = 0;
-                        try {
-                          const parsed = typeof selectedTurno.zonas === 'string' ? JSON.parse(selectedTurno.zonas || '[]') : selectedTurno.zonas;
-                          preselectedZoneIds = (parsed || []).map(z => z.id).filter(id => id && id !== 'otros');
-                          const otros = (parsed || []).find(z => z.id === 'otros' || (z.nombre && z.nombre.startsWith('Otros:')));
-                          if (otros) {
-                            hasOtros = true;
-                            otrosTexto = otros.nombre ? otros.nombre.replace(/^Otros:\s*/, '') : '';
-                            otrosPrecio = Number(otros.precio || 0);
-                          }
-                        } catch (e) {
-                          console.error('Error parsing zones for editing:', e);
-                        }
+                        const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
                         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
                         setEditTurno({
                           isInitialEdit: true,
