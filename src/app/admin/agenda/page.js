@@ -849,11 +849,21 @@ export default function AgendaPage() {
         estado: newStatus, 
         preserveDeposit, 
         markClientFinalizado, 
-        markClientVaAAvisar,
-        observaciones: tempClientObservaciones,
-        notasGonzalo: tempClientNotasGonzalo,
-        frecuencia: tempClientFrecuencia
+        markClientVaAAvisar
       };
+
+      // Only send client observations/notes if they were explicitly modified by the user
+      if (selectedTurno?.cliente) {
+        if (tempClientObservaciones !== (selectedTurno.cliente.observaciones || '')) {
+          updateBody.observaciones = tempClientObservaciones;
+        }
+        if (tempClientNotasGonzalo !== (selectedTurno.cliente.notasGonzalo || '')) {
+          updateBody.notasGonzalo = tempClientNotasGonzalo;
+        }
+        if (tempClientFrecuencia !== (selectedTurno.cliente.frecuencia || 4)) {
+          updateBody.frecuencia = tempClientFrecuencia;
+        }
+      }
 
       if (selectedTurno && (newStatus === 'REALIZADO' || actionType === 'FINALIZADO' || actionType === 'MANTENIMIENTO' || actionType === 'VA_A_AVISAR')) {
         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
@@ -1103,7 +1113,7 @@ export default function AgendaPage() {
           descuentoTipo: editTurno.descuentoTipo,
           descuentoValor: Number(editTurno.descuentoValor || 0),
           observaciones: editTurno.observaciones,
-          notasGonzalo: editTurno.notasGonzalo,
+          notasGonzalo: editTurno.notasGonzalo && editTurno.notasGonzalo.trim() !== '' ? editTurno.notasGonzalo : undefined,
           frecuencia: editTurno.frecuencia,
           selectedZoneIds: editTurno.selectedZoneIds,
           hasOtros: editTurno.hasOtros,

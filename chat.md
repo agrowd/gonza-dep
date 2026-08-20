@@ -522,10 +522,14 @@
 
 ## Respuesta del Asistente
 - Modificación de `getUpdatedTurnoPrices` en `src/app/admin/agenda/page.js`:
-  - Para turnos activos futuros (`SEÑADO`, `PENDIENTE_PAGO`, `PENDIENTE_AUTORIZACION`, `REPROGRAMADO`), el sistema calcula dinámicamente el precio base total según el catálogo de zonas vigente ($150.000 para Cuerpo Completo).
-  - Conserva la seña cobrada previa ($65.000) y recalcula el saldo restante a pagar en el local ($150.000 - $65.000 = $85.000).
-  - Si el turno tenía descuento (% o $), recalcula el descuento sobre la nueva base de catálogo.
-  - Para turnos históricos (`REALIZADO`, `CANCELADO`, `NO_ASISTIO`), preserva exactamente los montos registrados en la base de datos sin alteración alguna.
+## Mensaje del Usuario (2026-08-20 14:08:00-03:00)
+> Mensaje del cliente: "Con la agenda, gonza me está diciendo que parece que se están borrando las observaciones del operador, no sabe si es por el último cambio al actualizar los precios de los turnos"
+
+## Respuesta del Asistente
+- Diagnóstico: En la actualización de estado/precio rápido de los turnos (`handleUpdateStatus`), el objeto `updateBody` incluía incondicionalmente `notasGonzalo: tempClientNotasGonzalo`. Si la variable no había sido editada o estaba vacía en el cliente de estado local, enviaba `notasGonzalo: ""` en la petición `PUT /api/admin/turnos/[id]`, lo cual sobrescribía y borraba la nota del operador en la base de datos PostgreSQL.
+- Solución:
+  1. En `src/app/admin/agenda/page.js`: Se añadió chequeo de modificación (dirty check) en `handleUpdateStatus` para enviar `observaciones` y `notasGonzalo` ÚNICAMENTE cuando hayan sido modificadas explícitamente por el usuario.
+  2. En `src/app/api/admin/turnos/[id]/route.js`: Se blindó la actualización de la tabla `Cliente` para ignorar valores vacíos (`""`) a menos que exista un flag explícito de borrado (`forceClearNotasGonzalo`), previniendo así cualquier borrado accidental durante actualizaciones de estado o precio.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
 
