@@ -298,11 +298,22 @@ export default function AgendaPage() {
   }, [loading, appointments]);
 
   // Helper to recalculate updated prices based on current zone list
-  // Helper to recalculate updated prices based on current zone list
   const getUpdatedTurnoPrices = (turno) => {
     if (!turno) return { valorOriginal: 0, valorTotal: 0, bonificacion: 0, hasPriceUpdate: false, oldValorTotal: 0 };
     
     const storedBase = Number(turno.valorTotal || 0) + Number(turno.bonificacion || 0);
+
+    // If historical (REALIZADO, CANCELADO, NO_ASISTIO), preserve exact historical database record
+    const isHistorical = turno.estado === 'REALIZADO' || turno.estado === 'CANCELADO' || turno.estado === 'NO_ASISTIO';
+    if (isHistorical) {
+      return {
+        valorOriginal: storedBase,
+        valorTotal: Number(turno.valorTotal || 0),
+        bonificacion: Number(turno.bonificacion || 0),
+        hasPriceUpdate: false,
+        oldValorTotal: Number(turno.valorTotal || 0)
+      };
+    }
 
     if (!zones || zones.length === 0) {
       return {
@@ -417,9 +428,8 @@ export default function AgendaPage() {
         }
       }
     } else {
-      if (turno.valorTotal !== undefined && turno.valorTotal !== null && Number(turno.valorTotal) > 0) {
-        valorTotal = Number(turno.valorTotal);
-      }
+      // Without discount: use updated current catalog price
+      valorTotal = currentBaseTotal;
       bonificacion = 0;
     }
 
@@ -2633,24 +2643,25 @@ export default function AgendaPage() {
                         } catch (e) {
                           console.error('Error parsing zones for editing:', e);
                         }
+                        const dynPrices = getUpdatedTurnoPrices(selectedTurno);
                         setEditTurno({
                           isInitialEdit: true,
-                          initialValorTotal: Number(selectedTurno.valorTotal || 0),
+                          initialValorTotal: Number(dynPrices.valorTotal || selectedTurno.valorTotal || 0),
                           initialValorSeña: Number(selectedTurno.valorSeña || 0),
                           initialZoneIds: [...preselectedZoneIds],
                           fechaStr: typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha),
                           horaInicio: selectedTurno.horaInicio,
                           horaFin: selectedTurno.horaFin,
                           estado: selectedTurno.estado,
-                          valorTotal: selectedTurno.valorTotal,
+                          valorTotal: dynPrices.valorTotal,
                           valorSeña: selectedTurno.valorSeña,
                           manualTotalOverride: undefined,
                           manualSeñaOverride: Number(selectedTurno.valorSeña || 0),
                           descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
-                          descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? selectedTurno.bonificacion : ''),
-                          bonificacion: selectedTurno.bonificacion || 0,
-                          autoTotal: selectedTurno.valorTotal,
-                          autoTotalZonas: selectedTurno.valorTotal,
+                          descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? dynPrices.bonificacion : ''),
+                          bonificacion: dynPrices.bonificacion,
+                          autoTotal: dynPrices.valorTotal,
+                          autoTotalZonas: dynPrices.valorOriginal,
                           autoSeña: selectedTurno.valorSeña,
                           selectedZoneIds: preselectedZoneIds,
                           observaciones: tempClientObservaciones || selectedTurno.cliente?.observaciones || selectedTurno.observaciones || '',

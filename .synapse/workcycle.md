@@ -470,10 +470,10 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **18 de Agosto (8:45 PM)**:
-  - Fix integral de persistencia de Observaciones Generales y del Operador en la Agenda (`src/app/admin/agenda/page.js` y `src/app/api/admin/turnos/[id]/route.js`).
-  - Se añadió sincronización en `PUT /api/admin/turnos/[id]` para actualizar automáticamente `cliente.observaciones`, `cliente.notasGonzalo` y `cliente.frecuencia`.
-  - Se agregó auto-guardado en `onBlur` en los textareas del modal de turno y persistencia automática en todos los botones de acción (`✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `Va a avisar`, `Programar Siguiente Turno` y `Editar Turno`).
+- **20 de Agosto (4:50 AM)**:
+  - Actualización de `getUpdatedTurnoPrices` en `src/app/admin/agenda/page.js` para reflejar automáticamente los precios de lista vigentes del catálogo en turnos futuros activos (`SEÑADO`, `PENDIENTE_PAGO`, `PENDIENTE_AUTORIZACION`, `REPROGRAMADO`).
+  - Mantenimiento de la seña abonada intacta para recalcular el saldo real a pagar en el local (`Precio de Catálogo Vigente - Seña Abonada`).
+  - Protección estricta de turnos históricos (`REALIZADO`, `CANCELADO`, `NO_ASISTIO`) para conservar sus montos históricos intactos sin alteraciones.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

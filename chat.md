@@ -517,10 +517,15 @@
 
 ## Respuesta del Asistente
 - Diagnóstico: al editar turnos o cambiar estados rápidos (Realizado, Finalizado, Mantenimiento, Siguiente Turno), si no se presionaba el botón manual pequeño de guardar notas o si se abría el formulario de edición, las observaciones del operador no se enviaban en el payload o se pisaban con el valor previo del turno.
-- Implementación de auto-guardado en `onBlur` en los campos de Observaciones Generales y Observaciones del Operador.
-- Sincronización en `PUT /api/admin/turnos/[id]` para actualizar automáticamente `cliente.observaciones` y `cliente.notasGonzalo`.
-- Persistencia automática de observaciones y notas en todas las acciones rápidas (`✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `Va a avisar`, `Programar Siguiente Turno`).
-- Inclusión de ambos campos de observaciones en el formulario de edición de turno.
+## Mensaje del Usuario (2026-08-20 04:48:00-03:00)
+> Captura de WhatsApp de Gonzalo: "En la agenda de turno, en los turnos agendados, tiene que mostrar el valor con el valor actualizado de las zonas elegidas... Acá por ejemplo en un turno de mañana, que pone 140.000, debería de valer 150.000 por la lista de zonas... Y obvio que no toque los turnos anteriores, osea los realizados o cancelados o no asistidos"
+
+## Respuesta del Asistente
+- Modificación de `getUpdatedTurnoPrices` en `src/app/admin/agenda/page.js`:
+  - Para turnos activos futuros (`SEÑADO`, `PENDIENTE_PAGO`, `PENDIENTE_AUTORIZACION`, `REPROGRAMADO`), el sistema calcula dinámicamente el precio base total según el catálogo de zonas vigente ($150.000 para Cuerpo Completo).
+  - Conserva la seña cobrada previa ($65.000) y recalcula el saldo restante a pagar en el local ($150.000 - $65.000 = $85.000).
+  - Si el turno tenía descuento (% o $), recalcula el descuento sobre la nueva base de catálogo.
+  - Para turnos históricos (`REALIZADO`, `CANCELADO`, `NO_ASISTIO`), preserva exactamente los montos registrados en la base de datos sin alteración alguna.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
 
