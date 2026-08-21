@@ -612,10 +612,15 @@ export default function AgendaPage() {
       
       if (dateParam) {
         const parsedDate = parseYYYYMMDD(dateParam);
+        const now = new Date();
         if (!isNaN(parsedDate.getTime())) {
-          initialDate = parsedDate;
+          const diffDays = (now.getTime() - parsedDate.getTime()) / (1000 * 3600 * 24);
+          // Only use dateParam if it is not a stale past date (older than 7 days in the past)
+          if (diffDays <= 7) {
+            initialDate = parsedDate;
+          }
         }
-        // Clean URL so subsequent page reloads or mobile browser tab restores don't lock onto the old date
+        // Clean URL so subsequent page reloads, browser tab restores, or bookmarked URLs don't lock onto the old date
         try {
           window.history.replaceState({}, '', window.location.pathname);
         } catch (e) {}

@@ -528,11 +528,14 @@
 ## Mensaje del Usuario (2026-08-20 14:41:00-03:00)
 > Mensaje de Luciano: "Dale, también a Gonza le pasó con los turnos de cuerpo completo, que al poner 'agendar siguiente turno' no le guarda la zona y aparece como si no tuviera zona"
 
+## Mensaje del Usuario (2026-08-21 18:26:00-03:00)
+> Captura de WhatsApp: "A Gonza en la agenda, cuando abre la web, aparece siempre en la agenda de Julio, cuando recarga la página también. En mí teléfono no pasa eso así que nosé porque sucede"
+
 ## Respuesta del Asistente
-- Diagnóstico: En `handleScheduleNextTurn`, el filtrado de zonas para precargar en el formulario del siguiente turno asumía que `turno.zonas` contenía un array de objetos con la propiedad `.id`. Para turnos agendados con zonas en formato de solo nombre (o nombres de zonas como "Cuerpo Completo" sin ID de catálogo explicito o strings plain text), `z.id` resultaba `undefined`, devolviendo `preselectedZoneIds = []`. Al abrir la agenda de la siguiente sesión, el turno aparecía sin zonas seleccionadas.
+- Diagnóstico: Gonza guardó un marcador, un icono de acceso directo en su pantalla de inicio o una pestaña del navegador cuya URL contenía el parámetro `?date=2026-07-XX` (de un día que estuvo mirando en Julio). Cada vez que la web se abría o se recargaba desde su acceso directo, el parámetro `?date=` forzaba a la agenda a viajar al mes de Julio.
 - Solución:
-  - Creación del helper universal `extractZoneSelection` en `src/app/admin/agenda/page.js`: Parsea zonas en cualquier formato (JSON con ID, JSON con solo nombre, texto libre), emparejándolas por ID o por coincidencia de nombre (case-insensitive) contra el catálogo activo (`zones`).
-  - Integración en `handleScheduleNextTurn` y en `setEditTurno` para precargar siempre las zonas seleccionadas.
+  - En `src/app/admin/agenda/page.js`: Se actualizó la función de montaje `useEffect` para validar si `dateParam` es una fecha del pasado obsoleta (más de 7 días atrás). De ser así, ignora la fecha vieja y abre la agenda directamente en el **día actual (`new Date()`)**.
+  - Además, se ejecuta `replaceState` para limpiar la URL del navegador, desvinculando cualquier acceso directo guardado de la fecha obsoleta de Julio.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
 
