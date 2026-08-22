@@ -531,11 +531,18 @@
 ## Mensaje del Usuario (2026-08-21 18:26:00-03:00)
 > Captura de WhatsApp: "A Gonza en la agenda, cuando abre la web, aparece siempre en la agenda de Julio, cuando recarga la página también. En mí teléfono no pasa eso así que nosé porque sucede"
 
+## Mensaje del Usuario (2026-08-22 09:32:00-03:00)
+> Capturas de WhatsApp de Gonzalo:
+> 1. "Acá cámbiale de lugar los campos de Valor original y valor total uno por el otro. Para que no nos confundamos, en grande tiene que estar cuanto le cobramos y abajo cual era el valor original más chico como lo demas"
+> 2. "Y acá en ambos casos, cuando hago un cambio en las observaciones o me meto a editar y hago un cambio, y después voy a tocar la x para cerrar sin guardar los cambios, que me diga un mensaje 'tenés cambios sin guardar' para saber si se guardaron o no"
+
 ## Respuesta del Asistente
-- Diagnóstico: Gonza guardó un marcador, un icono de acceso directo en su pantalla de inicio o una pestaña del navegador cuya URL contenía el parámetro `?date=2026-07-XX` (de un día que estuvo mirando en Julio). Cada vez que la web se abría o se recargaba desde su acceso directo, el parámetro `?date=` forzaba a la agenda a viajar al mes de Julio.
-- Solución:
-  - En `src/app/admin/agenda/page.js`: Se actualizó la función de montaje `useEffect` para validar si `dateParam` es una fecha del pasado obsoleta (más de 7 días atrás). De ser así, ignora la fecha vieja y abre la agenda directamente en el **día actual (`new Date()`)**.
-  - Además, se ejecuta `replaceState` para limpiar la URL del navegador, desvinculando cualquier acceso directo guardado de la fecha obsoleta de Julio.
+- Reordenamiento visual de precios en el modal de detalle (`src/app/admin/agenda/page.js`):
+  - El `VALOR TOTAL (A COBRAR)` ahora ocupa la posición principal en el recuadro destacado superior ($88.000).
+  - El `Valor Original (Sin Descuento)` aparece abajo en tamaño secundario ($95.000).
+- Sistema de aviso de cambios sin guardar:
+  - Implementación de `checkHasUnsavedChanges()` y manejadores de cierre de modal `handleCloseDetailsModal()` / `handleCloseNewModal()`.
+  - Si el usuario edita observaciones del cliente/operador o modifica datos en el formulario de edición y presiona la `✕`, el botón Cancelar o hace clic fuera del modal, el sistema muestra el mensaje de confirmación: *"Tenés cambios sin guardar. ¿Estás seguro de cerrar sin guardar los cambios?"*.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
 

@@ -470,10 +470,10 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **21 de Agosto (6:28 PM)**:
-  - Fix de inicialización de fecha en `src/app/admin/agenda/page.js`.
-  - Se añadió validación para descartar parámetros `?date=` obsoletos de más de 7 días atrás (evitando que accesos directos o pestañas restauradas en celulares queden trabados en Julio).
-  - Limpieza automática del parámetro con `replaceState` para forzar que cualquier recarga abra siempre en el día actual (`TODAY`).
+- **22 de Agosto (9:35 AM)**:
+  - Reordenamiento visual en el modal de detalle del turno (`src/app/admin/agenda/page.js`): se ubicó el `VALOR TOTAL (A COBRAR)` en el recuadro destacado superior y el `Valor Original` abajo como ítem secundario tachado.
+  - Implementación del sistema de alerta de cambios sin guardar `checkHasUnsavedChanges()` y manejadores `handleCloseDetailsModal()` / `handleCloseNewModal()`.
+  - Al presionar `✕`, Cancelar o hacer clic fuera del modal con cambios sin guardar en observaciones o formularios, se solicita confirmación antes de descartar la información.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

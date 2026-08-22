@@ -1568,6 +1568,67 @@ export default function AgendaPage() {
     });
   };
 
+  const checkHasUnsavedChanges = () => {
+    if (!selectedTurno) return false;
+
+    if (isEditing) {
+      if (!editTurno) return false;
+      const originalFechaStr = typeof selectedTurno.fecha === 'string' 
+        ? selectedTurno.fecha.split('T')[0] 
+        : toYYYYMMDD(selectedTurno.fecha);
+      
+      const isFechaChanged = editTurno.fechaStr !== originalFechaStr;
+      const isHoraInicioChanged = editTurno.horaInicio !== selectedTurno.horaInicio;
+      const isHoraFinChanged = editTurno.horaFin !== selectedTurno.horaFin;
+      const isEstadoChanged = editTurno.estado !== selectedTurno.estado;
+      const isValorTotalChanged = editTurno.manualTotalOverride !== undefined || Number(editTurno.valorTotal) !== Number(editTurno.initialValorTotal);
+      const isValorSeñaChanged = editTurno.manualSeñaOverride !== undefined && Number(editTurno.manualSeñaOverride) !== Number(editTurno.initialValorSeña);
+      const isObsChanged = editTurno.observaciones !== (selectedTurno.cliente?.observaciones || selectedTurno.observaciones || '');
+      const isNotasChanged = editTurno.notasGonzalo !== (selectedTurno.cliente?.notasGonzalo || '');
+      const isFreqChanged = editTurno.frecuencia !== (selectedTurno.cliente?.frecuencia || 4);
+      const isOtrosChanged = Boolean(editTurno.hasOtros) || (editTurno.otrosTexto || '').trim() !== '';
+
+      const initialZonesStr = JSON.stringify([...(editTurno.initialZoneIds || [])].sort());
+      const currentZonesStr = JSON.stringify([...(editTurno.selectedZoneIds || [])].sort());
+      const isZonesChanged = initialZonesStr !== currentZonesStr;
+
+      return isFechaChanged || isHoraInicioChanged || isHoraFinChanged || isEstadoChanged || isValorTotalChanged || isValorSeñaChanged || isObsChanged || isNotasChanged || isFreqChanged || isOtrosChanged || isZonesChanged;
+    } else {
+      const isObsChanged = tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '');
+      const isNotasChanged = tempClientNotasGonzalo !== (selectedTurno.cliente?.notasGonzalo || '');
+      const isFreqChanged = tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4);
+
+      return isObsChanged || isNotasChanged || isFreqChanged;
+    }
+  };
+
+  const handleCloseDetailsModal = () => {
+    if (checkHasUnsavedChanges()) {
+      const confirmClose = window.confirm('Tenés cambios sin guardar. ¿Estás seguro de cerrar sin guardar los cambios?');
+      if (!confirmClose) return;
+    }
+    setIsDetailsOpen(false);
+    setIsEditing(false);
+  };
+
+  const checkHasUnsavedNewTurnoChanges = () => {
+    if (!newTurno) return false;
+    return (
+      (newTurno.nombreCompleto || '').trim() !== '' ||
+      (newTurno.whatsapp || '').trim() !== '' ||
+      ((newTurno.selectedZoneIds || []).length > 0 && !pendingNextScheduleData) ||
+      (newTurno.observaciones || '').trim() !== ''
+    );
+  };
+
+  const handleCloseNewModal = () => {
+    if (checkHasUnsavedNewTurnoChanges()) {
+      const confirmClose = window.confirm('Tenés cambios sin guardar. ¿Estás seguro de cerrar sin guardar los cambios?');
+      if (!confirmClose) return;
+    }
+    setIsNewOpen(false);
+  };
+
   const toggleEditTurnoZone = (zoneId) => {
     const exists = (editTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
 
@@ -2154,13 +2215,13 @@ export default function AgendaPage() {
 
       {/* MODAL 1: Appointment Details */}
       {isDetailsOpen && selectedTurno && (
-        <div className={styles.modalOverlay}>
-          <div className={`glass-card premium-border ${styles.modalContent}`}>
+        <div className={styles.modalOverlay} onClick={handleCloseDetailsModal}>
+          <div className={`glass-card premium-border ${styles.modalContent}`} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
                 {isEditing ? 'Editar / Reprogramar Turno' : 'Detalle del Turno'}
               </h3>
-              <button onClick={() => { setIsDetailsOpen(false); setIsEditing(false); }} className={styles.closeBtn}>&times;</button>
+              <button onClick={handleCloseDetailsModal} className={styles.closeBtn}>&times;</button>
             </div>
 
             {isEditing ? (
@@ -2448,7 +2509,7 @@ export default function AgendaPage() {
                 )}
 
                 <div className={styles.modalFooter}>
-                  <button type="button" onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancelar</button>
+                  <button type="button" onClick={handleCloseDetailsModal} className="btn btn-secondary">Cancelar</button>
                   <button type="submit" className="btn btn-primary">Guardar Cambios</button>
                 </div>
               </form>
@@ -2499,21 +2560,22 @@ export default function AgendaPage() {
                           </span>
                         </div>
 
+                        {/* Swapped order per Gonzalo's request: VALOR TOTAL in big gold box on top */}
+                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.14)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.4)', marginBottom: '0.25rem' }}>
+                          <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.85rem' }}>VALOR TOTAL (A COBRAR)</span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>
+                            ${Number(dynPrices.valorTotal).toLocaleString('es-ES')}
+                          </span>
+                        </div>
+
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
-                          <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.12)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.35)', marginBottom: '0.25rem' }}>
-                            <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.82rem' }}>Valor Original (Sin Descuento)</span>
-                            <span className={styles.detailValue} style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>
+                          <div className={styles.detailItem}>
+                            <span className={styles.detailLabel}>Valor Original (Sin Descuento)</span>
+                            <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.3rem', textDecoration: 'line-through' }}>
                               ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
                             </span>
                           </div>
                         )}
-
-                        <div className={styles.detailItem}>
-                          <span className={styles.detailLabel}>Valor Total</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.3rem' }}>
-                            ${Number(dynPrices.valorTotal).toLocaleString('es-ES')}
-                          </span>
-                        </div>
                         <div className={styles.detailItem}>
                           <span className={styles.detailLabel}>Seña Cobrada</span>
                           <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2e7d32', marginTop: '0.3rem' }}>
@@ -2928,11 +2990,11 @@ export default function AgendaPage() {
 
       {/* MODAL 2: New Manual Turno */}
       {isNewOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '550px', width: '100%', boxSizing: 'border-box' }}>
+        <div className={styles.modalOverlay} onClick={handleCloseNewModal}>
+          <div className={`glass-card premium-border ${styles.modalContent}`} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '550px', width: '100%', boxSizing: 'border-box' }}>
             <div className={styles.modalHeader}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>Agendar Nuevo Turno</h3>
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewOpen(false); }} className={styles.closeBtn}>&times;</button>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCloseNewModal(); }} className={styles.closeBtn}>&times;</button>
             </div>
 
             <form onSubmit={handleCreateTurno}>
@@ -3385,7 +3447,7 @@ export default function AgendaPage() {
               )}
 
               <div className={styles.modalFooter}>
-                <button type="button" onClick={() => setIsNewOpen(false)} className="btn btn-secondary">Cancelar</button>
+                <button type="button" onClick={handleCloseNewModal} className="btn btn-secondary">Cancelar</button>
                 <button type="submit" className="btn btn-primary" disabled={newTurno.estado !== 'BLOQUEADO' && newTurno.selectedZoneIds.length === 0 && !newTurno.hasOtros}>Guardar Turno</button>
               </div>
             </form>
