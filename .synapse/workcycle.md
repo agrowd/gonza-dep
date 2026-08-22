@@ -470,10 +470,9 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **22 de Agosto (9:35 AM)**:
-  - Reordenamiento visual en el modal de detalle del turno (`src/app/admin/agenda/page.js`): se ubicó el `VALOR TOTAL (A COBRAR)` en el recuadro destacado superior y el `Valor Original` abajo como ítem secundario tachado.
-  - Implementación del sistema de alerta de cambios sin guardar `checkHasUnsavedChanges()` y manejadores `handleCloseDetailsModal()` / `handleCloseNewModal()`.
-  - Al presionar `✕`, Cancelar o hacer clic fuera del modal con cambios sin guardar en observaciones o formularios, se solicita confirmación antes de descartar la información.
+- **22 de Agosto (2:50 PM)**:
+  - Diagnóstico de error en acceso a Bandeja de IA (`https://admin.depilacionparahombres.com/chats`).
+  - Integración del botón y enlace directo `Bandeja IA` en la barra lateral (`src/app/admin/SidebarNav.js`).
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

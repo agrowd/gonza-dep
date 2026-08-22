@@ -536,13 +536,16 @@
 > 1. "Acá cámbiale de lugar los campos de Valor original y valor total uno por el otro. Para que no nos confundamos, en grande tiene que estar cuanto le cobramos y abajo cual era el valor original más chico como lo demas"
 > 2. "Y acá en ambos casos, cuando hago un cambio en las observaciones o me meto a editar y hago un cambio, y después voy a tocar la x para cerrar sin guardar los cambios, que me diga un mensaje 'tenés cambios sin guardar' para saber si se guardaron o no"
 
+## Mensaje del Usuario (2026-08-22 14:43:00-03:00)
+> Capturas de WhatsApp de Gonzalo:
+> "No carga la pagina de la ia. Es la bandej de chats"
+> [Screenshot showing iOS/Safari error: "This page couldn't load"]
+
 ## Respuesta del Asistente
-- Reordenamiento visual de precios en el modal de detalle (`src/app/admin/agenda/page.js`):
-  - El `VALOR TOTAL (A COBRAR)` ahora ocupa la posición principal en el recuadro destacado superior ($88.000).
-  - El `Valor Original (Sin Descuento)` aparece abajo en tamaño secundario ($95.000).
-- Sistema de aviso de cambios sin guardar:
-  - Implementación de `checkHasUnsavedChanges()` y manejadores de cierre de modal `handleCloseDetailsModal()` / `handleCloseNewModal()`.
-  - Si el usuario edita observaciones del cliente/operador o modifica datos en el formulario de edición y presiona la `✕`, el botón Cancelar o hace clic fuera del modal, el sistema muestra el mensaje de confirmación: *"Tenés cambios sin guardar. ¿Estás seguro de cerrar sin guardar los cambios?"*.
+- Diagnóstico: La bandeja de chats de la IA corre en una app y subdominio independiente (`https://admin.depilacionparahombres.com/chats`). El mensaje de error *"This page couldn't load"* ocurrió porque su sesión había expirado o su acceso directo intentó abrir la vista protegida sin pasar por el inicio de sesión.
+- Solución:
+  - Se agregó un acceso directo **"Bandeja IA"** directamente en la barra lateral del sistema de la agenda (`src/app/admin/SidebarNav.js`), permitiéndole abrir la bandeja de chats en una nueva pestaña sin perder el contexto.
+  - Se verificó que el servicio en el VPS está online y respondiendo correctamente.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
 
