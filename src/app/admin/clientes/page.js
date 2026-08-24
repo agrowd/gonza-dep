@@ -187,7 +187,6 @@ function ClientesPageContent() {
         if (data && data.global_notifications_enabled !== undefined) {
           const isEnabled = data.global_notifications_enabled === 'true';
           setGlobalNotifEnabled(isEnabled);
-          setNewClient(prev => ({ ...prev, enviarNotificaciones: isEnabled }));
         }
       })
       .catch(err => console.error('Error fetching global notif config:', err));
@@ -480,7 +479,24 @@ function ClientesPageContent() {
           <h2>Directorio de Clientes</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Busca, filtra y revisa las fichas digitales de tus clientes.</p>
         </div>
-        <button onClick={() => setIsCreateOpen(true)} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: '8px' }}>
+        <button onClick={() => {
+          setNewClient({
+            nombre: '',
+            apellido: '',
+            nombreCompleto: '',
+            whatsapp: '',
+            whatsappCountry: '54',
+            whatsappCustomCode: '',
+            email: '',
+            dni: '',
+            frecuencia: 4,
+            observaciones: '',
+            notesGonzalo: '',
+            canalAdquisicion: 'MANUAL',
+            enviarNotificaciones: true
+          });
+          setIsCreateOpen(true);
+        }} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: '8px' }}>
           + Crear Nuevo Cliente
         </button>
       </div>

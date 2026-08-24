@@ -470,8 +470,9 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **22 de Agosto (3:05 PM)**:
-  - Reversión del enlace `Bandeja IA` en `src/app/admin/SidebarNav.js` a solicitud expresa del usuario.
+- **24 de Agosto (2:05 PM)**:
+  - Fix en `checkHasUnsavedChanges()` (`src/app/admin/agenda/page.js`): se guardan valores iniciales (`initialHasOtros`, `initialOtrosTexto`, `initialOtrosPrecio`, `initialObservaciones`, `initialNotasGonzalo`) al abrir *Editar Turno*. Comparación estricta que evita falsos positivos al abrir/cerrar turnos con zona "Otros" sin editar nada.
+  - Fix en `src/app/admin/clientes/page.js`: se aisló la inicialización de `newClient.enviarNotificaciones` para que siempre se abra activado (`true`) al presionar *+ Crear Nuevo Cliente*.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

@@ -539,8 +539,18 @@
 ## Mensaje del Usuario (2026-08-22 15:04:00-03:00)
 > "saca esto, en realidad se refería a la IA que está en admin, no a la agenda, me confundí en enviarla acá"
 
+## Mensaje del Usuario (2026-08-24 13:59:00-03:00)
+> Capturas de WhatsApp de Gonzalo:
+> 1. "El mensaje de cambios aparece aunque no se haya realizado ningún cambio"
+> 2. "Al agendar un nuevo cliente, que el botón de notificaciones este encendido automáticamente"
+
 ## Respuesta del Asistente
-- Reversión: Se removió la opción `Bandeja IA` de la barra lateral de la agenda (`src/app/admin/SidebarNav.js`) dejando el sistema de la agenda intacto.
+- Corrección de aviso falso positivo de cambios sin guardar (`src/app/admin/agenda/page.js`):
+  - Se identificó que al evaluar `isOtrosChanged` se comprobaba `Boolean(editTurno.hasOtros)`, lo que retornaba `true` si el turno ya tenía una zona personalizada "Otros", activando la alerta al cerrar sin haber editado nada.
+  - Se guardan los estados iniciales (`initialHasOtros`, `initialOtrosTexto`, `initialOtrosPrecio`, `initialObservaciones`, `initialNotasGonzalo`) en `setEditTurno` y se realiza una comparación estricta en `checkHasUnsavedChanges()`.
+- Notificaciones automáticas encendidas por defecto al crear cliente (`src/app/admin/clientes/page.js`):
+  - Se eliminó la sobrescritura del estado local por la configuración global en `useEffect`, asegurando que `newClient.enviarNotificaciones` inicie siempre en `true` (activado) al presionar *+ Crear Nuevo Cliente*.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
+
 

@@ -1581,12 +1581,15 @@ export default function AgendaPage() {
       const isHoraInicioChanged = editTurno.horaInicio !== selectedTurno.horaInicio;
       const isHoraFinChanged = editTurno.horaFin !== selectedTurno.horaFin;
       const isEstadoChanged = editTurno.estado !== selectedTurno.estado;
-      const isValorTotalChanged = editTurno.manualTotalOverride !== undefined || Number(editTurno.valorTotal) !== Number(editTurno.initialValorTotal);
+      const isValorTotalChanged = editTurno.manualTotalOverride !== undefined && Number(editTurno.manualTotalOverride) !== Number(editTurno.initialValorTotal);
       const isValorSeñaChanged = editTurno.manualSeñaOverride !== undefined && Number(editTurno.manualSeñaOverride) !== Number(editTurno.initialValorSeña);
-      const isObsChanged = editTurno.observaciones !== (selectedTurno.cliente?.observaciones || selectedTurno.observaciones || '');
-      const isNotasChanged = editTurno.notasGonzalo !== (selectedTurno.cliente?.notasGonzalo || '');
-      const isFreqChanged = editTurno.frecuencia !== (selectedTurno.cliente?.frecuencia || 4);
-      const isOtrosChanged = Boolean(editTurno.hasOtros) || (editTurno.otrosTexto || '').trim() !== '';
+      const isObsChanged = (editTurno.observaciones || '').trim() !== (editTurno.initialObservaciones || '');
+      const isNotasChanged = (editTurno.notasGonzalo || '').trim() !== (editTurno.initialNotasGonzalo || '');
+      const isFreqChanged = editTurno.frecuencia !== (editTurno.initialFrecuencia || 4);
+      
+      const isOtrosChanged = Boolean(editTurno.hasOtros) !== Boolean(editTurno.initialHasOtros) ||
+        (editTurno.otrosTexto || '').trim() !== (editTurno.initialOtrosTexto || '') ||
+        String(editTurno.otrosPrecio || '') !== String(editTurno.initialOtrosPrecio || '');
 
       const initialZonesStr = JSON.stringify([...(editTurno.initialZoneIds || [])].sort());
       const currentZonesStr = JSON.stringify([...(editTurno.selectedZoneIds || [])].sort());
@@ -1594,8 +1597,8 @@ export default function AgendaPage() {
 
       return isFechaChanged || isHoraInicioChanged || isHoraFinChanged || isEstadoChanged || isValorTotalChanged || isValorSeñaChanged || isObsChanged || isNotasChanged || isFreqChanged || isOtrosChanged || isZonesChanged;
     } else {
-      const isObsChanged = tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '');
-      const isNotasChanged = tempClientNotasGonzalo !== (selectedTurno.cliente?.notasGonzalo || '');
+      const isObsChanged = (tempClientObservaciones || '').trim() !== (selectedTurno.cliente?.observaciones || '').trim();
+      const isNotasChanged = (tempClientNotasGonzalo || '').trim() !== (selectedTurno.cliente?.notasGonzalo || '').trim();
       const isFreqChanged = tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4);
 
       return isObsChanged || isNotasChanged || isFreqChanged;
@@ -2766,11 +2769,21 @@ export default function AgendaPage() {
                         const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
                         const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
                         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
+                        const initialObs = (tempClientObservaciones || selectedTurno.cliente?.observaciones || selectedTurno.observaciones || '').trim();
+                        const initialNotas = (tempClientNotasGonzalo || selectedTurno.cliente?.notasGonzalo || '').trim();
+                        const initialFreq = tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4;
+
                         setEditTurno({
                           isInitialEdit: true,
                           initialValorTotal: Number(dynPrices.valorTotal || selectedTurno.valorTotal || 0),
                           initialValorSeña: Number(selectedTurno.valorSeña || 0),
                           initialZoneIds: [...preselectedZoneIds],
+                          initialHasOtros: Boolean(hasOtros),
+                          initialOtrosTexto: (otrosTexto || '').trim(),
+                          initialOtrosPrecio: String(otrosPrecio || ''),
+                          initialObservaciones: initialObs,
+                          initialNotasGonzalo: initialNotas,
+                          initialFrecuencia: initialFreq,
                           fechaStr: typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha),
                           horaInicio: selectedTurno.horaInicio,
                           horaFin: selectedTurno.horaFin,
@@ -2778,7 +2791,7 @@ export default function AgendaPage() {
                           valorTotal: dynPrices.valorTotal,
                           valorSeña: selectedTurno.valorSeña,
                           manualTotalOverride: undefined,
-                          manualSeñaOverride: Number(selectedTurno.valorSeña || 0),
+                          manualSeñaOverride: undefined,
                           descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
                           descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? dynPrices.bonificacion : ''),
                           bonificacion: dynPrices.bonificacion,
@@ -2786,11 +2799,11 @@ export default function AgendaPage() {
                           autoTotalZonas: dynPrices.valorOriginal,
                           autoSeña: selectedTurno.valorSeña,
                           selectedZoneIds: preselectedZoneIds,
-                          observaciones: tempClientObservaciones || selectedTurno.cliente?.observaciones || selectedTurno.observaciones || '',
-                          notasGonzalo: tempClientNotasGonzalo || selectedTurno.cliente?.notasGonzalo || '',
-                          frecuencia: tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4,
-                          hasOtros,
-                          otrosTexto,
+                          observaciones: initialObs,
+                          notasGonzalo: initialNotas,
+                          frecuencia: initialFreq,
+                          hasOtros: Boolean(hasOtros),
+                          otrosTexto: otrosTexto || '',
                           otrosPrecio: otrosPrecio || ''
                         });
                         setIsEditing(true);
