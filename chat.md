@@ -544,13 +544,23 @@
 > 1. "El mensaje de cambios aparece aunque no se haya realizado ningún cambio"
 > 2. "Al agendar un nuevo cliente, que el botón de notificaciones este encendido automáticamente"
 
+## Mensaje del Usuario (2026-08-25 09:14:00-03:00)
+> "resolver el tema para que no se caiga nunca whatsapp en la agenda y ver como reforzarlo y que avise por mail si se cayo aunque nunca tenga que pasar. Tienen que salir los mensajes antes de las 10 am como siempre"
+> [Screenshots showing WhatsApp DISCONNECTED status in admin notification panel and failed WhatsApp confirmation in client history]
+
 ## Respuesta del Asistente
-- Corrección de aviso falso positivo de cambios sin guardar (`src/app/admin/agenda/page.js`):
-  - Se identificó que al evaluar `isOtrosChanged` se comprobaba `Boolean(editTurno.hasOtros)`, lo que retornaba `true` si el turno ya tenía una zona personalizada "Otros", activando la alerta al cerrar sin haber editado nada.
-  - Se guardan los estados iniciales (`initialHasOtros`, `initialOtrosTexto`, `initialOtrosPrecio`, `initialObservaciones`, `initialNotasGonzalo`) en `setEditTurno` y se realiza una comparación estricta en `checkHasUnsavedChanges()`.
-- Notificaciones automáticas encendidas por defecto al crear cliente (`src/app/admin/clientes/page.js`):
-  - Se eliminó la sobrescritura del estado local por la configuración global en `useEffect`, asegurando que `newClient.enviarNotificaciones` inicie siempre en `true` (activado) al presionar *+ Crear Nuevo Cliente*.
+- Implementación de Guardián de Salud y Auto-Reconexión en Background (`startWhatsAppWatchdog` en `src/lib/whatsapp.js`):
+  - Revisa el estado de la sesión cada 2 minutos. Si detecta desconexión y existe una sesión activa (`.wwebjs_auth`), intenta reconectar automáticamente sin intervención humana.
+  - Auto-inicio de sesión al arrancar el servidor PM2 (boot) si existe sesión guardada.
+  - Limpieza automática si el proceso se congela en estado `INITIALIZING` por más de 4 minutos.
+- Alertas administrativas por Correo Electrónico (`src/lib/email.js`):
+  - `sendWhatsAppDisconnectAlertEmail`: Despacha un correo administrativo de alerta con asunto *"⚠️ ALERTA SISTEMA: Servicio de WhatsApp Desconectado"*, detallando la causa y brindando botón directo para escanear el QR.
+  - `sendWhatsAppReconnectedAlertEmail`: Envía notificación de recuperación al restaurar la conexión *"✅ SISTEMA RESTAURADO: Servicio de WhatsApp Reconectado"*.
+- Garantía de Envío Matutino (Antes de las 10:00 AM) y Fallback por Email (`src/lib/whatsapp.js`):
+  - Se adelantó la ventana de despacho del cron de recordatorios 48h a **08:00 AM - 11:00 AM (GMT-3)**.
+  - Se incorporó **Email Fallback**: si WhatsApp se encuentra desconectado o falla al despachar el aviso de 48h, el sistema envía automáticamente el recordatorio por correo electrónico al cliente para que nunca pierda su aviso.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
+
 
 

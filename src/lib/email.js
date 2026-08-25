@@ -1259,3 +1259,135 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
     html: htmlContent
   });
 }
+
+/**
+ * Sends an administrative alert email when WhatsApp service disconnects or requires re-linking.
+ */
+export async function sendWhatsAppDisconnectAlertEmail(reason = '', details = '') {
+  const { transporter, from, bcc } = getMailConfig();
+
+  const recipient = process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER || 'turnos@depilacionparahombres.com';
+  const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+  const subject = '⚠️ ALERTA SISTEMA: Servicio de WhatsApp Desconectado en la Agenda';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${subject}</title>
+      <style>
+        body { font-family: 'Outfit', 'Inter', Arial, sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background-color: #1e1e1e; border: 1px solid #ff5252; border-radius: 12px; overflow: hidden; }
+        .header { background-color: #7a1e1e; color: #ffffff; padding: 20px; text-align: center; }
+        .content { padding: 25px; line-height: 1.6; }
+        .badge { display: inline-block; padding: 6px 12px; background-color: #ff5252; color: #ffffff; font-weight: bold; border-radius: 20px; font-size: 13px; }
+        .info-box { background-color: #282a2b; border-left: 4px solid #ff5252; padding: 15px; margin: 15px 0; border-radius: 4px; font-family: monospace; font-size: 13px; color: #ff8a80; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #d4a54d; color: #000000 !important; font-weight: bold; text-decoration: none; border-radius: 8px; margin-top: 15px; text-align: center; }
+        .footer { background-color: #121212; padding: 15px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <h2 style="margin:0;">⚠️ ALERTA DE SISTEMA - WHATSAPP</h2>
+        </div>
+        <div class="content">
+          <p><span class="badge">ESTADO: DESCONECTADO</span></p>
+          <p>El servicio automatizado de WhatsApp de la agenda de turnos ha detectado una desconexión o desvinculación.</p>
+          <div class="info-box">
+            <strong>Fecha / Hora:</strong> ${timestamp} hs (ARG)<br>
+            <strong>Causa reportada:</strong> ${reason || 'Desconexión detectada o pérdida de conexión en el dispositivo'}<br>
+            ${details ? `<strong>Detalles:</strong> ${details}` : ''}
+          </div>
+          <p><strong>Impacto:</strong> Los recordatorios automáticos por WhatsApp no podrán despacharse hasta restaurar el enlace.</p>
+          <p style="text-align: center;">
+            <a href="https://agenda.depilacionparahombres.com/admin/notificaciones" class="btn">📱 Re-vincular WhatsApp / Escanear QR</a>
+          </p>
+          <p style="font-size: 13px; color: #aaa;">El guardián automático del sistema intentará reconectar usando la sesión guardada. Si la sesión fue desvinculada desde el teléfono, por favor ingresá al panel para escanear el código QR.</p>
+        </div>
+        <div class="footer">
+          Gonzalo Depilación - Sistema de Notificaciones de Reserva
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: recipient,
+      bcc,
+      subject,
+      html: htmlContent
+    });
+    console.log(`[Alert Email] WhatsApp disconnect alert sent to ${recipient}`);
+  } catch (err) {
+    console.error('[Alert Email] Failed to send WhatsApp disconnect alert email:', err);
+  }
+}
+
+/**
+ * Sends an administrative alert email when WhatsApp service successfully reconnects.
+ */
+export async function sendWhatsAppReconnectedAlertEmail() {
+  const { transporter, from, bcc } = getMailConfig();
+
+  const recipient = process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER || 'turnos@depilacionparahombres.com';
+  const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+  const subject = '✅ SISTEMA RESTAURADO: Servicio de WhatsApp Reconectado';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${subject}</title>
+      <style>
+        body { font-family: 'Outfit', 'Inter', Arial, sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background-color: #1e1e1e; border: 1px solid #4caf50; border-radius: 12px; overflow: hidden; }
+        .header { background-color: #2e7d32; color: #ffffff; padding: 20px; text-align: center; }
+        .content { padding: 25px; line-height: 1.6; }
+        .badge { display: inline-block; padding: 6px 12px; background-color: #4caf50; color: #ffffff; font-weight: bold; border-radius: 20px; font-size: 13px; }
+        .info-box { background-color: #282a2b; border-left: 4px solid #4caf50; padding: 15px; margin: 15px 0; border-radius: 4px; font-size: 13px; color: #a5d6a7; }
+        .footer { background-color: #121212; padding: 15px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <h2 style="margin:0;">✅ SISTEMA RESTAURADO - WHATSAPP</h2>
+        </div>
+        <div class="content">
+          <p><span class="badge">ESTADO: CONECTADO</span></p>
+          <p>El guardián del sistema ha restaurado la conexión del servicio de WhatsApp de la agenda exitosamente.</p>
+          <div class="info-box">
+            <strong>Fecha / Hora:</strong> ${timestamp} hs (ARG)<br>
+            <strong>Estado actual:</strong> Conexión activa y lista para despacho de mensajes.
+          </div>
+          <p>Los envíos y recordatorios automáticos continúan despachándose con normalidad.</p>
+        </div>
+        <div class="footer">
+          Gonzalo Depilación - Sistema de Notificaciones de Reserva
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from,
+      to: recipient,
+      bcc,
+      subject,
+      html: htmlContent
+    });
+    console.log(`[Alert Email] WhatsApp reconnected alert sent to ${recipient}`);
+  } catch (err) {
+    console.error('[Alert Email] Failed to send WhatsApp reconnected alert email:', err);
+  }
+}

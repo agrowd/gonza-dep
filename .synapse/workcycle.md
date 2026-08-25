@@ -470,9 +470,12 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **24 de Agosto (2:05 PM)**:
-  - Fix en `checkHasUnsavedChanges()` (`src/app/admin/agenda/page.js`): se guardan valores iniciales (`initialHasOtros`, `initialOtrosTexto`, `initialOtrosPrecio`, `initialObservaciones`, `initialNotasGonzalo`) al abrir *Editar Turno*. Comparación estricta que evita falsos positivos al abrir/cerrar turnos con zona "Otros" sin editar nada.
-  - Fix en `src/app/admin/clientes/page.js`: se aisló la inicialización de `newClient.enviarNotificaciones` para que siempre se abra activado (`true`) al presionar *+ Crear Nuevo Cliente*.
+- **25 de Agosto (9:20 AM)**:
+  - Implementación del guardián de auto-reconexión (`startWhatsAppWatchdog`) en `src/lib/whatsapp.js` que se ejecuta cada 2 minutos en background.
+  - Auto-inicio de sesión al iniciar la aplicación si existe el directorio `.wwebjs_auth`.
+  - Integración de alertas por email de desconexión (`sendWhatsAppDisconnectAlertEmail`) y reconexión (`sendWhatsAppReconnectedAlertEmail`) en `src/lib/email.js`.
+  - Actualización del cron de recordatorios para despachar en la ventana de **08:00 AM a 11:00 AM (GMT-3)** garantizando envíos antes de las 10:00 AM.
+  - Incorporación de Fallback por Email automático si WhatsApp se encuentra desconectado al momento del envío.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

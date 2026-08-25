@@ -1,7 +1,8 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import prisma from './db.js';
-import { sendMaintenanceEmail } from './email.js';
+import { sendMaintenanceEmail, sendWhatsAppDisconnectAlertEmail, sendWhatsAppReconnectedAlertEmail, sendReminder7DaysEmail } from './email.js';
+import fs from 'fs';
 
 // Use globalThis to cache the client across hot-reloads in development
 if (!globalThis.whatsappStatus) {
@@ -19,6 +20,72 @@ export function getWhatsAppStatus() {
   };
 }
 
+let watchdogInterval = null;
+let lastAutoReconnectAttempt = 0;
+
+export function startWhatsAppWatchdog() {
+  if (watchdogInterval) return;
+
+  console.log('[WhatsApp Watchdog] Initializing automated health-check and auto-reconnect watchdog (checks every 2 minutes)...');
+
+  watchdogInterval = setInterval(async () => {
+    try {
+      const status = globalThis.whatsappStatus;
+      const hasAuthDir = fs.existsSync('./.wwebjs_auth');
+      const now = Date.now();
+
+      // 1. If DISCONNECTED and session directory exists, attempt auto-reconnect with 3-minute backoff
+      if (status === 'DISCONNECTED' && hasAuthDir) {
+        if (now - lastAutoReconnectAttempt > 3 * 60 * 1000) {
+          lastAutoReconnectAttempt = now;
+          console.log('[WhatsApp Watchdog] WhatsApp is DISCONNECTED with active session. Triggering automatic reconnection...');
+          try {
+            initWhatsAppClient();
+          } catch (err) {
+            console.error('[WhatsApp Watchdog] Error during auto-reconnect initWhatsAppClient:', err);
+          }
+        }
+      }
+
+      // 2. Disconnect Alert Email Trigger (sent once per disconnection event)
+      if (status === 'DISCONNECTED') {
+        if (!globalThis.wasDisconnectedAlertSent) {
+          globalThis.wasDisconnectedAlertSent = true;
+          const reason = globalThis.whatsappError || 'Conexión interrumpida con el dispositivo o sesión desvinculada.';
+          console.warn('[WhatsApp Watchdog] WhatsApp disconnected. Sending alert email to administrator...');
+          await sendWhatsAppDisconnectAlertEmail(reason, 'El guardián automático del sistema intentará reconectar usando la sesión guardada.');
+        }
+      }
+
+      // 3. Recovery Alert Email Trigger (sent when re-connected after an alert)
+      if (status === 'CONNECTED' && globalThis.wasDisconnectedAlertSent) {
+        globalThis.wasDisconnectedAlertSent = false;
+        console.log('[WhatsApp Watchdog] WhatsApp reconnected successfully. Sending recovery email to administrator...');
+        await sendWhatsAppReconnectedAlertEmail();
+      }
+
+      // 4. Stale INITIALIZING State Cleanup (reset if stuck > 4 minutes)
+      if (status === 'INITIALIZING') {
+        if (!globalThis.initializingStartedAt) {
+          globalThis.initializingStartedAt = now;
+        } else if (now - globalThis.initializingStartedAt > 4 * 60 * 1000) {
+          console.warn('[WhatsApp Watchdog] Client stuck in INITIALIZING state >4 minutes. Forcefully resetting instance...');
+          globalThis.initializingStartedAt = null;
+          if (globalThis.whatsappClient) {
+            try { await globalThis.whatsappClient.destroy(); } catch (e) {}
+            globalThis.whatsappClient = null;
+          }
+          globalThis.whatsappStatus = 'DISCONNECTED';
+        }
+      } else {
+        globalThis.initializingStartedAt = null;
+      }
+    } catch (err) {
+      console.error('[WhatsApp Watchdog] Error in watchdog interval tick:', err);
+    }
+  }, 2 * 60 * 1000); // 2 minutes
+}
+
 export function initWhatsAppClient() {
   if (globalThis.whatsappClient) {
     if (globalThis.whatsappStatus === 'CONNECTED') {
@@ -30,6 +97,7 @@ export function initWhatsAppClient() {
   globalThis.whatsappStatus = 'INITIALIZING';
   globalThis.whatsappError = null;
   globalThis.whatsappQr = '';
+  globalThis.initializingStartedAt = Date.now();
 
   console.log('Initializing WhatsApp Client...');
 
@@ -47,7 +115,8 @@ export function initWhatsAppClient() {
         '--no-first-run',
         '--no-zygote',
         '--single-process', // helps run inside small VMs/VPS
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-software-rasterizer'
       ]
     }
   });
@@ -62,7 +131,15 @@ export function initWhatsAppClient() {
     console.log('WhatsApp Client is ready!');
     globalThis.whatsappStatus = 'CONNECTED';
     globalThis.whatsappQr = '';
+    globalThis.initializingStartedAt = null;
     startReminderCron();
+    startWhatsAppWatchdog();
+
+    // Trigger recovery email if an alert was previously sent
+    if (globalThis.wasDisconnectedAlertSent) {
+      globalThis.wasDisconnectedAlertSent = false;
+      sendWhatsAppReconnectedAlertEmail().catch(e => console.error('Error sending recovery email:', e));
+    }
   });
 
   client.on('authenticated', () => {
@@ -74,14 +151,25 @@ export function initWhatsAppClient() {
     globalThis.whatsappStatus = 'DISCONNECTED';
     globalThis.whatsappError = `Autenticación fallida: ${msg}`;
     globalThis.whatsappQr = '';
+    globalThis.whatsappClient = null;
+
+    if (!globalThis.wasDisconnectedAlertSent) {
+      globalThis.wasDisconnectedAlertSent = true;
+      sendWhatsAppDisconnectAlertEmail(`Autenticación fallida: ${msg}`, 'Se requiere volver a escanear el código QR en el panel administrativo.').catch(e => console.error('Error sending auth failure alert:', e));
+    }
   });
 
   client.on('disconnected', (reason) => {
     console.log('WhatsApp Client was disconnected:', reason);
     globalThis.whatsappStatus = 'DISCONNECTED';
     globalThis.whatsappQr = '';
-    // Clean up instance to allow re-initialization
     globalThis.whatsappClient = null;
+
+    // Trigger immediate Watchdog check to attempt auto-reconnect if session exists
+    if (fs.existsSync('./.wwebjs_auth')) {
+      console.log('[WhatsApp Event] Client disconnected. Triggering Watchdog auto-reconnect...');
+      startWhatsAppWatchdog();
+    }
   });
 
   client.initialize().catch((err) => {
@@ -271,8 +359,8 @@ export async function checkAndSendReminders() {
 
     console.log(`[Reminder Cron] Checking: hour=${hour} today=${todayStr} lastRun=${globalThis.lastReminderRunDate}`);
 
-    // Check if within the 10:00 - 12:00 PM Argentina window
-    if (hour < 10 || hour > 12) {
+    // Check if within the 08:00 - 12:00 PM Argentina window (allows early morning reminders before 10:00 AM)
+    if (hour < 8 || hour > 12) {
       return;
     }
 
@@ -372,6 +460,42 @@ export async function checkAndSendReminders() {
           });
         } else {
           console.warn('[Reminder Cron] Cannot send automated WhatsApp reminder: Client is disconnected.');
+          await prisma.notificacion.create({
+            data: {
+              clienteId: t.cliente.id,
+              turnoId: t.id,
+              canal: 'WHATSAPP',
+              mensaje: `[RECORDATORIO_48H] Fallo: WhatsApp desconectado.`,
+              estado: 'FALLIDO'
+            }
+          });
+
+          // Email Fallback for 48h reminder if client has valid email
+          if (t.cliente && t.cliente.email && t.cliente.email.includes('@')) {
+            console.log(`[Reminder Cron] Triggering Email 48h Fallback reminder for ${t.cliente.nombreCompleto}...`);
+            try {
+              const email48Subject = "Recordatorio de tu turno en 48 hs - Gonzalo Depilación";
+              await sendReminder7DaysEmail(
+                t.cliente.email,
+                t.cliente.nombreCompleto,
+                t,
+                address,
+                email48Subject,
+                rawMessage
+              );
+              await prisma.notificacion.create({
+                data: {
+                  clienteId: t.cliente.id,
+                  turnoId: t.id,
+                  canal: 'EMAIL',
+                  mensaje: `Recordatorio de 48h enviado por correo electrónico como alternativa por falta de conexión en WhatsApp.`,
+                  estado: 'ENVIADO'
+                }
+              });
+            } catch (emailErr) {
+              console.error(`[Reminder Cron] Email fallback failed for ${t.cliente.nombreCompleto}:`, emailErr);
+            }
+          }
         }
       } catch (err) {
         console.error(`[Reminder Cron] Failed to send automated WhatsApp reminder to ${t.cliente.nombreCompleto} (appointment ${t.id}):`, err);
@@ -385,6 +509,32 @@ export async function checkAndSendReminders() {
             estado: 'FALLIDO'
           }
         });
+
+        // Email Fallback on exception
+        if (t.cliente && t.cliente.email && t.cliente.email.includes('@')) {
+          try {
+            const email48Subject = "Recordatorio de tu turno en 48 hs - Gonzalo Depilación";
+            await sendReminder7DaysEmail(
+              t.cliente.email,
+              t.cliente.nombreCompleto,
+              t,
+              address,
+              email48Subject,
+              rawMessage
+            );
+            await prisma.notificacion.create({
+              data: {
+                clienteId: t.cliente.id,
+                turnoId: t.id,
+                canal: 'EMAIL',
+                mensaje: `Recordatorio de 48h enviado por correo electrónico como alternativa tras fallo en WhatsApp.`,
+                estado: 'ENVIADO'
+              }
+            });
+          } catch (emailErr) {
+            console.error(`[Reminder Cron] Email fallback failed for ${t.cliente.nombreCompleto}:`, emailErr);
+          }
+        }
       }
     }
 
@@ -623,3 +773,18 @@ export function startReminderCron() {
     });
   }, 15 * 60 * 1000); // 15 minutes
 }
+
+// Auto-start watchdog, reminder cron and client re-connection on server boot
+if (typeof window === 'undefined') {
+  startWhatsAppWatchdog();
+  startReminderCron();
+  if (fs.existsSync('./.wwebjs_auth') && globalThis.whatsappStatus === 'DISCONNECTED' && !globalThis.whatsappClient) {
+    console.log('[WhatsApp Auto-Boot] Discovered existing session .wwebjs_auth. Auto-initializing client on boot...');
+    try {
+      initWhatsAppClient();
+    } catch (e) {
+      console.error('[WhatsApp Auto-Boot] Error auto-initializing client:', e);
+    }
+  }
+}
+
