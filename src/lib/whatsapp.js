@@ -359,8 +359,8 @@ export async function checkAndSendReminders() {
 
     console.log(`[Reminder Cron] Checking: hour=${hour} today=${todayStr} lastRun=${globalThis.lastReminderRunDate}`);
 
-    // Check if within the 08:00 - 12:00 PM Argentina window (allows early morning reminders before 10:00 AM)
-    if (hour < 8 || hour > 12) {
+    // Check if within the 10:00 - 12:00 PM Argentina window
+    if (hour < 10 || hour > 12) {
       return;
     }
 
@@ -460,42 +460,6 @@ export async function checkAndSendReminders() {
           });
         } else {
           console.warn('[Reminder Cron] Cannot send automated WhatsApp reminder: Client is disconnected.');
-          await prisma.notificacion.create({
-            data: {
-              clienteId: t.cliente.id,
-              turnoId: t.id,
-              canal: 'WHATSAPP',
-              mensaje: `[RECORDATORIO_48H] Fallo: WhatsApp desconectado.`,
-              estado: 'FALLIDO'
-            }
-          });
-
-          // Email Fallback for 48h reminder if client has valid email
-          if (t.cliente && t.cliente.email && t.cliente.email.includes('@')) {
-            console.log(`[Reminder Cron] Triggering Email 48h Fallback reminder for ${t.cliente.nombreCompleto}...`);
-            try {
-              const email48Subject = "Recordatorio de tu turno en 48 hs - Gonzalo Depilación";
-              await sendReminder7DaysEmail(
-                t.cliente.email,
-                t.cliente.nombreCompleto,
-                t,
-                address,
-                email48Subject,
-                rawMessage
-              );
-              await prisma.notificacion.create({
-                data: {
-                  clienteId: t.cliente.id,
-                  turnoId: t.id,
-                  canal: 'EMAIL',
-                  mensaje: `Recordatorio de 48h enviado por correo electrónico como alternativa por falta de conexión en WhatsApp.`,
-                  estado: 'ENVIADO'
-                }
-              });
-            } catch (emailErr) {
-              console.error(`[Reminder Cron] Email fallback failed for ${t.cliente.nombreCompleto}:`, emailErr);
-            }
-          }
         }
       } catch (err) {
         console.error(`[Reminder Cron] Failed to send automated WhatsApp reminder to ${t.cliente.nombreCompleto} (appointment ${t.id}):`, err);
@@ -509,32 +473,6 @@ export async function checkAndSendReminders() {
             estado: 'FALLIDO'
           }
         });
-
-        // Email Fallback on exception
-        if (t.cliente && t.cliente.email && t.cliente.email.includes('@')) {
-          try {
-            const email48Subject = "Recordatorio de tu turno en 48 hs - Gonzalo Depilación";
-            await sendReminder7DaysEmail(
-              t.cliente.email,
-              t.cliente.nombreCompleto,
-              t,
-              address,
-              email48Subject,
-              rawMessage
-            );
-            await prisma.notificacion.create({
-              data: {
-                clienteId: t.cliente.id,
-                turnoId: t.id,
-                canal: 'EMAIL',
-                mensaje: `Recordatorio de 48h enviado por correo electrónico como alternativa tras fallo en WhatsApp.`,
-                estado: 'ENVIADO'
-              }
-            });
-          } catch (emailErr) {
-            console.error(`[Reminder Cron] Email fallback failed for ${t.cliente.nombreCompleto}:`, emailErr);
-          }
-        }
       }
     }
 

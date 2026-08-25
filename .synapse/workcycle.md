@@ -470,12 +470,10 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **25 de Agosto (9:20 AM)**:
-  - Implementación del guardián de auto-reconexión (`startWhatsAppWatchdog`) en `src/lib/whatsapp.js` que se ejecuta cada 2 minutos en background.
-  - Auto-inicio de sesión al iniciar la aplicación si existe el directorio `.wwebjs_auth`.
-  - Integración de alertas por email de desconexión (`sendWhatsAppDisconnectAlertEmail`) y reconexión (`sendWhatsAppReconnectedAlertEmail`) en `src/lib/email.js`.
-  - Actualización del cron de recordatorios para despachar en la ventana de **08:00 AM a 11:00 AM (GMT-3)** garantizando envíos antes de las 10:00 AM.
-  - Incorporación de Fallback por Email automático si WhatsApp se encuentra desconectado al momento del envío.
+- **25 de Agosto (9:30 AM)**:
+  - Ajuste a solicitud del usuario: Se restauró la ventana de inicio del cron de recordatorios para comenzar a las **10:00 AM (GMT-3)** tal como estaba originalmente (`hour < 10 || hour > 12`).
+  - Se removió el fallback de email duplicado en el cron de recordatorios de WhatsApp.
+  - Se preservó el guardián de auto-reconexión silenciosa cada 2 minutos (`startWhatsAppWatchdog`), auto-boot en inicio y las alertas por correo electrónico ante desvinculación/reconexión.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 
