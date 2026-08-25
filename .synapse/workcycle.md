@@ -470,10 +470,10 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **25 de Agosto (9:30 AM)**:
-  - Ajuste a solicitud del usuario: Se restauró la ventana de inicio del cron de recordatorios para comenzar a las **10:00 AM (GMT-3)** tal como estaba originalmente (`hour < 10 || hour > 12`).
-  - Se removió el fallback de email duplicado en el cron de recordatorios de WhatsApp.
-  - Se preservó el guardián de auto-reconexión silenciosa cada 2 minutos (`startWhatsAppWatchdog`), auto-boot en inicio y las alertas por correo electrónico ante desvinculación/reconexión.
+- **25 de Agosto (10:10 AM)**:
+  - Extensión del endpoint `POST /api/admin/turnos/[id]/enviar-aviso` para soportar envíos de WhatsApp (`canal: 'WHATSAPP'`) con plantillas de Recordatorio 48hs (`wtsp_reminder_template`) y Confirmación (`wtsp_confirmation_template`).
+  - Creación del modal interactivo de reenvío de WhatsApp (`resendWppModalTurno`) con selector de plantillas, validación de teléfono, indicador de conexión en tiempo real y auto-guardado en PostgreSQL.
+  - Incorporación del botón `📲 Reenviar WhatsApp (48hs)` en la pestaña *Historial Notificaciones* de Clientes (`src/app/admin/clientes/page.js`) y en el modal de detalle de Turnos de la Agenda (`src/app/admin/agenda/page.js`).
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 
