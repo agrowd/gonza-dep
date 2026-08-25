@@ -470,9 +470,9 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **25 de Agosto (12:45 PM)**:
-  - Estandarización de las opciones del campo `Canal de Adquisición` a solicitud de Gonzalo: `Orgánico` (`ORGANICO`), `Web` (`WEB`), `Redes Sociales` (`REDES_SOCIALES`) y `Publicidad` (`PUBLICIDAD`).
-  - Actualización del formulario de alta de nuevo cliente y de la pestaña *Notas y Configuración* en la ficha de cliente.
+- **25 de Agosto (02:30 PM)**:
+  - Eliminación de la opción `Pendiente de Pago` (`PENDIENTE_PAGO`) en el selector `Estado Inicial` del modal de creación de turnos (`src/app/admin/agenda/page.js`).
+  - Configuración de `Señado / Confirmado` (`SEÑADO`) como estado inicial por defecto en todas las creaciones manuales de turnos (click en slot horario, agendar siguiente turno y botón + Nuevo Turno).
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

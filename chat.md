@@ -562,16 +562,17 @@
 > "Donde dice canal de adquisición las opciones son: organico, web, redes sociales, publicidad"
 > "Te paso para hacer un cambio en el alta de Cliente, así de esta manera se va a poder identificar correctamente la procedencia"
 
+## Mensaje del Usuario (2026-08-25 14:24:00-03:00)
+> Captura de WhatsApp de Gonzalo:
+> "Sacale la opción que dice pendiente de pago y que figure señado, porque en todo caso le pongo seña cero"
+> [Screenshot showing Agendar Nuevo Turno -> Estado Inicial dropdown]
+
 ## Respuesta del Asistente
-- Estandarización de las opciones del selector `Canal de Adquisición` (`src/app/admin/clientes/page.js`):
-  - 1. **Orgánico** (`ORGANICO`)
-  - 2. **Web** (`WEB`)
-  - 3. **Redes Sociales** (`REDES_SOCIALES`)
-  - 4. **Publicidad** (`PUBLICIDAD`)
-- Disponibilidad en formulario de creación de cliente y en la pestaña de edición de ficha (*Notas y Configuración*).
-- Formateo visual dinámico en la lista general de clientes y en la cabecera de la ficha.
+- Eliminación de la opción `Pendiente de Pago` (`PENDIENTE_PAGO`) en el selector `Estado Inicial` del modal de creación de turnos (`src/app/admin/agenda/page.js`).
+- Asignación automática de `Señado / Confirmado` (`SEÑADO`) como estado inicial por defecto al crear turnos desde cualquier punto de la agenda (click en slot, botón + Nuevo Turno, agendar siguiente turno).
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
+
 
 
 

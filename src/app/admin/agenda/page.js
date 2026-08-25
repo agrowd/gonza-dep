@@ -258,7 +258,7 @@ export default function AgendaPage() {
     bonificacion: 0,
     autoTotal: 0,
     autoTotalZonas: 0,
-    estado: 'PENDIENTE_PAGO', // Manual creations default to PENDIENTE_PAGO now
+    estado: 'SEÑADO', // Manual creations default to SEÑADO
     observaciones: '',
     clienteId: null,
     hasOtros: false,
@@ -1298,7 +1298,7 @@ export default function AgendaPage() {
         horaInicio: timeStr,
         horaFin: endTimeStr,
         autoHoraFin: endTimeStr,
-        estado: 'PENDIENTE_PAGO'
+        estado: 'SEÑADO'
       });
       setPendingNextScheduleData(null);
     } else {
@@ -1326,7 +1326,7 @@ export default function AgendaPage() {
         descuentoTipo: 'NINGUNO',
         descuentoValor: '',
         bonificacion: 0,
-        estado: 'PENDIENTE_PAGO',
+        estado: 'SEÑADO',
         observaciones: '',
         clienteId: null,
         hasOtros: false,
@@ -1938,7 +1938,7 @@ export default function AgendaPage() {
               descuentoTipo: 'NINGUNO',
               descuentoValor: '',
               bonificacion: 0,
-              estado: 'PENDIENTE_PAGO',
+              estado: 'SEÑADO',
               observaciones: '',
               clienteId: null
             });
@@ -2319,7 +2319,9 @@ export default function AgendaPage() {
                       onChange={(e) => setEditTurno({ ...editTurno, estado: e.target.value })}
                     >
                       <option value="SEÑADO">Señado / Confirmado</option>
-                      <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
+                      {editTurno.estado === 'PENDIENTE_PAGO' && (
+                        <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
+                      )}
                       <option value="PENDIENTE_AUTORIZACION">Pendiente de Autorización</option>
                       <option value="REALIZADO">Realizado</option>
                       <option value="CANCELADO">Cancelado</option>
@@ -3516,7 +3518,6 @@ export default function AgendaPage() {
                     }}
                   >
                     <option value="SEÑADO">Señado / Confirmado</option>
-                    <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
                     <option value="PENDIENTE_AUTORIZACION">Pendiente de Autorización</option>
                     <option value="BLOQUEADO">🔒 BLOQUEADO (Bloqueo)</option>
                   </select>
