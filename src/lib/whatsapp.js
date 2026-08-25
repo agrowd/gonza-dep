@@ -87,6 +87,13 @@ export function startWhatsAppWatchdog() {
 }
 
 export function initWhatsAppClient() {
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.npm_lifecycle_event === 'build' ||
+    (process.argv && process.argv.some(arg => String(arg).includes('build')));
+  if (isBuildPhase) {
+    return null;
+  }
+
   if (globalThis.whatsappClient) {
     if (globalThis.whatsappStatus === 'CONNECTED') {
       startReminderCron();
@@ -712,8 +719,12 @@ export function startReminderCron() {
   }, 15 * 60 * 1000); // 15 minutes
 }
 
-// Auto-start watchdog, reminder cron and client re-connection on server boot
-if (typeof window === 'undefined') {
+// Auto-start watchdog, reminder cron and client re-connection on server runtime (NOT during Next.js build phase)
+const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' ||
+  process.env.npm_lifecycle_event === 'build' ||
+  (process.argv && process.argv.some(arg => String(arg).includes('build')));
+
+if (typeof window === 'undefined' && !isBuildPhase) {
   startWhatsAppWatchdog();
   startReminderCron();
   if (fs.existsSync('./.wwebjs_auth') && globalThis.whatsappStatus === 'DISCONNECTED' && !globalThis.whatsappClient) {
