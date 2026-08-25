@@ -557,12 +557,22 @@
 > Captura de pantalla mostrando botón "📲 Reenviar" de WhatsApp en el modal de detalle del turno.
 > "Le puedes cambiar el color de letra por uno que se pueda leer, gracias"
 
+## Mensaje del Usuario (2026-08-25 12:35:00-03:00)
+> Captura de WhatsApp de Gonzalo:
+> "Donde dice canal de adquisición las opciones son: organico, web, redes sociales, publicidad"
+> "Te paso para hacer un cambio en el alta de Cliente, así de esta manera se va a poder identificar correctamente la procedencia"
+
 ## Respuesta del Asistente
-- Corrección de estilo y contraste en los botones inline `📲 Reenviar` y `✏️ Reenviar` (`src/app/admin/agenda/page.js`):
-  - Se sustituyó el texto verde claro sobre fondo transparente por fondo sólido verde (`#16a34a`) con texto blanco brillante (`#ffffff`, font-weight 700) y sombra suave, logrando 100% de contraste y legibilidad tanto en tema claro como en tema oscuro.
-  - Se aplicó `flexWrap: 'wrap'` en el contenedor para evitar que el número de teléfono quede apretado.
+- Estandarización de las opciones del selector `Canal de Adquisición` (`src/app/admin/clientes/page.js`):
+  - 1. **Orgánico** (`ORGANICO`)
+  - 2. **Web** (`WEB`)
+  - 3. **Redes Sociales** (`REDES_SOCIALES`)
+  - 4. **Publicidad** (`PUBLICIDAD`)
+- Disponibilidad en formulario de creación de cliente y en la pestaña de edición de ficha (*Notas y Configuración*).
+- Formateo visual dinámico en la lista general de clientes y en la cabecera de la ficha.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
+
 
 
 

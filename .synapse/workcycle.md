@@ -470,8 +470,9 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **25 de Agosto (12:35 PM)**:
-  - Ajuste de contraste y legibilidad en botones `📲 Reenviar` y `✏️ Reenviar` en el modal de detalle de turno de la agenda: se aplicó fondo sólido verde (`#16a34a`) e índigo (`#4f46e5`) con texto blanco (`#ffffff`, peso 700) y `flexWrap: 'wrap'`, garantizando legibilidad total tanto en modo claro como en modo oscuro.
+- **25 de Agosto (12:45 PM)**:
+  - Estandarización de las opciones del campo `Canal de Adquisición` a solicitud de Gonzalo: `Orgánico` (`ORGANICO`), `Web` (`WEB`), `Redes Sociales` (`REDES_SOCIALES`) y `Publicidad` (`PUBLICIDAD`).
+  - Actualización del formulario de alta de nuevo cliente y de la pestaña *Notas y Configuración* en la ficha de cliente.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

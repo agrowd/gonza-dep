@@ -88,7 +88,7 @@ function ClientesPageContent() {
     frecuencia: 4,
     observaciones: '',
     notesGonzalo: '',
-    canalAdquisicion: 'MANUAL',
+    canalAdquisicion: 'ORGANICO',
     enviarNotificaciones: true
   });
 
@@ -102,11 +102,33 @@ function ClientesPageContent() {
     whatsappCustomCode: '',
     email: '',
     dni: '',
+    canalAdquisicion: 'ORGANICO',
     frecuencia: 4,
     observaciones: '',
     notasGonzalo: '',
     enviarNotificaciones: true
   });
+
+  const formatCanalAdquisicion = (canal) => {
+    if (!canal) return 'Orgánico';
+    switch (String(canal).toUpperCase()) {
+      case 'ORGANICO':
+        return 'Orgánico';
+      case 'WEB':
+        return 'Web';
+      case 'REDES_SOCIALES':
+        return 'Redes Sociales';
+      case 'PUBLICIDAD':
+        return 'Publicidad';
+      case 'MANUAL':
+        return 'Manual';
+      case 'RECOMENDADO':
+        return 'Recomendado';
+      default:
+        return String(canal).charAt(0).toUpperCase() + String(canal).slice(1).toLowerCase().replace('_', ' ');
+    }
+  };
+
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [resendEmailModalTurno, setResendEmailModalTurno] = useState(null);
   const [resendEmailAddress, setResendEmailAddress] = useState('');
@@ -289,6 +311,7 @@ function ClientesPageContent() {
             whatsappCustomCode: customCode,
             email: data.email || '',
             dni: data.dni || '',
+            canalAdquisicion: data.canalAdquisicion || 'ORGANICO',
             frecuencia: data.frecuencia,
             observaciones: data.observaciones || '',
             notasGonzalo: data.notasGonzalo || '',
@@ -387,7 +410,7 @@ function ClientesPageContent() {
           frecuencia: 4,
           observaciones: '',
           notesGonzalo: '',
-          canalAdquisicion: 'MANUAL',
+          canalAdquisicion: 'ORGANICO',
           enviarNotificaciones: true
         });
         showToast('Cliente creado correctamente.');
@@ -437,6 +460,7 @@ function ClientesPageContent() {
           whatsapp: data.whatsapp,
           email: data.email,
           dni: data.dni,
+          canalAdquisicion: data.canalAdquisicion,
           frecuencia: data.frecuencia,
           observaciones: data.observaciones,
           notasGonzalo: data.notasGonzalo,
@@ -447,6 +471,7 @@ function ClientesPageContent() {
           whatsapp: parsedSaved.number,
           whatsappCountry: parsedSaved.countryCode,
           whatsappCustomCode: parsedSaved.customCode,
+          canalAdquisicion: data.canalAdquisicion || prev.canalAdquisicion,
           enviarNotificaciones: data.enviarNotificaciones
         }));
         showToast('Ficha del cliente actualizada correctamente.');
@@ -557,7 +582,7 @@ function ClientesPageContent() {
             frecuencia: 4,
             observaciones: '',
             notesGonzalo: '',
-            canalAdquisicion: 'MANUAL',
+            canalAdquisicion: 'ORGANICO',
             enviarNotificaciones: true
           });
           setIsCreateOpen(true);
@@ -626,8 +651,8 @@ function ClientesPageContent() {
                     <td className={styles.metaText}>{formatDisplayPhone(client.whatsapp)}</td>
                     <td className={styles.metaText}>{client.email}</td>
                     <td style={{ fontWeight: 600 }}>{realizadosCount}</td>
-                    <td className={styles.metaText} style={{ textTransform: 'capitalize' }}>
-                      {client.canalAdquisicion.toLowerCase().replace('_', ' ')}
+                    <td className={styles.metaText}>
+                      {formatCanalAdquisicion(client.canalAdquisicion)}
                     </td>
                     <td>
                       <span className={`${agendaStyles.statusPill} ${client.estado === 'ACTIVO' ? agendaStyles.badgeSenado : (client.estado === 'FINALIZADO' ? agendaStyles.badgeRealizado : agendaStyles.badgeNoAsistio)}`} style={{ fontSize: '0.7rem' }}>
@@ -656,7 +681,7 @@ function ClientesPageContent() {
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')} | DNI: {selectedClient.dni || 'Sin registrar'} | Canal: {selectedClient.canalAdquisicion}</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')} | DNI: {selectedClient.dni || 'Sin registrar'} | Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
               </div>
               <button onClick={handleCloseProfile} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
             </div>
@@ -980,16 +1005,32 @@ function ClientesPageContent() {
                   <h3 className={styles.cardSectionTitle}>Anotaciones de Ficha Digital</h3>
                   
                   <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr' }}>
-                    <div className={styles.inputGroup}>
-                      <label className={styles.inputLabel}>Tratamiento cada cuántas semanas (Frecuencia) *</label>
-                      <input
-                        type="number"
-                        value={editNotes.frecuencia}
-                        onChange={(e) => setEditNotes({ ...editNotes, frecuencia: Number(e.target.value) })}
-                        required
-                        min="1"
-                        max="24"
-                      />
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Canal de Adquisición *</label>
+                        <select
+                          value={editNotes.canalAdquisicion || 'ORGANICO'}
+                          onChange={(e) => setEditNotes({ ...editNotes, canalAdquisicion: e.target.value })}
+                          className={styles.filterSelect}
+                          style={{ width: '100%' }}
+                        >
+                          <option value="ORGANICO">Orgánico</option>
+                          <option value="WEB">Web</option>
+                          <option value="REDES_SOCIALES">Redes Sociales</option>
+                          <option value="PUBLICIDAD">Publicidad</option>
+                        </select>
+                      </div>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Frecuencia (Semanas) *</label>
+                        <input
+                          type="number"
+                          value={editNotes.frecuencia}
+                          onChange={(e) => setEditNotes({ ...editNotes, frecuencia: Number(e.target.value) })}
+                          required
+                          min="1"
+                          max="24"
+                        />
+                      </div>
                     </div>
 
                     <div className={styles.inputGroup}>
@@ -1105,10 +1146,10 @@ function ClientesPageContent() {
                       className={styles.filterSelect}
                       style={{ width: '100%' }}
                     >
-                      <option value="MANUAL">Manual</option>
-                      <option value="ORGANICO">Orgánico (Web)</option>
-                      <option value="RECOMENDADO">Recomendado</option>
+                      <option value="ORGANICO">Orgánico</option>
+                      <option value="WEB">Web</option>
                       <option value="REDES_SOCIALES">Redes Sociales</option>
+                      <option value="PUBLICIDAD">Publicidad</option>
                     </select>
                   </div>
 
