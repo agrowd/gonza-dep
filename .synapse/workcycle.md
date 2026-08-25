@@ -470,10 +470,8 @@
   - Creación del módulo central de códigos de país `src/lib/countryCodes.js` y componente visual `src/components/PhoneInput.js`.
   - Integración del selector de países (🇦🇷 +54, 🇪🇸 +34, 🇺🇾 +598, 🇨🇱 +56, 🇺🇸 +1, 🇧🇷 +55, etc. y personalizado 🌐) en todos los formularios.
   - Actualización de formateo dinámico de teléfonos para mostrar la bandera y código de área correspondiente según el país del cliente.
-- **25 de Agosto (10:10 AM)**:
-  - Extensión del endpoint `POST /api/admin/turnos/[id]/enviar-aviso` para soportar envíos de WhatsApp (`canal: 'WHATSAPP'`) con plantillas de Recordatorio 48hs (`wtsp_reminder_template`) y Confirmación (`wtsp_confirmation_template`).
-  - Creación del modal interactivo de reenvío de WhatsApp (`resendWppModalTurno`) con selector de plantillas, validación de teléfono, indicador de conexión en tiempo real y auto-guardado en PostgreSQL.
-  - Incorporación del botón `📲 Reenviar WhatsApp (48hs)` en la pestaña *Historial Notificaciones* de Clientes (`src/app/admin/clientes/page.js`) y en el modal de detalle de Turnos de la Agenda (`src/app/admin/agenda/page.js`).
+- **25 de Agosto (12:35 PM)**:
+  - Ajuste de contraste y legibilidad en botones `📲 Reenviar` y `✏️ Reenviar` en el modal de detalle de turno de la agenda: se aplicó fondo sólido verde (`#16a34a`) e índigo (`#4f46e5`) con texto blanco (`#ffffff`, peso 700) y `flexWrap: 'wrap'`, garantizando legibilidad total tanto en modo claro como en modo oscuro.
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
 

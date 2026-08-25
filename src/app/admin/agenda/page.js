@@ -2669,7 +2669,7 @@ export default function AgendaPage() {
                   })()}
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>WhatsApp</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
                       <span className={styles.detailValue}>
                         {selectedTurno.cliente?.whatsapp ? formatDisplayPhone(selectedTurno.cliente.whatsapp) : 'N/A'}
                       </span>
@@ -2679,18 +2679,19 @@ export default function AgendaPage() {
                           onClick={() => handleOpenResendWpp(selectedTurno)}
                           title="Reenviar recordatorio o aviso por WhatsApp"
                           style={{
-                            backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                            border: '1px solid #22c55e',
-                            color: '#4ade80',
+                            backgroundColor: '#16a34a',
+                            border: '1px solid #15803d',
+                            color: '#ffffff',
                             borderRadius: '6px',
-                            padding: '0.2rem 0.45rem',
+                            padding: '0.25rem 0.55rem',
                             fontSize: '0.75rem',
                             cursor: 'pointer',
-                            fontWeight: 600,
+                            fontWeight: 700,
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.2rem',
-                            whiteSpace: 'nowrap'
+                            gap: '0.25rem',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                           }}
                         >
                           📲 Reenviar
@@ -2701,7 +2702,7 @@ export default function AgendaPage() {
 
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Email</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
                       <span className={styles.detailValue} style={{ fontSize: '0.9rem', wordBreak: 'break-all' }}>
                         {selectedTurno.cliente?.email || 'Sin email'}
                       </span>
@@ -2711,18 +2712,19 @@ export default function AgendaPage() {
                           onClick={() => handleOpenResendEmail(selectedTurno)}
                           title="Editar correo y reenviar aviso"
                           style={{
-                            backgroundColor: 'rgba(212, 165, 77, 0.15)',
-                            border: '1px solid var(--color-gold)',
-                            color: 'var(--color-gold)',
+                            backgroundColor: '#4f46e5',
+                            border: '1px solid #4338ca',
+                            color: '#ffffff',
                             borderRadius: '6px',
-                            padding: '0.2rem 0.45rem',
+                            padding: '0.25rem 0.55rem',
                             fontSize: '0.75rem',
                             cursor: 'pointer',
-                            fontWeight: 600,
+                            fontWeight: 700,
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.2rem',
-                            whiteSpace: 'nowrap'
+                            gap: '0.25rem',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                           }}
                         >
                           ✏️ Reenviar
@@ -3683,7 +3685,7 @@ export default function AgendaPage() {
         <div className={styles.modalOverlay} style={{ zIndex: 10000 }}>
           <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '520px', width: '100%', boxSizing: 'border-box' }}>
             <div className={styles.modalHeader}>
-              <h3 style={{ fontSize: '1.2rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                 <span>📲</span> Reenviar Mensaje por WhatsApp
               </h3>
               <button type="button" onClick={() => setResendWppModalTurno(null)} className={styles.closeBtn}>&times;</button>

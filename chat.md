@@ -553,17 +553,17 @@
 > "Ya para cuando Gonza ponga el qr, ponele acá el botón para reenviar los wpp también, así puedo mandar los mensajes de 48hs que no se pudieron enviar"
 > [Screenshot showing Client Profile -> Historial Notificaciones with failed WhatsApp recordatorio due to disconnection and button to re-send email]
 
+## Mensaje del Usuario (2026-08-25 12:29:00-03:00)
+> Captura de pantalla mostrando botón "📲 Reenviar" de WhatsApp en el modal de detalle del turno.
+> "Le puedes cambiar el color de letra por uno que se pueda leer, gracias"
+
 ## Respuesta del Asistente
-- Implementación de Reenvío Manual de WhatsApp (`POST /api/admin/turnos/[id]/enviar-aviso`):
-  - Soporte multicanal (`canal: 'WHATSAPP' | 'EMAIL'`) con procesamiento dinámico de plantillas (`RECORDATORIO_48H`, `CONFIRMACION`).
-  - Verificación del estado de conexión de WhatsApp antes de despachar y auto-actualización del teléfono en la base de datos si es corregido.
-- Interfaz en Ficha de Clientes (`src/app/admin/clientes/page.js`):
-  - Botón `📲 Reenviar WhatsApp (48hs)` en la pestaña *Historial Notificaciones* junto al botón de Email.
-  - Modal interactivo con validación de teléfono, selector de plantilla (Recordatorio 48hs / Confirmación) e indicador de estado de conexión en tiempo real.
-- Interfaz en Detalle de Agenda (`src/app/admin/agenda/page.js`):
-  - Botón `📲 Reenviar WhatsApp (48hs)` en la botonera de acciones del turno y botón inline `📲 Reenviar` al lado del número de WhatsApp.
+- Corrección de estilo y contraste en los botones inline `📲 Reenviar` y `✏️ Reenviar` (`src/app/admin/agenda/page.js`):
+  - Se sustituyó el texto verde claro sobre fondo transparente por fondo sólido verde (`#16a34a`) con texto blanco brillante (`#ffffff`, font-weight 700) y sombra suave, logrando 100% de contraste y legibilidad tanto en tema claro como en tema oscuro.
+  - Se aplicó `flexWrap: 'wrap'` en el contenedor para evitar que el número de teléfono quede apretado.
 - Compilación verificada con `npm run build` (34/34 rutas).
 - Despliegue en producción en VPS Hostinger y reinicio de PM2.
+
 
 
 

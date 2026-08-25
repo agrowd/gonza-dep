@@ -1273,7 +1273,7 @@ function ClientesPageContent() {
         <div className={agendaStyles.modalOverlay} style={{ zIndex: 10000 }}>
           <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '520px', width: '100%', boxSizing: 'border-box' }}>
             <div className={agendaStyles.modalHeader}>
-              <h3 style={{ fontSize: '1.2rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                 <span>📲</span> Reenviar Mensaje por WhatsApp
               </h3>
               <button type="button" onClick={() => setResendWppModalTurno(null)} className={agendaStyles.closeBtn}>&times;</button>
