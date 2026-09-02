@@ -571,11 +571,26 @@
 > "Para que tengas contexto ya que vamos a actualizar el sistema: Hay que actualizar el sistema con un documento word que me pasaron los clientes, este mismo lo vas a pasar a una version que lo puedas leer y si hay imagenes tambien interpretar, pero quieren que los modulos de actualizaciones no modifiquen el principal, tenemos que hacer de alguna manera otro que este conectado, funcione, se actualicen las cosas pero no moleste a la rama principal que ya esta en produccion"
 > "todavia no me lo enviaron, quiero que hagas el plan y propongas"
 
+## Mensaje del Usuario (2026-09-02 09:55:00-03:00)
+> "El archivo esta en descargas y se llama Mejoras AppWeb.docx"
+> "Revisa si pudiste ver todas las imagenes, ya que la 11 creo que no pudiste verla, y hay mas ademas de la 11, revisa bien todo"
+> "Si, empeza con eso y el primer modulo"
+
 ## Respuesta del Asistente
-- Creación de plan de arquitectura e implementación detallado (`implementation_plan.md`):
-  - **Estrategia de aislamiento**: Rama Git `staging`, proceso PM2 independiente en VPS (`gonzalo-agenda-staging` en puerto 3008), base de datos de pruebas `agenda_db_staging` sincronizable, y simulación de WhatsApp en pruebas para proteger la sesión de producción.
-  - **Estructura modular en código**: Organización bajo `src/modules/[modulo]` para mantener los flujos productivos actuales intactos.
-  - **Pipeline de lectura de Word**: Script automático de descompresión OpenXML/ZIP para extraer texto, tablas e imágenes en alta resolución en cuanto el cliente entregue el archivo.
+- Extracción y renderizado de las 10 páginas del documento en alta definición con PyMuPDF.
+- Aclaración de la "Imagen 11" y elementos superpuestos (el checkbox manual en la tabla de clientes en página 8 y las marcas de selector de operador en agenda y clientes en página 10).
+- Puesta en marcha de la infraestructura de Staging en VPS Hostinger:
+  - Rama `staging` en Git.
+  - Clon en `/srv/gonzalo-dep-staging` y proceso PM2 `gonzalo-agenda-staging` en puerto `3008`.
+  - Base de datos PostgreSQL aislada `agenda_db_staging`.
+  - `WHATSAPP_ENABLED=false` para proteger la sesión de producción.
+- Implementación completa del Módulo 1 (**Alta de Turno**):
+  - API `/api/admin/alta-turno/disponibilidad` con filtros de zonas, cálculo de duración, franjas horarias y días de la semana permitidos.
+  - Frontend interactivo `/admin/alta-turno` con calendario mensual semaforizado (🟢 Disponible, 🔴 Lleno, 🔘 Deshabilitado) y columna de horarios disponibles cada 10 minutos (estilo `image9.png`).
+  - Redirección con precarga de zonas, duración, fecha y hora al modal de la agenda (`/admin/agenda?newTurno=true...`).
+  - Ícono y enlace `⚡ Alta de Turno` ubicado encima de `Agenda` en la barra lateral.
+- Compilación y despliegue exitoso en Staging (`http://187.127.9.216:3008`).
+
 
 
 

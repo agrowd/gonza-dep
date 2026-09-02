@@ -10,21 +10,20 @@
   NEXT_PUBLIC_APP_URL="http://localhost:3006"
   ```
 
-## 🌐 [P] Producción VPS (DonWeb Debian)
-- **Sistema Operativo**: Debian Linux (DonWeb VPS).
-- **Base de Datos**: PostgreSQL (base de datos propia del servidor).
-- **Servidor Web**: Nginx (como Proxy Inverso apuntando a `http://localhost:3006`).
-- **Administrador de Procesos**: PM2 para mantener viva la aplicación Next.js.
-- **Dependencias de Sistema para WhatsApp (whatsapp-web.js / Puppeteer)**:
-  Dado que Debian en VPS viene sin interfaz gráfica, Puppeteer (Chromium headless) requiere instalar las siguientes librerías del sistema:
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgbm1 libgcc1 libgconf-2-4 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 lsb-release wget xdg-utils
-  ```
-- **Variables de Entorno (.env.production)**:
-  ```env
-  DATABASE_URL="postgresql://usuario:password@localhost:5432/agenda_db"
-  NEXTAUTH_SECRET="clave-secreta-produccion-muy-segura"
-  NEXT_PUBLIC_APP_URL="https://agenda.depilacionparahombres.com" # Cambiar por dominio real
-  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="false"
-  ```
+## 🌐 [P] Producción VPS (Hostinger VPS)
+- **IP / Dominio**: `https://agenda.depilacionparahombres.com` (puerto interno 3006)
+- **Directorio**: `/srv/gonzalo-dep`
+- **PM2**: `gonzalo-agenda` (ID 108)
+- **Base de Datos**: PostgreSQL `agenda_db`
+- **WhatsApp**: Conectado y activo (Puppeteer headless)
+- **Rama Git**: `main`
+
+## 🧪 [S] Staging / Pruebas VPS (Hostinger VPS)
+- **URL**: `http://187.127.9.216:3008` (puerto 3008)
+- **Directorio**: `/srv/gonzalo-dep-staging`
+- **PM2**: `gonzalo-agenda-staging` (ID 129)
+- **Base de Datos**: PostgreSQL `agenda_db_staging` (clonada de producción, aislada)
+- **WhatsApp**: `WHATSAPP_ENABLED="false"` (para no interferir con la sesión de producción ni enviar mensajes a clientes reales)
+- **Rama Git**: `staging`
+- **Despliegue**: `node scratch/deploy_vps_staging.js`
+

@@ -475,6 +475,25 @@
   - Configuración de `Señado / Confirmado` (`SEÑADO`) como estado inicial por defecto en todas las creaciones manuales de turnos (click en slot horario, agendar siguiente turno y botón + Nuevo Turno).
   - Verificación exitosa de compilación limpia con `npm run build` (34/34 rutas).
 
+## 📅 Sesión: 02 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Extraer texto, estructura y todas las imágenes (10 imágenes y 10 páginas renderizadas) del documento `Mejoras AppWeb.docx` y PDF.
+- [x] Identificar y analizar cada mockup gráfico: Alta de Turno (`image9`), NeoCita diaria (`image8`), semáforo mensual (`image7`), boxes (`image4`), acordeón de servicios (`image6`), toggle de notificaciones en clientes (`image11`/`page_8`), recibo comercial oficial (`image3`) y marcas de selector de operador en agenda y clientes (`image1`/`image5`).
+- [x] Diseñar e implementar el entorno de pruebas aislado (Staging) en Hostinger VPS:
+  - Nueva rama Git `staging` enlazada con GitHub.
+  - Clon de repositorio en `/srv/gonzalo-dep-staging`.
+  - Base de datos aislada `agenda_db_staging`.
+  - Proceso PM2 `gonzalo-agenda-staging` corriendo en puerto 3008 con `WHATSAPP_ENABLED=false` para proteger la sesión de producción.
+- [x] Desarrollar el Módulo 1: **Alta Rápida de Turno** (`/admin/alta-turno`):
+  - API `/api/admin/alta-turno/disponibilidad` con cálculo predictivo de duración, franja horaria y filtro por días hábiles.
+  - Frontend interactivo con calendario semaforizado (🟢 Disponible, 🔴 Lleno, 🔘 Deshabilitado).
+  - Columna derecha con listado de horarios disponibles cada 10 minutos (estilo `image9.png`).
+  - Botón de acción con redirección y precarga automática de fecha, hora, duración y zonas en el modal de nuevo turno de la agenda.
+  - Agregado del ícono y enlace `⚡ Alta de Turno` en la barra lateral por encima de `Agenda`.
+- [x] Compilar (`npm run build`, 36/36 rutas) y desplegar en Staging VPS (`http://187.127.9.216:3008`).
+
+
 
 
 
