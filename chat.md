@@ -597,14 +597,19 @@
 > "No me deja entrar"
 > [Screenshots showing 401 Unauthorized en http://187.127.9.216:3008/login con usuario admin]
 
-## Causa Raíz y Solución Aplicada
-1. **Causa 1 (Variable DATABASE_URL en Staging)**: El script de despliegue había concatenado repetidamente `_staging` en el archivo `.env`, intentando conectar a una base inexistente `agenda_db_staging_staging_staging`.
-2. **Causa 2 (Flag `Secure` en Cookies sobre HTTP)**: En Next.js, `secure: process.env.NODE_ENV === 'production'` forzaba el flag `Secure` en la cookie de sesión. Al estar accediendo por IP (`http://187.127.9.216:3008`), Chrome rechazaba guardar cookies marcadas como `Secure`.
-3. **Solución**:
-   - Se reescribió de forma limpia y estática el archivo `.env` en `/srv/gonzalo-dep-staging` con la base correcta `agenda_db_staging` y `PORT=3008`.
-   - Se ajustó el endpoint `/api/auth/login` para que solo active el flag `Secure` si la conexión entrante es efectivamente por HTTPS (`request.headers.get('x-forwarded-proto') === 'https'`).
-   - Se deshabilitó el auto-boot y watchdog de WhatsApp en Staging cuando `WHATSAPP_ENABLED=false` para no interferir con la sesión de producción.
-   - Verificado con test automatizado: Login responde HTTP 200, entrega la cookie y `/admin/alta-turno` responde HTTP 200 con sesión activa.
+## Mensaje del Usuario (2026-09-02 11:31:00-03:00)
+> "Ahora generame el mensaje para el cliente asi vamos avanzando y seguimos el ida y vuelta de las actualizaciones"
+
+## Mensaje del Usuario (2026-09-02 11:37:00-03:00)
+> "Esto no paso por algo que hicimos nosotros no?"
+> [Screenshot showing email: "ALERTA DE SISTEMA - WHATSAPP ESTADO: DESCONECTADO Fecha / Hora: 2/9/2026, 11:11:28 hs (ARG)"]
+
+## Explicación y Verificación Técnica
+1. **Producción Intacta**: El WhatsApp de producción (`agenda.depilacionparahombres.com`, PM2 ID 108) nunca se cayó. Los logs confirman que a las 10:00 y 11:00 hs continuó enviando los recordatorios de 48h por WhatsApp y 7 días por email sin interrupciones.
+2. **Origen del Mail**: Provino del proceso de **Staging** (puerto 3008). Al corregir el puerto SMTP a las 11:09 hs en staging, el guardián de Staging detectó que en su propia instancia no había sesión de WhatsApp iniciada (ya que Staging corre aislado) y emitió la alerta a las 11:11:28 hs.
+3. **Solución Definitiva**: Ya quedó implementado el bloqueo `if (process.env.WHATSAPP_ENABLED !== 'false')` en el guardián y cron de WhatsApp, asegurando que Staging nunca más emita alertas por correo.
+
+
 
 
 
