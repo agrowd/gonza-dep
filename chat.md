@@ -589,7 +589,19 @@
   - Frontend interactivo `/admin/alta-turno` con calendario mensual semaforizado (🟢 Disponible, 🔴 Lleno, 🔘 Deshabilitado) y columna de horarios disponibles cada 10 minutos (estilo `image9.png`).
   - Redirección con precarga de zonas, duración, fecha y hora al modal de la agenda (`/admin/agenda?newTurno=true...`).
   - Ícono y enlace `⚡ Alta de Turno` ubicado encima de `Agenda` en la barra lateral.
-- Compilación y despliegue exitoso en Staging (`http://187.127.9.216:3008`).
+## Mensaje del Usuario (2026-09-02 10:46:00-03:00)
+> "cual es el usuario y contraseña. Ademas"
+> [Screenshot showing 187.127.9.216:3008/admin returning 404]
+
+## Respuesta del Asistente
+- **Credenciales de acceso al panel**:
+  - **Usuario:** `admin`
+  - **Contraseña:** `admin123`
+  - **Enlace directo de Login:** `http://187.127.9.216:3008/login`
+- **Solución del 404 en `/admin`**:
+  - Se sincronizó la tabla de `Usuario` en la base de datos aislada `agenda_db_staging`.
+  - Se creó la ruta raíz `/admin/page.js` para redirigir automáticamente a `/admin/alta-turno` (o `/login` si no hay sesión activa), eliminando el error 404.
+  - Se compiló y desplegó en el servidor Staging.
 
 
 
