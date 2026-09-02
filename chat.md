@@ -593,15 +593,19 @@
 > "cual es el usuario y contraseña. Ademas"
 > [Screenshot showing 187.127.9.216:3008/admin returning 404]
 
-## Respuesta del Asistente
-- **Credenciales de acceso al panel**:
-  - **Usuario:** `admin`
-  - **Contraseña:** `admin123`
-  - **Enlace directo de Login:** `http://187.127.9.216:3008/login`
-- **Solución del 404 en `/admin`**:
-  - Se sincronizó la tabla de `Usuario` en la base de datos aislada `agenda_db_staging`.
-  - Se creó la ruta raíz `/admin/page.js` para redirigir automáticamente a `/admin/alta-turno` (o `/login` si no hay sesión activa), eliminando el error 404.
-  - Se compiló y desplegó en el servidor Staging.
+## Mensaje del Usuario (2026-09-02 10:58:00-03:00)
+> "No me deja entrar"
+> [Screenshots showing 401 Unauthorized en http://187.127.9.216:3008/login con usuario admin]
+
+## Causa Raíz y Solución Aplicada
+1. **Causa 1 (Variable DATABASE_URL en Staging)**: El script de despliegue había concatenado repetidamente `_staging` en el archivo `.env`, intentando conectar a una base inexistente `agenda_db_staging_staging_staging`.
+2. **Causa 2 (Flag `Secure` en Cookies sobre HTTP)**: En Next.js, `secure: process.env.NODE_ENV === 'production'` forzaba el flag `Secure` en la cookie de sesión. Al estar accediendo por IP (`http://187.127.9.216:3008`), Chrome rechazaba guardar cookies marcadas como `Secure`.
+3. **Solución**:
+   - Se reescribió de forma limpia y estática el archivo `.env` en `/srv/gonzalo-dep-staging` con la base correcta `agenda_db_staging` y `PORT=3008`.
+   - Se ajustó el endpoint `/api/auth/login` para que solo active el flag `Secure` si la conexión entrante es efectivamente por HTTPS (`request.headers.get('x-forwarded-proto') === 'https'`).
+   - Se deshabilitó el auto-boot y watchdog de WhatsApp en Staging cuando `WHATSAPP_ENABLED=false` para no interferir con la sesión de producción.
+   - Verificado con test automatizado: Login responde HTTP 200, entrega la cookie y `/admin/alta-turno` responde HTTP 200 con sesión activa.
+
 
 
 
