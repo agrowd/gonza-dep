@@ -567,11 +567,16 @@
 > "Sacale la opción que dice pendiente de pago y que figure señado, porque en todo caso le pongo seña cero"
 > [Screenshot showing Agendar Nuevo Turno -> Estado Inicial dropdown]
 
+## Mensaje del Usuario (2026-09-02 09:50:00-03:00)
+> "Para que tengas contexto ya que vamos a actualizar el sistema: Hay que actualizar el sistema con un documento word que me pasaron los clientes, este mismo lo vas a pasar a una version que lo puedas leer y si hay imagenes tambien interpretar, pero quieren que los modulos de actualizaciones no modifiquen el principal, tenemos que hacer de alguna manera otro que este conectado, funcione, se actualicen las cosas pero no moleste a la rama principal que ya esta en produccion"
+> "todavia no me lo enviaron, quiero que hagas el plan y propongas"
+
 ## Respuesta del Asistente
-- Eliminación de la opción `Pendiente de Pago` (`PENDIENTE_PAGO`) en el selector `Estado Inicial` del modal de creación de turnos (`src/app/admin/agenda/page.js`).
-- Asignación automática de `Señado / Confirmado` (`SEÑADO`) como estado inicial por defecto al crear turnos desde cualquier punto de la agenda (click en slot, botón + Nuevo Turno, agendar siguiente turno).
-- Compilación verificada con `npm run build` (34/34 rutas).
-- Despliegue en producción en VPS Hostinger y reinicio de PM2.
+- Creación de plan de arquitectura e implementación detallado (`implementation_plan.md`):
+  - **Estrategia de aislamiento**: Rama Git `staging`, proceso PM2 independiente en VPS (`gonzalo-agenda-staging` en puerto 3008), base de datos de pruebas `agenda_db_staging` sincronizable, y simulación de WhatsApp en pruebas para proteger la sesión de producción.
+  - **Estructura modular en código**: Organización bajo `src/modules/[modulo]` para mantener los flujos productivos actuales intactos.
+  - **Pipeline de lectura de Word**: Script automático de descompresión OpenXML/ZIP para extraer texto, tablas e imágenes en alta resolución en cuanto el cliente entregue el archivo.
+
 
 
 
