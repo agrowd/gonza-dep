@@ -609,15 +609,23 @@
 2. **Origen del Mail**: Provino del proceso de **Staging** (puerto 3008). Al corregir el puerto SMTP a las 11:09 hs en staging, el guardián de Staging detectó que en su propia instancia no había sesión de WhatsApp iniciada (ya que Staging corre aislado) y emitió la alerta a las 11:11:28 hs.
 3. **Solución Definitiva**: Ya quedó implementado el bloqueo `if (process.env.WHATSAPP_ENABLED !== 'false')` en el guardián y cron de WhatsApp, asegurando que Staging nunca más emita alertas por correo.
 
+## Mensaje del Usuario (2026-09-02 17:23:05-03:00)
+> "Esto es lo que respondio el cliente, mejora la vista para celular y todo lo que menciona"
+> Capturas de Gonzalo desde el celular en http://187.127.9.216:3008/admin:
+> 1. "Estoy viendo el primer módulo y no me aparece lo de zonas"
+> 2. "Y acá me corta la agenda y no puedo ver el resto" (el calendario de septiembre cortaba viernes, sábado y domingo a la derecha).
+> 3. "Lo mismo con los horarios" (la grilla de horarios disponibles se cortaba en el borde derecho del celular).
 
-
-
-
-
-
-
-
-
-
-
-
+## Solución Aplicada y Validada:
+1. **Catálogo de Zonas en Staging**:
+   - Causa: La base de datos `agenda_db_staging` (puerto 3008) no tenía los registros de `Zona` cargados (estaba vacía `[]`), por lo que `/api/zonas` devolvía un array vacío.
+   - Solución: Se migraron y poblaron las 9 zonas oficiales desde `agenda_db` a `agenda_db_staging`. Ahora el catálogo de 9 zonas carga inmediatamente en el primer módulo.
+2. **Optimización Responsive del Calendario en Celulares**:
+   - Causa: En pantallas móviles, los paddings de `.container` (32px) y `.card` (20px), sumados a `gap: 8px` y al texto "libres" en cada celda, desbordaban los 360px de ancho disponible, provocando que `.contentArea` (con `overflow-x: hidden`) recortara las columnas de viernes, sábado y domingo.
+   - Solución: Se añadieron reglas `@media (max-width: 768px)` con paddings compactos (`8px 4px`), `gap: 3px`, y en celulares se oculta la palabra "libres" dejando únicamente el número disponible (ej: "40"). Las 7 columnas encajan perfectamente de lunes a domingo sin ningún recorte.
+3. **Optimización Responsive de la Grilla de Horarios**:
+   - Causa: `minmax(105px, 1fr)` en móviles forzaba columnas que no entraban y se recortaban.
+   - Solución: Se configuró una grilla de 3 columnas (`repeat(3, 1fr)`) con `gap: 6px` y botones estilizados a medida (`padding: 8px 4px`), mostrando todos los horarios disponibles de forma clara, ordenada y sin cortes.
+4. **Despliegue y Validación**:
+   - Cambios comiteados y subidos a GitHub (`origin/staging` y `origin/main`).
+   - Compilado y desplegado con éxito tanto en Staging (puerto 3008) como en Producción (puerto 3006).
