@@ -50,11 +50,12 @@ export async function POST(request) {
     });
 
     // Set cookie
+    const isHttps = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https:');
     response.cookies.set({
       name: 'session',
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7 // 7 days

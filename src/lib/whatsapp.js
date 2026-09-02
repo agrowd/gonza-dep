@@ -725,15 +725,19 @@ const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' ||
   (process.argv && process.argv.some(arg => String(arg).includes('build')));
 
 if (typeof window === 'undefined' && !isBuildPhase) {
-  startWhatsAppWatchdog();
-  startReminderCron();
-  if (fs.existsSync('./.wwebjs_auth') && globalThis.whatsappStatus === 'DISCONNECTED' && !globalThis.whatsappClient) {
-    console.log('[WhatsApp Auto-Boot] Discovered existing session .wwebjs_auth. Auto-initializing client on boot...');
-    try {
-      initWhatsAppClient();
-    } catch (e) {
-      console.error('[WhatsApp Auto-Boot] Error auto-initializing client:', e);
+  if (process.env.WHATSAPP_ENABLED !== 'false') {
+    startWhatsAppWatchdog();
+    startReminderCron();
+    if (fs.existsSync('./.wwebjs_auth') && globalThis.whatsappStatus === 'DISCONNECTED' && !globalThis.whatsappClient) {
+      console.log('[WhatsApp Auto-Boot] Discovered existing session .wwebjs_auth. Auto-initializing client on boot...');
+      try {
+        initWhatsAppClient();
+      } catch (e) {
+        console.error('[WhatsApp Auto-Boot] Error auto-initializing client:', e);
+      }
     }
+  } else {
+    console.log('[WhatsApp] WHATSAPP_ENABLED=false: Watchdog, reminder cron and auto-boot disabled.');
   }
 }
 
