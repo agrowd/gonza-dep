@@ -604,10 +604,26 @@
 > "Esto no paso por algo que hicimos nosotros no?"
 > [Screenshot showing email: "ALERTA DE SISTEMA - WHATSAPP ESTADO: DESCONECTADO Fecha / Hora: 2/9/2026, 11:11:28 hs (ARG)"]
 
-## Explicación y Verificación Técnica
-1. **Producción Intacta**: El WhatsApp de producción (`agenda.depilacionparahombres.com`, PM2 ID 108) nunca se cayó. Los logs confirman que a las 10:00 y 11:00 hs continuó enviando los recordatorios de 48h por WhatsApp y 7 días por email sin interrupciones.
-2. **Origen del Mail**: Provino del proceso de **Staging** (puerto 3008). Al corregir el puerto SMTP a las 11:09 hs en staging, el guardián de Staging detectó que en su propia instancia no había sesión de WhatsApp iniciada (ya que Staging corre aislado) y emitió la alerta a las 11:11:28 hs.
-3. **Solución Definitiva**: Ya quedó implementado el bloqueo `if (process.env.WHATSAPP_ENABLED !== 'false')` en el guardián y cron de WhatsApp, asegurando que Staging nunca más emita alertas por correo.
+## Mensaje del Usuario (2026-09-02 18:49:00-03:00)
+> [3 imágenes de WhatsApp de Gonzalo]:
+> 1. En `depilacionparahombres.com` (producción) aparece el enlace `⚡ Alta de Turno` en la barra lateral.
+> 2. En `187.127.9.216:3008/admin` seleccionó un horario (14:40 a 15:30) y pulsó "Continuar a Agendar Turno".
+> 3. En la agenda, el campo `Hora Fin (Calculado)` quedó fijo en `10:00 a. m.` en lugar de las 15:30 hs.
+
+## Acciones Inmediatas y Solución Aplicada
+1. **Restauración de Producción (`main` 100% aislado)**:
+   - Se restableció la rama `main` en Git al commit previo a la Etapa 2 (`4206b7c`).
+   - Se forzó la actualización en `origin/main` y en el VPS en `/srv/gonzalo-dep`.
+   - Se recompiló y reinició PM2 en el puerto 3006.
+   - **Resultado**: `agenda.depilacionparahombres.com` ya NO tiene el ítem "Alta de Turno" en el menú lateral. Quedó completamente limpio en su versión productiva.
+2. **Corrección de `Hora Fin` Fijo en Staging (`staging`)**:
+   - **Causa Raíz**: En la agenda, cuando no había zonas seleccionadas, el cálculo asignaba `startMin + 0`, derivando en las `10:00 hs` (`horaFin: 10:00`). Además, `shouldUpdateHoraFin` bloqueaba el recálculo al desincronizarse `autoHoraFin` durante la carga asíncrona del catálogo de zonas, dejando la hora de fin congelada.
+   - **Solución**:
+     - Se envía explícitamente `horaFin: selectedSlot.horaFin` desde `alta-turno` a `agenda`.
+     - Se añadió `manualHoraFinOverride: false` en `newTurno` y se asociaron `newTurno.horaInicio` y `zones` a las dependencias del efecto de recálculo.
+     - Ahora, al seleccionar zonas o cambiar la hora de inicio, `Hora Fin` se recalcula de forma 100% reactiva y automática (ej: 14:40 + 50 min = 15:30 hs).
+   - Se desplegó en Staging (`http://187.127.9.216:3008`).
+
 
 ## Mensaje del Usuario (2026-09-02 17:23:05-03:00)
 > "Esto es lo que respondio el cliente, mejora la vista para celular y todo lo que menciona"
