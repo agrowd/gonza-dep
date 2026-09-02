@@ -442,7 +442,7 @@ export default function AltaTurnoPage() {
                   <span>{day}</span>
                   {isAvailable && (
                     <span className={styles.daySlotBadge}>
-                      {dayData.slots.length} libre{dayData.slots.length > 1 ? 's' : ''}
+                      {dayData.slots.length} <span className={styles.badgeWord}>libre{dayData.slots.length > 1 ? 's' : ''}</span>
                     </span>
                   )}
                   {isLleno && (
