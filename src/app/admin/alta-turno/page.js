@@ -223,6 +223,7 @@ export default function AltaTurnoPage() {
       newTurno: 'true',
       date: selectedDateStr,
       time: selectedSlot.horaInicio,
+      horaFin: selectedSlot.horaFin,
       duracion: activeDuration.toString(),
       zones: selectedZoneIds.join(','),
       hasOtros: hasOtros ? 'true' : 'false',

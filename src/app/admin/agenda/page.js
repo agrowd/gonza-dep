@@ -636,6 +636,7 @@ export default function AgendaPage() {
       
       const isNewTurnoReq = searchParams.get('newTurno') === 'true';
       const timeParam = searchParams.get('time');
+      const horaFinParam = searchParams.get('horaFin');
       const duracionParam = parseInt(searchParams.get('duracion') || '30', 10);
       const zonesParam = searchParams.get('zones');
       const hasOtrosParam = searchParams.get('hasOtros') === 'true';
@@ -643,14 +644,17 @@ export default function AgendaPage() {
       const otrosPrecioParam = searchParams.get('otrosPrecio') || 0;
 
       if (isNewTurnoReq) {
-        let calcHoraFin = '10:30';
-        if (timeParam) {
+        let calcHoraFin = horaFinParam;
+        if (!calcHoraFin && timeParam) {
           const [h, m] = timeParam.split(':').map(Number);
-          const totalMin = (h || 0) * 60 + (m || 0) + duracionParam;
+          const dur = isNaN(duracionParam) ? 30 : duracionParam;
+          const totalMin = (h || 0) * 60 + (m || 0) + dur;
           const endH = Math.floor(totalMin / 60);
           const endM = totalMin % 60;
           calcHoraFin = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
         }
+        if (!calcHoraFin) calcHoraFin = '10:30';
+
         const effectiveDateStr = dateParam || new Date().toISOString().split('T')[0];
         setNewTurno(prev => ({
           ...prev,
@@ -658,6 +662,7 @@ export default function AgendaPage() {
           horaInicio: timeParam || prev.horaInicio,
           horaFin: calcHoraFin,
           autoHoraFin: calcHoraFin,
+          manualHoraFinOverride: false,
           selectedZoneIds: zonesParam ? zonesParam.split(',').filter(Boolean) : [],
           hasOtros: hasOtrosParam,
           otrosTexto: otrosTextoParam,
@@ -1386,16 +1391,19 @@ export default function AgendaPage() {
 
   // Re-calculate pricing/durations when newTurno inputs change
   useEffect(() => {
-    if (newTurno.selectedZoneIds.length === 0 && !newTurno.hasOtros) {
-      const startMin = timeToMinutes(newTurno.horaInicio);
-      const endMin = startMin + (newTurno.estado === 'BLOQUEADO' ? 30 : 0);
-      const endHour = Math.floor(endMin / 60);
-      const endMins = endMin % 60;
-      const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+    const selected = zones.filter(z => (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
+    const calcs = calculateTurnDetails(selected, false);
 
+    // Duration: if zones selected, use calculated duration. If no zones selected, fallback to 30 min
+    const durMins = (calcs.duracionMinutos > 0)
+      ? calcs.duracionMinutos
+      : 30;
+    const horaFinStr = addMinutesToTime(newTurno.horaInicio || '10:00', durMins);
+
+    if (newTurno.selectedZoneIds.length === 0 && !newTurno.hasOtros) {
       setNewTurno(prev => ({
         ...prev,
-        horaFin: horaFinStr,
+        horaFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
         autoHoraFin: horaFinStr,
         valorTotal: 0,
         valorSeña: 0,
@@ -1406,17 +1414,6 @@ export default function AgendaPage() {
       }));
       return;
     }
-    const selected = zones.filter(z => (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id)));
-    
-    // Assume regular/new based on form (defaults to new=false for manual scheduler)
-    const calcs = calculateTurnDetails(selected, false);
-    
-    // Calculate horaFin based on start time + calculated duration
-    const startMin = timeToMinutes(newTurno.horaInicio);
-    const endMin = startMin + (calcs.duracionMinutos > 0 ? calcs.duracionMinutos : 30);
-    const endHour = Math.floor(endMin / 60);
-    const endMins = endMin % 60;
-    const horaFinStr = `${endHour.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
 
     const baseZonasTotal = calcs.valorTotal;
     const otrosExtra = newTurno.hasOtros ? Number(newTurno.otrosPrecio || 0) : 0;
@@ -1443,10 +1440,9 @@ export default function AgendaPage() {
     }
 
     setNewTurno(prev => {
-      const shouldUpdateHoraFin = !prev.horaFin || prev.horaFin === prev.autoHoraFin || !prev.autoHoraFin;
       return {
         ...prev,
-        horaFin: (shouldUpdateHoraFin && calcs.duracionMinutos > 0) ? horaFinStr : (prev.horaFin || horaFinStr),
+        horaFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
         autoHoraFin: horaFinStr,
         valorTotal: finalTotal,
         valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
@@ -1458,7 +1454,18 @@ export default function AgendaPage() {
         bonificacion: bonificacion
       };
     });
-  }, [newTurno.selectedZoneIds, newTurno.descuentoTipo, newTurno.descuentoValor, newTurno.hasOtros, newTurno.otrosPrecio, newTurno.manualTotalOverride, newTurno.manualSeñaOverride]);
+  }, [
+    newTurno.selectedZoneIds,
+    newTurno.horaInicio,
+    newTurno.descuentoTipo,
+    newTurno.descuentoValor,
+    newTurno.hasOtros,
+    newTurno.otrosPrecio,
+    newTurno.manualTotalOverride,
+    newTurno.manualSeñaOverride,
+    newTurno.estado,
+    zones
+  ]);
 
   // Re-calculate pricing/discount and duration for editTurno
   useEffect(() => {
@@ -1673,6 +1680,7 @@ export default function AgendaPage() {
       return {
         ...prev,
         manualTotalOverride: undefined,
+        manualHoraFinOverride: false,
         selectedZoneIds: newZoneIds,
         horaFin: newHoraFin,
         autoHoraFin: newHoraFin
@@ -3369,7 +3377,7 @@ export default function AgendaPage() {
                     <input
                       type="time"
                       value={newTurno.horaFin}
-                      onChange={(e) => setNewTurno({ ...newTurno, horaFin: e.target.value })}
+                      onChange={(e) => setNewTurno(prev => ({ ...prev, horaFin: e.target.value, manualHoraFinOverride: true }))}
                       required
                     />
                   </div>
