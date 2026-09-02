@@ -634,6 +634,39 @@ export default function AgendaPage() {
         } catch (e) {}
       }
       
+      const isNewTurnoReq = searchParams.get('newTurno') === 'true';
+      const timeParam = searchParams.get('time');
+      const duracionParam = parseInt(searchParams.get('duracion') || '30', 10);
+      const zonesParam = searchParams.get('zones');
+      const hasOtrosParam = searchParams.get('hasOtros') === 'true';
+      const otrosTextoParam = searchParams.get('otrosTexto') || '';
+      const otrosPrecioParam = searchParams.get('otrosPrecio') || 0;
+
+      if (isNewTurnoReq) {
+        let calcHoraFin = '10:30';
+        if (timeParam) {
+          const [h, m] = timeParam.split(':').map(Number);
+          const totalMin = (h || 0) * 60 + (m || 0) + duracionParam;
+          const endH = Math.floor(totalMin / 60);
+          const endM = totalMin % 60;
+          calcHoraFin = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+        }
+        const effectiveDateStr = dateParam || new Date().toISOString().split('T')[0];
+        setNewTurno(prev => ({
+          ...prev,
+          fechaStr: effectiveDateStr,
+          horaInicio: timeParam || prev.horaInicio,
+          horaFin: calcHoraFin,
+          autoHoraFin: calcHoraFin,
+          selectedZoneIds: zonesParam ? zonesParam.split(',').filter(Boolean) : [],
+          hasOtros: hasOtrosParam,
+          otrosTexto: otrosTextoParam,
+          otrosPrecio: otrosPrecioParam,
+          estado: 'SEÑADO'
+        }));
+        setIsNewOpen(true);
+      }
+
       if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
         initialView = viewParam;
       } else if (window.innerWidth < 768) {
@@ -795,6 +828,20 @@ export default function AgendaPage() {
       .then(data => {
         if (Array.isArray(data)) {
           setZones(data);
+          setNewTurno(prev => {
+            if (prev.selectedZoneIds && prev.selectedZoneIds.length > 0) {
+              const matched = data.filter(z => prev.selectedZoneIds.includes(z.id));
+              const calcs = calculateTurnDetails(matched, false);
+              return {
+                ...prev,
+                valorTotal: calcs.valorTotal || prev.valorTotal,
+                valorSeña: calcs.valorSeña || prev.valorSeña,
+                autoTotal: calcs.valorTotal || prev.autoTotal,
+                autoTotalZonas: calcs.valorTotal || prev.autoTotalZonas
+              };
+            }
+            return prev;
+          });
         }
       })
       .catch(err => console.error('Error fetching zones:', err));
