@@ -272,8 +272,9 @@ function AltaTurnoContent() {
 
   const monthName = useMemo(() => {
     const d = new Date(currentYear, currentMonth - 1, 1);
-    const raw = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-    return raw.charAt(0).toUpperCase() + raw.slice(1);
+    const m = d.toLocaleDateString('es-ES', { month: 'long' });
+    const y = d.getFullYear();
+    return `${m.charAt(0).toUpperCase() + m.slice(1)} ${y}`;
   }, [currentYear, currentMonth]);
 
   // Calendar cells generation (Monday to Sunday)
@@ -431,14 +432,13 @@ function AltaTurnoContent() {
         <div className={styles.card}>
           <div className={styles.cardTitle}>
             <span>1. Zonas & Duración</span>
-            <label style={{ fontSize: '0.85rem', fontWeight: 'normal', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={isNuevoCliente} 
-                onChange={(e) => setIsNuevoCliente(e.target.checked)} 
-              />
-              ¿Cliente nuevo? (+10 min)
-            </label>
+            <div 
+              className={`${styles.clientTogglePill} ${isNuevoCliente ? styles.clientTogglePillActive : ''}`}
+              onClick={() => setIsNuevoCliente(prev => !prev)}
+            >
+              <span>{isNuevoCliente ? '✓' : '+'}</span>
+              <span>¿Cliente nuevo? (+10 min)</span>
+            </div>
           </div>
 
           <div className={styles.zonesList}>
@@ -454,11 +454,11 @@ function AltaTurnoContent() {
                     type="checkbox"
                     checked={active}
                     readOnly
-                    style={{ cursor: 'pointer' }}
+                    className={styles.zoneCheckbox}
                   />
-                  <div>
-                    <div>{z.nombre}</div>
-                    <small style={{ color: '#6b7280' }}>{z.duracionMinutos} min</small>
+                  <div className={styles.zoneInfo}>
+                    <span className={styles.zoneName}>{z.nombre}</span>
+                    <span className={styles.zoneDuration}>{z.duracionMinutos} min</span>
                   </div>
                 </div>
               );
@@ -466,19 +466,18 @@ function AltaTurnoContent() {
 
             {/* OTROS Checkbox */}
             <div
-              className={`${styles.zoneItem} ${hasOtros ? styles.zoneItemActive : ''}`}
+              className={`${styles.zoneItem} ${styles.zoneItemCustom} ${hasOtros ? styles.zoneItemActive : ''}`}
               onClick={() => setHasOtros(prev => !prev)}
-              style={{ borderStyle: 'dashed' }}
             >
               <input
                 type="checkbox"
                 checked={hasOtros}
                 readOnly
-                style={{ cursor: 'pointer' }}
+                className={styles.zoneCheckbox}
               />
-              <div>
-                <div style={{ fontWeight: 600 }}>Otros (Extras)</div>
-                <small style={{ color: '#6b7280' }}>Zonas combinadas</small>
+              <div className={styles.zoneInfo}>
+                <span className={styles.zoneName}>Otros (Extras)</span>
+                <span className={styles.zoneDuration}>Zonas combinadas</span>
               </div>
             </div>
           </div>
@@ -486,7 +485,7 @@ function AltaTurnoContent() {
           {/* Fields for OTROS */}
           {hasOtros && (
             <div className={styles.otrosBox}>
-              <div className={styles.formRow} style={{ marginBottom: 0, gap: '10px' }}>
+              <div className={styles.formRow} style={{ marginBottom: 0, gap: '12px' }}>
                 <div className={styles.formGroup} style={{ flex: 2 }}>
                   <label className={styles.label}>Escribir Zona Extra (Otros) *:</label>
                   <input
@@ -513,28 +512,54 @@ function AltaTurnoContent() {
 
           <div className={styles.durationSummary}>
             <div className={styles.durationInputWrap}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Duración del Turno:</span>
-              <input
-                type="number"
-                min="10"
-                step="10"
-                value={customDuration !== null ? customDuration : activeDuration}
-                onChange={(e) => setCustomDuration(parseInt(e.target.value, 10) || 10)}
-                className={styles.durationInput}
-              />
-              <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>minutos</span>
+              <span>⏱️ Duración:</span>
+              <div className={styles.durationStepper}>
+                <button
+                  type="button"
+                  className={styles.stepBtn}
+                  onClick={() => {
+                    const cur = customDuration !== null ? customDuration : activeDuration;
+                    if (cur > 10) setCustomDuration(cur - 10);
+                  }}
+                  title="Restar 10 min"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="10"
+                  step="10"
+                  value={customDuration !== null ? customDuration : activeDuration}
+                  onChange={(e) => setCustomDuration(parseInt(e.target.value, 10) || 10)}
+                  className={styles.durationInput}
+                />
+                <button
+                  type="button"
+                  className={styles.stepBtn}
+                  onClick={() => {
+                    const cur = customDuration !== null ? customDuration : activeDuration;
+                    setCustomDuration(cur + 10);
+                  }}
+                  title="Sumar 10 min"
+                >
+                  +
+                </button>
+              </div>
+              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>min</span>
             </div>
 
-            {calculations.valorTotal > 0 && (
-              <span className={styles.badgeSummary}>
-                💰 Valor est.: ${calculations.valorTotal.toLocaleString()}
-              </span>
-            )}
-            {calculations.valorSeña > 0 && (
-              <span className={styles.badgeSummary}>
-                📝 Seña est.: ${calculations.valorSeña.toLocaleString()}
-              </span>
-            )}
+            <div className={styles.summaryBadgesWrap}>
+              {calculations.valorTotal > 0 && (
+                <span className={styles.badgeSummary}>
+                  💰 Total: ${calculations.valorTotal.toLocaleString()}
+                </span>
+              )}
+              {calculations.valorSeña > 0 && (
+                <span className={`${styles.badgeSummary} ${styles.badgeSummarySeña}`}>
+                  💳 Seña: ${calculations.valorSeña.toLocaleString()}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -574,7 +599,7 @@ function AltaTurnoContent() {
                   key={d.id}
                   type="button"
                   onClick={() => toggleDayOfWeek(d.id)}
-                  className={`${styles.dayPill} ${active ? styles.dayPillActive : ''}`}
+                  className={`${styles.dayChip} ${active ? styles.dayChipActive : ''}`}
                 >
                   {d.short}
                 </button>
@@ -583,20 +608,20 @@ function AltaTurnoContent() {
           </div>
 
           {/* Quick presets */}
-          <div className={styles.quickPresets}>
+          <div className={styles.presetBtns}>
             <button
               type="button"
               className={styles.presetBtn}
               onClick={() => setSelectedDays([1, 2, 3, 4, 5])}
             >
-              Lunes a Viernes
+              📅 Lunes a Viernes
             </button>
             <button
               type="button"
               className={styles.presetBtn}
               onClick={() => setSelectedDays([1, 2, 3, 4, 5, 6, 0])}
             >
-              Toda la semana
+              🗓️ Toda la semana
             </button>
             <button
               type="button"
@@ -606,7 +631,7 @@ function AltaTurnoContent() {
                 setHoraHasta('22:00');
               }}
             >
-              Noche (18:00+)
+              🌙 Noche (18:00+)
             </button>
           </div>
         </div>
@@ -617,15 +642,11 @@ function AltaTurnoContent() {
         {/* Left Side: Monthly Calendar (image9.png style) */}
         <div className={styles.card}>
           <div className={styles.calendarHeader}>
-            <button type="button" onClick={prevMonth} className={styles.navMonthBtn}>
-              &lt;
-            </button>
+            <button type="button" onClick={prevMonth} className={styles.navMonthBtn} title="Mes anterior">‹</button>
             <div className={styles.monthTitle}>
               {monthName} {loadingAvailability && <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>⏳ Buscando...</span>}
             </div>
-            <button type="button" onClick={nextMonth} className={styles.navMonthBtn}>
-              &gt;
-            </button>
+            <button type="button" onClick={nextMonth} className={styles.navMonthBtn} title="Mes siguiente">›</button>
           </div>
 
           <div className={styles.calendarGrid}>
@@ -658,7 +679,9 @@ function AltaTurnoContent() {
                     if (isAvailable) {
                       setSelectedDateStr(dateStr);
                       setSelectedSlot(null);
-                      setIsSlotsModalOpen(true);
+                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                        setIsSlotsModalOpen(true);
+                      }
                     }
                   }}
                   title={
