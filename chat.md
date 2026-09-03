@@ -622,7 +622,35 @@
      - Se envía explícitamente `horaFin: selectedSlot.horaFin` desde `alta-turno` a `agenda`.
      - Se añadió `manualHoraFinOverride: false` en `newTurno` y se asociaron `newTurno.horaInicio` y `zones` a las dependencias del efecto de recálculo.
      - Ahora, al seleccionar zonas o cambiar la hora de inicio, `Hora Fin` se recalcula de forma 100% reactiva y automática (ej: 14:40 + 50 min = 15:30 hs).
-   - Se desplegó en Staging (`http://187.127.9.216:3008`).
+## Mensaje del Usuario (2026-09-03 08:54:55-03:00)
+> [Capturas de WhatsApp de Gonzalo]:
+> 1. Agregar opción "Otros" en Alta de Turno para zonas extras y transferir a la agenda.
+> 2. Horarios en una ventana que se pueda abrir y cerrar con lista vertical (manteniendo el encabezado "jue, 24 sept").
+> 3. Separar botón "Editar turno" en dos: "Editar turno" y "Reprogramar" (lleva a Alta de Turno precargando datos y devuelve con horario elegido).
+> 4. Al pulsar "Programar siguiente turno", llevar a Alta de Turno resaltando la semana próxima según la frecuencia de la ficha del cliente, y volver con los datos listos.
+
+## Acciones Realizadas y Solución Desplegada en Staging
+1. **Zona Otros en Alta de Turno**:
+   - Se añadió la opción `[ ] Otros (Extras)` en el catálogo de zonas de `/admin/alta-turno`.
+   - Se incorporaron inputs para `otrosTexto` y `otrosPrecio`, sumando dinámicamente al total estimado y a la seña, transfiriéndose a la agenda al continuar.
+2. **Ventana Vertical Desplegable de Horarios ("Abrir y Cerrar")**:
+   - Al tocar un día disponible en el calendario, se abre un modal vertical limpio con cabecera `HORARIOS DISPONIBLES — Jue, 24 sept` y botón de cierre `✕`.
+   - Lista de horarios en formato vertical (tarjetas cómodas para pantallas táctiles).
+   - Botón de acción destacado para confirmar el turno seleccionado.
+3. **Botón Reprogramar en Agenda**:
+   - En el detalle de turno se incorporó el botón `🔄 Reprogramar` junto a `✏️ Editar Turno`.
+   - Redirige a `/admin/alta-turno` con `modo=reprogramar`, precargando cliente, zonas, duración y mostrando un banner informativo.
+   - Al elegir el nuevo horario libre, regresa a la agenda abriendo el modal de edición con la nueva fecha y hora para guardar.
+4. **Siguiente Turno con Semana Recomendada**:
+   - El botón `📅 Siguiente Turno` redirige a Alta de Turno con `modo=siguienteTurno`.
+   - Calcula la semana objetivo (`fechaAnterior + frecuencia * 7 días`) y la **resalta en el calendario con fondo y borde dorado suave** (`⭐ Sugerida`), abriendo directamente el mes objetivo.
+   - Al seleccionar slot, regresa a la agenda con el cliente y zonas listos para agendar la próxima sesión.
+5. **Compilación y Despliegue**:
+   - Compilado localmente (`npm run build`, 37 rutas exitosas).
+   - Pusheado a rama `staging` (commit `49c4316`).
+   - Desplegado y verificado en Staging VPS (`http://187.127.9.216:3008/admin/alta-turno`).
+   - Producción verificada 100% online y protegida.
+
 
 
 ## Mensaje del Usuario (2026-09-02 17:23:05-03:00)
