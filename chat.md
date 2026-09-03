@@ -651,6 +651,32 @@
    - Desplegado y verificado en Staging VPS (`http://187.127.9.216:3008/admin/alta-turno`).
    - Producción verificada 100% online y protegida.
 
+## Mensaje del Usuario (2026-09-03 14:27:35-03:00)
+> "En la version del espacio de prueba, mejorar el diseño de esto, ya que por partes tiene buen diseño y por otras partes no" [capturas en alta-turno desktop].
+
+## Diagnóstico y Rediseño Visual Implementado
+1. **Filtros de Franja Horaria y Días (Card 2)**:
+   - Se conectaron las clases CSS `.dayChip` y `.dayChipActive` para reemplazar la clase no definida `dayPill`. Ahora los días son fichas redondeadas modernas con centrado perfecto y estado activo en color vino de la marca (`#7a1e1e`).
+   - Los presets (`Lunes a Viernes`, `Toda la semana`, `Noche 18h+`) se rediseñaron con íconos y fondo suave, eliminando bordes punteados de borrador.
+2. **Filtros de Zonas y Duración (Card 1)**:
+   - Se reemplazó el checkbox crudo de `¿Cliente nuevo? (+10 min)` por una pastilla interactiva (`.clientTogglePill`).
+   - Se estilizó la selección de zonas y "Otros (Extras)" con tarjeta propia y campos de texto integrados.
+   - La duración se integró en un stepper con botones `−` y `+` de 10 minutos, además de chips destacados para valor total y seña estimada.
+3. **Calendario**:
+   - Corrección ortográfica del título (`Septiembre 2026`).
+   - Navegadores de mes con chevrons refinados `‹` y `›`.
+   - Celdas disponibles en verde menta suave y día seleccionado con anillo destacado.
+4. **Horarios Disponibles (Panel Derecho)**:
+   - Se eliminó la columna única de botones estirados que rompía el diseño en pantallas de escritorio.
+   - Ahora se muestran en una **grilla equilibrada de 3 columnas de pastillas limpias**.
+   - Se removió el botón invasivo de ventana vertical en escritorio (en celulares se abre fluidamente al tocar un día).
+   - Tarjeta de confirmación verde esmeralda con botón `Continuar a Agendar Turno ➔`.
+5. **Despliegue**:
+   - Compilado localmente (`npm run build`, 37 rutas exitosas).
+   - Pusheado a `staging` (commit `6de9acf`).
+   - Desplegado en VPS Staging en puerto 3008 (PM2 id 138).
+
+
 
 
 ## Mensaje del Usuario (2026-09-02 17:23:05-03:00)
