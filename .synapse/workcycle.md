@@ -491,10 +491,16 @@
   - Columna derecha con listado de horarios disponibles cada 10 minutos (estilo `image9.png`).
   - Botón de acción con redirección y precarga automática de fecha, hora, duración y zonas en el modal de nuevo turno de la agenda.
   - Agregado del ícono y enlace `⚡ Alta de Turno` en la barra lateral por encima de `Agenda`.
-- [x] Compilar (`npm run build`, 36/36 rutas) y desplegar en Staging VPS (`http://187.127.9.216:3008`).
 
+## 📅 Sesión: 03 de Septiembre de 2026
 
-
-
-
-
+### 🎯 Tareas en curso / Objetivos
+- [ ] Integrar zona "Otros" (texto y precio) en el Módulo de Alta de Turno (`/admin/alta-turno`).
+- [ ] Implementar modal / ventana desplegable vertical de horarios disponibles ("abrir y cerrar" con fecha en cabecera) para optimizar la experiencia en celular.
+- [ ] Separar el botón `Editar Turno` del modal de turno de la agenda en dos:
+  - ✏️ `Editar Turno`: edición manual estándar.
+  - 🔄 `Reprogramar`: redirección a Alta de Turno precargando datos para elegir nueva fecha/hora.
+- [ ] Integrar el botón `📅 Siguiente Turno` con Alta de Turno:
+  - Resaltar en el calendario la **semana sugerida** según la frecuencia del cliente (ej: a las 3 o 4 semanas).
+  - Precargar datos del turno anterior y devolver a la agenda con el horario seleccionado.
+- [ ] Compilar y desplegar exclusivamente en el entorno Staging (`http://187.127.9.216:3008`).

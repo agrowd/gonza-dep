@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './alta-turno.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 
@@ -15,8 +15,22 @@ const DAYS_OF_WEEK = [
   { id: 0, label: 'Domingo', short: 'Dom' },
 ];
 
-export default function AltaTurnoPage() {
+function AltaTurnoContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Mode and contextual parameters
+  const modo = searchParams.get('modo') || 'nuevo'; // 'nuevo' | 'reprogramar' | 'siguienteTurno'
+  const turnoIdParam = searchParams.get('turnoId');
+  const clienteIdParam = searchParams.get('clienteId');
+  const clienteNombreParam = searchParams.get('clienteNombre') || '';
+  const clienteWhatsappParam = searchParams.get('clienteWhatsapp') || '';
+  const clienteEmailParam = searchParams.get('clienteEmail') || '';
+  const clienteDniParam = searchParams.get('clienteDni') || '';
+  const fechaOriginalParam = searchParams.get('fechaOriginal') || '';
+  const horaOriginalParam = searchParams.get('horaOriginal') || '';
+  const fechaAnteriorParam = searchParams.get('fechaAnterior') || '';
+  const frecuenciaParam = searchParams.get('frecuencia') || '4';
 
   // 1. Zones Catalog & Selection
   const [zones, setZones] = useState([]);
@@ -25,7 +39,6 @@ export default function AltaTurnoPage() {
   const [hasOtros, setHasOtros] = useState(false);
   const [otrosTexto, setOtrosTexto] = useState('');
   const [otrosPrecio, setOtrosPrecio] = useState(0);
-  const [otrosMinutos, setOtrosMinutos] = useState(20);
 
   // Duration State: automatically calculated, but operator can edit it
   const [customDuration, setCustomDuration] = useState(null);
@@ -47,6 +60,71 @@ export default function AltaTurnoPage() {
   // 5. User Selection
   const [selectedDateStr, setSelectedDateStr] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [isSlotsModalOpen, setIsSlotsModalOpen] = useState(false);
+
+  // Compute recommended week for siguienteTurno
+  const recommendedWeekRange = useMemo(() => {
+    if (modo !== 'siguienteTurno' || !fechaAnteriorParam) return null;
+    try {
+      const [y, m, d] = fechaAnteriorParam.split('-').map(Number);
+      const prevDate = new Date(y, m - 1, d, 12, 0, 0);
+      const weeks = parseInt(frecuenciaParam || '4', 10) || 4;
+      const targetDate = new Date(prevDate);
+      targetDate.setDate(targetDate.getDate() + weeks * 7);
+
+      const targetDay = targetDate.getDay(); // 0 is Sun, 1 is Mon...
+      const diffToMonday = targetDate.getDate() - targetDay + (targetDay === 0 ? -6 : 1);
+      const monday = new Date(targetDate);
+      monday.setDate(diffToMonday);
+      monday.setHours(12, 0, 0, 0);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(12, 0, 0, 0);
+
+      const toStr = (dt) => {
+        const yr = dt.getFullYear();
+        const mo = String(dt.getMonth() + 1).padStart(2, '0');
+        const da = String(dt.getDate()).padStart(2, '0');
+        return `${yr}-${mo}-${da}`;
+      };
+
+      return {
+        startDate: monday,
+        endDate: sunday,
+        startStr: toStr(monday),
+        endStr: toStr(sunday),
+        targetMonth: monday.getMonth() + 1,
+        targetYear: monday.getFullYear()
+      };
+    } catch (e) {
+      return null;
+    }
+  }, [modo, fechaAnteriorParam, frecuenciaParam]);
+
+  // Initial preloading from query parameters
+  useEffect(() => {
+    const zonesParam = searchParams.get('zones');
+    if (zonesParam) {
+      const ids = zonesParam.split(',').filter(Boolean);
+      setSelectedZoneIds(ids);
+    }
+    const hasOtrosParam = searchParams.get('hasOtros') === 'true';
+    if (hasOtrosParam) {
+      setHasOtros(true);
+      setOtrosTexto(searchParams.get('otrosTexto') || '');
+      setOtrosPrecio(parseInt(searchParams.get('otrosPrecio') || '0', 10) || 0);
+    }
+    const durParam = parseInt(searchParams.get('duracion') || '0', 10);
+    if (durParam > 0) {
+      setCustomDuration(durParam);
+    }
+
+    if (recommendedWeekRange) {
+      setCurrentYear(recommendedWeekRange.targetYear);
+      setCurrentMonth(recommendedWeekRange.targetMonth);
+    }
+  }, [searchParams, recommendedWeekRange]);
 
   // Fetch zones catalog
   useEffect(() => {
@@ -78,14 +156,16 @@ export default function AltaTurnoPage() {
   const calculations = useMemo(() => {
     let baseCalcs = calculateTurnDetails(activeZoneObjs, isNuevoCliente);
     if (hasOtros) {
+      const extraP = Number(otrosPrecio) || 0;
       baseCalcs = {
         ...baseCalcs,
-        valorTotal: baseCalcs.valorTotal + (Number(otrosPrecio) || 0),
-        duracionMinutos: baseCalcs.duracionMinutos + (Number(otrosMinutos) || 20)
+        valorTotal: baseCalcs.valorTotal + extraP,
+        valorSeña: baseCalcs.valorSeña + Math.round(extraP * 0.5),
+        duracionMinutos: baseCalcs.duracionMinutos > 0 ? baseCalcs.duracionMinutos : 30
       };
     }
     return baseCalcs;
-  }, [activeZoneObjs, isNuevoCliente, hasOtros, otrosPrecio, otrosMinutos]);
+  }, [activeZoneObjs, isNuevoCliente, hasOtros, otrosPrecio]);
 
   // Active duration for scheduling: either user override or calculated
   const activeDuration = useMemo(() => {
@@ -99,7 +179,6 @@ export default function AltaTurnoPage() {
   const toggleZone = (id) => {
     setSelectedZoneIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
-      // Reset custom duration override when changing zones to recalculate
       setCustomDuration(null);
       return next;
     });
@@ -136,66 +215,82 @@ export default function AltaTurnoPage() {
         if (!isMounted) return;
         if (data.success && data.days) {
           setAvailability(data.days);
-          // If previously selected date is still available, keep it, else clear
           if (selectedDateStr && data.days[selectedDateStr]?.disponible) {
             // Keep selected date
           } else {
-            // Find first available day
-            const firstAvail = Object.keys(data.days).find(d => data.days[d].disponible);
-            setSelectedDateStr(firstAvail || null);
+            let chosenDay = null;
+            if (recommendedWeekRange) {
+              const recDays = Object.keys(data.days).filter(d => 
+                d >= recommendedWeekRange.startStr && 
+                d <= recommendedWeekRange.endStr && 
+                data.days[d].disponible
+              );
+              if (recDays.length > 0) chosenDay = recDays[0];
+            }
+            if (!chosenDay) {
+              chosenDay = Object.keys(data.days).find(d => data.days[d].disponible);
+            }
+            setSelectedDateStr(chosenDay || null);
             setSelectedSlot(null);
           }
         }
         setLoadingAvailability(false);
       })
       .catch(err => {
+        if (!isMounted) return;
         console.error('Error fetching availability:', err);
-        if (isMounted) setLoadingAvailability(false);
+        setLoadingAvailability(false);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [currentYear, currentMonth, activeDuration, horaDesde, horaHasta, selectedDays]);
+  }, [currentYear, currentMonth, activeDuration, horaDesde, horaHasta, selectedDays, recommendedWeekRange]);
 
-  // Month Navigation
+  // Month navigation
   const prevMonth = () => {
     if (currentMonth === 1) {
       setCurrentMonth(12);
-      setCurrentYear(currentYear - 1);
+      setCurrentYear(prev => prev - 1);
     } else {
-      setCurrentMonth(currentMonth - 1);
+      setCurrentMonth(prev => prev - 1);
     }
+    setSelectedDateStr(null);
+    setSelectedSlot(null);
   };
 
   const nextMonth = () => {
     if (currentMonth === 12) {
       setCurrentMonth(1);
-      setCurrentYear(currentYear + 1);
+      setCurrentYear(prev => prev + 1);
     } else {
-      setCurrentMonth(currentMonth + 1);
+      setCurrentMonth(prev => prev + 1);
     }
+    setSelectedDateStr(null);
+    setSelectedSlot(null);
   };
 
   const monthName = useMemo(() => {
     const d = new Date(currentYear, currentMonth - 1, 1);
-    return d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    const raw = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
   }, [currentYear, currentMonth]);
 
-  // Generate calendar cells (with leading blanks for starting weekday)
+  // Calendar cells generation (Monday to Sunday)
   const calendarCells = useMemo(() => {
-    const firstDayIndex = new Date(currentYear, currentMonth - 1, 1).getDay(); // 0 is Sunday
-    // Adjust to start on Monday (0 = Lun, 6 = Dom)
-    const mondayOffset = (firstDayIndex + 6) % 7;
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-
     const cells = [];
-    // Leading empty cells
-    for (let i = 0; i < mondayOffset; i++) {
+    const firstDayOfMonth = new Date(currentYear, currentMonth - 1, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth, 0);
+    const totalDays = lastDayOfMonth.getDate();
+
+    let startingDayOfWeek = firstDayOfMonth.getDay();
+    startingDayOfWeek = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1;
+
+    for (let i = 0; i < startingDayOfWeek; i++) {
       cells.push({ type: 'empty', key: `empty-${i}` });
     }
-    // Days
-    for (let day = 1; day <= daysInMonth; day++) {
+
+    for (let day = 1; day <= totalDays; day++) {
       const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayData = availability[dateStr];
       cells.push({
@@ -215,10 +310,65 @@ export default function AltaTurnoPage() {
     return availability[selectedDateStr].slots || [];
   }, [selectedDateStr, availability]);
 
-  // Continue to Agenda with preloaded parameters
-  const handleProceedToAgenda = () => {
+  // Formatted date label for header
+  const formattedSelectedDateLabel = useMemo(() => {
+    if (!selectedDateStr) return '';
+    try {
+      const dt = new Date(selectedDateStr + 'T12:00:00');
+      const weekday = dt.toLocaleDateString('es-ES', { weekday: 'short' });
+      const day = dt.getDate();
+      const month = dt.toLocaleDateString('es-ES', { month: 'short' });
+      return `${weekday}, ${day} ${month}`;
+    } catch (e) {
+      return selectedDateStr;
+    }
+  }, [selectedDateStr]);
+
+  // Proceed depending on active mode
+  const handleProceed = () => {
     if (!selectedDateStr || !selectedSlot) return;
 
+    if (modo === 'reprogramar') {
+      const params = new URLSearchParams({
+        modo: 'reprogramar',
+        reprogramarTurnoId: turnoIdParam || '',
+        clienteId: clienteIdParam || '',
+        newDate: selectedDateStr,
+        newTime: selectedSlot.horaInicio,
+        newHoraFin: selectedSlot.horaFin,
+        duracion: activeDuration.toString(),
+        zones: selectedZoneIds.join(','),
+        hasOtros: hasOtros ? 'true' : 'false',
+        otrosTexto: otrosTexto || '',
+        otrosPrecio: otrosPrecio.toString()
+      });
+      router.push(`/admin/agenda?${params.toString()}`);
+      return;
+    }
+
+    if (modo === 'siguienteTurno') {
+      const params = new URLSearchParams({
+        newTurno: 'true',
+        modo: 'siguienteTurno',
+        clienteId: clienteIdParam || '',
+        nombre: clienteNombreParam || '',
+        whatsapp: clienteWhatsappParam || '',
+        email: clienteEmailParam || '',
+        dni: clienteDniParam || '',
+        date: selectedDateStr,
+        time: selectedSlot.horaInicio,
+        horaFin: selectedSlot.horaFin,
+        duracion: activeDuration.toString(),
+        zones: selectedZoneIds.join(','),
+        hasOtros: hasOtros ? 'true' : 'false',
+        otrosTexto: otrosTexto || '',
+        otrosPrecio: otrosPrecio.toString()
+      });
+      router.push(`/admin/agenda?${params.toString()}`);
+      return;
+    }
+
+    // Default: nuevo turno
     const params = new URLSearchParams({
       newTurno: 'true',
       date: selectedDateStr,
@@ -230,15 +380,45 @@ export default function AltaTurnoPage() {
       otrosTexto: otrosTexto || '',
       otrosPrecio: otrosPrecio.toString()
     });
-
     router.push(`/admin/agenda?${params.toString()}`);
   };
 
   return (
     <div className={styles.container}>
+      {/* Contextual Mode Banners */}
+      {modo === 'reprogramar' && (
+        <div className={`${styles.modoBanner} ${styles.modoBannerReprogramar}`}>
+          <div>
+            <strong>🔄 Reprogramando Turno:</strong> {clienteNombreParam || 'Cliente'}
+            <div style={{ fontSize: '0.82rem', marginTop: '3px', opacity: 0.9 }}>
+              Turno original: <strong>{fechaOriginalParam} a las {horaOriginalParam} hs</strong>. Seleccioná el nuevo día y horario libre.
+            </div>
+          </div>
+          <button type="button" onClick={() => router.push('/admin/agenda')} className={styles.modoBannerLink}>
+            ✕ Cancelar y Volver
+          </button>
+        </div>
+      )}
+
+      {modo === 'siguienteTurno' && (
+        <div className={`${styles.modoBanner} ${styles.modoBannerSiguiente}`}>
+          <div>
+            <strong>📅 Programando Siguiente Sesión:</strong> {clienteNombreParam || 'Cliente'} ({frecuenciaParam} semanas entre sesiones).
+            {recommendedWeekRange && (
+              <div style={{ fontSize: '0.82rem', marginTop: '3px', opacity: 0.95 }}>
+                ✨ Semana sugerida en el calendario: del <strong>{recommendedWeekRange.startStr}</strong> al <strong>{recommendedWeekRange.endStr}</strong> (resaltada en amarillo).
+              </div>
+            )}
+          </div>
+          <button type="button" onClick={() => router.push('/admin/agenda')} className={styles.modoBannerLink}>
+            ✕ Cancelar y Volver
+          </button>
+        </div>
+      )}
+
       <div className={styles.header}>
         <h1 className={styles.title}>
-          <span>⚡</span> Alta Rápida de Turno
+          <span>⚡</span> {modo === 'reprogramar' ? 'Reprogramar Turno' : (modo === 'siguienteTurno' ? 'Programar Siguiente Turno' : 'Alta Rápida de Turno')}
         </h1>
         <p className={styles.subtitle}>
           Encontrá horarios libres al instante filtrando por zonas requeridas, franjas horarias y días específicos.
@@ -283,7 +463,53 @@ export default function AltaTurnoPage() {
                 </div>
               );
             })}
+
+            {/* OTROS Checkbox */}
+            <div
+              className={`${styles.zoneItem} ${hasOtros ? styles.zoneItemActive : ''}`}
+              onClick={() => setHasOtros(prev => !prev)}
+              style={{ borderStyle: 'dashed' }}
+            >
+              <input
+                type="checkbox"
+                checked={hasOtros}
+                readOnly
+                style={{ cursor: 'pointer' }}
+              />
+              <div>
+                <div style={{ fontWeight: 600 }}>Otros (Extras)</div>
+                <small style={{ color: '#6b7280' }}>Zonas combinadas</small>
+              </div>
+            </div>
           </div>
+
+          {/* Fields for OTROS */}
+          {hasOtros && (
+            <div className={styles.otrosBox}>
+              <div className={styles.formRow} style={{ marginBottom: 0, gap: '10px' }}>
+                <div className={styles.formGroup} style={{ flex: 2 }}>
+                  <label className={styles.label}>Escribir Zona Extra (Otros) *:</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Patillas, Nuca, Cintura..."
+                    value={otrosTexto}
+                    onChange={(e) => setOtrosTexto(e.target.value)}
+                    className={styles.textInput}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ flex: 1 }}>
+                  <label className={styles.label}>Valor Extras ($):</label>
+                  <input
+                    type="number"
+                    placeholder="Ej. 15000"
+                    value={otrosPrecio || ''}
+                    onChange={(e) => setOtrosPrecio(parseInt(e.target.value, 10) || 0)}
+                    className={styles.textInput}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className={styles.durationSummary}>
             <div className={styles.durationInputWrap}>
@@ -348,7 +574,7 @@ export default function AltaTurnoPage() {
                   key={d.id}
                   type="button"
                   onClick={() => toggleDayOfWeek(d.id)}
-                  className={`${styles.dayChip} ${active ? styles.dayChipActive : ''}`}
+                  className={`${styles.dayPill} ${active ? styles.dayPillActive : ''}`}
                 >
                   {d.short}
                 </button>
@@ -356,7 +582,8 @@ export default function AltaTurnoPage() {
             })}
           </div>
 
-          <div className={styles.presetBtns}>
+          {/* Quick presets */}
+          <div className={styles.quickPresets}>
             <button
               type="button"
               className={styles.presetBtn}
@@ -417,6 +644,7 @@ export default function AltaTurnoPage() {
               const isAvailable = dayData?.disponible;
               const isLleno = dayData?.lleno;
               const isSelected = selectedDateStr === dateStr;
+              const isRecommended = recommendedWeekRange && (dateStr >= recommendedWeekRange.startStr && dateStr <= recommendedWeekRange.endStr);
 
               let cellClass = styles.dayDisabled;
               if (isAvailable) cellClass = styles.dayAvailable;
@@ -425,11 +653,12 @@ export default function AltaTurnoPage() {
               return (
                 <div
                   key={cell.key}
-                  className={`${styles.dayCell} ${cellClass} ${isSelected ? styles.daySelected : ''}`}
+                  className={`${styles.dayCell} ${cellClass} ${isSelected ? styles.daySelected : ''} ${isRecommended ? styles.dayCellRecommended : ''}`}
                   onClick={() => {
                     if (isAvailable) {
                       setSelectedDateStr(dateStr);
                       setSelectedSlot(null);
+                      setIsSlotsModalOpen(true);
                     }
                   }}
                   title={
@@ -441,6 +670,9 @@ export default function AltaTurnoPage() {
                   }
                 >
                   <span>{day}</span>
+                  {isRecommended && (
+                    <span className={styles.recommendedTag}>Sugerida</span>
+                  )}
                   {isAvailable && (
                     <span className={styles.daySlotBadge}>
                       {dayData.slots.length} <span className={styles.badgeWord}>libre{dayData.slots.length > 1 ? 's' : ''}</span>
@@ -469,10 +701,16 @@ export default function AltaTurnoPage() {
               <div className={styles.legendDot} style={{ background: '#e5e7eb' }}></div>
               <span>No disponible / Desactivado</span>
             </div>
+            {recommendedWeekRange && (
+              <div className={styles.legendItem}>
+                <div className={styles.legendDot} style={{ background: '#f59e0b' }}></div>
+                <span>Semana Sugerida (Ficha)</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Side: Available Slots List (image9.png style) */}
+        {/* Right Side: Available Slots List Panel */}
         <div className={styles.card}>
           <div className={styles.slotsHeader}>
             <div className={styles.slotsTitle}>
@@ -480,11 +718,7 @@ export default function AltaTurnoPage() {
             </div>
             {selectedDateStr && (
               <div className={styles.dateBadge}>
-                {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short'
-                })}
+                {formattedSelectedDateLabel}
               </div>
             )}
           </div>
@@ -492,6 +726,27 @@ export default function AltaTurnoPage() {
           {selectedDateStr ? (
             currentSlots.length > 0 ? (
               <>
+                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsSlotsModalOpen(true)}
+                    style={{
+                      background: '#f3f4f6',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    📱 Ver en ventana vertical
+                  </button>
+                </div>
+
                 <div className={styles.slotsList}>
                   {currentSlots.map(slot => {
                     const isSelected = selectedSlot?.horaInicio === slot.horaInicio;
@@ -515,10 +770,12 @@ export default function AltaTurnoPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={handleProceedToAgenda}
+                      onClick={handleProceed}
                       className={styles.primaryCtaBtn}
                     >
-                      Continuar a Agendar Turno ➔
+                      {modo === 'reprogramar' 
+                        ? 'Continuar a Confirmar Reprogramación ➔' 
+                        : (modo === 'siguienteTurno' ? 'Continuar a Siguiente Turno ➔' : 'Continuar a Agendar Turno ➔')}
                     </button>
                   </div>
                 )}
@@ -535,6 +792,87 @@ export default function AltaTurnoPage() {
           )}
         </div>
       </div>
+
+      {/* Ventana Modal / Desplegable Vertical de Horarios ("Ventana que se puede abrir y cerrar") */}
+      {isSlotsModalOpen && selectedDateStr && (
+        <div className={styles.slotsModalOverlay} onClick={() => setIsSlotsModalOpen(false)}>
+          <div className={styles.slotsModalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.slotsModalHeader}>
+              <div className={styles.slotsModalTitleWrap}>
+                <div className={styles.slotsModalTitle}>
+                  <span>🕒</span> HORARIOS DISPONIBLES
+                </div>
+                <div className={styles.dateBadge}>
+                  {formattedSelectedDateLabel}
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setIsSlotsModalOpen(false)}
+                title="Cerrar ventana"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.slotsModalBody}>
+              {currentSlots.length > 0 ? (
+                <div className={styles.slotsListVertical}>
+                  {currentSlots.map(slot => {
+                    const isSelected = selectedSlot?.horaInicio === slot.horaInicio;
+                    return (
+                      <div
+                        key={slot.horaInicio}
+                        className={`${styles.slotCardVertical} ${isSelected ? styles.slotCardVerticalActive : ''}`}
+                        onClick={() => setSelectedSlot(slot)}
+                      >
+                        <div className={styles.slotCardTime}>
+                          <span className={styles.slotTimeText}>{slot.horaInicio} hs</span>
+                          <span className={styles.slotTimeSeparator}>➔</span>
+                          <span className={styles.slotEndTimeText}>{slot.horaFin} hs</span>
+                        </div>
+                        <div className={styles.slotDurationBadge}>
+                          ⏱️ {activeDuration} min
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={styles.emptyState}>
+                  No se encontraron horarios libres que cumplan con la duración de {activeDuration} min en esta fecha.
+                </div>
+              )}
+            </div>
+
+            {selectedSlot && (
+              <div className={styles.slotsModalFooter}>
+                <div className={styles.modalSelectionSummary}>
+                  ✅ Horario seleccionado: <strong>{selectedSlot.horaInicio} a {selectedSlot.horaFin} hs</strong> ({activeDuration} min)
+                </div>
+                <button
+                  type="button"
+                  onClick={handleProceed}
+                  className={styles.primaryCtaBtn}
+                >
+                  {modo === 'reprogramar' 
+                    ? 'Continuar a Confirmar Reprogramación ➔' 
+                    : (modo === 'siguienteTurno' ? 'Continuar a Siguiente Turno ➔' : 'Continuar a Agendar Turno ➔')}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function AltaTurnoPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Cargando disponibilidad...</div>}>
+      <AltaTurnoContent />
+    </Suspense>
   );
 }

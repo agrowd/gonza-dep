@@ -635,6 +635,7 @@ export default function AgendaPage() {
       }
       
       const isNewTurnoReq = searchParams.get('newTurno') === 'true';
+      const reprogramarTurnoId = searchParams.get('reprogramarTurnoId');
       const timeParam = searchParams.get('time');
       const horaFinParam = searchParams.get('horaFin');
       const duracionParam = parseInt(searchParams.get('duracion') || '30', 10);
@@ -642,6 +643,11 @@ export default function AgendaPage() {
       const hasOtrosParam = searchParams.get('hasOtros') === 'true';
       const otrosTextoParam = searchParams.get('otrosTexto') || '';
       const otrosPrecioParam = searchParams.get('otrosPrecio') || 0;
+      const clienteIdParam = searchParams.get('clienteId');
+      const nombreParam = searchParams.get('nombre') || '';
+      const whatsappParam = searchParams.get('whatsapp') || '';
+      const emailParam = searchParams.get('email') || '';
+      const dniParam = searchParams.get('dni') || '';
 
       if (isNewTurnoReq) {
         let calcHoraFin = horaFinParam;
@@ -656,6 +662,17 @@ export default function AgendaPage() {
         if (!calcHoraFin) calcHoraFin = '10:30';
 
         const effectiveDateStr = dateParam || new Date().toISOString().split('T')[0];
+
+        let nombreVal = '';
+        let apellidoVal = '';
+        if (nombreParam) {
+          const lastSpaceIdx = nombreParam.lastIndexOf(' ');
+          nombreVal = lastSpaceIdx !== -1 ? nombreParam.substring(0, lastSpaceIdx) : nombreParam;
+          apellidoVal = lastSpaceIdx !== -1 ? nombreParam.substring(lastSpaceIdx + 1) : '';
+        }
+
+        const { countryCode, number, customCode } = parsePhoneCountryAndNumber(whatsappParam);
+
         setNewTurno(prev => ({
           ...prev,
           fechaStr: effectiveDateStr,
@@ -667,9 +684,81 @@ export default function AgendaPage() {
           hasOtros: hasOtrosParam,
           otrosTexto: otrosTextoParam,
           otrosPrecio: otrosPrecioParam,
+          clienteId: clienteIdParam ? (parseInt(clienteIdParam, 10) || clienteIdParam) : null,
+          nombreCompleto: nombreParam || prev.nombreCompleto,
+          nombre: nombreVal || prev.nombre,
+          apellido: apellidoVal || prev.apellido,
+          whatsapp: number || whatsappParam || prev.whatsapp,
+          whatsappCountry: countryCode || prev.whatsappCountry,
+          whatsappCustomCode: customCode || prev.whatsappCustomCode,
+          email: emailParam || prev.email,
+          dni: dniParam || prev.dni,
           estado: 'SEÑADO'
         }));
         setIsNewOpen(true);
+      }
+
+      if (reprogramarTurnoId) {
+        const newDate = searchParams.get('newDate');
+        const newTime = searchParams.get('newTime');
+        const newHoraFin = searchParams.get('newHoraFin');
+
+        if (newDate) {
+          const parsedDate = parseYYYYMMDD(newDate);
+          if (!isNaN(parsedDate.getTime())) {
+            initialDate = parsedDate;
+          }
+        }
+
+        fetch(`/api/admin/turnos/${reprogramarTurnoId}`)
+          .then(res => res.json())
+          .then(turno => {
+            if (turno && !turno.error) {
+              setSelectedTurno(turno);
+              const hasDiscount = (turno.bonificacion || 0) > 0;
+              const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
+              const dynPrices = getUpdatedTurnoPrices(turno);
+              const initialObs = (turno.cliente?.observaciones || turno.observaciones || '').trim();
+              const initialNotas = (turno.cliente?.notasGonzalo || '').trim();
+              const initialFreq = turno.cliente?.frecuencia || 4;
+
+              setEditTurno({
+                isInitialEdit: true,
+                initialValorTotal: Number(dynPrices.valorTotal || turno.valorTotal || 0),
+                initialValorSeña: Number(turno.valorSeña || 0),
+                initialZoneIds: [...preselectedZoneIds],
+                initialHasOtros: Boolean(hasOtros),
+                initialOtrosTexto: (otrosTexto || '').trim(),
+                initialOtrosPrecio: String(otrosPrecio || ''),
+                initialObservaciones: initialObs,
+                initialNotasGonzalo: initialNotas,
+                initialFrecuencia: initialFreq,
+                fechaStr: newDate || (typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha)),
+                horaInicio: newTime || turno.horaInicio,
+                horaFin: newHoraFin || turno.horaFin,
+                estado: 'REPROGRAMADO',
+                valorTotal: dynPrices.valorTotal,
+                valorSeña: turno.valorSeña,
+                manualTotalOverride: undefined,
+                manualSeñaOverride: undefined,
+                descuentoTipo: turno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
+                descuentoValor: turno.descuentoValor !== undefined && turno.descuentoValor !== null && turno.descuentoValor !== '' ? turno.descuentoValor : (hasDiscount ? dynPrices.bonificacion : ''),
+                bonificacion: dynPrices.bonificacion,
+                autoTotal: dynPrices.valorTotal,
+                autoTotalZonas: dynPrices.valorOriginal,
+                autoSeña: turno.valorSeña,
+                selectedZoneIds: preselectedZoneIds,
+                observaciones: initialObs,
+                notasGonzalo: initialNotas,
+                frecuencia: initialFreq,
+                hasOtros: Boolean(hasOtros),
+                otrosTexto: otrosTexto || '',
+                otrosPrecio: otrosPrecio || ''
+              });
+              setIsEditing(true);
+            }
+          })
+          .catch(err => console.error('Error fetching turno to reprogram:', err));
       }
 
       if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
@@ -1181,70 +1270,25 @@ export default function AgendaPage() {
 
   const [pendingNextScheduleData, setPendingNextScheduleData] = useState(null);
 
-  // Schedule next turno based on client's treatment frequency: navigate calendar to target week
+  // Schedule next turno: redirect to Alta de Turno highlighting recommended week based on frequency
   const handleScheduleNextTurn = (turno) => {
     if (!turno || !turno.cliente) return;
     
     const fechaStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha);
-    const [year, month, day] = fechaStr.split('-').map(Number);
-    const currentFecha = new Date(year, month - 1, day, 12, 0, 0);
-    const freqWeeks = turno.cliente.frecuencia || 4;
-    
-    const targetDate = new Date(currentFecha);
-    targetDate.setDate(targetDate.getDate() + freqWeeks * 7);
-
-    // Calculate Monday of that target week cleanly at local noon
-    const targetDay = targetDate.getDay();
-    const diffToMonday = targetDate.getDate() - targetDay + (targetDay === 0 ? -6 : 1);
-    const mondayOfWeek = new Date(targetDate);
-    mondayOfWeek.setDate(diffToMonday);
-    mondayOfWeek.setHours(12, 0, 0, 0);
-
+    const freqWeeks = tempClientFrecuencia || turno.cliente.frecuencia || 4;
     const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
-
-    const fullName = turno.cliente.nombreCompleto || '';
-    const lastSpaceIdx = fullName.lastIndexOf(' ');
-    const nombreVal = lastSpaceIdx !== -1 ? fullName.substring(0, lastSpaceIdx) : fullName;
-    const apellidoVal = lastSpaceIdx !== -1 ? fullName.substring(lastSpaceIdx + 1) : '';
-
-    const { countryCode, number, customCode } = parsePhoneCountryAndNumber(turno.cliente.whatsapp);
 
     let previousDuration = 30;
     if (turno.horaInicio && turno.horaFin) {
       const s = timeToMinutes(turno.horaInicio);
       const e = timeToMinutes(turno.horaFin);
-      if (e > s) {
-        previousDuration = e - s;
-      }
+      if (e > s) previousDuration = e - s;
     } else if (preselectedZoneIds.length > 0) {
       const selectedZ = zones.filter(z => preselectedZoneIds.some(id => String(id) === String(z.id)));
       const calcsZ = calculateTurnDetails(selectedZ, false);
       if (calcsZ.duracionMinutos > 0) previousDuration = calcsZ.duracionMinutos;
     }
 
-    setPendingNextScheduleData({
-      clienteId: turno.cliente.id,
-      nombre: nombreVal,
-      apellido: apellidoVal,
-      nombreCompleto: fullName,
-      whatsapp: number,
-      whatsappCountry: countryCode,
-      whatsappCustomCode: customCode,
-      email: turno.cliente.email || '',
-      dni: turno.cliente.dni || '',
-      selectedZoneIds: preselectedZoneIds,
-      hasOtros,
-      otrosTexto,
-      otrosPrecio: otrosPrecio || '',
-      descuentoTipo: turno.descuentoTipo || (turno.bonificacion > 0 ? 'PESOS' : 'NINGUNO'),
-      descuentoValor: turno.descuentoValor || turno.bonificacion || '',
-      manualTotalOverride: undefined,
-      valorSeña: Number(turno.valorSeña || 0),
-      manualSeñaOverride: Number(turno.valorSeña || 0),
-      inheritedDuration: previousDuration
-    });
-
-    // If observations were edited in the modal before clicking next turn, persist them silently
     if (turno.cliente?.id && (
       tempClientObservaciones !== (turno.cliente?.observaciones || '') ||
       tempClientNotasGonzalo !== (turno.cliente?.notasGonzalo || '') ||
@@ -1253,28 +1297,60 @@ export default function AgendaPage() {
       handleSaveClientObservaciones(true);
     }
 
-    setIsDetailsOpen(false);
-    setSelectedDate(targetDate);
-    setCurrentWeekStart(mondayOfWeek);
-    setViewMode('week');
+    const params = new URLSearchParams({
+      modo: 'siguienteTurno',
+      clienteId: turno.cliente.id || turno.clienteId || '',
+      clienteNombre: turno.cliente.nombreCompleto || turno.nombreCompleto || '',
+      clienteWhatsapp: turno.cliente.whatsapp || turno.whatsapp || '',
+      clienteEmail: turno.cliente.email || turno.email || '',
+      clienteDni: turno.cliente.dni || turno.dni || '',
+      fechaAnterior: fechaStr,
+      frecuencia: freqWeeks.toString(),
+      zones: preselectedZoneIds.join(','),
+      duracion: previousDuration.toString(),
+      hasOtros: hasOtros ? 'true' : 'false',
+      otrosTexto: otrosTexto || '',
+      otrosPrecio: (otrosPrecio || 0).toString()
+    });
 
-    // Pre-fetch target week appointments immediately so they show on screen without delay
-    const startStr = toYYYYMMDD(mondayOfWeek);
-    const satDate = new Date(mondayOfWeek);
-    satDate.setDate(satDate.getDate() + 5);
-    const endStr = toYYYYMMDD(satDate);
+    window.location.href = `/admin/alta-turno?${params.toString()}`;
+  };
 
-    fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setAppointments(data);
-        }
-      })
-      .catch(err => console.error('Error pre-fetching next week appointments:', err));
+  // Reprogramar turno: redirect to Alta de Turno with current appointment details to choose a new free slot
+  const handleReprogramarTurno = (turno) => {
+    if (!turno) return;
+    const fechaStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha);
+    const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
 
-    const formattedTarget = targetDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
-    showToast(`Navegando a la semana del ${formattedTarget} (${freqWeeks} semanas después). Hace clic en un horario libre para agendar con los datos pre-cargados de ${fullName}.`);
+    let duration = 30;
+    if (turno.horaInicio && turno.horaFin) {
+      const s = timeToMinutes(turno.horaInicio);
+      const e = timeToMinutes(turno.horaFin);
+      if (e > s) duration = e - s;
+    } else if (preselectedZoneIds.length > 0) {
+      const selectedZ = zones.filter(z => preselectedZoneIds.some(id => String(id) === String(z.id)));
+      const calcsZ = calculateTurnDetails(selectedZ, false);
+      if (calcsZ.duracionMinutos > 0) duration = calcsZ.duracionMinutos;
+    }
+
+    const params = new URLSearchParams({
+      modo: 'reprogramar',
+      turnoId: turno.id,
+      clienteId: turno.cliente?.id || turno.clienteId || '',
+      clienteNombre: turno.cliente?.nombreCompleto || turno.nombreCompleto || '',
+      clienteWhatsapp: turno.cliente?.whatsapp || turno.whatsapp || '',
+      clienteEmail: turno.cliente?.email || turno.email || '',
+      clienteDni: turno.cliente?.dni || turno.dni || '',
+      fechaOriginal: fechaStr,
+      horaOriginal: turno.horaInicio || '',
+      zones: preselectedZoneIds.join(','),
+      duracion: duration.toString(),
+      hasOtros: hasOtros ? 'true' : 'false',
+      otrosTexto: otrosTexto || '',
+      otrosPrecio: (otrosPrecio || 0).toString()
+    });
+
+    window.location.href = `/admin/alta-turno?${params.toString()}`;
   };
 
   // Save edited Turno
@@ -2913,6 +2989,13 @@ export default function AgendaPage() {
                         </button>
                       </>
                     )}
+                    <button
+                      onClick={() => handleReprogramarTurno(selectedTurno)}
+                      className="btn"
+                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                    >
+                      🔄 Reprogramar
+                    </button>
                     <button
                       onClick={() => {
                         const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
