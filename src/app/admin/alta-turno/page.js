@@ -637,192 +637,112 @@ function AltaTurnoContent() {
         </div>
       </div>
 
-      {/* Main Interactive Wizard: Calendar + Slots */}
-      <div className={styles.wizardLayout}>
-        {/* Left Side: Monthly Calendar (image9.png style) */}
-        <div className={styles.card}>
-          <div className={styles.calendarHeader}>
-            <button type="button" onClick={prevMonth} className={styles.navMonthBtn} title="Mes anterior">‹</button>
-            <div className={styles.monthTitle}>
-              {monthName} {loadingAvailability && <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>⏳ Buscando...</span>}
-            </div>
-            <button type="button" onClick={nextMonth} className={styles.navMonthBtn} title="Mes siguiente">›</button>
+      {/* Calendario Mensual + Desplegable Integrado de Horarios Abajo */}
+      <div className={styles.card}>
+        <div className={styles.calendarHeader}>
+          <button type="button" onClick={prevMonth} className={styles.navMonthBtn} title="Mes anterior">‹</button>
+          <div className={styles.monthTitle}>
+            {monthName} {loadingAvailability && <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>⏳ Buscando...</span>}
           </div>
-
-          <div className={styles.calendarGrid}>
-            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(col => (
-              <div key={col} className={styles.weekdayHeader}>
-                {col}
-              </div>
-            ))}
-
-            {calendarCells.map(cell => {
-              if (cell.type === 'empty') {
-                return <div key={cell.key} style={{ visibility: 'hidden' }} />;
-              }
-
-              const { day, dateStr, dayData } = cell;
-              const isAvailable = dayData?.disponible;
-              const isLleno = dayData?.lleno;
-              const isSelected = selectedDateStr === dateStr;
-              const isRecommended = recommendedWeekRange && (dateStr >= recommendedWeekRange.startStr && dateStr <= recommendedWeekRange.endStr);
-
-              let cellClass = styles.dayDisabled;
-              if (isAvailable) cellClass = styles.dayAvailable;
-              else if (isLleno) cellClass = styles.dayFull;
-
-              return (
-                <div
-                  key={cell.key}
-                  className={`${styles.dayCell} ${cellClass} ${isSelected ? styles.daySelected : ''} ${isRecommended ? styles.dayCellRecommended : ''}`}
-                  onClick={() => {
-                    if (isAvailable) {
-                      setSelectedDateStr(dateStr);
-                      setSelectedSlot(null);
-                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
-                        setIsSlotsModalOpen(true);
-                      }
-                    }
-                  }}
-                  title={
-                    isAvailable
-                      ? `${dayData.slots.length} horarios disponibles`
-                      : isLleno
-                      ? 'Día completo sin espacio'
-                      : 'No disponible'
-                  }
-                >
-                  <span>{day}</span>
-                  {isRecommended && (
-                    <span className={styles.recommendedTag}>Sugerida</span>
-                  )}
-                  {isAvailable && (
-                    <span className={styles.daySlotBadge}>
-                      {dayData.slots.length} <span className={styles.badgeWord}>libre{dayData.slots.length > 1 ? 's' : ''}</span>
-                    </span>
-                  )}
-                  {isLleno && (
-                    <span className={styles.daySlotBadge} style={{ color: '#dc2626' }}>
-                      Lleno
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className={styles.calendarLegend}>
-            <div className={styles.legendItem}>
-              <div className={styles.legendDot} style={{ background: '#22c55e' }}></div>
-              <span>Disponible (Cumple filtros)</span>
-            </div>
-            <div className={styles.legendItem}>
-              <div className={styles.legendDot} style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}></div>
-              <span>Día Lleno</span>
-            </div>
-            <div className={styles.legendItem}>
-              <div className={styles.legendDot} style={{ background: '#e5e7eb' }}></div>
-              <span>No disponible / Desactivado</span>
-            </div>
-            {recommendedWeekRange && (
-              <div className={styles.legendItem}>
-                <div className={styles.legendDot} style={{ background: '#f59e0b' }}></div>
-                <span>Semana Sugerida (Ficha)</span>
-              </div>
-            )}
-          </div>
+          <button type="button" onClick={nextMonth} className={styles.navMonthBtn} title="Mes siguiente">›</button>
         </div>
 
-        {/* Right Side: Available Slots List Panel */}
-        <div className={styles.card}>
-          <div className={styles.slotsHeader}>
-            <div className={styles.slotsTitle}>
-              <span>🕒</span> HORARIOS DISPONIBLES
+        <div className={styles.calendarGrid}>
+          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(col => (
+            <div key={col} className={styles.weekdayHeader}>
+              {col}
             </div>
-            {selectedDateStr && (
-              <div className={styles.dateBadge}>
-                {formattedSelectedDateLabel}
-              </div>
-            )}
-          </div>
+          ))}
 
-          {selectedDateStr ? (
-            currentSlots.length > 0 ? (
-              <>
-                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsSlotsModalOpen(true)}
-                    style={{
-                      background: '#f3f4f6',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      padding: '4px 10px',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    📱 Ver en ventana vertical
-                  </button>
-                </div>
+          {calendarCells.map(cell => {
+            if (cell.type === 'empty') {
+              return <div key={cell.key} style={{ visibility: 'hidden' }} />;
+            }
 
-                <div className={styles.slotsList}>
-                  {currentSlots.map(slot => {
-                    const isSelected = selectedSlot?.horaInicio === slot.horaInicio;
-                    return (
-                      <button
-                        key={slot.horaInicio}
-                        type="button"
-                        className={`${styles.slotBtn} ${isSelected ? styles.slotBtnSelected : ''}`}
-                        onClick={() => setSelectedSlot(slot)}
-                      >
-                        {slot.horaInicio} hs
-                      </button>
-                    );
-                  })}
-                </div>
+            const { day, dateStr, dayData } = cell;
+            const isAvailable = dayData?.disponible;
+            const isLleno = dayData?.lleno;
+            const isSelected = selectedDateStr === dateStr;
+            const isRecommended = recommendedWeekRange && (dateStr >= recommendedWeekRange.startStr && dateStr <= recommendedWeekRange.endStr);
 
-                {selectedSlot && (
-                  <div className={styles.actionCard}>
-                    <div className={styles.actionInfo}>
-                      ✅ Turno seleccionado: {selectedSlot.horaInicio} hs a {selectedSlot.horaFin} hs ({activeDuration} min)
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleProceed}
-                      className={styles.primaryCtaBtn}
-                    >
-                      {modo === 'reprogramar' 
-                        ? 'Continuar a Confirmar Reprogramación ➔' 
-                        : (modo === 'siguienteTurno' ? 'Continuar a Siguiente Turno ➔' : 'Continuar a Agendar Turno ➔')}
-                    </button>
-                  </div>
+            let cellClass = styles.dayDisabled;
+            if (isAvailable) cellClass = styles.dayAvailable;
+            else if (isLleno) cellClass = styles.dayFull;
+
+            return (
+              <div
+                key={cell.key}
+                className={`${styles.dayCell} ${cellClass} ${isSelected ? styles.daySelected : ''} ${isRecommended ? styles.dayCellRecommended : ''}`}
+                onClick={() => {
+                  if (isAvailable) {
+                    if (selectedDateStr === dateStr) {
+                      // Toggle off if clicking the already selected day
+                      setSelectedDateStr(null);
+                      setSelectedSlot(null);
+                    } else {
+                      setSelectedDateStr(dateStr);
+                      setSelectedSlot(null);
+                      setTimeout(() => {
+                        const el = document.getElementById('desplegable-horarios');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }, 60);
+                    }
+                  }
+                }}
+                title={
+                  isAvailable
+                    ? `${dayData.slots.length} horarios disponibles`
+                    : isLleno
+                    ? 'Día completo sin espacio'
+                    : 'No disponible'
+                }
+              >
+                {isRecommended && (
+                  <span className={styles.recommendedStar} title="Semana sugerida según frecuencia">⭐</span>
                 )}
-              </>
-            ) : (
-              <div className={styles.emptyState}>
-                No se encontraron horarios que cumplan con la duración de {activeDuration} min en esta fecha.
+                <span className={styles.dayNumber}>{day}</span>
+                {isAvailable && (
+                  <span className={`${styles.daySlotBadge} ${isRecommended ? styles.daySlotBadgeRecommended : ''}`}>
+                    {dayData.slots.length} <span className={styles.badgeWord}>libre{dayData.slots.length > 1 ? 's' : ''}</span>
+                  </span>
+                )}
+                {isLleno && (
+                  <span className={styles.daySlotBadge} style={{ color: '#dc2626' }}>
+                    Lleno
+                  </span>
+                )}
               </div>
-            )
-          ) : (
-            <div className={styles.emptyState}>
-              👈 Seleccioná un día en <strong>verde</strong> del calendario para ver los horarios disponibles.
+            );
+          })}
+        </div>
+
+        <div className={styles.calendarLegend}>
+          <div className={styles.legendItem}>
+            <div className={styles.legendDot} style={{ background: '#22c55e' }}></div>
+            <span>Disponible (Cumple filtros)</span>
+          </div>
+          <div className={styles.legendItem}>
+            <div className={styles.legendDot} style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}></div>
+            <span>Día Lleno</span>
+          </div>
+          <div className={styles.legendItem}>
+            <div className={styles.legendDot} style={{ background: '#e5e7eb' }}></div>
+            <span>No disponible / Desactivado</span>
+          </div>
+          {recommendedWeekRange && (
+            <div className={styles.legendItem}>
+              <span style={{ fontSize: '0.85rem' }}>⭐</span>
+              <span>Semana Sugerida ({frecuenciaParam || 4} sem)</span>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Ventana Modal / Desplegable Vertical de Horarios ("Ventana que se puede abrir y cerrar") */}
-      {isSlotsModalOpen && selectedDateStr && (
-        <div className={styles.slotsModalOverlay} onClick={() => setIsSlotsModalOpen(false)}>
-          <div className={styles.slotsModalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.slotsModalHeader}>
-              <div className={styles.slotsModalTitleWrap}>
-                <div className={styles.slotsModalTitle}>
+        {/* Desplegable de Horarios Vertical (Aparece abajo de la selección de día como pidió Gonzalo en Captura 3) */}
+        {selectedDateStr && (
+          <div id="desplegable-horarios" className={styles.desplegableCard}>
+            <div className={styles.desplegableHeader}>
+              <div className={styles.desplegableTitleWrap}>
+                <div className={styles.desplegableTitle}>
                   <span>🕒</span> HORARIOS DISPONIBLES
                 </div>
                 <div className={styles.dateBadge}>
@@ -831,71 +751,82 @@ function AltaTurnoContent() {
               </div>
               <button
                 type="button"
-                className={styles.modalCloseBtn}
-                onClick={() => setIsSlotsModalOpen(false)}
-                title="Cerrar ventana"
+                className={styles.desplegableCloseBtn}
+                onClick={() => {
+                  setSelectedDateStr(null);
+                  setSelectedSlot(null);
+                }}
+                title="Cerrar horarios"
               >
                 ✕
               </button>
             </div>
 
-            <div className={styles.slotsModalBody}>
+            <div className={styles.desplegableBody}>
               {currentSlots.length > 0 ? (
-                <div className={styles.slotsListVertical}>
-                  {currentSlots.map(slot => {
-                    const isSelected = selectedSlot?.horaInicio === slot.horaInicio;
-                    return (
-                      <div
-                        key={slot.horaInicio}
-                        className={`${styles.slotCardVertical} ${isSelected ? styles.slotCardVerticalActive : ''}`}
-                        onClick={() => setSelectedSlot(slot)}
-                      >
-                        <div className={styles.slotCardTime}>
-                          <span className={styles.slotTimeText}>{slot.horaInicio} hs</span>
-                          <span className={styles.slotTimeSeparator}>➔</span>
-                          <span className={styles.slotEndTimeText}>{slot.horaFin} hs</span>
+                <>
+                  <div className={styles.desplegableSubtitle}>
+                    🟢 {currentSlots.length} turnos disponibles para el {formattedSelectedDateLabel}:
+                  </div>
+
+                  <div className={styles.slotsListVertical}>
+                    {currentSlots.map(slot => {
+                      const isSelected = selectedSlot?.horaInicio === slot.horaInicio;
+                      return (
+                        <div
+                          key={slot.horaInicio}
+                          className={`${styles.slotCardVertical} ${isSelected ? styles.slotCardVerticalActive : ''}`}
+                          onClick={() => setSelectedSlot(slot)}
+                        >
+                          <div className={styles.slotCardTime}>
+                            <span className={styles.slotTimeText}>{slot.horaInicio} hs</span>
+                            <span className={styles.slotTimeSeparator}>➔</span>
+                            <span className={styles.slotEndTimeText}>{slot.horaFin} hs</span>
+                          </div>
+                          <div className={styles.slotDurationBadge}>
+                            ⏱️ {activeDuration} min
+                          </div>
                         </div>
-                        <div className={styles.slotDurationBadge}>
-                          ⏱️ {activeDuration} min
-                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {selectedSlot && (
+                    <div className={styles.actionCard}>
+                      <div className={styles.actionInfo}>
+                        <span>✅</span>
+                        <span>Turno seleccionado: <strong>{selectedSlot.horaInicio} hs a {selectedSlot.horaFin} hs</strong> ({activeDuration} min)</span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <button
+                        type="button"
+                        onClick={handleProceed}
+                        className={styles.primaryCtaBtn}
+                      >
+                        {modo === 'reprogramar' 
+                          ? 'Continuar a Confirmar Reprogramación ➔' 
+                          : (modo === 'siguienteTurno' ? 'Continuar a Siguiente Turno ➔' : 'Continuar a Agendar Turno ➔')}
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className={styles.emptyState}>
                   No se encontraron horarios libres que cumplan con la duración de {activeDuration} min en esta fecha.
                 </div>
               )}
             </div>
-
-            {selectedSlot && (
-              <div className={styles.slotsModalFooter}>
-                <div className={styles.modalSelectionSummary}>
-                  ✅ Horario seleccionado: <strong>{selectedSlot.horaInicio} a {selectedSlot.horaFin} hs</strong> ({activeDuration} min)
-                </div>
-                <button
-                  type="button"
-                  onClick={handleProceed}
-                  className={styles.primaryCtaBtn}
-                >
-                  {modo === 'reprogramar' 
-                    ? 'Continuar a Confirmar Reprogramación ➔' 
-                    : (modo === 'siguienteTurno' ? 'Continuar a Siguiente Turno ➔' : 'Continuar a Agendar Turno ➔')}
-                </button>
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
 export default function AltaTurnoPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Cargando disponibilidad...</div>}>
+    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando Alta de Turno...</div>}>
       <AltaTurnoContent />
     </Suspense>
   );
 }
+
