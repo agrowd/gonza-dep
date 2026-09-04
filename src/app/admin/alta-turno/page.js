@@ -776,12 +776,18 @@ function AltaTurnoContent() {
                         <div
                           key={slot.horaInicio}
                           className={`${styles.slotCardVertical} ${isSelected ? styles.slotCardVerticalActive : ''}`}
-                          onClick={() => setSelectedSlot(slot)}
+                          onClick={() => {
+                            setSelectedSlot(slot);
+                            setTimeout(() => {
+                              const el = document.getElementById('action-card-cta');
+                              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }, 50);
+                          }}
                         >
                           <div className={styles.slotCardTime}>
-                            <span className={styles.slotTimeText}>{slot.horaInicio} hs</span>
+                            <span className={styles.slotTimeText}>{slot.horaInicio}&nbsp;hs</span>
                             <span className={styles.slotTimeSeparator}>➔</span>
-                            <span className={styles.slotEndTimeText}>{slot.horaFin} hs</span>
+                            <span className={styles.slotEndTimeText}>{slot.horaFin}&nbsp;hs</span>
                           </div>
                           <div className={styles.slotDurationBadge}>
                             ⏱️ {activeDuration} min
@@ -790,24 +796,6 @@ function AltaTurnoContent() {
                       );
                     })}
                   </div>
-
-                  {selectedSlot && (
-                    <div className={styles.actionCard}>
-                      <div className={styles.actionInfo}>
-                        <span>✅</span>
-                        <span>Turno seleccionado: <strong>{selectedSlot.horaInicio} hs a {selectedSlot.horaFin} hs</strong> ({activeDuration} min)</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleProceed}
-                        className={styles.primaryCtaBtn}
-                      >
-                        {modo === 'reprogramar' 
-                          ? 'Continuar a Confirmar Reprogramación ➔' 
-                          : (modo === 'siguienteTurno' ? 'Continuar a Siguiente Turno ➔' : 'Continuar a Agendar Turno ➔')}
-                      </button>
-                    </div>
-                  )}
                 </>
               ) : (
                 <div className={styles.emptyState}>
@@ -815,6 +803,32 @@ function AltaTurnoContent() {
                 </div>
               )}
             </div>
+
+            {/* Fuera del bloque de horarios: Confirmación accesible de inmediato sin scroll */}
+            {selectedSlot && (
+              <div id="action-card-cta" className={styles.desplegableFooter}>
+                <div className={styles.actionCard}>
+                  <div className={styles.actionInfo}>
+                    <span className={styles.actionCheckIcon}>✅</span>
+                    <div className={styles.actionTextWrap}>
+                      <span className={styles.actionTitle}>Turno seleccionado:</span>
+                      <span className={styles.actionSelectedSlot}>
+                        <strong>{selectedSlot.horaInicio} hs a {selectedSlot.horaFin} hs</strong> ({activeDuration} min)
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleProceed}
+                    className={styles.primaryCtaBtn}
+                  >
+                    {modo === 'reprogramar' 
+                      ? 'Continuar a Confirmar Reprogramación ➔' 
+                      : (modo === 'siguienteTurno' ? 'Continuar a Siguiente Turno ➔' : 'Continuar a Agendar Turno ➔')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

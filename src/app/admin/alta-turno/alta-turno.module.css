@@ -704,24 +704,24 @@
 }
 
 .desplegableBody {
-  padding: 18px 20px 22px;
-  max-height: 480px;
+  padding: 14px 18px 16px;
+  max-height: 380px;
   overflow-y: auto;
   width: 100%;
   box-sizing: border-box;
 }
 
 .desplegableSubtitle {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: #15803d;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .slotsListVertical {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -730,14 +730,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: 7px 12px;
+  min-height: 36px;
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   box-sizing: border-box;
   width: 100%;
 }
@@ -745,7 +746,6 @@
 .slotCardVertical:hover {
   background: #f8fafc;
   border-color: #34d399;
-  transform: translateY(-1px);
 }
 
 .slotCardVerticalActive {
@@ -757,34 +757,39 @@
 .slotCardTime {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .slotTimeText {
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: 0.88rem;
+  font-weight: 700;
   color: #0f172a;
+  white-space: nowrap;
 }
 
 .slotTimeSeparator {
   color: #94a3b8;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .slotEndTimeText {
-  font-size: 0.98rem;
+  font-size: 0.84rem;
   font-weight: 600;
   color: #475569;
+  white-space: nowrap;
 }
 
 .slotDurationBadge {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 700;
   background: #f1f5f9;
   color: #475569;
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 2px 7px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .slotCardVerticalActive .slotDurationBadge {
@@ -793,28 +798,63 @@
   border-color: #34d399;
 }
 
-/* Action Confirmation Card */
+/* Footer de Confirmación (Fuera del scroll de horarios) */
+.desplegableFooter {
+  border-top: 1.5px solid #86efac;
+  background: #ffffff;
+  padding: 12px 16px;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.06);
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  width: 100%;
+}
+
 .actionCard {
-  margin-top: 18px;
-  padding: 16px 18px;
+  padding: 10px 14px;
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   border: 1.5px solid #86efac;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  animation: fadeIn 0.2s ease-out;
+  gap: 8px;
   box-sizing: border-box;
   width: 100%;
 }
 
 .actionInfo {
-  font-size: 0.94rem;
+  font-size: 0.88rem;
   color: #14532d;
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.actionCheckIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.actionTextWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.actionTitle {
+  font-size: 0.72rem;
+  color: #166534;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.actionSelectedSlot {
+  font-size: 0.88rem;
+  color: #0f172a;
 }
 
 .primaryCtaBtn {
@@ -823,14 +863,14 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 11px 18px;
   font-family: var(--font-title), 'Montserrat', sans-serif;
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: #ffffff;
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
@@ -866,6 +906,17 @@
   from {
     opacity: 0;
     transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -965,23 +1016,67 @@
   }
 
   .desplegableBody {
-    padding: 12px 14px 16px;
+    padding: 10px 12px 12px;
+    max-height: 280px;
+  }
+
+  .slotsListVertical {
+    gap: 4px;
   }
 
   .slotCardVertical {
-    padding: 12px 14px;
+    padding: 5px 10px;
+    min-height: 32px;
+    border-radius: 7px;
+  }
+
+  .slotCardTime {
+    gap: 4px;
+    white-space: nowrap;
   }
 
   .slotTimeText {
-    font-size: 1rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .slotTimeSeparator {
+    font-size: 0.68rem;
+    white-space: nowrap;
   }
 
   .slotEndTimeText {
-    font-size: 0.9rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
   }
 
   .slotDurationBadge {
-    font-size: 0.75rem;
-    padding: 3px 8px;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    white-space: nowrap;
+  }
+
+  .desplegableFooter {
+    padding: 8px 10px;
+  }
+
+  .actionCard {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .actionTitle {
+    font-size: 0.70rem;
+  }
+
+  .actionSelectedSlot {
+    font-size: 0.82rem;
+  }
+
+  .primaryCtaBtn {
+    padding: 10px 14px;
+    font-size: 0.86rem;
+    border-radius: 8px;
   }
 }
+
