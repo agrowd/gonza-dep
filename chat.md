@@ -673,8 +673,35 @@
    - Tarjeta de confirmación verde esmeralda con botón `Continuar a Agendar Turno ➔`.
 5. **Despliegue**:
    - Compilado localmente (`npm run build`, 37 rutas exitosas).
-   - Pusheado a `staging` (commit `6de9acf`).
    - Desplegado en VPS Staging en puerto 3008 (PM2 id 138).
+
+## Mensaje del Usuario (2026-09-04 18:34:23-03:00)
+> [3 capturas de WhatsApp de Gonzalo]:
+> 1. "Acá me aparece cortado": la lista de 3 columnas de horarios se cortaba horizontalmente en celulares pequeños.
+> 2. "Esta parte también me aparece cortada" y "Y el sugerido cámbialo de lugar para que no tape la fecha": el calendario en mobile desbordaba hacia la derecha (columna DOM se cortaba), y el badge de "Sugerida" tapaba el número de día (días 28, 29, 30).
+> 3. "A esto cámbialo así Fede, osea cambia lo de los horarios para que la lista de horas vertical aparezca abajo de la selección de día (Cómo desplegable)": mockup mostrando el calendario arriba y directamente abajo la lista vertical de horas como desplegable integrado con cruz de cierre.
+
+## Acciones Realizadas y Solución Desplegada en Staging
+1. **Desplegable Vertical de Horarios Abajo del Calendario (Fiel a la Captura 3)**:
+   - Se eliminó el layout de 2 columnas apretadas y el modal emergente superpuesto.
+   - Ahora, al seleccionar un día disponible en el calendario, se despliega automáticamente **directamente abajo del calendario** una tarjeta integrada (`.desplegableCard`):
+     - Encabezado: `🕒 HORARIOS DISPONIBLES` | Fecha (`Mié, 30 Sept`) | Botón `✕` de cierre.
+     - Lista vertical de tarjetas cómodas: `12:30 hs ➔ 13:00 hs | ⏱️ 30 min`.
+     - Al seleccionar un turno se ilumina en verde esmeralda y muestra la tarjeta de acción con el botón `Continuar a Agendar Turno ➔`.
+     - Al volver a tocar el día o tocar la cruz `✕`, el desplegable se repliega suavemente.
+2. **Solución Total al Corte Horizontal en Celulares**:
+   - Se aplicó `grid-template-columns: repeat(7, minmax(0, 1fr))` en `.calendarGrid` para forzar que las 7 columnas encajen con exactitud matemática dentro del ancho del teléfono sin desbordar jamás `DOM`.
+   - Se ajustó el padding del contenedor y las tarjetas en mobile (`padding: 12px 6px` y `14px 10px`), eliminando cualquier desborde o scroll horizontal involuntario.
+   - Las pastillas de días (`Lun`, `Mar`...) ahora tienen `min-width: 0; flex: 1` para encajar los 7 días sin salirse de la pantalla.
+3. **Semana Sugerida sin Tapar el Número de Fecha**:
+   - Se eliminó la etiqueta de texto `Sugerida` que tapaba el número del día.
+   - Ahora el día sugerido cuenta con un **borde dorado suave (`border: 2px solid #f59e0b`)**, una pequeña estrella `⭐` en la esquina superior derecha (`.recommendedStar`) y un badge numérico dorado en la base (`.daySlotBadgeRecommended`).
+   - El número de fecha (`28`, `29`, `30`) permanece 100% visible, legible y despejado.
+4. **Despliegue y Verificación**:
+   - Compilado localmente (`npm run build`, 37 rutas exitosas).
+   - Pusheado a `staging` (commit `18bb8c6`).
+   - Desplegado y verificado en el VPS Staging en puerto 3008 (PM2 id 139).
+
 
 
 
