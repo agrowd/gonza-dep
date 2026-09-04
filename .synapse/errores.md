@@ -59,3 +59,10 @@
 **Solución:** Se eliminaron las 8 zonas duplicadas de la base de datos PostgreSQL, se desactivó el seeding de zonas en `/srv/ia-gonzadep/prisma/seed.js` y se reinició la aplicación. La base de datos ahora contiene exclusivamente las 10 zonas oficiales.
 **Estado:** ✅ FIXED
 
+## ERR-11: Capping a las 20:00 hs al buscar disponibilidad en Alta de Turno (2026-09-04)
+**Síntoma:** Al buscar turnos en `/admin/alta-turno` con franja horaria "Hasta las: 10:00 p.m." (22:00) y duración de 90 min, el último turno retornado era `18:30 hs ➔ 20:00 hs`, no mostrando horarios posteriores como `20:30 hs ➔ 22:00 hs`.
+**Root Cause:** En `src/app/api/admin/alta-turno/disponibilidad/route.js`, el cálculo de `filterEndMin` utilizaba `Math.min(workEndMin, timeToMinutes(horaHasta))`. Dado que la configuración general de atención en base de datos tiene `work_end = '20:00'`, `Math.min('20:00', '22:00')` se limitaba a las 20:00 hs ignorando la búsqueda extendida del operador.
+**Solución:** Se actualizó la API para utilizar directamente los minutos provistos por el operador (`timeToMinutes(horaHasta)` y `timeToMinutes(horaDesde)`) sin recortar con `work_start`/`work_end` cuando son ingresados manualmente.
+**Commit:** `b4acae3`
+**Estado:** ✅ FIXED
+

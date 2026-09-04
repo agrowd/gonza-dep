@@ -726,3 +726,26 @@
 4. **Despliegue y Validación**:
    - Cambios comiteados y subidos a GitHub (`origin/staging` y `origin/main`).
    - Compilado y desplegado con éxito tanto en Staging (puerto 3008) como en Producción (puerto 3006).
+
+## Mensaje del Usuario (2026-09-04 19:10:00-03:00)
+> [3 capturas de WhatsApp de Gonzalo]:
+> "Acá puse que la franja horaria sea hasta las 10:00 (osea que el último turno sería a las 20:30 porque el turno es de 90 minutos)"
+> "Pero el último turno me lo muestra a las 18:30"
+
+## Diagnóstico y Solución Aplicada
+1. **Causa Raíz**:
+   - En `src/app/api/admin/alta-turno/disponibilidad/route.js`, el cálculo de la hora límite de búsqueda utilizaba:
+     `const filterEndMin = horaHasta ? Math.min(workEndMin, timeToMinutes(horaHasta)) : workEndMin;`
+   - Como la configuración del local tiene configurado `work_end = '20:00'`, `Math.min('20:00', '22:00')` se limitaba a las 20:00 hs (1200 minutos).
+   - Para un turno de 90 minutos, el último turno posible que terminaba a las 20:00 hs era exactamente a las 18:30 hs (`18:30 + 90 min = 20:00 hs`), recortando los turnos entre 18:30 y 20:30.
+2. **Corrección**:
+   - Se eliminó la función `Math.min(workEndMin, ...)` y `Math.max(workStartMin, ...)`. Cuando el operador especifica una franja horaria explícita (`horaDesde` y/o `horaHasta`), el motor de disponibilidad respeta estrictamente los horarios ingresados por el operador.
+   - Si no se especifican, se mantienen los valores por defecto del horario laboral configurado.
+3. **Validación en Vivo en Staging**:
+   - Se ejecutó un test de consulta a `http://187.127.9.216:3008/api/admin/alta-turno/disponibilidad` con `duracion=90`, `horaDesde=14:00`, `horaHasta=22:00`.
+   - El resultado ahora incluye correctamente todos los slots hasta el último: `20:30 hs ➔ 22:00 hs`.
+4. **Despliegue**:
+   - Pusheado a la rama `staging` (commit `b4acae3`).
+   - Desplegado y reiniciado en PM2 Staging (proceso `gonzalo-agenda-staging`, ID 140, puerto 3008).
+   - Producción (puerto 3006) 100% aislada e intacta.
+

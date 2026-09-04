@@ -492,15 +492,28 @@
   - Botón de acción con redirección y precarga automática de fecha, hora, duración y zonas en el modal de nuevo turno de la agenda.
   - Agregado del ícono y enlace `⚡ Alta de Turno` en la barra lateral por encima de `Agenda`.
 
-## 📅 Sesión: 03 de Septiembre de 2026
+## 📅 Sesión: 03 y 04 de Septiembre de 2026
 
 ### 🎯 Tareas en curso / Objetivos
-- [ ] Integrar zona "Otros" (texto y precio) en el Módulo de Alta de Turno (`/admin/alta-turno`).
-- [ ] Implementar modal / ventana desplegable vertical de horarios disponibles ("abrir y cerrar" con fecha en cabecera) para optimizar la experiencia en celular.
+- [x] Implementar ventana desplegable vertical de horarios disponibles ("abrir y cerrar" con fecha en cabecera) directamente debajo del calendario para celulares y escritorio.
+- [x] Solucionar cortes laterales en dispositivos móviles (calendario y columna de domingo DOM).
+- [x] Corregir la indicación de "Semana sugerida" para que no tape los números de los días (estrella ⭐ y borde dorado).
+- [x] Corregir el corte de horarios a las 18:30 hs al buscar turnos hasta las 22:00 hs con 90 min de duración en `/api/admin/alta-turno/disponibilidad`.
 - [ ] Separar el botón `Editar Turno` del modal de turno de la agenda en dos:
   - ✏️ `Editar Turno`: edición manual estándar.
   - 🔄 `Reprogramar`: redirección a Alta de Turno precargando datos para elegir nueva fecha/hora.
 - [ ] Integrar el botón `📅 Siguiente Turno` con Alta de Turno:
   - Resaltar en el calendario la **semana sugerida** según la frecuencia del cliente (ej: a las 3 o 4 semanas).
   - Precargar datos del turno anterior y devolver a la agenda con el horario seleccionado.
-- [ ] Compilar y desplegar exclusivamente en el entorno Staging (`http://187.127.9.216:3008`).
+- [x] Compilar y desplegar exclusivamente en el entorno Staging (`http://187.127.9.216:3008`).
+
+### 📝 Notas / Bitácora
+- **03 de Septiembre (14:30 - 18:00)**:
+  - Rediseño visual de `/admin/alta-turno`: pastillas estilizadas de días (`.dayChip`), stepper interactivo de duración con chips de totales/seña, título de mes pulido y grilla responsiva.
+- **04 de Septiembre (18:30 - 19:30)**:
+  - Desplegable vertical integrado directamente abajo del calendario (`.desplegableCard`), permitiendo abrir/cerrar con suavidad y consultar los horarios en formato lista vertical tal como solicitó Gonzalo.
+  - Corrección de corte de la columna domingo (DOM) en móviles usando `repeat(7, minmax(0, 1fr))` en la grilla y paddings compactos.
+  - Indicador de "Sugerida" transformado a un sutil borde dorado y una estrella `⭐` en la esquina superior derecha, manteniendo el número de fecha (28, 29, 30) 100% visible y despejado.
+  - Resolución del capping a las 20:00 hs en la API de disponibilidad (`/api/admin/alta-turno/disponibilidad`): se removió `Math.min(workEndMin, timeToMinutes(horaHasta))`, permitiendo generar slots hasta el límite manual provisto por el operador (ej. 20:30 a 22:00 hs para turnos de 90 min con límite 22:00 hs).
+  - Desplegado y verificado en vivo en Staging VPS (`http://187.127.9.216:3008`). Producción completamente aislada y sin cambios.
+
