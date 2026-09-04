@@ -749,3 +749,22 @@
    - Desplegado y reiniciado en PM2 Staging (proceso `gonzalo-agenda-staging`, ID 140, puerto 3008).
    - Producción (puerto 3006) 100% aislada e intacta.
 
+## Mensaje del Usuario (2026-09-04 19:27:00-03:00)
+> [Captura de WhatsApp de Gonzalo con indicaciones dibujadas a mano]:
+> 1. "Esta parte sacame la para afuera del bloque de horarios para no tener que bajar todo el scroll para poner el okey" (marcado con círculo rojo sobre la tarjeta verde de confirmación y el botón 'Continuar a Siguiente Turno').
+> 2. "Y a los horarios hacelo con el font más chico para que entre el hs adelante de la hora y el bloque quede más chico" (dibujado: '21:20 hs ➔ 21:40 hs ⏱️ 20 min' todo en una sola línea horizontal compacta, tachando el salto de línea de 'hs' y el alto excesivo de la tarjeta).
+
+## Diagnóstico y Solución Aplicada
+1. **Confirmación Fuera del Bloque de Horarios (`desplegableFooter`)**:
+   - Anteriormente, el bloque de confirmación (`actionCard`) estaba ubicado al final del contenedor scrollable de turnos (`desplegableBody`). Al haber 30 o 40 turnos disponibles, el operador debía desplazarse hasta el final del scroll para poder tocar el botón de confirmación.
+   - Solución: Se extrajo `actionCard` fuera del contenedor de scroll y se colocó en un footer dedicado (`.desplegableFooter`) con `position: sticky; bottom: 0`. Al seleccionar cualquier horario, el cuadro verde y el botón "Continuar a Siguiente Turno ➔" aparecen inmediatamente visibles y accesibles sin necesidad de scrollear.
+2. **Horarios Compactos y en una Sola Línea sin Salto de 'hs'**:
+   - Anteriormente en mobile, el tamaño de fuente (`1rem`) y los paddings (`12px 14px`) provocaban que el texto "hs" hiciera salto de línea hacia abajo del número (ej. "21:20" arriba y "hs" abajo), duplicando la altura de cada fila.
+   - Solución: Se redujo la tipografía a `0.82rem`, se aplicaron paddings compactos (`5px 10px`) y altura de 32px, y se utilizó `white-space: nowrap` con `&nbsp;hs` en todos los componentes. Ahora cada turno se muestra en una única fila horizontal limpia y proporcionada (`21:20 hs ➔ 21:40 hs ⏱️ 20 min`).
+3. **Compilación y Despliegue en Staging**:
+   - Build de Next.js verificado localmente con 37/37 rutas generadas con éxito.
+   - Pusheado a GitHub rama `staging` (commit `f828323`).
+   - Desplegado y reiniciado en el VPS Staging bajo PM2 (proceso `gonzalo-agenda-staging`, ID 141, puerto 3008).
+   - Producción (puerto 3006) 100% aislada e intacta.
+
+

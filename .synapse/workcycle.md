@@ -499,6 +499,8 @@
 - [x] Solucionar cortes laterales en dispositivos móviles (calendario y columna de domingo DOM).
 - [x] Corregir la indicación de "Semana sugerida" para que no tape los números de los días (estrella ⭐ y borde dorado).
 - [x] Corregir el corte de horarios a las 18:30 hs al buscar turnos hasta las 22:00 hs con 90 min de duración en `/api/admin/alta-turno/disponibilidad`.
+- [x] Extraer la confirmación del turno fuera del bloque scrollable de horarios (`desplegableFooter` sticky) para confirmar sin tener que scrollear.
+- [x] Ajustar la tipografía y dimensiones de los slots a formato compacto de un solo renglón (`21:20 hs ➔ 21:40 hs ⏱️ 20 min`), evitando el quiebre de línea de `hs`.
 - [ ] Separar el botón `Editar Turno` del modal de turno de la agenda en dos:
   - ✏️ `Editar Turno`: edición manual estándar.
   - 🔄 `Reprogramar`: redirección a Alta de Turno precargando datos para elegir nueva fecha/hora.
@@ -510,10 +512,13 @@
 ### 📝 Notas / Bitácora
 - **03 de Septiembre (14:30 - 18:00)**:
   - Rediseño visual de `/admin/alta-turno`: pastillas estilizadas de días (`.dayChip`), stepper interactivo de duración con chips de totales/seña, título de mes pulido y grilla responsiva.
-- **04 de Septiembre (18:30 - 19:30)**:
+- **04 de Septiembre (18:30 - 19:35)**:
   - Desplegable vertical integrado directamente abajo del calendario (`.desplegableCard`), permitiendo abrir/cerrar con suavidad y consultar los horarios en formato lista vertical tal como solicitó Gonzalo.
   - Corrección de corte de la columna domingo (DOM) en móviles usando `repeat(7, minmax(0, 1fr))` en la grilla y paddings compactos.
   - Indicador de "Sugerida" transformado a un sutil borde dorado y una estrella `⭐` en la esquina superior derecha, manteniendo el número de fecha (28, 29, 30) 100% visible y despejado.
   - Resolución del capping a las 20:00 hs en la API de disponibilidad (`/api/admin/alta-turno/disponibilidad`): se removió `Math.min(workEndMin, timeToMinutes(horaHasta))`, permitiendo generar slots hasta el límite manual provisto por el operador (ej. 20:30 a 22:00 hs para turnos de 90 min con límite 22:00 hs).
+  - Desplazamiento de la tarjeta de confirmación ("Turno seleccionado... Continuar") fuera del scroll de turnos a un footer pegajoso (`.desplegableFooter`). Ahora al tocar un turno el botón queda visible de inmediato sin bajar todo el scroll.
+  - Reducción de font size y uso de `white-space: nowrap` con `&nbsp;hs` en las tarjetas de horarios. Cada tarjeta es un renglón único ultra-compacto de 32px de alto (`21:20 hs ➔ 21:40 hs ⏱️ 20 min`), reduciendo la altura vertical del bloque y evitando cortes.
   - Desplegado y verificado en vivo en Staging VPS (`http://187.127.9.216:3008`). Producción completamente aislada y sin cambios.
+
 
