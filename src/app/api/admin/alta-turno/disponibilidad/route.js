@@ -87,9 +87,9 @@ export async function GET(request) {
     const workStartMin = timeToMinutes(globalWorkStart);
     const workEndMin = timeToMinutes(globalWorkEnd);
 
-    // Apply user filters for range, clamped by work hours
-    const filterStartMin = horaDesde ? Math.max(workStartMin, timeToMinutes(horaDesde)) : workStartMin;
-    const filterEndMin = horaHasta ? Math.min(workEndMin, timeToMinutes(horaHasta)) : workEndMin;
+    // Apply user filters for range; fallback to global configured work hours only if not specified
+    const filterStartMin = horaDesde ? timeToMinutes(horaDesde) : workStartMin;
+    const filterEndMin = horaHasta ? timeToMinutes(horaHasta) : workEndMin;
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
