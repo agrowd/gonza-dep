@@ -501,24 +501,33 @@
 - [x] Corregir el corte de horarios a las 18:30 hs al buscar turnos hasta las 22:00 hs con 90 min de duración en `/api/admin/alta-turno/disponibilidad`.
 - [x] Extraer la confirmación del turno fuera del bloque scrollable de horarios (`desplegableFooter` sticky) para confirmar sin tener que scrollear.
 - [x] Ajustar la tipografía y dimensiones de los slots a formato compacto de un solo renglón (`21:20 hs ➔ 21:40 hs ⏱️ 20 min`), evitando el quiebre de línea de `hs`.
-- [ ] Separar el botón `Editar Turno` del modal de turno de la agenda en dos:
+- [x] Separar el botón `Editar Turno` del modal de turno de la agenda en dos:
   - ✏️ `Editar Turno`: edición manual estándar.
   - 🔄 `Reprogramar`: redirección a Alta de Turno precargando datos para elegir nueva fecha/hora.
-- [ ] Integrar el botón `📅 Siguiente Turno` con Alta de Turno:
+- [x] Integrar el botón `📅 Siguiente Turno` con Alta de Turno:
   - Resaltar en el calendario la **semana sugerida** según la frecuencia del cliente (ej: a las 3 o 4 semanas).
   - Precargar datos del turno anterior y devolver a la agenda con el horario seleccionado.
 - [x] Compilar y desplegar exclusivamente en el entorno Staging (`http://187.127.9.216:3008`).
 
+## 📅 Sesión: 05 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Crear backup integral de base de datos PostgreSQL (`agenda_db`) de producción en el VPS (`/root/backups/backup_agenda_db_prod_20260905.dump` y `.sql`).
+- [x] Descargar copia de seguridad local en `scratch/backups/backup_agenda_db_prod_20260905.dump`.
+- [x] Crear tag de rollback en Git `backup-prod-before-alta-turno` en el commit `4206b7c` y sincronizar con GitHub.
+- [x] Fusionar rama `staging` en `main` y pushear a GitHub.
+- [x] Desplegar en producción oficial en el VPS (`https://agenda.depilacionparahombres.com`, puerto 3006).
+- [x] Verificar respuesta HTTP 200 OK, re-autenticación de WhatsApp (`WhatsApp Client is ready!`) y funcionamiento en vivo.
+
 ### 📝 Notas / Bitácora
-- **03 de Septiembre (14:30 - 18:00)**:
-  - Rediseño visual de `/admin/alta-turno`: pastillas estilizadas de días (`.dayChip`), stepper interactivo de duración con chips de totales/seña, título de mes pulido y grilla responsiva.
-- **04 de Septiembre (18:30 - 19:35)**:
-  - Desplegable vertical integrado directamente abajo del calendario (`.desplegableCard`), permitiendo abrir/cerrar con suavidad y consultar los horarios en formato lista vertical tal como solicitó Gonzalo.
-  - Corrección de corte de la columna domingo (DOM) en móviles usando `repeat(7, minmax(0, 1fr))` en la grilla y paddings compactos.
-  - Indicador de "Sugerida" transformado a un sutil borde dorado y una estrella `⭐` en la esquina superior derecha, manteniendo el número de fecha (28, 29, 30) 100% visible y despejado.
-  - Resolución del capping a las 20:00 hs en la API de disponibilidad (`/api/admin/alta-turno/disponibilidad`): se removió `Math.min(workEndMin, timeToMinutes(horaHasta))`, permitiendo generar slots hasta el límite manual provisto por el operador (ej. 20:30 a 22:00 hs para turnos de 90 min con límite 22:00 hs).
-  - Desplazamiento de la tarjeta de confirmación ("Turno seleccionado... Continuar") fuera del scroll de turnos a un footer pegajoso (`.desplegableFooter`). Ahora al tocar un turno el botón queda visible de inmediato sin bajar todo el scroll.
-  - Reducción de font size y uso de `white-space: nowrap` con `&nbsp;hs` en las tarjetas de horarios. Cada tarjeta es un renglón único ultra-compacto de 32px de alto (`21:20 hs ➔ 21:40 hs ⏱️ 20 min`), reduciendo la altura vertical del bloque y evitando cortes.
-  - Desplegado y verificado en vivo en Staging VPS (`http://187.127.9.216:3008`). Producción completamente aislada y sin cambios.
+- **05 de Septiembre (14:20 - 14:30)**:
+  - Gonzalo aprueba la versión final del Módulo 1 probada en Staging y solicita backup preventivo antes de implementarlo en la agenda oficial.
+  - Se ejecuta script automatizado de backup vía SSH/SFTP: `pg_dump` genera volcado binario de 574 KB y SQL plano de 2.2 MB en `/root/backups/`, descargándose copia local en `scratch/backups/`.
+  - Se crea y publica el tag Git `backup-prod-before-alta-turno` en GitHub asegurando un punto de rollback instantáneo.
+  - Se realiza fast-forward merge de `staging` hacia `main` (`d1fe3bc`) y se sube a GitHub.
+  - Se ejecuta `deploy_vps_workspace.js`: Next.js compila las 37 rutas en 19.2 segundos en producción, se actualiza el proceso PM2 `gonzalo-agenda` (ID 142) en el puerto 3006.
+  - Se verifica que la sesión de WhatsApp `.wwebjs_auth` se mantiene intacta: el watchdog y cliente inician automáticamente (`WhatsApp Client authenticated. WhatsApp Client is ready!`).
+  - Se validan mediante peticiones HTTPS las rutas `/`, `/admin/alta-turno`, y la API `/api/admin/alta-turno/disponibilidad` confirmando la correcta generación y visualización de disponibilidad sobre la base de datos real.
+
 
 

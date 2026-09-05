@@ -767,4 +767,29 @@
    - Desplegado y reiniciado en el VPS Staging bajo PM2 (proceso `gonzalo-agenda-staging`, ID 141, puerto 3008).
    - Producción (puerto 3006) 100% aislada e intacta.
 
+## Mensaje del Usuario (2026-09-05 14:01:58-03:00)
+> [Captura de WhatsApp de Gonzalo dando el visto bueno y pidiendo backup]:
+> "Perfecto, ya con eso ya podemos implementarlo en la agenda"
+> "Es posible hacer un backup de la agenda como tenemos ahora por si al sumar eso se rompe algo, y así volver a lo que teníamos?"
+
+## Acciones Realizadas: Backup de Seguridad e Implementación en Producción Oficial
+1. **Backup Integral de Base de Datos y Código**:
+   - Se ejecutó script automatizado vía SSH/SFTP para realizar `pg_dump` sobre la base de datos oficial `agenda_db`:
+     - Volcado binario: `/root/backups/backup_agenda_db_prod_20260905.dump` (574 KB).
+     - Volcado SQL: `/root/backups/backup_agenda_db_prod_20260905.sql` (2.2 MB).
+     - Copia local descargada: `scratch/backups/backup_agenda_db_prod_20260905.dump` (573.93 KB).
+   - Se creó y publicó el tag Git de rollback `backup-prod-before-alta-turno` en GitHub apuntando al commit base `4206b7c`.
+2. **Fusión y Despliegue Oficial en Producción**:
+   - Se cambió a la rama `main` y se fusionó `staging` limpiamente (`d1fe3bc`).
+   - Se ejecutó el script de despliegue `deploy_vps_workspace.js` en `/srv/gonzalo-dep`:
+     - Compilación de Next.js en producción (37/37 rutas completadas con éxito en 19.2s).
+     - Reinicio limpio de PM2 para `gonzalo-agenda` (ID 142) corriendo en el puerto 3006.
+3. **Verificación en Vivo**:
+   - El proxy inverso HTTPS `https://agenda.depilacionparahombres.com` responde `HTTP 200 OK`.
+   - La nueva ruta `/admin/alta-turno` responde `HTTP 200 OK`.
+   - La API `/api/admin/alta-turno/disponibilidad` calcula correctamente la disponibilidad con datos reales de `agenda_db`.
+   - El cliente de WhatsApp Web re-autenticó exitosamente preservando la sesión (`WhatsApp Client is ready!`).
+   - En la agenda `/admin/agenda`, los botones `✏️ Editar Turno`, `🔄 Reprogramar` y `📅 Siguiente Turno` están activos e integrados.
+
+
 
