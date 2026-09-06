@@ -705,7 +705,7 @@ let reminderInterval = null;
 export function startReminderCron() {
   if (reminderInterval) return;
 
-  console.log('[Reminder Cron] Initializing automated WhatsApp reminder cron (checks every 15 minutes)...');
+  console.log('[Reminder Cron] Initializing automated WhatsApp reminder cron (checks every 1 minute for exact 10:00 AM dispatch)...');
   
   // Run immediate check
   checkAndSendReminders().catch(err => {
@@ -716,7 +716,7 @@ export function startReminderCron() {
     checkAndSendReminders().catch(err => {
       console.error('[Reminder Cron] Error running automated reminder check:', err);
     });
-  }, 15 * 60 * 1000); // 15 minutes
+  }, 60 * 1000); // Check every 1 minute
 }
 
 // Auto-start watchdog, reminder cron and client re-connection on server runtime (NOT during Next.js build phase)

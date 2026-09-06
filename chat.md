@@ -791,5 +791,10 @@
    - El cliente de WhatsApp Web re-autenticó exitosamente preservando la sesión (`WhatsApp Client is ready!`).
    - En la agenda `/admin/agenda`, los botones `✏️ Editar Turno`, `🔄 Reprogramar` y `📅 Siguiente Turno` están activos e integrados.
 
-
-
+## Mensaje del Usuario (2026-09-06 17:46:00-03:00)
+> "Te dejo correcciones sobre el modulo 1 que me enviaron"
+> [Mensajes y audios de Gonzalo de WhatsApp]:
+> 1. "Que las opciones de turno sea cada 30 minutos porque de lo contrario me deja un turno de 10 o 20 minutos y me bloquea ese espacio para un turno para otra persona y la mayoría son turnos de 30 minutos. O sea si el turno empieza a las 17:10, el siguiente que ofrezca sea 17:40 (no a las 17.20 o 17:30)"
+> 2. "Y lo otro, que si bien es correcto que tenemos como horario 12.30, el horario que manejo de atención es de 14 a 22, que de manera puntual a alguna persona yo le quiero atender a las 13.30, a 13 doy turnos excepcionales, pero como es los menos y contados, prefiero ponerlo yo y no estar corrigiendo cada vez que toque algún turno que busque a partir de las 14"
+> 3. "pero tené en cuenta que los turnos no es que tienen que ser cada 30 minutos, o sea, 14, 14:30, 15, 15:30. Del momento en que termina el turno, ahí se cuenta el tiempo que se necesita para la sesión que se está queriendo programar, ya sea desde que termina el turno o el tiempo anterior que se necesita cuando está empezando otro."
+> 4. [Captura de WhatsApp sobre recordatorios]: "Hola, hoy no salieron los mensajes de WhatsApp de 48hs... Salieron a las 10:08... fijate por que no se respeto qie salieran a las 10:00hs... Dale como para quedarme tranquilo que no haya sido por la implementación del módulo".

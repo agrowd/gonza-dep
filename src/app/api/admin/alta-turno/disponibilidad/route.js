@@ -26,8 +26,8 @@ export async function GET(request) {
     const year = parseInt(searchParams.get('year') || currentYear, 10);
     const month = parseInt(searchParams.get('month') || currentMonth, 10); // 1-12
     const duracion = parseInt(searchParams.get('duracion') || 30, 10);
-    const horaDesde = searchParams.get('horaDesde') || '';
-    const horaHasta = searchParams.get('horaHasta') || '';
+    const horaDesde = searchParams.get('horaDesde') || '14:00';
+    const horaHasta = searchParams.get('horaHasta') || '22:00';
     const diasSemanaParam = searchParams.get('diasSemana'); // e.g. "1,2,3,4,5"
 
     // Parse allowed days of week (0 = Sunday, 1 = Monday, ... 6 = Saturday)
@@ -87,9 +87,9 @@ export async function GET(request) {
     const workStartMin = timeToMinutes(globalWorkStart);
     const workEndMin = timeToMinutes(globalWorkEnd);
 
-    // Apply user filters for range; fallback to global configured work hours only if not specified
-    const filterStartMin = horaDesde ? timeToMinutes(horaDesde) : workStartMin;
-    const filterEndMin = horaHasta ? timeToMinutes(horaHasta) : workEndMin;
+    // Apply user filters for range (defaults to 14:00 - 22:00)
+    const filterStartMin = timeToMinutes(horaDesde);
+    const filterEndMin = timeToMinutes(horaHasta);
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
@@ -125,18 +125,89 @@ export async function GET(request) {
       }
 
       const dayBusy = busyByDate[dateStr] || [];
+
+      // 1. Clamp busy intervals to [filterStartMin, filterEndMin]
+      const clampedBusy = [];
+      for (const b of dayBusy) {
+        const bStart = Math.max(filterStartMin, b.start);
+        const bEnd = Math.min(filterEndMin, b.end);
+        if (bStart < bEnd) {
+          clampedBusy.push({ start: bStart, end: bEnd });
+        }
+      }
+
+      // 2. Sort by start ascending
+      clampedBusy.sort((a, b) => a.start - b.start);
+
+      // 3. Merge overlapping/adjacent intervals
+      const mergedBusy = [];
+      for (const b of clampedBusy) {
+        if (mergedBusy.length === 0) {
+          mergedBusy.push({ ...b });
+        } else {
+          const last = mergedBusy[mergedBusy.length - 1];
+          if (b.start <= last.end) {
+            last.end = Math.max(last.end, b.end);
+          } else {
+            mergedBusy.push({ ...b });
+          }
+        }
+      }
+
+      // 4. Invert to get free gaps within the window
+      const gaps = [];
+      let cursor = filterStartMin;
+
+      for (const b of mergedBusy) {
+        if (b.start > cursor) {
+          gaps.push({ start: cursor, end: b.start });
+        }
+        cursor = Math.max(cursor, b.end);
+      }
+
+      if (cursor < filterEndMin) {
+        gaps.push({ start: cursor, end: filterEndMin });
+      }
+
+      // 5. Generate slots for each gap (every 30 min, avoiding dead gaps of 10 or 20 min)
       const slots = [];
-      const STEP = 10; // 10-minute intervals
 
-      for (let cur = filterStartMin; cur + duracion <= filterEndMin; cur += STEP) {
-        const slotStart = cur;
-        const slotEnd = cur + duracion;
+      for (const gap of gaps) {
+        const gapLen = gap.end - gap.start;
+        if (gapLen < duracion) continue;
 
-        const hasOverlap = dayBusy.some(b => slotStart < b.end && slotEnd > b.start);
-        if (!hasOverlap) {
+        const candidateStarts = new Set();
+
+        // Forward: anchored to gap.start, step 30
+        for (let s = gap.start; s + duracion <= gap.end; s += 30) {
+          const remAfter = gap.end - (s + duracion);
+          if (remAfter === 0 || remAfter >= 30) {
+            candidateStarts.add(s);
+          }
+        }
+
+        // Backward: anchored to gap.end, step 30
+        for (let e = gap.end; e - duracion >= gap.start; e -= 30) {
+          const s = e - duracion;
+          const remBefore = s - gap.start;
+          if (remBefore === 0 || remBefore >= 30) {
+            candidateStarts.add(s);
+          }
+        }
+
+        // Fallback: if no slot satisfies the clean condition, offer start and end so gap is not lost
+        if (candidateStarts.size === 0) {
+          candidateStarts.add(gap.start);
+          if (gap.end - duracion !== gap.start) {
+            candidateStarts.add(gap.end - duracion);
+          }
+        }
+
+        const sortedStarts = Array.from(candidateStarts).sort((a, b) => a - b);
+        for (const s of sortedStarts) {
           slots.push({
-            horaInicio: minutesToTime(slotStart),
-            horaFin: minutesToTime(slotEnd)
+            horaInicio: minutesToTime(s),
+            horaFin: minutesToTime(s + duracion)
           });
         }
       }

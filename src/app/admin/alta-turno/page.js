@@ -43,9 +43,9 @@ function AltaTurnoContent() {
   // Duration State: automatically calculated, but operator can edit it
   const [customDuration, setCustomDuration] = useState(null);
 
-  // 2. Search Filters
-  const [horaDesde, setHoraDesde] = useState('');
-  const [horaHasta, setHoraHasta] = useState('');
+  // 2. Search Filters (default 14:00 - 22:00 according to operator shift)
+  const [horaDesde, setHoraDesde] = useState('14:00');
+  const [horaHasta, setHoraHasta] = useState('22:00');
   const [selectedDays, setSelectedDays] = useState([1, 2, 3, 4, 5]); // Default: Lun-Vie
 
   // 3. Calendar Navigation
@@ -140,10 +140,7 @@ function AltaTurnoContent() {
     fetch('/api/admin/configuracion')
       .then(res => res.json())
       .then(cfg => {
-        if (cfg && !cfg.error) {
-          if (cfg.work_start) setHoraDesde(cfg.work_start);
-          if (cfg.work_end) setHoraHasta(cfg.work_end);
-        }
+        // Preservamos el turno laboral habitual 14:00 - 22:00 para Alta de Turno
       })
       .catch(err => console.error('Error fetching config:', err));
   }, []);

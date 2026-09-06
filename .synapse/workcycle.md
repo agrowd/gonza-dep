@@ -529,5 +529,21 @@
   - Se verifica que la sesión de WhatsApp `.wwebjs_auth` se mantiene intacta: el watchdog y cliente inician automáticamente (`WhatsApp Client authenticated. WhatsApp Client is ready!`).
   - Se validan mediante peticiones HTTPS las rutas `/`, `/admin/alta-turno`, y la API `/api/admin/alta-turno/disponibilidad` confirmando la correcta generación y visualización de disponibilidad sobre la base de datos real.
 
+## 📅 Sesión: 06 de Septiembre de 2026
 
+### 🎯 Tareas en curso / Objetivos
+- [x] Implementar generación de slots cada 30 minutos anclados a `gapStart` y `gapEnd` en `/api/admin/alta-turno/disponibilidad/route.js`.
+- [x] Fijar horario por defecto de 14:00 a 22:00 hs en `/admin/alta-turno/page.js` y en la API.
+- [x] Cambiar el cron de recordatorios de WhatsApp en `src/lib/whatsapp.js` a chequeo cada 1 minuto para asegurar despacho exacto a las 10:00:00 hs.
+- [x] Ejecutar build de prueba (`npm run build`) verificando 37/37 rutas exitosas.
+
+### 📝 Notas / Bitácora
+- **06 de Septiembre (17:45 - 18:00)**:
+  - Se analizan los audios y capturas de Gonzalo sobre tres observaciones:
+    1. **Slots cada 30 minutos / Anti-huecos muertos**: El step previo de 10 min generaba huecos muertos inutilizables de 10 o 20 min. Gonzalo requiere que los turnos avancen cada 30 min desde el fin del turno anterior (`gapStart`), o se anclen al inicio del turno siguiente (`gapEnd - duracion`) sin dejar huecos menores a 30 min.
+    2. **Hora de Inicio por defecto 14:00 a 22:00 hs**: En `/admin/alta-turno`, se cargaba `12:30` de la base de datos. Gonzalo opera de 14:00 a 22:00 hs habitualmente y atiende a las 13:00/13:30 solo de forma excepcional.
+    3. **WhatsApp a las 10:08 hs**: Se diagnosticó que `startReminderCron()` utilizaba `setInterval(..., 15 * 60 * 1000)`. Si el servidor inició a las XX:08, la comprobación caía a las 10:08 AM. Se ajusta a intervalo de 1 minuto para ejecutar a las 10:00:xx AM sin demoras.
+  - Se diseñó y validó con pruebas unitarias el nuevo algoritmo de generación de slots bidireccional anclado.
+  - Se aplicaron los cambios en `route.js`, `page.js` y `whatsapp.js`.
+  - Se ejecutó `npm run build` localmente compilando las 37 rutas en 41 segundos sin ningún error.
 

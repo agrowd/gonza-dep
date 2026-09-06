@@ -66,3 +66,10 @@
 **Commit:** `b4acae3`
 **Estado:** ✅ FIXED
 
+## ERR-12: Desfase en recordatorios automáticos de WhatsApp por intervalo de polling (2026-09-06)
+**Síntoma:** Los recordatorios de 48hs de WhatsApp salieron a las 10:08 hs en vez de a las 10:00 hs en punto.
+**Root Cause:** `startReminderCron` utilizaba `setInterval` de 15 minutos (`15 * 60 * 1000`). Si el servidor se iniciaba a las XX:08 (o XX:23, etc.), el primer chequeo dentro de la ventana de las 10:00 AM caía a las 10:08 AM.
+**Solución:** Se redujo el intervalo de polling a 1 minuto (`60 * 1000`), ejecutando el despacho inmediatamente en el minuto 10:00:xx AM.
+**Estado:** ✅ FIXED
+
+
