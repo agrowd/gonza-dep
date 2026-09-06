@@ -72,4 +72,11 @@
 **Solución:** Se redujo el intervalo de polling a 1 minuto (`60 * 1000`), ejecutando el despacho inmediatamente en el minuto 10:00:xx AM.
 **Estado:** ✅ FIXED
 
+## ERR-13: Modal de edición cerrado al reprogramar turno desde Alta de Turno (2026-09-06)
+**Síntoma:** Al seleccionar un nuevo horario en Alta de Turno con `modo=reprogramar`, la pantalla regresaba a la agenda pero no mostraba ninguna ventana modal para confirmar los cambios.
+**Root Cause:** En `src/app/admin/agenda/page.js`, al procesar `reprogramarTurnoId`, se invocaba `setIsEditing(true)` pero se omitía `setIsDetailsOpen(true)`. El modal principal solo se renderiza si `isDetailsOpen && selectedTurno` es verdadero.
+**Solución:** Se agregó la llamada a `setIsDetailsOpen(true)` y se sincronizó `selectedDate` y `currentWeekStart` con la nueva fecha seleccionada.
+**Estado:** ✅ FIXED
+
+
 

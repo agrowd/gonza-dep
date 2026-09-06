@@ -279,3 +279,19 @@
 - Exclusión estricta de reservas para el mismo día (mínimo a partir de mañana) y fines de semana (sábados y domingos) en el calendario público y APIs.
 - Envío diferenciado de correos de cancelación: seña retenida por cancelación menor a 72hs vs seña conservada por cancelación mayor a 72hs.
 - Obligatoriedad de DNI en creación/edición de clientes y reservas manuales.
+
+## [1.1.0] - 2026-09-06
+### Added
+- Nuevo módulo de Alta de Turno (`/admin/alta-turno`) para búsqueda inteligente de disponibilidad por duración, zonas corporales y rango horario, con vista de calendario y tarjeta desplegable vertical de turnos disponibles.
+- Algoritmo bidireccional inteligente de generación de turnos espaciados cada 30 minutos, eliminando espacios muertos de 10 o 20 minutos entre turnos.
+- Selector interactivo de intervalo en Alta de Turno: botones de alternancia rápida `[ ⏱️ Cada 30 min ]` (predeterminado) y `[ ⏱️ Cada 10 min ]` (granular).
+- Soporte para reprogramación asistida mediante `/admin/alta-turno?modo=reprogramar`, separando la edición convencional del flujo de búsqueda de nuevos huecos disponibles.
+- Herencia automática de tipo y valor de bonificación/descuento (% o $) al programar el siguiente turno de un cliente desde la agenda (`handleScheduleNextTurn`).
+- Ajuste del horario de búsqueda por defecto en Alta de Turno de 14:00 a 22:00 hs.
+- Optimización del cron de recordatorios de WhatsApp reduciendo el intervalo de verificación a 1 minuto para garantizar envíos a las 10:00 hs exactas.
+
+### Fixed
+- Apertura automática del modal de edición al reprogramar un turno y seleccionar el nuevo horario desde Alta de Turno (`setIsDetailsOpen(true)`).
+- Visualización compacta en un solo renglón horizontal para los slots de horarios (`white-space: nowrap`) evitando quiebres en pantallas móviles.
+- Fijación de la tarjeta de confirmación de turno fuera del scroll vertical para visibilidad inmediata al seleccionar horario.
+

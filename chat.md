@@ -798,3 +798,25 @@
 > 2. "Y lo otro, que si bien es correcto que tenemos como horario 12.30, el horario que manejo de atención es de 14 a 22, que de manera puntual a alguna persona yo le quiero atender a las 13.30, a 13 doy turnos excepcionales, pero como es los menos y contados, prefiero ponerlo yo y no estar corrigiendo cada vez que toque algún turno que busque a partir de las 14"
 > 3. "pero tené en cuenta que los turnos no es que tienen que ser cada 30 minutos, o sea, 14, 14:30, 15, 15:30. Del momento en que termina el turno, ahí se cuenta el tiempo que se necesita para la sesión que se está queriendo programar, ya sea desde que termina el turno o el tiempo anterior que se necesita cuando está empezando otro."
 > 4. [Captura de WhatsApp sobre recordatorios]: "Hola, hoy no salieron los mensajes de WhatsApp de 48hs... Salieron a las 10:08... fijate por que no se respeto qie salieran a las 10:00hs... Dale como para quedarme tranquilo que no haya sido por la implementación del módulo".
+
+## Acciones Realizadas (Feedback Gonzalo):
+1. **Algoritmo Bidireccional de Slots de 30 min**: Implementado en `/api/admin/alta-turno/disponibilidad/route.js`, calculando huecos libres y avanzando cada 30 min desde el fin del turno anterior o retrocediendo 30 min desde el inicio del turno siguiente, descartando huecos residuales menores a 30 min.
+2. **Franja Predeterminada 14:00 a 22:00 hs**: Modificado en `src/app/admin/alta-turno/page.js` y `route.js`.
+3. **Optimización de Cron de WhatsApp**: En `src/lib/whatsapp.js`, se redujo el intervalo de sondeo a 1 minuto para garantizar el disparo a las 10:00 hs exactas.
+4. Desplegado a Producción en VPS (`eb000ed`).
+
+## Mensaje del Usuario (2026-09-06 18:15:00-03:00)
+> [5 capturas de feedback enviadas por Luciano, asistente de Gonzalo]:
+> 1. Iniciar por defecto a las 14:00 hs.
+> 2. Posibilidad de alternar entre turnos cada 30 min y turnos cada 10 min.
+> 3. En "Programar siguiente turno" (ej. Juan Zacarias con 20% de descuento), se pierde el tipo y valor del descuento volviendo a "Sin Descuento" y precio de lista.
+> 4. En "Reprogramar", al seleccionar el nuevo horario en Alta de Turno y volver a la agenda, queda la pantalla en blanco y no abre el modal de edición/confirmación.
+
+## Acciones Realizadas (Feedback Luciano):
+1. **Diferenciación de Requerimientos**:
+   - *Punto 1*: Ya estaba implementado en la etapa anterior (default 14:00 hs).
+   - *Punto 2*: Implementado selector interactivo `[ ⏱️ Cada 30 min ]` (predeterminado) y `[ ⏱️ Cada 10 min ]` en la cabecera de la ventana desplegable de horarios de Alta de Turno, conectado a la API de disponibilidad.
+   - *Punto 3*: Implementada herencia completa de `descuentoTipo` y `descuentoValor` en `handleScheduleNextTurn`, pasando por parámetros URL hacia `alta-turno` y precargándose en el modal `newTurno` de la agenda.
+   - *Punto 4*: Corregido bug en `src/app/admin/agenda/page.js` (ERR-13). Al retornar con `reprogramarTurnoId`, se agregó `setIsDetailsOpen(true)` junto con `setIsEditing(true)` y la sincronización de la fecha seleccionada.
+2. **Compilación y Verificación**:
+   - `npm run build` local exitoso (37/37 rutas compiladas con 0 errores en 27.6s).

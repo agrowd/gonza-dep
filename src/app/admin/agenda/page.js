@@ -648,6 +648,8 @@ export default function AgendaPage() {
       const whatsappParam = searchParams.get('whatsapp') || '';
       const emailParam = searchParams.get('email') || '';
       const dniParam = searchParams.get('dni') || '';
+      const descuentoTipoParam = searchParams.get('descuentoTipo');
+      const descuentoValorParam = searchParams.get('descuentoValor');
 
       if (isNewTurnoReq) {
         let calcHoraFin = horaFinParam;
@@ -693,7 +695,9 @@ export default function AgendaPage() {
           whatsappCustomCode: customCode || prev.whatsappCustomCode,
           email: emailParam || prev.email,
           dni: dniParam || prev.dni,
-          estado: 'SEÑADO'
+          estado: 'SEÑADO',
+          descuentoTipo: descuentoTipoParam || prev.descuentoTipo || 'NINGUNO',
+          descuentoValor: descuentoValorParam !== null && descuentoValorParam !== undefined && descuentoValorParam !== '' ? descuentoValorParam : prev.descuentoValor
         }));
         setIsNewOpen(true);
       }
@@ -756,6 +760,12 @@ export default function AgendaPage() {
                 otrosPrecio: otrosPrecio || ''
               });
               setIsEditing(true);
+              setIsDetailsOpen(true);
+              if (newDate) {
+                const pDate = parseYYYYMMDD(newDate);
+                setSelectedDate(pDate);
+                setCurrentWeekStart(getStartOfWeek(pDate));
+              }
             }
           })
           .catch(err => console.error('Error fetching turno to reprogram:', err));
@@ -1297,20 +1307,27 @@ export default function AgendaPage() {
       handleSaveClientObservaciones(true);
     }
 
+    const prevDescuentoTipo = turno.descuentoTipo || ((turno.bonificacion || 0) > 0 ? 'PESOS' : 'NINGUNO');
+    const prevDescuentoValor = turno.descuentoValor !== undefined && turno.descuentoValor !== null && turno.descuentoValor !== '' 
+      ? String(turno.descuentoValor) 
+      : ((turno.bonificacion || 0) > 0 ? String(turno.bonificacion) : '0');
+
     const params = new URLSearchParams({
       modo: 'siguienteTurno',
-      clienteId: turno.cliente.id || turno.clienteId || '',
-      clienteNombre: turno.cliente.nombreCompleto || turno.nombreCompleto || '',
-      clienteWhatsapp: turno.cliente.whatsapp || turno.whatsapp || '',
-      clienteEmail: turno.cliente.email || turno.email || '',
-      clienteDni: turno.cliente.dni || turno.dni || '',
+      clienteId: turno.cliente?.id || turno.clienteId || '',
+      clienteNombre: turno.cliente?.nombreCompleto || turno.nombreCompleto || '',
+      clienteWhatsapp: turno.cliente?.whatsapp || turno.whatsapp || '',
+      clienteEmail: turno.cliente?.email || turno.email || '',
+      clienteDni: turno.cliente?.dni || turno.dni || '',
       fechaAnterior: fechaStr,
       frecuencia: freqWeeks.toString(),
       zones: preselectedZoneIds.join(','),
       duracion: previousDuration.toString(),
       hasOtros: hasOtros ? 'true' : 'false',
       otrosTexto: otrosTexto || '',
-      otrosPrecio: (otrosPrecio || 0).toString()
+      otrosPrecio: (otrosPrecio || 0).toString(),
+      descuentoTipo: prevDescuentoTipo,
+      descuentoValor: prevDescuentoValor
     });
 
     window.location.href = `/admin/alta-turno?${params.toString()}`;

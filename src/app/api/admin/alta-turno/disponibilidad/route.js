@@ -28,6 +28,7 @@ export async function GET(request) {
     const duracion = parseInt(searchParams.get('duracion') || 30, 10);
     const horaDesde = searchParams.get('horaDesde') || '14:00';
     const horaHasta = searchParams.get('horaHasta') || '22:00';
+    const intervalo = parseInt(searchParams.get('intervalo') || searchParams.get('step') || '30', 10);
     const diasSemanaParam = searchParams.get('diasSemana'); // e.g. "1,2,3,4,5"
 
     // Parse allowed days of week (0 = Sunday, 1 = Monday, ... 6 = Saturday)
@@ -169,46 +170,61 @@ export async function GET(request) {
         gaps.push({ start: cursor, end: filterEndMin });
       }
 
-      // 5. Generate slots for each gap (every 30 min, avoiding dead gaps of 10 or 20 min)
+      // 5. Generate slots: either step 10 (granular) or step 30 (default smart slots without dead gaps)
       const slots = [];
 
-      for (const gap of gaps) {
-        const gapLen = gap.end - gap.start;
-        if (gapLen < duracion) continue;
-
-        const candidateStarts = new Set();
-
-        // Forward: anchored to gap.start, step 30
-        for (let s = gap.start; s + duracion <= gap.end; s += 30) {
-          const remAfter = gap.end - (s + duracion);
-          if (remAfter === 0 || remAfter >= 30) {
-            candidateStarts.add(s);
+      if (intervalo === 10) {
+        for (let cur = filterStartMin; cur + duracion <= filterEndMin; cur += 10) {
+          const slotStart = cur;
+          const slotEnd = cur + duracion;
+          const hasOverlap = dayBusy.some(b => slotStart < b.end && slotEnd > b.start);
+          if (!hasOverlap) {
+            slots.push({
+              horaInicio: minutesToTime(slotStart),
+              horaFin: minutesToTime(slotEnd)
+            });
           }
         }
+      } else {
+        // Step 30: Smart anchored slots (advancing every 30 min, preventing 10/20-min dead gaps)
+        for (const gap of gaps) {
+          const gapLen = gap.end - gap.start;
+          if (gapLen < duracion) continue;
 
-        // Backward: anchored to gap.end, step 30
-        for (let e = gap.end; e - duracion >= gap.start; e -= 30) {
-          const s = e - duracion;
-          const remBefore = s - gap.start;
-          if (remBefore === 0 || remBefore >= 30) {
-            candidateStarts.add(s);
+          const candidateStarts = new Set();
+
+          // Forward: anchored to gap.start, step 30
+          for (let s = gap.start; s + duracion <= gap.end; s += 30) {
+            const remAfter = gap.end - (s + duracion);
+            if (remAfter === 0 || remAfter >= 30) {
+              candidateStarts.add(s);
+            }
           }
-        }
 
-        // Fallback: if no slot satisfies the clean condition, offer start and end so gap is not lost
-        if (candidateStarts.size === 0) {
-          candidateStarts.add(gap.start);
-          if (gap.end - duracion !== gap.start) {
-            candidateStarts.add(gap.end - duracion);
+          // Backward: anchored to gap.end, step 30
+          for (let e = gap.end; e - duracion >= gap.start; e -= 30) {
+            const s = e - duracion;
+            const remBefore = s - gap.start;
+            if (remBefore === 0 || remBefore >= 30) {
+              candidateStarts.add(s);
+            }
           }
-        }
 
-        const sortedStarts = Array.from(candidateStarts).sort((a, b) => a - b);
-        for (const s of sortedStarts) {
-          slots.push({
-            horaInicio: minutesToTime(s),
-            horaFin: minutesToTime(s + duracion)
-          });
+          // Fallback: if no slot satisfies the clean condition, offer start and end so gap is not lost
+          if (candidateStarts.size === 0) {
+            candidateStarts.add(gap.start);
+            if (gap.end - duracion !== gap.start) {
+              candidateStarts.add(gap.end - duracion);
+            }
+          }
+
+          const sortedStarts = Array.from(candidateStarts).sort((a, b) => a - b);
+          for (const s of sortedStarts) {
+            slots.push({
+              horaInicio: minutesToTime(s),
+              horaFin: minutesToTime(s + duracion)
+            });
+          }
         }
       }
 

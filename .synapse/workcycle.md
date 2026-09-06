@@ -537,6 +537,10 @@
 - [x] Cambiar el cron de recordatorios de WhatsApp en `src/lib/whatsapp.js` a chequeo cada 1 minuto para asegurar despacho exacto a las 10:00:00 hs.
 - [x] Ejecutar build de prueba (`npm run build`) verificando 37/37 rutas exitosas.
 
+- [x] Toggle selector de intervalo `[ 30 min ]` (predeterminado) y `[ 10 min ]` en la ventana desplegable de Alta de Turno (`alta-turno/page.js`, `alta-turno.module.css` y `route.js`).
+- [x] Preservación de descuento (% o $) en "Programar Siguiente Turno" (`handleScheduleNextTurn` -> `alta-turno` -> `newTurno` en `agenda/page.js`).
+- [x] Corrección de modal de confirmación en Reprogramar: agregar `setIsDetailsOpen(true)` al recibir `reprogramarTurnoId` (`agenda/page.js`).
+
 ### 📝 Notas / Bitácora
 - **06 de Septiembre (17:45 - 18:00)**:
   - Se analizan los audios y capturas de Gonzalo sobre tres observaciones:
@@ -546,4 +550,11 @@
   - Se diseñó y validó con pruebas unitarias el nuevo algoritmo de generación de slots bidireccional anclado.
   - Se aplicaron los cambios en `route.js`, `page.js` y `whatsapp.js`.
   - Se ejecutó `npm run build` localmente compilando las 37 rutas en 41 segundos sin ningún error.
-
+  - Se desplegó en producción y se verificó en vivo.
+- **06 de Septiembre (18:15 - 18:30)**:
+  - Se analizan las 5 capturas enviadas por Luciano (asistente de Gonzalo):
+    1. **Default 14:00 hs**: Ya implementado previamente.
+    2. **Selector 30 min vs 10 min**: Se añade la barra `.intervalFilterBar` con botones redondeados `[ 30 min ]` (activo por defecto) y `[ 10 min ]` en la tarjeta desplegable de horarios. En backend, `/api/admin/alta-turno/disponibilidad` soporta `intervalo=30` (algoritmo inteligente sin huecos muertos) e `intervalo=10` (pasos granulares cada 10 min).
+    3. **Preservar descuento en Siguiente Turno**: Se traspasan `descuentoTipo` y `descuentoValor` en `handleScheduleNextTurn`, pasando por `alta-turno` y precargándose en `newTurno` en la agenda.
+    4. **Bug al reprogramar**: Al regresar de Alta de Turno a la agenda con `reprogramarTurnoId`, faltaba la llamada a `setIsDetailsOpen(true)`, por lo que el modal quedaba oculto. Se añadió `setIsDetailsOpen(true)` para que la ventana de confirmación y edición aparezca de inmediato.
+  - Se ejecutó `npm run build` compilando las 37 rutas en 27.6 segundos con 0 errores.

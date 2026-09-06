@@ -31,6 +31,8 @@ function AltaTurnoContent() {
   const horaOriginalParam = searchParams.get('horaOriginal') || '';
   const fechaAnteriorParam = searchParams.get('fechaAnterior') || '';
   const frecuenciaParam = searchParams.get('frecuencia') || '4';
+  const descuentoTipoParam = searchParams.get('descuentoTipo') || 'NINGUNO';
+  const descuentoValorParam = searchParams.get('descuentoValor') || '';
 
   // 1. Zones Catalog & Selection
   const [zones, setZones] = useState([]);
@@ -47,6 +49,7 @@ function AltaTurnoContent() {
   const [horaDesde, setHoraDesde] = useState('14:00');
   const [horaHasta, setHoraHasta] = useState('22:00');
   const [selectedDays, setSelectedDays] = useState([1, 2, 3, 4, 5]); // Default: Lun-Vie
+  const [stepInterval, setStepInterval] = useState(30); // 30 min (predeterminado) o 10 min
 
   // 3. Calendar Navigation
   const now = new Date();
@@ -203,7 +206,8 @@ function AltaTurnoContent() {
       duracion: activeDuration.toString(),
       horaDesde: horaDesde || '',
       horaHasta: horaHasta || '',
-      diasSemana: selectedDays.join(',')
+      diasSemana: selectedDays.join(','),
+      intervalo: stepInterval.toString()
     });
 
     fetch(`/api/admin/alta-turno/disponibilidad?${query.toString()}`)
@@ -242,7 +246,7 @@ function AltaTurnoContent() {
     return () => {
       isMounted = false;
     };
-  }, [currentYear, currentMonth, activeDuration, horaDesde, horaHasta, selectedDays, recommendedWeekRange]);
+  }, [currentYear, currentMonth, activeDuration, horaDesde, horaHasta, selectedDays, recommendedWeekRange, stepInterval]);
 
   // Month navigation
   const prevMonth = () => {
@@ -360,7 +364,9 @@ function AltaTurnoContent() {
         zones: selectedZoneIds.join(','),
         hasOtros: hasOtros ? 'true' : 'false',
         otrosTexto: otrosTexto || '',
-        otrosPrecio: otrosPrecio.toString()
+        otrosPrecio: otrosPrecio.toString(),
+        descuentoTipo: descuentoTipoParam,
+        descuentoValor: descuentoValorParam
       });
       router.push(`/admin/agenda?${params.toString()}`);
       return;
@@ -757,6 +763,34 @@ function AltaTurnoContent() {
               >
                 ✕
               </button>
+            </div>
+
+            <div className={styles.intervalFilterBar}>
+              <span className={styles.intervalFilterLabel}>Mostrar turnos:</span>
+              <div className={styles.intervalToggleGroup}>
+                <button
+                  type="button"
+                  className={`${styles.intervalPill} ${stepInterval === 30 ? styles.intervalPillActive : ''}`}
+                  onClick={() => {
+                    setStepInterval(30);
+                    setSelectedSlot(null);
+                  }}
+                  title="Turnos espaciados cada 30 min (sin huecos muertos)"
+                >
+                  ⏱️ Cada 30 min
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.intervalPill} ${stepInterval === 10 ? styles.intervalPillActive : ''}`}
+                  onClick={() => {
+                    setStepInterval(10);
+                    setSelectedSlot(null);
+                  }}
+                  title="Turnos granulares cada 10 min"
+                >
+                  ⏱️ Cada 10 min
+                </button>
+              </div>
             </div>
 
             <div className={styles.desplegableBody}>
