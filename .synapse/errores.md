@@ -78,5 +78,14 @@
 **Solución:** Se agregó la llamada a `setIsDetailsOpen(true)` y se sincronizó `selectedDate` y `currentWeekStart` con la nueva fecha seleccionada.
 **Estado:** ✅ FIXED
 
+## ERR-14: Error interno al guardar turno desde "Programar Siguiente Turno" por truncamiento con parseInt (2026-09-07)
+**Síntoma:** Al agendar un turno mediante "Programar Siguiente Turno", tras seleccionar el nuevo horario y tocar "Guardar Turno" en el modal, saltaba un popup rojo con "⚠️ Error interno" y el turno no se guardaba.
+**Root Cause:** En `src/app/admin/agenda/page.js`, al leer `clienteIdParam` de la URL, se hacía `(parseInt(clienteIdParam, 10) || clienteIdParam)`. Cuando el UUID del cliente en PostgreSQL iniciaba con dígitos (ej: `24ae95df-...`), `parseInt` truncaba el UUID extrayendo únicamente el número entero `24`. Al enviar `{ clienteId: 24 }` (tipo Int) a `POST /api/admin/turnos`, Prisma fallaba con `PrismaClientValidationError: Expected String, provided Int` en `prisma.cliente.findUnique({ where: { id: finalClienteId } })`.
+**Solución:** 
+1. Se reemplazó el casteo erróneo en `src/app/admin/agenda/page.js` por `String(clienteIdParam)`, preservando íntegramente el UUID del cliente.
+2. En `src/app/api/admin/turnos/route.js`, se aseguró `finalClienteId = clienteId ? String(clienteId) : null`, y se implementó un mecanismo resiliente de resolución de cliente (búsqueda por ID, fallback por DNI/email/WhatsApp, y chequeo seguro de `turnos.length`).
+**Estado:** ✅ FIXED
+
+
 
 

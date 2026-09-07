@@ -182,40 +182,50 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    let finalClienteId = clienteId;
+    let finalClienteId = clienteId ? String(clienteId) : null;
+    let clientRecord = null;
 
-    // 1. Resolve client (create if new or details provided)
-    if (!finalClienteId) {
-      if (!nombreCompleto || !whatsapp || !email) {
-        return NextResponse.json({ error: 'Datos de cliente requeridos para nuevo cliente' }, { status: 400 });
+    if (finalClienteId) {
+      clientRecord = await prisma.cliente.findUnique({
+        where: { id: finalClienteId },
+        include: { turnos: true }
+      });
+    }
+
+    // 1. Resolve client if not found by ID or if no ID was provided
+    if (!clientRecord) {
+      const finalWhatsapp = whatsapp ? normalizeWhatsApp(whatsapp) : null;
+      if (dni || email || finalWhatsapp) {
+        clientRecord = await prisma.cliente.findFirst({
+          where: {
+            OR: [
+              dni ? { dni } : undefined,
+              email ? { email } : undefined,
+              finalWhatsapp ? { whatsapp: finalWhatsapp } : undefined
+            ].filter(Boolean)
+          },
+          include: { turnos: true }
+        });
       }
 
-      const finalWhatsapp = normalizeWhatsApp(whatsapp);
-
-      // Check if already exists
-      let client = await prisma.cliente.findFirst({
-        where: {
-          OR: [
-            { dni: dni || undefined },
-            { email: email },
-            { whatsapp: finalWhatsapp }
-          ]
+      if (!clientRecord) {
+        if (!nombreCompleto || !whatsapp || !email) {
+          return NextResponse.json({ error: 'Datos de cliente requeridos para nuevo cliente' }, { status: 400 });
         }
-      });
 
-      if (!client) {
-        client = await prisma.cliente.create({
+        clientRecord = await prisma.cliente.create({
           data: {
             dni: dni || null,
             nombreCompleto,
-            whatsapp: finalWhatsapp,
+            whatsapp: finalWhatsapp || normalizeWhatsApp(whatsapp),
             email,
             canalAdquisicion: 'ORGANICO',
             estado: 'ACTIVO'
-          }
+          },
+          include: { turnos: true }
         });
       }
-      finalClienteId = client.id;
+      finalClienteId = clientRecord.id;
     }
 
     // 2. Compute details (bypass zones if BLOQUEADO)
@@ -241,8 +251,7 @@ export async function POST(request) {
       }
       zonasJson = JSON.stringify(parsedZones);
       
-      const clientRecord = await prisma.cliente.findUnique({ where: { id: finalClienteId }, include: { turnos: true } });
-      const isNew = clientRecord.turnos.length === 0;
+      const isNew = clientRecord ? (clientRecord.turnos?.length === 0) : true;
       const coreDetails = calculateTurnDetails(dbZones, isNew);
       
       computedDuration = coreDetails.duracionMinutos;
@@ -280,11 +289,11 @@ export async function POST(request) {
       }
     });
 
-    if (observaciones !== undefined && observaciones !== '') {
+    if (observaciones !== undefined && observaciones !== '' && finalClienteId) {
       await prisma.cliente.update({
         where: { id: finalClienteId },
         data: { observaciones }
-      });
+      }).catch(err => console.error('Error updating client observaciones:', err));
       if (newTurno.cliente) {
         newTurno.cliente.observaciones = observaciones;
       }

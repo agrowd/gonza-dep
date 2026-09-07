@@ -820,3 +820,20 @@
    - *Punto 4*: Corregido bug en `src/app/admin/agenda/page.js` (ERR-13). Al retornar con `reprogramarTurnoId`, se agregó `setIsDetailsOpen(true)` junto con `setIsEditing(true)` y la sincronización de la fecha seleccionada.
 2. **Compilación y Verificación**:
    - `npm run build` local exitoso (37/37 rutas compiladas con 0 errores en 27.6s).
+   - Desplegado a Producción (`76d9fe4`) y Staging.
+
+## Mensaje del Usuario (2026-09-07 16:42:00-03:00)
+> "Me dijo esto en los audios: Fede, acabo de usar la opción de poner siguiente turno, programar siguiente turno, y viste que ahora utiliza la forma nueva de Agendar. Cuando selecciono ahí, me tira un error. No me toma los datos, no me graba ni nada. Que por eso te pasé la pantalla. Avísame y dale prioridad a esto porque hasta tanto no lo arregles no me va a dejar cargar o poner mejor dicho el siguiente turno con ninguno de los de hoy."
+> [Captura de pantalla en móvil mostrando modal con toast rojo: "⚠️ Error interno"]
+
+## Diagnóstico y Solución Aplicada (ERR-14):
+1. **Inspección de Logs en Servidor de Producción**:
+   - Se ejecutó `pm2 logs gonzalo-agenda` en el VPS, identificando el error exacto:
+     `PrismaClientValidationError: Invalid prisma.cliente.findUnique() invocation: Argument id: Invalid value provided. Expected String, provided Int. id: 24`
+   - Causa raíz: En `src/app/admin/agenda/page.js`, al leer `clienteIdParam` de la URL, el código hacía `(parseInt(clienteIdParam, 10) || clienteIdParam)`. Cuando el cliente posee un UUID de PostgreSQL que inicia con números (ej: `24ae95df-...`), `parseInt` truncaba el ID al entero `24`. Prisma esperaba un String UUID y fallaba con error 500.
+2. **Correcciones Aplicadas**:
+   - `src/app/admin/agenda/page.js`: se reemplazó `(parseInt(clienteIdParam, 10) || clienteIdParam)` por `String(clienteIdParam)`, conservando íntegro el UUID del cliente.
+   - `src/app/api/admin/turnos/route.js`: se forzó el casteo `finalClienteId = clienteId ? String(clienteId) : null` y se incorporó búsqueda de respaldo por DNI, email o WhatsApp para evitar caídas y asegurar la persistencia.
+3. **Verificación y Compilación**:
+   - `npm run build` ejecutado exitosamente con 37/37 rutas compiladas con 0 errores.
+

@@ -557,4 +557,14 @@
     2. **Selector 30 min vs 10 min**: Se añade la barra `.intervalFilterBar` con botones redondeados `[ 30 min ]` (activo por defecto) y `[ 10 min ]` en la tarjeta desplegable de horarios. En backend, `/api/admin/alta-turno/disponibilidad` soporta `intervalo=30` (algoritmo inteligente sin huecos muertos) e `intervalo=10` (pasos granulares cada 10 min).
     3. **Preservar descuento en Siguiente Turno**: Se traspasan `descuentoTipo` y `descuentoValor` en `handleScheduleNextTurn`, pasando por `alta-turno` y precargándose en `newTurno` en la agenda.
     4. **Bug al reprogramar**: Al regresar de Alta de Turno a la agenda con `reprogramarTurnoId`, faltaba la llamada a `setIsDetailsOpen(true)`, por lo que el modal quedaba oculto. Se añadió `setIsDetailsOpen(true)` para que la ventana de confirmación y edición aparezca de inmediato.
-  - Se ejecutó `npm run build` compilando las 37 rutas en 27.6 segundos con 0 errores.
+  - **07 de Septiembre (16:45 - 17:00)**:
+  - Gonzalo reporta error al programar siguiente turno: al seleccionar el nuevo horario e intentar guardar, salta un popup "⚠️ Error interno" y no permite grabar el turno.
+  - Se inspeccionan los logs de PM2 en el servidor de producción (`187.127.9.216`):
+    - Se descubre error: `PrismaClientValidationError: Invalid prisma.cliente.findUnique() invocation: Argument id: Invalid value provided. Expected String, provided Int. id: 24`.
+    - **Causa Raíz**: En `src/app/admin/agenda/page.js`, al leer `clienteIdParam`, se ejecutaba `(parseInt(clienteIdParam, 10) || clienteIdParam)`. Para clientes cuyo UUID en PostgreSQL comenzaba con dígitos (ej: `24ae95df-...`), `parseInt` truncaba el UUID al entero `24`. Al enviar `{ clienteId: 24 }` al backend, Prisma rechazaba el entero al esperar un String UUID.
+  - **Solución**:
+    1. Se sustituyó el casteo en `agenda/page.js` por `String(clienteIdParam)`, manteniendo intacto el UUID completo del cliente.
+    2. En `api/admin/turnos/route.js`, se blindó la recepción con `finalClienteId = clienteId ? String(clienteId) : null` y se incorporó un mecanismo resiliente de resolución de cliente (búsqueda por ID, fallback por DNI/email/WhatsApp, y chequeo seguro de `turnos?.length`).
+    3. Se añadió control de excepciones en la actualización de observaciones del cliente (`.catch(...)`).
+  - Se verificó compilación local con `npm run build` (37/37 rutas exitosas).
+

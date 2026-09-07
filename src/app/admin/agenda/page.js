@@ -686,7 +686,7 @@ export default function AgendaPage() {
           hasOtros: hasOtrosParam,
           otrosTexto: otrosTextoParam,
           otrosPrecio: otrosPrecioParam,
-          clienteId: clienteIdParam ? (parseInt(clienteIdParam, 10) || clienteIdParam) : null,
+          clienteId: clienteIdParam ? String(clienteIdParam) : null,
           nombreCompleto: nombreParam || prev.nombreCompleto,
           nombre: nombreVal || prev.nombre,
           apellido: apellidoVal || prev.apellido,
