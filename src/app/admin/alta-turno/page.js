@@ -126,8 +126,19 @@ function AltaTurnoContent() {
     if (recommendedWeekRange) {
       setCurrentYear(recommendedWeekRange.targetYear);
       setCurrentMonth(recommendedWeekRange.targetMonth);
+    } else if (modo === 'reprogramar' && fechaOriginalParam) {
+      const parts = fechaOriginalParam.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (!isNaN(y) && !isNaN(m)) {
+          setCurrentYear(y);
+          setCurrentMonth(m);
+          setSelectedDateStr(fechaOriginalParam);
+        }
+      }
     }
-  }, [searchParams, recommendedWeekRange]);
+  }, [searchParams, recommendedWeekRange, modo, fechaOriginalParam]);
 
   // Fetch zones catalog
   useEffect(() => {
@@ -210,6 +221,10 @@ function AltaTurnoContent() {
       intervalo: stepInterval.toString()
     });
 
+    if (modo === 'reprogramar' && turnoIdParam) {
+      query.set('excludeTurnoId', turnoIdParam);
+    }
+
     fetch(`/api/admin/alta-turno/disponibilidad?${query.toString()}`)
       .then(res => res.json())
       .then(data => {
@@ -246,7 +261,7 @@ function AltaTurnoContent() {
     return () => {
       isMounted = false;
     };
-  }, [currentYear, currentMonth, activeDuration, horaDesde, horaHasta, selectedDays, recommendedWeekRange, stepInterval]);
+  }, [currentYear, currentMonth, activeDuration, horaDesde, horaHasta, selectedDays, recommendedWeekRange, stepInterval, modo, turnoIdParam]);
 
   // Month navigation
   const prevMonth = () => {
@@ -335,6 +350,7 @@ function AltaTurnoContent() {
         modo: 'reprogramar',
         reprogramarTurnoId: turnoIdParam || '',
         clienteId: clienteIdParam || '',
+        date: selectedDateStr,
         newDate: selectedDateStr,
         newTime: selectedSlot.horaInicio,
         newHoraFin: selectedSlot.horaFin,
@@ -344,7 +360,7 @@ function AltaTurnoContent() {
         otrosTexto: otrosTexto || '',
         otrosPrecio: otrosPrecio.toString()
       });
-      router.push(`/admin/agenda?${params.toString()}`);
+      window.location.href = `/admin/agenda?${params.toString()}`;
       return;
     }
 
@@ -368,7 +384,7 @@ function AltaTurnoContent() {
         descuentoTipo: descuentoTipoParam,
         descuentoValor: descuentoValorParam
       });
-      router.push(`/admin/agenda?${params.toString()}`);
+      window.location.href = `/admin/agenda?${params.toString()}`;
       return;
     }
 
@@ -384,7 +400,7 @@ function AltaTurnoContent() {
       otrosTexto: otrosTexto || '',
       otrosPrecio: otrosPrecio.toString()
     });
-    router.push(`/admin/agenda?${params.toString()}`);
+    window.location.href = `/admin/agenda?${params.toString()}`;
   };
 
   return (

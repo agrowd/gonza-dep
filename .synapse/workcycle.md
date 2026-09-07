@@ -567,4 +567,18 @@
     2. En `api/admin/turnos/route.js`, se blindó la recepción con `finalClienteId = clienteId ? String(clienteId) : null` y se incorporó un mecanismo resiliente de resolución de cliente (búsqueda por ID, fallback por DNI/email/WhatsApp, y chequeo seguro de `turnos?.length`).
     3. Se añadió control de excepciones en la actualización de observaciones del cliente (`.catch(...)`).
   - Se verificó compilación local con `npm run build` (37/37 rutas exitosas).
+- **07 de Septiembre (17:30 - 18:00)**:
+  - Gonzalo reporta incidencia al reprogramar turno: "Hola Fede, anda bien cuando hago 'siguiente turno'. Pero cuando quiero reprogramar un turno y elijo horario, no le aparece la ventana para agendar el turno, me aparece la agenda vacia nomas."
+  - Se diagnosticó la causa raíz:
+    1. `src/app/api/admin/turnos/[id]/route.js` no implementaba el método `GET` (solo tenía `PUT` y `DELETE`). Al solicitar los datos del turno con `fetch('/api/admin/turnos/' + reprogramarTurnoId)`, el servidor devolvía error HTTP 405 Method Not Allowed, por lo que nunca se seteaba `selectedTurno` y la ventana modal de edición/confirmación no se abría.
+    2. La navegación desde `AltaTurnoPage` en modo reprogramar usaba `router.push()` y no incluía el parámetro `date`, produciendo estados transicionales superficiales en móviles.
+    3. `PUT /api/admin/turnos/[id]` y `POST /api/admin/turnos` restringían los turnos al horario configurado en DB (12:30 a 22:00 hs), rechazando turnos administrativos tempranos (ej: 11:30 hs) o nocturnos.
+    4. En `/api/admin/alta-turno/disponibilidad` y `/api/disponibilidad`, el estado `REPROGRAMADO` estaba en la lista de exclusión (`notIn`), lo que provocaba que turnos activos reprogramados fueran considerados erróneamente como huecos libres. Asimismo, al reprogramar en el mismo día, el propio turno a mover se bloqueaba a sí mismo.
+  - Soluciones implementadas:
+    1. Se implementó `export async function GET(request, { params })` en `src/app/api/admin/turnos/[id]/route.js` con autenticación y relación completa `include: { cliente: true }`.
+    2. Se flexibilizó el rango horario administrativo a `07:00` a `23:00` hs para que el operador pueda agendar o reprogramar libremente en casos excepcionales.
+    3. Se implementó redirección de página completa con `window.location.href` en `handleProceed` de Alta de Turno para todos los modos (`reprogramar`, `siguienteTurno`, `nuevo`).
+    4. Se implementó soporte de `excludeTurnoId` en `/api/admin/alta-turno/disponibilidad` y se eliminó `REPROGRAMADO` de las listas `notIn` en disponibilidad administrativa y pública.
+    5. Se preconfiguró el mes y fecha original en Alta de Turno al ingresar en modo reprogramar para situar al usuario en el contexto correcto.
+  - Se verificó compilación local con `npm run build` (37/37 rutas exitosas).
 

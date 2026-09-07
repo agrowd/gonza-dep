@@ -159,16 +159,17 @@ export async function POST(request) {
     const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
     const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
     const workStartStr = startConfig?.value || '10:00';
-    const workEndStr = endConfig?.value || '20:00';
+    const workEndStr = endConfig?.value || '22:00';
     
-    const workStartMinutes = timeToMinutes(workStartStr);
-    const workEndMinutes = timeToMinutes(workEndStr);
+    // For admin operations, allow flexible scheduling (07:00 to 23:00) so exceptional appointments (e.g. at 13:00 hs or 21:30 hs) are not blocked
+    const workStartMinutes = Math.min(timeToMinutes(workStartStr), timeToMinutes('07:00'));
+    const workEndMinutes = Math.max(timeToMinutes(workEndStr), timeToMinutes('23:00'));
     
     const startMinutes = timeToMinutes(horaInicio);
     const endMinutes = timeToMinutes(horaFin);
 
     if (startMinutes < workStartMinutes || endMinutes > workEndMinutes) {
-      return NextResponse.json({ error: `El horario seleccionado está fuera del horario de atención permitido (${workStartStr} hs a ${workEndStr} hs).` }, { status: 400 });
+      return NextResponse.json({ error: `El horario seleccionado está fuera del rango horario permitido (07:00 hs a 23:00 hs).` }, { status: 400 });
     }
 
     // Validation: Overlap Check

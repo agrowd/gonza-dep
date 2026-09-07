@@ -55,6 +55,38 @@ async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId
 }
 
 
+// GET: Fetch single appointment by ID
+export async function GET(request, { params }) {
+  try {
+    const { id } = await params;
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session');
+    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID de turno requerido' }, { status: 400 });
+    }
+
+    const turno = await prisma.turno.findUnique({
+      where: { id: String(id) },
+      include: {
+        cliente: true
+      }
+    });
+
+    if (!turno) {
+      return NextResponse.json({ error: 'Turno no encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json(turno);
+  } catch (error) {
+    console.error('Error fetching turno by id:', error);
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+  }
+}
+
 // PUT: Update appointment (actions: reprogram, cancel, mark completed, approve)
 export async function PUT(request, { params }) {
   try {
@@ -113,16 +145,17 @@ export async function PUT(request, { params }) {
         const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
         const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
         const workStartStr = startConfig?.value || '10:00';
-        const workEndStr = endConfig?.value || '20:00';
+        const workEndStr = endConfig?.value || '22:00';
         
-        const workStartMinutes = timeToMinutes(workStartStr);
-        const workEndMinutes = timeToMinutes(workEndStr);
+        // For admin operations, allow flexible scheduling (07:00 to 23:00) so exceptional appointments (e.g. at 13:00 hs or 21:30 hs) are not blocked
+        const workStartMinutes = Math.min(timeToMinutes(workStartStr), timeToMinutes('07:00'));
+        const workEndMinutes = Math.max(timeToMinutes(workEndStr), timeToMinutes('23:00'));
         
         const startMinutes = timeToMinutes(checkHoraInicio);
         const endMinutes = timeToMinutes(checkHoraFin);
 
         if (startMinutes < workStartMinutes || endMinutes > workEndMinutes) {
-          return NextResponse.json({ error: `El horario seleccionado está fuera del horario de atención permitido (${workStartStr} hs a ${workEndStr} hs).` }, { status: 400 });
+          return NextResponse.json({ error: `El horario seleccionado está fuera del rango horario permitido (07:00 hs a 23:00 hs).` }, { status: 400 });
         }
       }
     }

@@ -628,10 +628,6 @@ export default function AgendaPage() {
             initialDate = parsedDate;
           }
         }
-        // Clean URL so subsequent page reloads, browser tab restores, or bookmarked URLs don't lock onto the old date
-        try {
-          window.history.replaceState({}, '', window.location.pathname);
-        } catch (e) {}
       }
       
       const isNewTurnoReq = searchParams.get('newTurno') === 'true';
@@ -726,14 +722,20 @@ export default function AgendaPage() {
               const initialNotas = (turno.cliente?.notasGonzalo || '').trim();
               const initialFreq = turno.cliente?.frecuencia || 4;
 
+              const zonesFromUrl = zonesParam ? zonesParam.split(',').filter(Boolean) : null;
+              const finalZoneIds = (zonesFromUrl && zonesFromUrl.length > 0) ? zonesFromUrl : preselectedZoneIds;
+              const finalHasOtros = searchParams.has('hasOtros') ? hasOtrosParam : Boolean(hasOtros);
+              const finalOtrosTexto = searchParams.has('otrosTexto') ? otrosTextoParam : otrosTexto;
+              const finalOtrosPrecio = searchParams.has('otrosPrecio') ? otrosPrecioParam : otrosPrecio;
+
               setEditTurno({
                 isInitialEdit: true,
                 initialValorTotal: Number(dynPrices.valorTotal || turno.valorTotal || 0),
                 initialValorSeña: Number(turno.valorSeña || 0),
-                initialZoneIds: [...preselectedZoneIds],
-                initialHasOtros: Boolean(hasOtros),
-                initialOtrosTexto: (otrosTexto || '').trim(),
-                initialOtrosPrecio: String(otrosPrecio || ''),
+                initialZoneIds: [...finalZoneIds],
+                initialHasOtros: Boolean(finalHasOtros),
+                initialOtrosTexto: (finalOtrosTexto || '').trim(),
+                initialOtrosPrecio: String(finalOtrosPrecio || ''),
                 initialObservaciones: initialObs,
                 initialNotasGonzalo: initialNotas,
                 initialFrecuencia: initialFreq,
@@ -751,13 +753,13 @@ export default function AgendaPage() {
                 autoTotal: dynPrices.valorTotal,
                 autoTotalZonas: dynPrices.valorOriginal,
                 autoSeña: turno.valorSeña,
-                selectedZoneIds: preselectedZoneIds,
+                selectedZoneIds: finalZoneIds,
                 observaciones: initialObs,
                 notasGonzalo: initialNotas,
                 frecuencia: initialFreq,
-                hasOtros: Boolean(hasOtros),
-                otrosTexto: otrosTexto || '',
-                otrosPrecio: otrosPrecio || ''
+                hasOtros: Boolean(finalHasOtros),
+                otrosTexto: finalOtrosTexto || '',
+                otrosPrecio: finalOtrosPrecio || ''
               });
               setIsEditing(true);
               setIsDetailsOpen(true);
@@ -766,15 +768,27 @@ export default function AgendaPage() {
                 setSelectedDate(pDate);
                 setCurrentWeekStart(getStartOfWeek(pDate));
               }
+            } else {
+              console.error('Error fetching turno to reprogram:', turno);
+              showToast(turno?.error || 'Error al cargar el turno para reprogramar.', 'error');
             }
           })
-          .catch(err => console.error('Error fetching turno to reprogram:', err));
+          .catch(err => {
+            console.error('Error fetching turno to reprogram:', err);
+            showToast('Error al cargar el turno para reprogramar.', 'error');
+          });
       }
 
       if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
         initialView = viewParam;
       } else if (window.innerWidth < 768) {
         initialView = 'day';
+      }
+
+      if (dateParam && !isNewTurnoReq && !reprogramarTurnoId) {
+        try {
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch (e) {}
       }
     }
 

@@ -41,7 +41,7 @@ export async function GET(request) {
           lt: nextDate
         },
         estado: {
-          notIn: ['CANCELADO', 'REPROGRAMADO', 'NO_ASISTIO'] // skip cancelled slots
+          notIn: ['CANCELADO', 'NO_ASISTIO'] // skip cancelled and no-show slots
         },
         NOT: {
           estado: 'PENDIENTE_PAGO',

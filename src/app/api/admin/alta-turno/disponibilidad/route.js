@@ -30,6 +30,7 @@ export async function GET(request) {
     const horaHasta = searchParams.get('horaHasta') || '22:00';
     const intervalo = parseInt(searchParams.get('intervalo') || searchParams.get('step') || '30', 10);
     const diasSemanaParam = searchParams.get('diasSemana'); // e.g. "1,2,3,4,5"
+    const excludeTurnoId = searchParams.get('excludeTurnoId') || searchParams.get('turnoId');
 
     // Parse allowed days of week (0 = Sunday, 1 = Monday, ... 6 = Saturday)
     let allowedDays = [1, 2, 3, 4, 5, 6]; // default Lun-Sab
@@ -47,17 +48,22 @@ export async function GET(request) {
     const globalWorkStart = startConfig?.value || '10:00';
     const globalWorkEnd = endConfig?.value || '20:00';
 
-    // Fetch all active appointments for the month
-    const turnos = await prisma.turno.findMany({
-      where: {
-        fecha: {
-          gte: startDate,
-          lt: endDate
-        },
-        estado: {
-          notIn: ['CANCELADO', 'REPROGRAMADO', 'NO_ASISTIO']
-        }
+    // Fetch all active appointments for the month (REPROGRAMADO appointments are active and occupy slots; exclude current turno if rescheduling)
+    const whereClause = {
+      fecha: {
+        gte: startDate,
+        lt: endDate
       },
+      estado: {
+        notIn: ['CANCELADO', 'NO_ASISTIO']
+      }
+    };
+    if (excludeTurnoId) {
+      whereClause.id = { not: String(excludeTurnoId) };
+    }
+
+    const turnos = await prisma.turno.findMany({
+      where: whereClause,
       select: {
         fecha: true,
         horaInicio: true,

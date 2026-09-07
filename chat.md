@@ -837,3 +837,24 @@
 3. **Verificación y Compilación**:
    - `npm run build` ejecutado exitosamente con 37/37 rutas compiladas con 0 errores.
 
+## Mensaje del Usuario (2026-09-07 17:35:00-03:00)
+> [3 capturas de pantalla de Gonzalo mostrando el flujo de Reprogramar]:
+> "Hola Fede, anda bien cuando hago 'siguiente turno'. Pero cuando quiero reprogramar un turno y elijo horario, no le aparece la ventana para agendar el turno, me aparece la agenda vacia nomas."
+> "Interpreta y soluciona este problema y los que puedan aparecer de la misma indole de proceso"
+
+## Diagnóstico y Solución Aplicada (ERR-15 & D-46):
+1. **Diagnóstico Integral de Causas**:
+   - **Endpoint GET /api/admin/turnos/[id] inexistente**: La ruta `/api/admin/turnos/[id]` únicamente contaba con métodos `PUT` y `DELETE`. Al hacer `fetch('/api/admin/turnos/' + reprogramarTurnoId)` desde la agenda, el backend respondía con `HTTP 405 Method Not Allowed`. Como la respuesta no traía el objeto del turno sino un error, `setSelectedTurno(turno)` nunca se ejecutaba y el modal `{isDetailsOpen && selectedTurno && (...)}` no se renderizaba, mostrando la agenda vacía.
+   - **Navegación en Alta de Turno**: En `alta-turno/page.js`, la redirección al reprogramar usaba `router.push()` y omitía el parámetro `date`, produciendo transiciones superficiales en móviles.
+   - **Rango Operativo Restrictivo**: `PUT /api/admin/turnos/[id]` y `POST /api/admin/turnos` validaban estrictamente contra `work_start` y `work_end` (12:30 a 22:00 hs), rechazando turnos administrativos tempranos (ej: 11:30 hs) o nocturnos.
+   - **Disponibilidad**: En `/api/admin/alta-turno/disponibilidad` y `/api/disponibilidad`, el estado `REPROGRAMADO` estaba erróneamente excluido (`notIn`), y no se soportaba `excludeTurnoId`, provocando que al reprogramar en el mismo día el propio turno se bloqueara a sí mismo.
+2. **Correcciones Aplicadas**:
+   - `src/app/api/admin/turnos/[id]/route.js`: Se implementó el método `GET` con autenticación y relación `cliente: true`. Se flexibilizó el rango horario administrativo a 07:00 - 23:00 hs.
+   - `src/app/api/admin/turnos/route.js`: Se aplicó el rango horario administrativo flexible 07:00 - 23:00 hs.
+   - `src/app/admin/alta-turno/page.js`: Se implementó `window.location.href` para navegación limpia con todos los parámetros (`date`, `newDate`, `newTime`, `newHoraFin`, `zones`, `hasOtros`). Se agregó precarga de mes y fecha original en modo reprogramar, y envío de `excludeTurnoId`.
+   - `src/app/api/admin/alta-turno/disponibilidad/route.js` y `src/app/api/disponibilidad/route.js`: Se eliminó `REPROGRAMADO` de las listas `notIn` para considerarlos turnos activos ocupando slots, y se integró `excludeTurnoId` en la consulta.
+   - `src/app/admin/agenda/page.js`: Se protegió `window.history.replaceState` contra borrado prematuro de parámetros y se agregó feedback de error con toast.
+3. **Verificación y Despliegue**:
+   - `npm run build` ejecutado exitosamente (37/37 rutas compiladas con 0 errores).
+
+

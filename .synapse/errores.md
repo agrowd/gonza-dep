@@ -86,6 +86,20 @@
 2. En `src/app/api/admin/turnos/route.js`, se aseguró `finalClienteId = clienteId ? String(clienteId) : null`, y se implementó un mecanismo resiliente de resolución de cliente (búsqueda por ID, fallback por DNI/email/WhatsApp, y chequeo seguro de `turnos.length`).
 **Estado:** ✅ FIXED
 
+## ERR-15: Endpoint GET /api/admin/turnos/[id] inexistente (405 Method Not Allowed) y rango administrativo restrictivo al reprogramar (2026-09-07)
+**Síntoma:** Al tocar "Reprogramar" en un turno y elegir fecha/hora en Alta de Turno, al volver a la agenda no se abre la ventana para guardar o agendar el turno reprogramado, mostrándose la agenda vacía.
+**Root Cause:**
+1. `src/app/api/admin/turnos/[id]/route.js` no disponía del método `GET` (solo tenía `PUT` y `DELETE`). Al ejecutar `fetch('/api/admin/turnos/' + reprogramarTurnoId)` en la agenda, el servidor devolvía `405 Method Not Allowed`. Como la respuesta no traía el objeto del turno sino un JSON de error o HTML, `setSelectedTurno(turno)` nunca se invocaba y la condición `{isDetailsOpen && selectedTurno && (...)}` permanecía en falso, impidiendo que el modal se renderice.
+2. `alta-turno/page.js` utilizaba `router.push()` con query params parciales en lugar de navegación de página completa `window.location.href`, lo que en navegadores móviles causaba transiciones superficiales sin remontar correctamente los hooks.
+3. `PUT /api/admin/turnos/[id]` y `POST /api/admin/turnos` validaban rígidamente contra `work_start` y `work_end` de la configuración (12:30 a 22:00 hs), rechazando turnos administrativos en horarios especiales fuera de esa franja (ej. 11:30 o 22:00 a 23:00 hs).
+4. `alta-turno/disponibilidad` consideraba como ocupado el propio turno que se estaba reprogramando si el operador deseaba moverlo en el mismo día, y excluía indebidamente turnos activos con estado `REPROGRAMADO`.
+**Solución:**
+1. Se implementó el método `GET` con autenticación de sesión en `src/app/api/admin/turnos/[id]/route.js` retornando el turno completo con su relación `cliente`.
+2. Se flexibilizó el rango horario permitido para operaciones del administrador a `07:00` a `23:00` hs en `PUT /api/admin/turnos/[id]` y `POST /api/admin/turnos`.
+3. Se actualizó `alta-turno/page.js` para usar `window.location.href` garantizando montaje fresco con todos los parámetros (`date`, `newDate`, `newTime`, `newHoraFin`, `zones`, `hasOtros`).
+4. Se agregó soporte para `excludeTurnoId` en `/api/admin/alta-turno/disponibilidad` y se corrigió el filtro de estados para considerar `REPROGRAMADO` como turno activo que ocupa franja horaria.
+**Estado:** ✅ FIXED
+
 
 
 
