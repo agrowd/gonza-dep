@@ -98,8 +98,13 @@
 2. Se flexibilizó el rango horario permitido para operaciones del administrador a `07:00` a `23:00` hs en `PUT /api/admin/turnos/[id]` y `POST /api/admin/turnos`.
 3. Se actualizó `alta-turno/page.js` para usar `window.location.href` garantizando montaje fresco con todos los parámetros (`date`, `newDate`, `newTime`, `newHoraFin`, `zones`, `hasOtros`).
 4. Se agregó soporte para `excludeTurnoId` en `/api/admin/alta-turno/disponibilidad` y se corrigió el filtro de estados para considerar `REPROGRAMADO` como turno activo que ocupa franja horaria.
+## ERR-16: Recálculo automático de seña persistente y fallo silencioso de despliegue en VPS (2026-09-08)
+**Síntoma:** Al usar "Programar Siguiente Turno", el modal de agendado de la agenda continúa recalculando automáticamente la seña al 50% de las zonas (ej: $34.500 en vez de $15.500).
+**Root Cause:**
+1. En el VPS de producción (`/srv/gonzalo-dep`), existía un commit local `9e4884c` no integrado en GitHub, lo cual provocó que `git pull origin main` en `deploy_vps_workspace.js` fallara por divergencia de ramas (`Your branch and origin/main have diverged`). Como consecuencia, el commit `da7f8eb` nunca se desplegó en producción y el servidor siguió ejecutando el build anterior.
+2. En `src/app/admin/agenda/page.js`, existía una segunda llamada asíncrona redundante a `setNewTurno` dentro de `fetch('/api/zonas')` que calculaba `calcs.valorSeña` en paralelo al efecto principal de recálculo de precios, y el chequeo de zonas vacías reseteaba `valorSeña: 0` antes de procesar el parámetro de seña.
+**Solución:**
+1. Se integraron en local los cambios de `9e4884c` de WhatsApp (watchdog de liveness de Chromium, resolución de JID/LID con getNumberId y deduplicación de recordatorios con estado ENVIADO).
+2. Se eliminó la llamada redundante a `setNewTurno` en `fetch('/api/zonas')`, dejando la responsabilidad unificada en el efecto centralizado de precios, y se protegió `manualSeñaOverride` contra cualquier reseteo a 0.
+3. Se sincronizó el repositorio y se recompiló y desplegó tanto en el entorno de producción (puerto 3006) como en staging (puerto 3008).
 **Estado:** ✅ FIXED
-
-
-
-

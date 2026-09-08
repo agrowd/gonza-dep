@@ -592,4 +592,14 @@
     2. En `src/app/admin/alta-turno/page.js`: Se extrae `señaParam` y se reenvía en `handleProceed` hacia la agenda cuando `modo === 'siguienteTurno'`.
     3. En `src/app/admin/agenda/page.js`: En la recepción de `isNewTurnoReq`, se lee `señaParam`, precargando `valorSeña` y `manualSeñaOverride` con dicho valor numérico. Asimismo, se protegió la carga de zonas (`/api/zonas`) para que respete `manualSeñaOverride` si está definido.
   - Se verificó compilación local con `npm run build` (37/37 rutas exitosas).
-
+- **08 de Septiembre (20:30 - 20:45)**:
+  - Gonzalo envía capturas reportando que al poner siguiente turno sigue recalculándose la seña al 50% ($34.500 en lugar de $15.500 de Rafael Vazquez).
+  - Se diagnosticó mediante inspección directa por SSH al VPS Hostinger:
+    1. En el VPS de producción (`/srv/gonzalo-dep`), existía un commit local `9e4884c` no integrado en GitHub con mejoras del watchdog y cron de WhatsApp.
+    2. El comando `git pull origin main` en `deploy_vps_workspace.js` había fallado silenciosamente debido a la divergencia de ramas (`Your branch and origin/main have diverged`), por lo cual `da7f8eb` nunca se desplegó en producción y el servidor continuaba ejecutando el build antiguo.
+    3. Adicionalmente, en `src/app/admin/agenda/page.js`, la carga de `/api/zonas` ejecutaba un `setNewTurno` redundante y el caso de `selectedZoneIds.length === 0` forzaba `valorSeña: 0`.
+  - Soluciones implementadas:
+    1. Se integraron en local las mejoras de `9e4884c` en `src/lib/whatsapp.js` (Chromium liveness watchdog, normalización JID/LID vía `getNumberId`, pausa de cortesía 2s entre envíos y deduplicación estricta con `estado: ENVIADO`).
+    2. Se simplificó `fetch('/api/zonas')` en `src/app/admin/agenda/page.js` para delegar el recálculo exclusivamente en el efecto centralizado de precios, protegiendo `manualSeñaOverride` contra cualquier anulación o reseteo a 0.
+    3. Se validó la compilación local (`npm run build`, 37/37 rutas exitosas en 19.5s).
+    4. Se sincroniza con GitHub y se despliega con `git fetch` y `git reset --hard origin/main` en Producción (3006) y Staging (3008).

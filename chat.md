@@ -873,5 +873,22 @@
 3. **Verificación**:
    - `npm run build` ejecutado exitosamente con 37/37 rutas compiladas con 0 errores.
 
+## Mensaje del Usuario (2026-09-08 20:25:00-03:00)
+> [3 Capturas de pantalla de WhatsApp]:
+> - Captura 1: Turno de Rafael Vazquez con Seña Cobrada: $15.500.
+> - Captura 2: Modal de Nuevo Turno con Seña Recibida: $34.500 (50% de $69.000).
+> - Captura 3: Mensaje de Gonzalo: "Me sigue recalculando la seña al poner siguiente turno"
+> "Resolve esto que pide"
+
+## Diagnóstico y Solución Aplicada (D-48, ERR-16):
+1. **Diagnóstico**:
+   - En el servidor de producción Hostinger (`187.127.9.216`), existía un commit local `9e4884c` que provocó que el despliegue previo con `git pull` fallara por divergencia de ramas (`Your branch and origin/main have diverged`). Por consiguiente, la versión productiva seguía ejecutando el bundle anterior que carecía del pase de parámetros de seña.
+   - Adicionalmente, se detectó una llamada redundante a `setNewTurno` en `fetch('/api/zonas')` y un reseteo prematuro de `valorSeña: 0` cuando `selectedZoneIds.length === 0`.
+2. **Correcciones Aplicadas**:
+   - Se incorporaron a la rama `main` las optimizaciones de WhatsApp del commit `9e4884c` (detección de navegador Chromium desconectado, resolución robusta de JID/LID con `getNumberId`, pausa de cortesía y deduplicación con estado `ENVIADO`).
+   - Se simplificó `fetch('/api/zonas')` en `src/app/admin/agenda/page.js` dejando la recalculación en el efecto centralizado de precios y protegiendo `manualSeñaOverride` contra cualquier anulación.
+   - Se verificó la compilación local (`npm run build`, 37/37 rutas compiladas con éxito).
+   - Se sincronizó GitHub y se desplegó en el servidor de producción (puerto 3006) y staging (puerto 3008).
+
 
 

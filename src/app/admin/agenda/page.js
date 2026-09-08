@@ -952,22 +952,6 @@ export default function AgendaPage() {
       .then(data => {
         if (Array.isArray(data)) {
           setZones(data);
-          setNewTurno(prev => {
-            if (prev.selectedZoneIds && prev.selectedZoneIds.length > 0) {
-              const matched = data.filter(z => prev.selectedZoneIds.includes(z.id));
-              const calcs = calculateTurnDetails(matched, false);
-              return {
-                ...prev,
-                valorTotal: calcs.valorTotal || prev.valorTotal,
-                valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
-                  ? prev.manualSeñaOverride
-                  : (calcs.valorSeña || prev.valorSeña),
-                autoTotal: calcs.valorTotal || prev.autoTotal,
-                autoTotalZonas: calcs.valorTotal || prev.autoTotalZonas
-              };
-            }
-            return prev;
-          });
         }
       })
       .catch(err => console.error('Error fetching zones:', err));
@@ -1522,11 +1506,11 @@ export default function AgendaPage() {
         ...prev,
         horaFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
         autoHoraFin: horaFinStr,
-        valorTotal: 0,
-        valorSeña: 0,
+        valorTotal: (prev.manualTotalOverride !== undefined && prev.manualTotalOverride !== null) ? prev.manualTotalOverride : 0,
+        valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null) ? prev.manualSeñaOverride : 0,
         autoTotal: 0,
         autoTotalZonas: 0,
-        autoSeña: 0,
+        autoSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null) ? prev.manualSeñaOverride : 0,
         bonificacion: 0
       }));
       return;

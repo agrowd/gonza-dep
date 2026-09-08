@@ -34,6 +34,20 @@ export function startWhatsAppWatchdog() {
       const hasAuthDir = fs.existsSync('./.wwebjs_auth');
       const now = Date.now();
 
+      // 0. Proactively check if client is nominally CONNECTED but Chromium process died/detached
+      if (status === 'CONNECTED' && globalThis.whatsappClient) {
+        try {
+          if (globalThis.whatsappClient.pupBrowser && !globalThis.whatsappClient.pupBrowser.isConnected()) {
+            console.warn('[WhatsApp Watchdog] Chromium browser disconnected unexpectedly. Resetting client...');
+            try { await globalThis.whatsappClient.destroy(); } catch (e) {}
+            globalThis.whatsappClient = null;
+            globalThis.whatsappStatus = 'DISCONNECTED';
+          }
+        } catch (err) {
+          console.error('[WhatsApp Watchdog] Error checking browser liveness:', err);
+        }
+      }
+
       // 1. If DISCONNECTED and session directory exists, attempt auto-reconnect with 3-minute backoff
       if (status === 'DISCONNECTED' && hasAuthDir) {
         if (now - lastAutoReconnectAttempt > 3 * 60 * 1000) {
@@ -260,9 +274,35 @@ export async function sendWhatsAppMessage(phone, text) {
   }
 
   const formattedPhone = formatArgentinaPhone(phone);
+  let targetChatId = formattedPhone;
 
-  console.log(`Sending WhatsApp message to ${formattedPhone}...`);
-  const response = await client.sendMessage(formattedPhone, text);
+  // Resolve true WhatsApp contact JID using getNumberId (handles LID and Argentina +54 9 vs +54 differences)
+  try {
+    const cleanDigits = (phone || '').replace(/\D/g, '');
+    let numberId = await client.getNumberId(formattedPhone);
+
+    if (!numberId && cleanDigits.startsWith('549')) {
+      // Try without the 9 (e.g. 5411... instead of 54911...)
+      const altNumber = '54' + cleanDigits.slice(3);
+      numberId = await client.getNumberId(altNumber);
+    } else if (!numberId && cleanDigits.startsWith('54') && !cleanDigits.startsWith('549')) {
+      // Try with the 9 (e.g. 54911... instead of 5411...)
+      const altNumber = '549' + cleanDigits.slice(2);
+      numberId = await client.getNumberId(altNumber);
+    }
+
+    if (numberId && numberId._serialized) {
+      targetChatId = numberId._serialized;
+      console.log(`[WhatsApp] Resolved ${phone} to WhatsApp ID ${targetChatId}`);
+    } else {
+      console.warn(`[WhatsApp] Warning: getNumberId returned null for ${phone}. Fallback to ${formattedPhone}`);
+    }
+  } catch (resErr) {
+    console.warn(`[WhatsApp] Warning resolving numberId for ${phone}:`, resErr.message);
+  }
+
+  console.log(`Sending WhatsApp message to ${targetChatId}...`);
+  const response = await client.sendMessage(targetChatId, text);
   return response;
 }
 
@@ -375,10 +415,12 @@ export async function checkAndSendReminders() {
       return;
     }
 
+    if (globalThis.whatsappStatus !== 'CONNECTED') {
+      console.log(`[Reminder Cron] WhatsApp not connected yet (status: ${globalThis.whatsappStatus}). Postponing reminder check.`);
+      return;
+    }
+
     console.log('[Reminder Cron] Automated reminder window active. Fetching appointments for today + 2 days...');
-    
-    // Set run date to prevent duplicate executions
-    globalThis.lastReminderRunDate = todayStr;
 
     // Calculate start and end of target day (today + 2 days)
     const targetDate = new Date(Date.UTC(argToday.getUTCFullYear(), argToday.getUTCMonth(), argToday.getUTCDate()));
@@ -423,16 +465,19 @@ export async function checkAndSendReminders() {
 
     console.log(`[Reminder Cron] Found ${turnos.length} appointments for 48h reminder check.`);
 
+    let hasWppErrors = false;
+
     for (const t of turnos) {
-      // Check specifically if a WHATSAPP REMINDER notification has already been sent for this appointment
+      // Check specifically if a WHATSAPP REMINDER notification has already been sent (or permanently failed due to invalid number)
       const existingNotification = await prisma.notificacion.findFirst({
         where: {
           turnoId: t.id,
           canal: 'WHATSAPP',
           OR: [
-            { mensaje: { contains: '[RECORDATORIO_48H]' } },
-            { mensaje: { contains: 'NO RESPONDER ESTE MENSAJE' } },
-            { mensaje: { contains: 'Te recuerdo el turno' } }
+            { estado: 'ENVIADO', mensaje: { contains: '[RECORDATORIO_48H]' } },
+            { estado: 'ENVIADO', mensaje: { contains: 'NO RESPONDER ESTE MENSAJE' } },
+            { estado: 'ENVIADO', mensaje: { contains: 'Te recuerdo el turno' } },
+            { estado: 'FALLIDO', mensaje: { contains: '[RECORDATORIO_48H_FALLIDO_NUMERO_INVALIDO]' } }
           ]
         }
       });
@@ -465,18 +510,37 @@ export async function checkAndSendReminders() {
               estado: 'ENVIADO'
             }
           });
+
+          // Polite pause between automated WhatsApp dispatches to prevent rate-limiting
+          await new Promise(r => setTimeout(r, 2000));
         } else {
           console.warn('[Reminder Cron] Cannot send automated WhatsApp reminder: Client is disconnected.');
+          hasWppErrors = true;
         }
       } catch (err) {
         console.error(`[Reminder Cron] Failed to send automated WhatsApp reminder to ${t.cliente.nombreCompleto} (appointment ${t.id}):`, err);
+        
+        const isClientPhoneError = err.message && (
+          err.message.includes('No LID for user') || 
+          err.message.includes('not registered') ||
+          err.message.includes('no está registrado')
+        );
+
+        if (!isClientPhoneError) {
+          hasWppErrors = true;
+        }
+
+        if (err.message && (err.message.includes('detached Frame') || err.message.includes('Session closed') || err.message.includes('Target closed'))) {
+          globalThis.whatsappStatus = 'DISCONNECTED';
+        }
+
         // Save failure notification log
         await prisma.notificacion.create({
           data: {
             clienteId: t.cliente.id,
             turnoId: t.id,
             canal: 'WHATSAPP',
-            mensaje: logMessage,
+            mensaje: isClientPhoneError ? `[RECORDATORIO_48H_FALLIDO_NUMERO_INVALIDO] ${rawMessage}` : logMessage,
             estado: 'FALLIDO'
           }
         });
@@ -536,6 +600,7 @@ export async function checkAndSendReminders() {
           where: {
             turnoId: t.id,
             canal: 'EMAIL',
+            estado: 'ENVIADO',
             mensaje: {
               startsWith: 'Recordatorio automático (7 días antes)'
             }
@@ -636,7 +701,8 @@ export async function checkAndSendReminders() {
           mensaje: {
             contains: 'mantenimiento'
           },
-          canal: 'EMAIL'
+          canal: 'EMAIL',
+          estado: 'ENVIADO'
         }
       });
 
@@ -694,6 +760,13 @@ export async function checkAndSendReminders() {
           }
         });
       }
+    }
+
+    if (!hasWppErrors) {
+      globalThis.lastReminderRunDate = todayStr;
+      console.log(`[Reminder Cron] All reminders for ${todayStr} processed successfully. Locked until tomorrow.`);
+    } else {
+      console.warn(`[Reminder Cron] Some reminders encountered errors for ${todayStr}. Will retry on next cron tick within window.`);
     }
   } catch (error) {
     console.error('[Reminder Cron] Error in automated reminder cron:', error);
