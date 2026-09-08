@@ -179,6 +179,28 @@ function AltaTurnoContent() {
     return baseCalcs;
   }, [activeZoneObjs, isNuevoCliente, hasOtros, otrosPrecio]);
 
+  // Dynamic displayed Total considering inherited discount
+  const displayTotal = useMemo(() => {
+    const base = calculations.valorTotal;
+    if (descuentoTipoParam === 'PORCENTAJE' && Number(descuentoValorParam) > 0) {
+      const raw = base * (1 - Number(descuentoValorParam) / 100);
+      return Math.max(0, Math.round(raw / 1000) * 1000);
+    } else if (descuentoTipoParam === 'PESOS' && Number(descuentoValorParam) > 0) {
+      return Math.max(0, base - Number(descuentoValorParam));
+    }
+    return base;
+  }, [calculations.valorTotal, descuentoTipoParam, descuentoValorParam]);
+
+  // Dynamic displayed Seña: if seña was explicitly passed from previous appointment, preserve it; otherwise use auto 50%
+  const displaySeña = useMemo(() => {
+    if (señaParam !== null && señaParam !== undefined && señaParam !== '') {
+      return Number(señaParam);
+    }
+    return calculations.valorSeña;
+  }, [señaParam, calculations.valorSeña]);
+
+  const hasExplicitSeña = señaParam !== null && señaParam !== undefined && señaParam !== '';
+
   // Active duration for scheduling: either user override or calculated
   const activeDuration = useMemo(() => {
     if (customDuration !== null && customDuration > 0) {
@@ -570,14 +592,14 @@ function AltaTurnoContent() {
             </div>
 
             <div className={styles.summaryBadgesWrap}>
-              {calculations.valorTotal > 0 && (
+              {displayTotal > 0 && (
                 <span className={styles.badgeSummary}>
-                  💰 Total: ${calculations.valorTotal.toLocaleString()}
+                  💰 Total: ${displayTotal.toLocaleString()}
                 </span>
               )}
-              {calculations.valorSeña > 0 && (
+              {(hasExplicitSeña || displaySeña > 0) && (
                 <span className={`${styles.badgeSummary} ${styles.badgeSummarySeña}`}>
-                  💳 Seña: ${calculations.valorSeña.toLocaleString()}
+                  💳 Seña: ${displaySeña.toLocaleString()}
                 </span>
               )}
             </div>
@@ -626,34 +648,6 @@ function AltaTurnoContent() {
                 </button>
               );
             })}
-          </div>
-
-          {/* Quick presets */}
-          <div className={styles.presetBtns}>
-            <button
-              type="button"
-              className={styles.presetBtn}
-              onClick={() => setSelectedDays([1, 2, 3, 4, 5])}
-            >
-              📅 Lunes a Viernes
-            </button>
-            <button
-              type="button"
-              className={styles.presetBtn}
-              onClick={() => setSelectedDays([1, 2, 3, 4, 5, 6, 0])}
-            >
-              🗓️ Toda la semana
-            </button>
-            <button
-              type="button"
-              className={styles.presetBtn}
-              onClick={() => {
-                setHoraDesde('18:00');
-                setHoraHasta('22:00');
-              }}
-            >
-              🌙 Noche (18:00+)
-            </button>
           </div>
         </div>
       </div>

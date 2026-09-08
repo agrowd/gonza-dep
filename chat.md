@@ -890,5 +890,25 @@
    - Se verificó la compilación local (`npm run build`, 37/37 rutas compiladas con éxito).
    - Se sincronizó GitHub y se desplegó en el servidor de producción (puerto 3006) y staging (puerto 3008).
 
+## Mensaje del Usuario (2026-09-08 20:49:00-03:00)
+> [Captura de pantalla de WhatsApp de Gonzalo con 2 círculos rojos en Alta de Turno]:
+> 1. Círculo en badge de seña superior (= Seña: $34.500): "Que acá también aparezca la seña correcta"
+> 2. Círculo en botones de filtros inferiores: "Y abajo sácale esos filtros extras que no vamos a usarlos"
+> "Resolve esto que pide"
+
+## Diagnóstico y Solución Aplicada (D-49):
+1. **Seña y Total heredados en Alta de Turno (`/admin/alta-turno`)**:
+   - Se crearon los hooks `displayTotal` y `displaySeña` en `src/app/admin/alta-turno/page.js`.
+   - `displaySeña` comprueba prioritariamente `señaParam` heredado desde la URL del turno previo. Si existía una seña explícita (ej: $15.500 de Rafael Vazquez, o $0), la muestra fielmente en el badge superior en lugar de recalcular el 50% genérico.
+   - `displayTotal` aplica cualquier bonificación heredada (`descuentoTipoParam` y `descuentoValorParam`) sobre el total de las zonas seleccionadas.
+   - Se actualizó el renderizado en `.summaryBadgesWrap` para utilizar `displayTotal` y `displaySeña`.
+2. **Remoción de Filtros Extras**:
+   - Se eliminó el bloque de botones de presets rápidos (`.presetBtns` con "Lunes a Viernes", "Toda la semana" y "Noche (18:00+)") de `src/app/admin/alta-turno/page.js`.
+   - Se eliminaron las clases `.presetBtns`, `.presetBtn` y `.presetBtn:hover` de `src/app/admin/alta-turno/alta-turno.module.css`.
+3. **Verificación y Despliegue**:
+   - Compilación exitosa en local con `npm run build` (37/37 rutas compiladas).
+   - Commits empujados a `main` y sincronizados en `staging`.
+   - Despliegue completado en Hostinger VPS para Producción (3006) y Staging (3008).
+
 
 

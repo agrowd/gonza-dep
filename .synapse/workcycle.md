@@ -603,3 +603,12 @@
     2. Se simplificó `fetch('/api/zonas')` en `src/app/admin/agenda/page.js` para delegar el recálculo exclusivamente en el efecto centralizado de precios, protegiendo `manualSeñaOverride` contra cualquier anulación o reseteo a 0.
     3. Se validó la compilación local (`npm run build`, 37/37 rutas exitosas en 19.5s).
     4. Se sincroniza con GitHub y se despliega con `git fetch` y `git reset --hard origin/main` en Producción (3006) y Staging (3008).
+- **08 de Septiembre (20:50 - 21:05)**:
+  - Gonzalo envía captura con 2 solicitudes puntuales en `/admin/alta-turno`:
+    1. Que el badge superior de seña muestre la seña real heredada del turno previo (ej: $15.500 para Rafael) en vez de recalcular siempre el 50%.
+    2. Remover los filtros extras inferiores (`[ 📍 Lunes a Viernes ] [ 🗓️ Toda la semana ] [ 🌙 Noche (18:00+) ]`) para dejar más limpia la vista móvil.
+  - Soluciones implementadas:
+    1. En `src/app/admin/alta-turno/page.js`, se implementó `displaySeña` (utilizando `señaParam` si fue transmitido, con fallback a cálculo base de zonas) y `displayTotal` (aplicando descuentos heredados porcentuales o fijos).
+    2. Se vincularon los badges `.badgeSummary` a `displayTotal` y `displaySeña`, mostrando la seña explícita aun si es $0.
+    3. Se removió el bloque `.presetBtns` y sus estilos en `alta-turno.module.css`.
+  - Verificación: `npm run build` compiló exitosamente (37/37 rutas).
