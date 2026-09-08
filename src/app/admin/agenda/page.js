@@ -646,6 +646,10 @@ export default function AgendaPage() {
       const dniParam = searchParams.get('dni') || '';
       const descuentoTipoParam = searchParams.get('descuentoTipo');
       const descuentoValorParam = searchParams.get('descuentoValor');
+      const señaParam = searchParams.get('seña') ?? searchParams.get('valorSeña');
+      const initialSeña = (señaParam !== null && señaParam !== undefined && señaParam !== '')
+        ? Number(señaParam)
+        : undefined;
 
       if (isNewTurnoReq) {
         let calcHoraFin = horaFinParam;
@@ -693,7 +697,9 @@ export default function AgendaPage() {
           dni: dniParam || prev.dni,
           estado: 'SEÑADO',
           descuentoTipo: descuentoTipoParam || prev.descuentoTipo || 'NINGUNO',
-          descuentoValor: descuentoValorParam !== null && descuentoValorParam !== undefined && descuentoValorParam !== '' ? descuentoValorParam : prev.descuentoValor
+          descuentoValor: descuentoValorParam !== null && descuentoValorParam !== undefined && descuentoValorParam !== '' ? descuentoValorParam : prev.descuentoValor,
+          valorSeña: initialSeña !== undefined ? initialSeña : prev.valorSeña,
+          manualSeñaOverride: initialSeña !== undefined ? initialSeña : prev.manualSeñaOverride
         }));
         setIsNewOpen(true);
       }
@@ -953,7 +959,9 @@ export default function AgendaPage() {
               return {
                 ...prev,
                 valorTotal: calcs.valorTotal || prev.valorTotal,
-                valorSeña: calcs.valorSeña || prev.valorSeña,
+                valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
+                  ? prev.manualSeñaOverride
+                  : (calcs.valorSeña || prev.valorSeña),
                 autoTotal: calcs.valorTotal || prev.autoTotal,
                 autoTotalZonas: calcs.valorTotal || prev.autoTotalZonas
               };
@@ -1325,6 +1333,7 @@ export default function AgendaPage() {
     const prevDescuentoValor = turno.descuentoValor !== undefined && turno.descuentoValor !== null && turno.descuentoValor !== '' 
       ? String(turno.descuentoValor) 
       : ((turno.bonificacion || 0) > 0 ? String(turno.bonificacion) : '0');
+    const prevSeña = turno.valorSeña !== undefined && turno.valorSeña !== null ? String(turno.valorSeña) : '0';
 
     const params = new URLSearchParams({
       modo: 'siguienteTurno',
@@ -1341,7 +1350,8 @@ export default function AgendaPage() {
       otrosTexto: otrosTexto || '',
       otrosPrecio: (otrosPrecio || 0).toString(),
       descuentoTipo: prevDescuentoTipo,
-      descuentoValor: prevDescuentoValor
+      descuentoValor: prevDescuentoValor,
+      seña: prevSeña
     });
 
     window.location.href = `/admin/alta-turno?${params.toString()}`;

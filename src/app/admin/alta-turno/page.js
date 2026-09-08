@@ -33,6 +33,7 @@ function AltaTurnoContent() {
   const frecuenciaParam = searchParams.get('frecuencia') || '4';
   const descuentoTipoParam = searchParams.get('descuentoTipo') || 'NINGUNO';
   const descuentoValorParam = searchParams.get('descuentoValor') || '';
+  const señaParam = searchParams.get('seña') ?? searchParams.get('valorSeña');
 
   // 1. Zones Catalog & Selection
   const [zones, setZones] = useState([]);
@@ -382,7 +383,8 @@ function AltaTurnoContent() {
         otrosTexto: otrosTexto || '',
         otrosPrecio: otrosPrecio.toString(),
         descuentoTipo: descuentoTipoParam,
-        descuentoValor: descuentoValorParam
+        descuentoValor: descuentoValorParam,
+        seña: señaParam !== null && señaParam !== undefined ? señaParam : ''
       });
       window.location.href = `/admin/agenda?${params.toString()}`;
       return;

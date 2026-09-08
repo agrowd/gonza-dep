@@ -857,4 +857,21 @@
 3. **Verificación y Despliegue**:
    - `npm run build` ejecutado exitosamente (37/37 rutas compiladas con 0 errores).
 
+## Mensaje del Usuario (2026-09-08 19:20:00-03:00)
+> [Captura de WhatsApp de Luciano]:
+> "Hola Fede, al hacer siguiente turno ahora, no se guarda la seña que tenía en el turno anterior, se calcula automáticamente"
+
+## Diagnóstico y Solución Aplicada (D-47):
+1. **Causa Raíz**:
+   - Al ejecutar `handleScheduleNextTurn` (`src/app/admin/agenda/page.js`), el objeto `params` enviado a `/admin/alta-turno?modo=siguienteTurno` omitía `turno.valorSeña`.
+   - En `AltaTurnoPage`, no se leía ni se reenviaba la seña al volver a la agenda.
+   - En `AgendaPage`, al inicializar `newTurno`, `manualSeñaOverride` no se seteaba, por lo que el efecto de cálculo de precios y la carga de zonas sobreescribían `valorSeña` recalculando automáticamente el 50% de las zonas en vez de preservar la seña del turno previo (ej. $0 o monto fijo acordado).
+2. **Correcciones Aplicadas**:
+   - `src/app/admin/agenda/page.js`: En `handleScheduleNextTurn`, se extrae `prevSeña = turno.valorSeña !== undefined && turno.valorSeña !== null ? String(turno.valorSeña) : '0'` y se pasa en `params`.
+   - `src/app/admin/alta-turno/page.js`: Se extrae `señaParam` y se reenvía en `handleProceed` hacia la agenda cuando `modo === 'siguienteTurno'`.
+   - `src/app/admin/agenda/page.js`: En `isNewTurnoReq`, se lee `señaParam` y se precargan `valorSeña` y `manualSeñaOverride` en `newTurno`. Asimismo, se blindó el callback de carga de zonas (`/api/zonas`) para no pisar `manualSeñaOverride` cuando esté presente.
+3. **Verificación**:
+   - `npm run build` ejecutado exitosamente con 37/37 rutas compiladas con 0 errores.
+
+
 

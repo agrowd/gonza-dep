@@ -581,4 +581,15 @@
     4. Se implementó soporte de `excludeTurnoId` en `/api/admin/alta-turno/disponibilidad` y se eliminó `REPROGRAMADO` de las listas `notIn` en disponibilidad administrativa y pública.
     5. Se preconfiguró el mes y fecha original en Alta de Turno al ingresar en modo reprogramar para situar al usuario en el contexto correcto.
   - Se verificó compilación local con `npm run build` (37/37 rutas exitosas).
+- **08 de Septiembre (19:20 - 19:35)**:
+  - Luciano reporta incidencia: "Hola Fede, al hacer siguiente turno ahora, no se guarda la seña que tenía en el turno anterior, se calcula automáticamente".
+  - Se diagnosticó la causa raíz:
+    - En `handleScheduleNextTurn` (`src/app/admin/agenda/page.js`), al construir los parámetros hacia Alta de Turno (`modo=siguienteTurno`), no se incluía `turno.valorSeña`.
+    - Al seleccionar el nuevo horario en Alta de Turno y regresar a la agenda (`alta-turno/page.js` -> `agenda/page.js`), `seña` no viajaba en la URL.
+    - Como `manualSeñaOverride` no se definía en `setNewTurno`, el efecto de recálculo de precios y la carga de zonas sobreescribían `valorSeña` calculando automáticamente el 50% según las zonas seleccionadas, perdiendo señas personalizadas (ej. $0 o importes fijos acordados previamente con clientes recurrentes).
+  - Soluciones implementadas:
+    1. En `src/app/admin/agenda/page.js`: En `handleScheduleNextTurn`, se extrae `prevSeña = turno.valorSeña !== undefined && turno.valorSeña !== null ? String(turno.valorSeña) : '0'` y se añade como parámetro `seña` a la URL.
+    2. En `src/app/admin/alta-turno/page.js`: Se extrae `señaParam` y se reenvía en `handleProceed` hacia la agenda cuando `modo === 'siguienteTurno'`.
+    3. En `src/app/admin/agenda/page.js`: En la recepción de `isNewTurnoReq`, se lee `señaParam`, precargando `valorSeña` y `manualSeñaOverride` con dicho valor numérico. Asimismo, se protegió la carga de zonas (`/api/zonas`) para que respete `manualSeñaOverride` si está definido.
+  - Se verificó compilación local con `npm run build` (37/37 rutas exitosas).
 
