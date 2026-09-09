@@ -1540,18 +1540,31 @@ export default function AgendaPage() {
       }
     }
 
+    const calculatedAutoSeña = Math.round(finalTotal * 0.5);
+
     setNewTurno(prev => {
+      const hasDiscount = (newTurno.descuentoTipo === 'PORCENTAJE' || newTurno.descuentoTipo === 'PESOS') && Number(newTurno.descuentoValor || 0) > 0;
+      const unDiscountedSeña = calcs.valorSeña + Math.round(otrosExtra * 0.5);
+      
+      let effectiveSeña = calculatedAutoSeña;
+      if (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null) {
+        // If manualSeñaOverride was set to the 50% of the un-discounted price (the old bug) but a discount is active, recalculate to 50% of the new discounted total!
+        if (hasDiscount && Number(prev.manualSeñaOverride) === unDiscountedSeña && unDiscountedSeña !== calculatedAutoSeña) {
+          effectiveSeña = calculatedAutoSeña;
+        } else {
+          effectiveSeña = prev.manualSeñaOverride;
+        }
+      }
+
       return {
         ...prev,
         horaFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
         autoHoraFin: horaFinStr,
         valorTotal: finalTotal,
-        valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null)
-          ? prev.manualSeñaOverride
-          : (calcs.valorSeña + Math.round(otrosExtra * 0.5)),
+        valorSeña: effectiveSeña,
         autoTotal: totalBaseCombinado,
         autoTotalZonas: baseZonasTotal,
-        autoSeña: calcs.valorSeña + Math.round(otrosExtra * 0.5),
+        autoSeña: calculatedAutoSeña,
         bonificacion: bonificacion
       };
     });
@@ -1620,10 +1633,19 @@ export default function AgendaPage() {
       }
     }
 
-    // Seña MUST STAY FIXED at initial deposit or manual override
-    const fixedSeña = (editTurno.manualSeñaOverride !== undefined && editTurno.manualSeñaOverride !== null)
+    const calculatedAutoSeña = Math.round(finalTotal * 0.5);
+
+    // Seña: preserve initial deposit or manual override, UNLESS it matched un-discounted 50% and there is a discount
+    const hasDiscount = (editTurno.descuentoTipo === 'PORCENTAJE' || editTurno.descuentoTipo === 'PESOS') && Number(editTurno.descuentoValor || 0) > 0;
+    const unDiscountedSeña = calcs.valorSeña + Math.round(otrosExtra * 0.5);
+
+    let fixedSeña = (editTurno.manualSeñaOverride !== undefined && editTurno.manualSeñaOverride !== null)
       ? editTurno.manualSeñaOverride 
       : (editTurno.initialValorSeña !== undefined ? editTurno.initialValorSeña : editTurno.valorSeña);
+
+    if (hasDiscount && Number(fixedSeña) === unDiscountedSeña && unDiscountedSeña !== calculatedAutoSeña) {
+      fixedSeña = calculatedAutoSeña;
+    }
 
     setEditTurno(prev => ({
       ...prev,
@@ -1631,6 +1653,7 @@ export default function AgendaPage() {
       valorSeña: fixedSeña,
       autoTotal: totalBaseCombinado,
       autoTotalZonas: baseZonasTotal,
+      autoSeña: calculatedAutoSeña,
       bonificacion: bonificacion
     }));
   }, [editTurno.selectedZoneIds, editTurno.descuentoTipo, editTurno.descuentoValor, editTurno.hasOtros, editTurno.otrosPrecio, editTurno.manualTotalOverride, editTurno.manualSeñaOverride, isEditing]);
@@ -1781,6 +1804,7 @@ export default function AgendaPage() {
       return {
         ...prev,
         manualTotalOverride: undefined,
+        manualSeñaOverride: undefined,
         manualHoraFinOverride: false,
         selectedZoneIds: newZoneIds,
         horaFin: newHoraFin,
@@ -1871,6 +1895,7 @@ export default function AgendaPage() {
       return {
         ...prev,
         manualTotalOverride: undefined,
+        manualSeñaOverride: undefined,
         selectedZoneIds: newZoneIds,
         horaFin: newHoraFin,
         autoHoraFin: newHoraFin
@@ -2536,7 +2561,7 @@ export default function AgendaPage() {
                         );
                       })}
                       {/* OTROS Checkbox */}
-                      <div onClick={() => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <div onClick={() => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                         <input type="checkbox" checked={editTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
                         <span style={{ fontWeight: 'bold' }}>Otros</span>
                       </div>
@@ -2566,7 +2591,8 @@ export default function AgendaPage() {
                             setEditTurno(prev => ({
                               ...prev,
                               otrosPrecio: val,
-                              manualTotalOverride: undefined
+                              manualTotalOverride: undefined,
+                              manualSeñaOverride: undefined
                             }));
                           }}
                         />
@@ -2662,7 +2688,7 @@ export default function AgendaPage() {
                     <label className={styles.inputLabel}>Tipo de Descuento</label>
                     <select
                       value={editTurno.descuentoTipo}
-                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoTipo: e.target.value }))}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoTipo: e.target.value }))}
                     >
                       <option value="NINGUNO">Sin Descuento</option>
                       <option value="PORCENTAJE">Porcentaje (%)</option>
@@ -2675,7 +2701,7 @@ export default function AgendaPage() {
                     <input
                       type="number"
                       value={editTurno.descuentoValor}
-                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoValor: e.target.value }))}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoValor: e.target.value }))}
                       placeholder="Ej. 10 o 500"
                       disabled={editTurno.descuentoTipo === 'NINGUNO'}
                     />
@@ -3505,7 +3531,7 @@ export default function AgendaPage() {
                       );
                     })}
                     {/* OTROS Checkbox */}
-                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                       <input type="checkbox" checked={newTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
                       <span style={{ fontWeight: 'bold' }}>Otros</span>
                     </div>
@@ -3535,7 +3561,8 @@ export default function AgendaPage() {
                           setNewTurno(prev => ({
                             ...prev,
                             otrosPrecio: val,
-                            manualTotalOverride: undefined
+                            manualTotalOverride: undefined,
+                            manualSeñaOverride: undefined
                           }));
                         }}
                       />
@@ -3632,7 +3659,7 @@ export default function AgendaPage() {
                   <label className={styles.inputLabel}>Tipo de Descuento</label>
                   <select
                     value={newTurno.descuentoTipo}
-                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoTipo: e.target.value }))}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoTipo: e.target.value }))}
                   >
                     <option value="NINGUNO">Sin Descuento</option>
                     <option value="PORCENTAJE">Porcentaje (%)</option>
@@ -3645,7 +3672,7 @@ export default function AgendaPage() {
                   <input
                     type="number"
                     value={newTurno.descuentoValor}
-                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, descuentoValor: e.target.value }))}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoValor: e.target.value }))}
                     placeholder="Ej. 10 o 500"
                     disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />

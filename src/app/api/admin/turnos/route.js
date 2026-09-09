@@ -262,7 +262,7 @@ export async function POST(request) {
         computedDuration = Math.max(10, endMin - startMin);
       }
       if (valorTotal === undefined || valorTotal === '') finalValorTotal = coreDetails.valorTotal;
-      if (valorSeña === undefined || valorSeña === '') finalValorSeña = coreDetails.valorSeña;
+      if (valorSeña === undefined || valorSeña === '') finalValorSeña = Math.round(finalValorTotal * 0.5);
     }
 
     const targetDate = new Date(fechaStr + 'T00:00:00');

@@ -910,5 +910,28 @@
    - Commits empujados a `main` y sincronizados en `staging`.
    - Despliegue completado en Hostinger VPS para Producción (3006) y Staging (3008).
 
+## Mensaje del Usuario (2026-09-09 18:46:00-03:00)
+> [Captura de pantalla de WhatsApp de Gonzalo]:
+> Modal de agendado con Hombros y Pecho y abdomen seleccionados, Total de Venta: $68.000, Seña Recibida: $37.500, Tipo de Descuento: Porcentaje (%), Valor Descuento: 10.
+> Gonzalo: "Acá hay otro error, aplicó el descuento del 10% y la seña me la sigue tomando del 50% del valor original y no del Nuevo"
+
+## Diagnóstico y Solución Aplicada (D-50):
+1. **Cálculo de Seña Dinámica con Descuento**:
+   - `autoSeña` y el fallback de `valorSeña` calculaban 50% sumando los precios de catálogo de las zonas (`calcs.valorSeña`), ignorando el descuento aplicado a `finalTotal`. En el caso del 10% sobre $75.000, el total pasó a $68.000 pero la seña se mantuvo en $37.500 (50% de $75.000) en lugar de $34.000 (50% de $68.000).
+2. **Correcciones en `src/app/admin/agenda/page.js`**:
+   - Se computa `calculatedAutoSeña = Math.round(finalTotal * 0.5)`.
+   - Si existía una seña manual o heredada que igualaba al 50% sin descuento (37.500) y hay un descuento activo, se actualiza automáticamente al nuevo 50% ($34.000).
+   - Se mantiene intacta cualquier seña personalizada fija (ej: $15.500 de Rafael o $0).
+   - Al editar el tipo o valor del descuento, o cambiar zonas/extras, se limpia `manualSeñaOverride` para recalcular reactivamente la seña sobre el nuevo importe.
+3. **Correcciones en `src/app/admin/alta-turno/page.js`**:
+   - `displaySeña` se calcula dinámicamente sobre `displayTotal` (el total con descuento).
+   - Se incorpora detección `userModifiedZones` para desestimar señas heredadas de servicios distintos si se agregan o quitan zonas.
+   - `handleProceed` transfiere `displaySeña` calculada a la agenda.
+4. **Correcciones en Backend (`src/app/api/admin/turnos/route.js`)**:
+   - Si no se provee `valorSeña`, el fallback calcula `Math.round(finalValorTotal * 0.5)`.
+5. **Verificación y Despliegue**:
+   - Compilación exitosa en local con `npm run build` (37/37 rutas compiladas con éxito).
+   - Despliegue en Producción (3006) y Staging (3008) en Hostinger VPS.
+
 
 

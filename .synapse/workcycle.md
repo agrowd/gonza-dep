@@ -612,3 +612,25 @@
     2. Se vincularon los badges `.badgeSummary` a `displayTotal` y `displaySeña`, mostrando la seña explícita aun si es $0.
     3. Se removió el bloque `.presetBtns` y sus estilos en `alta-turno.module.css`.
   - Verificación: `npm run build` compiló exitosamente (37/37 rutas).
+- **09 de Septiembre (18:45 - 19:05)**:
+  - Gonzalo envía captura de pantalla de WhatsApp:
+    - En el modal de agendado, seleccionando Hombros y Pecho y abdomen con descuento del 10%:
+    - "Total de Venta ($): 68000" (75000 base - 10% = 67500 -> 68000 redondeado a mil).
+    - "Seña Recibida ($): 37500".
+    - Gonzalo señala: *"Acá hay otro error, aplicó el descuento del 10% y la seña me la sigue tomando del 50% del valor original y no del Nuevo"*.
+  - Diagnóstico:
+    - `autoSeña` y el fallback de `valorSeña` calculaban `calcs.valorSeña + Math.round(otrosExtra * 0.5)`, lo cual sumaba el 50% de las zonas a precio de catálogo sin aplicar la bonificación.
+    - Cuando se definía un descuento o cambiaban los valores, `valorSeña` quedaba anclado a 37500 (50% de 75000) en lugar de recalcularse a 34000 (50% de 68000).
+  - Soluciones implementadas (D-50):
+    1. En `src/app/admin/agenda/page.js`:
+       - Se definió `calculatedAutoSeña = Math.round(finalTotal * 0.5)`.
+       - En `setNewTurno`, si existe descuento activo y la seña previa coincidía con el 50% sin descuento (37500), se actualiza automáticamente al 50% del nuevo total con descuento (34000). Se respetan señas fijas personalizadas (ej. $15.500 de Rafael o $0).
+       - Al modificar `descuentoTipo`, `descuentoValor`, zonas o extras, se limpia `manualSeñaOverride: undefined` para recalcular dinámicamente la seña al 50% del nuevo total.
+       - Se aplicó la misma regla en `editTurno`.
+    2. En `src/app/admin/alta-turno/page.js`:
+       - `displaySeña` calcula el 50% de `displayTotal` (el total bonificado).
+       - Se añadió tracking `userModifiedZones`: si el operador altera las zonas o extras, se anula la seña fija heredada y se recalcula al 50% del nuevo total.
+       - `handleProceed` transfiere `displaySeña` explícito a la agenda.
+    3. En `src/app/api/admin/turnos/route.js`:
+       - Si no se especifica `valorSeña`, el backend computa `Math.round(finalValorTotal * 0.5)`.
+  - Verificación: `npm run build` compiló exitosamente (37/37 rutas compiladas en 33.5s sin errores).

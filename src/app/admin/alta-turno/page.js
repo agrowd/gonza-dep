@@ -42,6 +42,7 @@ function AltaTurnoContent() {
   const [hasOtros, setHasOtros] = useState(false);
   const [otrosTexto, setOtrosTexto] = useState('');
   const [otrosPrecio, setOtrosPrecio] = useState(0);
+  const [userModifiedZones, setUserModifiedZones] = useState(false);
 
   // Duration State: automatically calculated, but operator can edit it
   const [customDuration, setCustomDuration] = useState(null);
@@ -191,15 +192,22 @@ function AltaTurnoContent() {
     return base;
   }, [calculations.valorTotal, descuentoTipoParam, descuentoValorParam]);
 
-  // Dynamic displayed Seña: if seña was explicitly passed from previous appointment, preserve it; otherwise use auto 50%
+  // Dynamic displayed Seña: if seña was explicitly passed from previous appointment, preserve it; otherwise use auto 50% of displayTotal
   const displaySeña = useMemo(() => {
-    if (señaParam !== null && señaParam !== undefined && señaParam !== '') {
-      return Number(señaParam);
+    const autoSeñaFromNewTotal = Math.round(displayTotal * 0.5);
+    if (!userModifiedZones && señaParam !== null && señaParam !== undefined && señaParam !== '') {
+      const numSeña = Number(señaParam);
+      const hasDiscount = (descuentoTipoParam === 'PORCENTAJE' || descuentoTipoParam === 'PESOS') && Number(descuentoValorParam) > 0;
+      // If previous seña was the 50% of the UN-discounted base total, but now there's a discount, update to 50% of new discounted total!
+      if (hasDiscount && numSeña === calculations.valorSeña && numSeña !== autoSeñaFromNewTotal) {
+        return autoSeñaFromNewTotal;
+      }
+      return numSeña;
     }
-    return calculations.valorSeña;
-  }, [señaParam, calculations.valorSeña]);
+    return autoSeñaFromNewTotal;
+  }, [userModifiedZones, señaParam, displayTotal, calculations.valorSeña, descuentoTipoParam, descuentoValorParam]);
 
-  const hasExplicitSeña = señaParam !== null && señaParam !== undefined && señaParam !== '';
+  const hasExplicitSeña = !userModifiedZones && señaParam !== null && señaParam !== undefined && señaParam !== '';
 
   // Active duration for scheduling: either user override or calculated
   const activeDuration = useMemo(() => {
@@ -211,6 +219,7 @@ function AltaTurnoContent() {
 
   // Handle Zone Toggle
   const toggleZone = (id) => {
+    setUserModifiedZones(true);
     setSelectedZoneIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
       setCustomDuration(null);
@@ -406,7 +415,7 @@ function AltaTurnoContent() {
         otrosPrecio: otrosPrecio.toString(),
         descuentoTipo: descuentoTipoParam,
         descuentoValor: descuentoValorParam,
-        seña: señaParam !== null && señaParam !== undefined ? señaParam : ''
+        seña: displaySeña.toString()
       });
       window.location.href = `/admin/agenda?${params.toString()}`;
       return;
@@ -510,7 +519,10 @@ function AltaTurnoContent() {
             {/* OTROS Checkbox */}
             <div
               className={`${styles.zoneItem} ${styles.zoneItemCustom} ${hasOtros ? styles.zoneItemActive : ''}`}
-              onClick={() => setHasOtros(prev => !prev)}
+              onClick={() => {
+                setUserModifiedZones(true);
+                setHasOtros(prev => !prev);
+              }}
             >
               <input
                 type="checkbox"
@@ -545,7 +557,10 @@ function AltaTurnoContent() {
                     type="number"
                     placeholder="Ej. 15000"
                     value={otrosPrecio || ''}
-                    onChange={(e) => setOtrosPrecio(parseInt(e.target.value, 10) || 0)}
+                    onChange={(e) => {
+                      setUserModifiedZones(true);
+                      setOtrosPrecio(parseInt(e.target.value, 10) || 0);
+                    }}
                     className={styles.textInput}
                   />
                 </div>
