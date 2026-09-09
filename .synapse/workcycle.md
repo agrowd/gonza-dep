@@ -633,4 +633,17 @@
        - `handleProceed` transfiere `displaySeña` explícito a la agenda.
     3. En `src/app/api/admin/turnos/route.js`:
        - Si no se especifica `valorSeña`, el backend computa `Math.round(finalValorTotal * 0.5)`.
-  - Verificación: `npm run build` compiló exitosamente (37/37 rutas compiladas en 33.5s sin errores).
+   - Verificación: `npm run build` compiló exitosamente (37/37 rutas compiladas en 33.5s sin errores).
+- **09 de Septiembre (19:10 - 19:25)**:
+  - Gonzalo envía capturas de pantalla de WhatsApp:
+    - *"Hola Fede acá cuando pongo agendar siguiente turno o reagendar a un turno que tenía una duración de 30min (por ejemplo). En modulo de búsqueda de turno aparece bien la duración, pero cuando elijo horario y me manda a la ventana, se calcula de vuelta el tiempo y pasa a ser 20min, tiene que respetar el que tenía el anterior turno a menos que lo modifique yo"*
+  - Diagnóstico:
+    - En `src/app/admin/agenda/page.js`, cuando se recibía `isNewTurnoReq`, `manualHoraFinOverride` se seteaba forzosamente en `false`.
+    - Al montarse el estado de `newTurno`, el `useEffect` de recálculo de precios y duración evaluaba `prev.manualHoraFinOverride ? prev.horaFin : horaFinStr`. Al ser `false`, sobreescribía `calcHoraFin` (e.g. 19:50, 30 min) con la duración del catálogo de zonas (e.g. 20 min para Genitales -> 19:40).
+  - Soluciones implementadas (D-51):
+    1. En `src/app/admin/agenda/page.js`:
+       - Se definió `manualHoraFinOverride: Boolean(horaFinParam || (timeParam && searchParams.has('duracion')))` al inicializar `newTurno` desde los parámetros de URL de Alta de Turno.
+       - En `useEffect`, se asignó `autoHoraFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr` para mantener la hora fin en sincronía.
+       - Al hacer click en celda de calendario con `pendingNextScheduleData`, se preserva `manualHoraFinOverride: Boolean(pendingNextScheduleData.inheritedDuration)`.
+       - Si el operador desmarca o agrega zonas en el modal (`toggleNewTurnoZone`), se resetea `manualHoraFinOverride: false` para recalcular dinámicamente la duración al nuevo conjunto de zonas elegidas.
+  - Verificación: `npm run build` compiló exitosamente (37/37 rutas en 22.3s).

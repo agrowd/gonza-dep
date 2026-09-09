@@ -108,3 +108,16 @@
 2. Se eliminó la llamada redundante a `setNewTurno` en `fetch('/api/zonas')`, dejando la responsabilidad unificada en el efecto centralizado de precios, y se protegió `manualSeñaOverride` contra cualquier reseteo a 0.
 3. Se sincronizó el repositorio y se recompiló y desplegó tanto en el entorno de producción (puerto 3006) como en staging (puerto 3008).
 **Estado:** ✅ FIXED
+
+## ERR-17: Seña calculada sobre el total original sin descuento (2026-09-09)
+**Síntoma:** Al agendar un turno con descuento (ej: 10%), el total se reducía a $68.000 pero la seña se calculaba sobre el valor base de catálogo ($75.000), resultando en $37.500 en lugar del 50% del valor bonificado ($34.000).
+**Root Cause:** En el `useEffect` de cálculo de importes, `autoSeña` se obtenía de `calcs.valorSeña`, valor que no contemplaba bonificaciones porcentuales ni fijas.
+**Solución:** Se unificó `calculatedAutoSeña = Math.round(finalTotal * 0.5)` y se ajustó la lógica para actualizar señas desfasadas cuando se activa o cambia un descuento.
+**Estado:** ✅ FIXED
+
+## ERR-18: Recálculo involuntario de duración al seleccionar horario en Siguiente Turno (2026-09-09)
+**Síntoma:** Al presionar "Agendar Siguiente Turno" para un turno de duración personalizada (ej. 30 min para una zona de 20 min de catálogo), en Alta de Turno la duración se visualiza correctamente en 30 min, pero al seleccionar el slot y abrir el modal en la agenda, la hora fin se recalculaba automáticamente a 20 min.
+**Root Cause:** Al recibir los parámetros en `/admin/agenda`, `manualHoraFinOverride` se inicializaba rígidamente en `false`. En consecuencia, el efecto de React `newTurno` recalculaba `horaFin` en base a la duración del catálogo de zonas base.
+**Solución:** Se activó `manualHoraFinOverride: Boolean(horaFinParam || (timeParam && searchParams.has('duracion')))` y se sincronizó `autoHoraFin`. Si el operador cambia las zonas en el modal (`toggleNewTurnoZone`), se reactiva el recálculo dinámico.
+**Estado:** ✅ FIXED
+

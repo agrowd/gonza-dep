@@ -681,7 +681,7 @@ export default function AgendaPage() {
           horaInicio: timeParam || prev.horaInicio,
           horaFin: calcHoraFin,
           autoHoraFin: calcHoraFin,
-          manualHoraFinOverride: false,
+          manualHoraFinOverride: Boolean(horaFinParam || (timeParam && searchParams.has('duracion'))),
           selectedZoneIds: zonesParam ? zonesParam.split(',').filter(Boolean) : [],
           hasOtros: hasOtrosParam,
           otrosTexto: otrosTextoParam,
@@ -1451,6 +1451,7 @@ export default function AgendaPage() {
         horaInicio: timeStr,
         horaFin: endTimeStr,
         autoHoraFin: endTimeStr,
+        manualHoraFinOverride: Boolean(pendingNextScheduleData.inheritedDuration),
         estado: 'SEÑADO'
       });
       setPendingNextScheduleData(null);
@@ -1505,7 +1506,7 @@ export default function AgendaPage() {
       setNewTurno(prev => ({
         ...prev,
         horaFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
-        autoHoraFin: horaFinStr,
+        autoHoraFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
         valorTotal: (prev.manualTotalOverride !== undefined && prev.manualTotalOverride !== null) ? prev.manualTotalOverride : 0,
         valorSeña: (prev.manualSeñaOverride !== undefined && prev.manualSeñaOverride !== null) ? prev.manualSeñaOverride : 0,
         autoTotal: 0,
@@ -1559,7 +1560,7 @@ export default function AgendaPage() {
       return {
         ...prev,
         horaFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
-        autoHoraFin: horaFinStr,
+        autoHoraFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr,
         valorTotal: finalTotal,
         valorSeña: effectiveSeña,
         autoTotal: totalBaseCombinado,

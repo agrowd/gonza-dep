@@ -933,5 +933,25 @@
    - Compilación exitosa en local con `npm run build` (37/37 rutas compiladas con éxito).
    - Despliegue en Producción (3006) y Staging (3008) en Hostinger VPS.
 
+## Mensaje del Usuario (2026-09-09 19:10:00-03:00)
+> [4 capturas de pantalla de WhatsApp de Gonzalo]:
+> - Turno original de Gastón Sánchez: 19:30 a 20:00 (30 min de duración), Genitales.
+> - Pantalla de Alta de Turno: Duración 30 min conservada.
+> - Pantalla del modal en Agenda al seleccionar slot: Hora Inicio 19:20, Hora Fin 19:40 (recalculada a 20 min de catálogo).
+> - Gonzalo: "Hola Fede acá cuando pongo agendar siguiente turno o reagendar a un turno que tenía una duración de 30min (por ejemplo). En modulo de búsqueda de turno aparece bien la duración, pero cuando elijo horario y me manda a la ventana, se calcula de vuelta el tiempo y pasa a ser 20min, tiene que respetar el que tenía el anterior turno a menos que lo modifique yo"
 
-
+## Diagnóstico y Solución Aplicada (D-51, ERR-18):
+1. **Diagnóstico**:
+   - En `src/app/admin/agenda/page.js`, al procesar los parámetros de URL de Alta de Turno (`isNewTurnoReq`), la propiedad `manualHoraFinOverride` se inicializaba rígidamente en `false`.
+   - Cuando el modal se renderizaba, el `useEffect` encargado de calcular duraciones y precios ejecutaba `horaFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr`.
+   - Al ser `false`, ignoraba `calcHoraFin` (19:50) y sobreescribía la hora final con la duración estándar del catálogo de zonas (20 min para Genitales -> 19:40).
+2. **Correcciones Aplicadas**:
+   - En `src/app/admin/agenda/page.js`:
+     - Se inicializa `manualHoraFinOverride: Boolean(horaFinParam || (timeParam && searchParams.has('duracion')))` para que cualquier turno que provenga con duración explícita mantenga su hora fin calculada.
+     - En el `useEffect` de precios/duración, se sincroniza `autoHoraFin: prev.manualHoraFinOverride ? prev.horaFin : horaFinStr`.
+     - Si el operador decide modificar las zonas dentro del modal (`toggleNewTurnoZone`), se resetea `manualHoraFinOverride: false` para que la duración se recalcule automáticamente al nuevo conjunto de zonas ("a menos que lo modifique yo").
+     - Si el operador cambia la hora de inicio directamente en el input del modal, se recalcula la hora fin manteniendo el intervalo de duración previo.
+3. **Verificación y Despliegue**:
+   - Compilación exitosa en local con `npm run build` (37/37 rutas compiladas en 22.3s sin errores).
+   - Commit y sincronización en ramas `main` y `staging`.
+   - Despliegue completado en Hostinger VPS para Producción (puerto 3006) y Staging (puerto 3008).
