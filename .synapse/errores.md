@@ -121,3 +121,14 @@
 **Solución:** Se activó `manualHoraFinOverride: Boolean(horaFinParam || (timeParam && searchParams.has('duracion')))` y se sincronizó `autoHoraFin`. Si el operador cambia las zonas en el modal (`toggleNewTurnoZone`), se reactiva el recálculo dinámico.
 **Estado:** ✅ FIXED
 
+## ERR-19: Sobrescritura de nombres de clientes con notas de WhatsApp por el bot de IA (2026-09-10)
+**Síntoma:** Varios turnos en la Agenda Web (`agenda.depilacionparahombres.com`) aparecían con los nombres de contacto crudos del celular de Gonzalo (ej. `Laser Alan Taborda 23-7-26 Abd $20...`, `Laser Pablo Zincarini 13-8-16 Pier Esp Gl $79k`, `Laser Claudio Maidana`, `Cancelo Laser Ariel Benitez...`).
+**Root Cause:** En el servicio `ia-gonzadep` (`/srv/ia-gonzadep/src/lib/whatsapp.js`), la función `syncWhatsAppContactsToDb` ejecutaba `prisma.cliente.update({ where: { id: conv.clienteId }, data: { nombreCompleto: targetName } })` cada vez que el bot iniciaba o reconectaba con WhatsApp. Al leer los 10.335 contactos de la libreta telefónica de Gonzalo, sobreescribía directamente `Cliente.nombreCompleto` en `agenda_db` con las notas clínicas y de precios que Gonzalo anota en su agenda telefónica.
+**Solución:**
+1. En `/srv/ia-gonzadep/src/lib/whatsapp.js`, se eliminó la actualización a `Cliente.nombreCompleto` en `syncWhatsAppContactsToDb`, restringiendo `targetName` únicamente al modelo `ConversacionWsp.nombreContacto`.
+2. Se protegió la auto-extracción de nombres en saludos de chat para que no sobreescriba nombres válidos existentes en `Cliente`.
+3. Se ejecutó un script de saneamiento que restauró los nombres limpios de los 19 clientes afectados en `agenda_db` y migró de manera segura cualquier detalle o nota de precios/fechas al campo `Cliente.notasGonzalo`.
+4. Se recompiló `ia-gonzadep` (`npm run build`) y se reinició el servicio en PM2, verificando en vivo que tras el sync no se altere ningún registro de `Cliente`.
+**Estado:** ✅ FIXED
+
+

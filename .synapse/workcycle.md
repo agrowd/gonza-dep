@@ -647,3 +647,35 @@
        - Al hacer click en celda de calendario con `pendingNextScheduleData`, se preserva `manualHoraFinOverride: Boolean(pendingNextScheduleData.inheritedDuration)`.
        - Si el operador desmarca o agrega zonas en el modal (`toggleNewTurnoZone`), se resetea `manualHoraFinOverride: false` para recalcular dinámicamente la duración al nuevo conjunto de zonas elegidas.
   - Verificación: `npm run build` compiló exitosamente (37/37 rutas en 22.3s).
+- **10 de Septiembre (12:30 - 13:05)**:
+  - Gonzalo envía captura de pantalla de WhatsApp:
+    - *"Hola Fede nosé que paso con la agenda pero varios aparecen así con el nombre de wpp, se les cambió el nombre en la agenda"*
+    - En la agenda de hoy `JUE 10`, varios turnos mostraban el formato crudo de la libreta de contactos de Gonzalo:
+      - `Laser Alan Taborda 23-7-26 Abd $20...`
+      - `Laser Pablo Zincarini 13-8-16 Pier Esp Gl $79k`
+      - `Laser Sergio Escalante 10-10-23 Esp Torso Ax $14k`
+      - `Laser Claudio Maidana`
+  - Diagnóstico y Root Cause (ERR-19):
+    - En `/srv/ia-gonzadep/src/lib/whatsapp.js`, la función `syncWhatsAppContactsToDb` (ejecutada tras cada inicio/reconexión de WhatsApp) leía los 10.335 contactos de la libreta del celular de Gonzalo y ejecutaba:
+      ```javascript
+      if (conv.clienteId) {
+        await prisma.cliente.update({
+          where: { id: conv.clienteId },
+          data: { nombreCompleto: targetName }
+        });
+      }
+      ```
+    - Dado que Gonzalo guarda a sus pacientes en su celular con notas clínicas, fechas y precios para identificar sus tratamientos previos, esta sincronización pisaba destructivamente el `nombreCompleto` limpio de `Cliente` en `agenda_db`.
+    - Se constató que 19 clientes de la base de datos se encontraban contaminados con este formato (ej. `Laser Claudio Maidana`, `Cancelo Laser Ariel Benitez...`, `Laser David Gonzalez...`).
+  - Soluciones implementadas (D-52):
+    1. En `/srv/ia-gonzadep/src/lib/whatsapp.js`:
+       - Se eliminó completamente la llamada `prisma.cliente.update` en `syncWhatsAppContactsToDb`. Los contactos de la libreta se sincronizan únicamente en `ConversacionWsp.nombreContacto` y estado de IA, preservando intacta la tabla `Cliente`.
+       - Se blindó la extracción de nombres de saludos para que verifique si el cliente ya cuenta con un nombre válido antes de actualizar `Cliente.nombreCompleto`.
+    2. Saneamiento de base de datos en `agenda_db`:
+       - Se ejecutó un script de saneamiento que restauró los 19 clientes con sus nombres propios y apellidos correspondientes (deducidos de comprobantes, emails y registros de notificaciones previas).
+       - Cualquier dato valioso de tratamiento previo o precio se migró de manera segura a `Cliente.notasGonzalo`.
+    3. Verificación de producción:
+       - Se recompiló `ia-gonzadep` (`npm run build` exitoso en 23.2s).
+       - Se reinició el proceso PM2 `ia-gonzadep` (id 134).
+       - Se verificó en los logs que la sesión se autenticó (`[WhatsApp Engine] ✅ Cliente CONECTADO y LISTO.`), se ejecutó la sincronización de contactos y no se alteró ningún registro de `Cliente` (`Total matches: 0`).
+       - En la agenda de hoy `JUE 10`, el turno de las 17:00 ahora muestra limpiamente `Claudio Maidana` y los demás turnos se mantienen en perfecto estado.

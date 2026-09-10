@@ -955,3 +955,41 @@
    - Compilación exitosa en local con `npm run build` (37/37 rutas compiladas en 22.3s sin errores).
    - Commit y sincronización en ramas `main` y `staging`.
    - Despliegue completado en Hostinger VPS para Producción (puerto 3006) y Staging (puerto 3008).
+
+## Mensaje del Usuario (2026-09-10 12:25:00-03:00)
+> [Captura de pantalla de WhatsApp de Gonzalo]:
+> Foto de la agenda de hoy `JUE 10` en `agenda.depilacionparahombres.com` con círculo rojo alrededor de los turnos de las 14:00, 14:30, 15:30 y 17:00:
+> "Laser Alan Taborda 23-7-26 Abd $20..."
+> "Laser Pablo Zincarini 13-8-16 Pier Esp Gl $79k"
+> "Laser Sergio Escalante 10-10-23 Esp Torso Ax $14k"
+> "Laser Claudio Maidana"
+> Gonzalo: "Hola Fede nosé que paso con la agenda pero varios aparecen así con el nombre de wpp, se les cambió el nombre en la agenda"
+> Usuario: "Interpreta y soluciona este problema y los que puedan aparecer de la misma indole de proceso" / "Resolve esto que pide"
+
+## Diagnóstico y Solución Aplicada (D-52, ERR-19):
+1. **Diagnóstico y Causa Raíz**:
+   - En el VPS (`187.127.9.216`), el servicio de inteligencia artificial `ia-gonzadep` (puerto 3007) conecta a la misma base de datos PostgreSQL `agenda_db`.
+   - En `/srv/ia-gonzadep/src/lib/whatsapp.js`, la rutina `syncWhatsAppContactsToDb` leía la libreta de contactos completa de Gonzalo (10.335 contactos) y ejecutaba:
+     ```javascript
+     if (conv.clienteId) {
+       await prisma.cliente.update({
+         where: { id: conv.clienteId },
+         data: { nombreCompleto: targetName }
+       });
+     }
+     ```
+   - Como Gonzalo almacena a sus clientes en su celular con anotaciones de turnos previos, fechas, zonas y precios (ej: `Laser Pablo Zincarini 13-8-16 Pier Esp Gl $79k`, `Cancelo Laser Ariel Benitez...`), cada reinicio o sincronización del bot de WhatsApp pisaba destructivamente el campo `Cliente.nombreCompleto` de la base de datos de la agenda.
+   - Se detectaron 19 clientes en `agenda_db` afectados por este comportamiento.
+2. **Correcciones Aplicadas**:
+   - En `/srv/ia-gonzadep/src/lib/whatsapp.js`:
+     - Se eliminó la sentencia `prisma.cliente.update` de la sincronización de contactos (`syncWhatsAppContactsToDb`). La sincronización de contactos de la libreta ahora actualiza exclusivamente `ConversacionWsp.nombreContacto` y el estado del bot en el CRM de IA, protegiendo a `Cliente` como fuente de verdad inmutable de la Agenda.
+     - Se reforzó la auto-extracción de nombres de saludos (`handleIncomingMessage`) para que solo asigne nombre a `Cliente` si el cliente no posee un nombre válido o es un número telefónico.
+   - En la Base de Datos (`agenda_db`):
+     - Se ejecutó un script de saneamiento que restauró los 19 clientes afectados con sus nombres propios y apellidos limpios.
+     - Se preservó cualquier detalle de tratamiento previo o precio migrándolo de forma segura al campo `Cliente.notasGonzalo`.
+   - En el VPS:
+     - Se recompiló `ia-gonzadep` (`npm run build` completado exitosamente en 23.2s).
+     - Se reinició el proceso PM2 `ia-gonzadep`.
+     - Se validó en vivo que tras el arranque y sincronización de WhatsApp, la base de datos no sufrió modificaciones (`Total matches: 0` registros anómalos).
+     - Se verificó que en la agenda de hoy `JUE 10`, el turno de las 17:00 ahora muestra limpiamente `Claudio Maidana` y los demás turnos se encuentran en perfecto estado.
+
