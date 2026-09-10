@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
-import { sendWhatsAppMessage, getWhatsAppStatus, parseTemplate } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, getWhatsAppStatus, parseTemplate, checkRelayStatus } from '@/lib/whatsapp.js';
 
 // GET: Retrieve turnos for a specific week and notification config
 export async function GET(request) {
@@ -142,7 +142,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Check if WhatsApp is connected first
+    // Check if WhatsApp is connected first (locally or via relay)
+    await checkRelayStatus();
     const wtspStatus = getWhatsAppStatus();
     if (wtspStatus.status !== 'CONNECTED') {
       return NextResponse.json({ error: 'El servicio de WhatsApp no está conectado. Por favor inícialo desde el panel.' }, { status: 400 });

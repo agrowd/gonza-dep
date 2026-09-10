@@ -192,22 +192,15 @@ function AltaTurnoContent() {
     return base;
   }, [calculations.valorTotal, descuentoTipoParam, descuentoValorParam]);
 
-  // Dynamic displayed Seña: if seña was explicitly passed from previous appointment, preserve it; otherwise use auto 50% of displayTotal
+  // Dynamic displayed Seña: if seña was explicitly passed from previous appointment/client, preserve it ("traer el valor cargado"); otherwise use auto 50% of displayTotal
   const displaySeña = useMemo(() => {
-    const autoSeñaFromNewTotal = Math.round(displayTotal * 0.5);
-    if (!userModifiedZones && señaParam !== null && señaParam !== undefined && señaParam !== '') {
-      const numSeña = Number(señaParam);
-      const hasDiscount = (descuentoTipoParam === 'PORCENTAJE' || descuentoTipoParam === 'PESOS') && Number(descuentoValorParam) > 0;
-      // If previous seña was the 50% of the UN-discounted base total, but now there's a discount, update to 50% of new discounted total!
-      if (hasDiscount && numSeña === calculations.valorSeña && numSeña !== autoSeñaFromNewTotal) {
-        return autoSeñaFromNewTotal;
-      }
-      return numSeña;
+    if (señaParam !== null && señaParam !== undefined && señaParam !== '') {
+      return Number(señaParam);
     }
-    return autoSeñaFromNewTotal;
-  }, [userModifiedZones, señaParam, displayTotal, calculations.valorSeña, descuentoTipoParam, descuentoValorParam]);
+    return Math.round(displayTotal * 0.5);
+  }, [señaParam, displayTotal]);
 
-  const hasExplicitSeña = !userModifiedZones && señaParam !== null && señaParam !== undefined && señaParam !== '';
+  const hasExplicitSeña = señaParam !== null && señaParam !== undefined && señaParam !== '';
 
   // Active duration for scheduling: either user override or calculated
   const activeDuration = useMemo(() => {

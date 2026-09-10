@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { sendReminder7DaysEmail, sendConfirmationEmail, sendReceiptEmail } from '@/lib/email.js';
-import { sendWhatsAppMessage, parseTemplate, getWhatsAppStatus } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, parseTemplate, getWhatsAppStatus, checkRelayStatus } from '@/lib/whatsapp.js';
 
 export async function POST(request, { params }) {
   try {
@@ -41,7 +41,8 @@ export async function POST(request, { params }) {
         return NextResponse.json({ error: 'El cliente no tiene un número de WhatsApp registrado' }, { status: 400 });
       }
 
-      // Check WhatsApp connection
+      // Check WhatsApp connection (locally or via relay)
+      await checkRelayStatus();
       const wppStatus = getWhatsAppStatus();
       if (wppStatus.status !== 'CONNECTED') {
         return NextResponse.json({ 

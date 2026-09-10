@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
-import { getWhatsAppStatus, initWhatsAppClient } from '@/lib/whatsapp.js';
+import { getWhatsAppStatus, initWhatsAppClient, checkRelayStatus } from '@/lib/whatsapp.js';
 
 export async function GET() {
   try {
@@ -13,10 +13,13 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // 2. Fetch current status
+    // 2. Refresh relay status
+    await checkRelayStatus();
+
+    // 3. Fetch current status
     const statusInfo = getWhatsAppStatus();
 
-    // 3. Proactively initialize if disconnected
+    // 4. Proactively initialize if disconnected and not reachable via relay
     if (statusInfo.status === 'DISCONNECTED') {
       initWhatsAppClient();
       // Update status info after trigger

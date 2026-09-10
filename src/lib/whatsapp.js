@@ -11,8 +11,52 @@ if (!globalThis.whatsappStatus) {
 if (!globalThis.whatsappQr) {
   globalThis.whatsappQr = '';
 }
+if (!globalThis.whatsappRelayStatus) {
+  globalThis.whatsappRelayStatus = 'DISCONNECTED';
+}
+
+let lastRelayCheckTime = 0;
+
+export async function checkRelayStatus() {
+  const now = Date.now();
+  if (now - lastRelayCheckTime < 4000 && globalThis.whatsappRelayStatus) {
+    return globalThis.whatsappRelayStatus;
+  }
+  try {
+    lastRelayCheckTime = now;
+    const res = await fetch('http://localhost:3007/api/whatsapp/status', {
+      signal: AbortSignal.timeout(2500)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      globalThis.whatsappRelayStatus = data.status || 'DISCONNECTED';
+    } else {
+      globalThis.whatsappRelayStatus = 'DISCONNECTED';
+    }
+  } catch (err) {
+    globalThis.whatsappRelayStatus = 'DISCONNECTED';
+  }
+  return globalThis.whatsappRelayStatus;
+}
 
 export function getWhatsAppStatus() {
+  if (globalThis.whatsappStatus === 'CONNECTED') {
+    return {
+      status: 'CONNECTED',
+      qr: '',
+      error: null
+    };
+  }
+
+  if (globalThis.whatsappRelayStatus === 'CONNECTED') {
+    return {
+      status: 'CONNECTED',
+      qr: '',
+      error: null,
+      viaRelay: true
+    };
+  }
+
   return {
     status: globalThis.whatsappStatus,
     qr: globalThis.whatsappQr,
@@ -269,41 +313,66 @@ export function formatArgentinaPhone(phone) {
 
 export async function sendWhatsAppMessage(phone, text) {
   const client = globalThis.whatsappClient;
-  if (!client || globalThis.whatsappStatus !== 'CONNECTED') {
-    throw new Error('El servicio de WhatsApp no está conectado.');
+
+  // 1. Try local client first if connected
+  if (client && globalThis.whatsappStatus === 'CONNECTED') {
+    try {
+      const formattedPhone = formatArgentinaPhone(phone);
+      let targetChatId = formattedPhone;
+
+      try {
+        const cleanDigits = (phone || '').replace(/\D/g, '');
+        let numberId = await client.getNumberId(formattedPhone);
+
+        if (!numberId && cleanDigits.startsWith('549')) {
+          const altNumber = '54' + cleanDigits.slice(3);
+          numberId = await client.getNumberId(altNumber);
+        } else if (!numberId && cleanDigits.startsWith('54') && !cleanDigits.startsWith('549')) {
+          const altNumber = '549' + cleanDigits.slice(2);
+          numberId = await client.getNumberId(altNumber);
+        }
+
+        if (numberId && numberId._serialized) {
+          targetChatId = numberId._serialized;
+          console.log(`[WhatsApp] Resolved ${phone} to WhatsApp ID ${targetChatId}`);
+        } else {
+          console.warn(`[WhatsApp] Warning: getNumberId returned null for ${phone}. Fallback to ${formattedPhone}`);
+        }
+      } catch (resErr) {
+        console.warn(`[WhatsApp] Warning resolving numberId for ${phone}:`, resErr.message);
+      }
+
+      console.log(`Sending WhatsApp message locally to ${targetChatId}...`);
+      const response = await client.sendMessage(targetChatId, text);
+      return response;
+    } catch (localErr) {
+      console.warn(`[WhatsApp] Local send failed (${localErr.message}). Fallback to relay (port 3007)...`);
+    }
   }
 
-  const formattedPhone = formatArgentinaPhone(phone);
-  let targetChatId = formattedPhone;
-
-  // Resolve true WhatsApp contact JID using getNumberId (handles LID and Argentina +54 9 vs +54 differences)
+  // 2. Relay via ia-gonzadep (port 3007)
   try {
-    const cleanDigits = (phone || '').replace(/\D/g, '');
-    let numberId = await client.getNumberId(formattedPhone);
+    console.log(`[WhatsApp Relay] Relaying message for ${phone} to http://localhost:3007/api/whatsapp/send...`);
+    const res = await fetch('http://localhost:3007/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: phone, message: text }),
+      signal: AbortSignal.timeout(15000)
+    });
 
-    if (!numberId && cleanDigits.startsWith('549')) {
-      // Try without the 9 (e.g. 5411... instead of 54911...)
-      const altNumber = '54' + cleanDigits.slice(3);
-      numberId = await client.getNumberId(altNumber);
-    } else if (!numberId && cleanDigits.startsWith('54') && !cleanDigits.startsWith('549')) {
-      // Try with the 9 (e.g. 54911... instead of 5411...)
-      const altNumber = '549' + cleanDigits.slice(2);
-      numberId = await client.getNumberId(altNumber);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${res.status} desde servicio de WhatsApp relay`);
     }
 
-    if (numberId && numberId._serialized) {
-      targetChatId = numberId._serialized;
-      console.log(`[WhatsApp] Resolved ${phone} to WhatsApp ID ${targetChatId}`);
-    } else {
-      console.warn(`[WhatsApp] Warning: getNumberId returned null for ${phone}. Fallback to ${formattedPhone}`);
-    }
-  } catch (resErr) {
-    console.warn(`[WhatsApp] Warning resolving numberId for ${phone}:`, resErr.message);
+    const data = await res.json();
+    globalThis.whatsappRelayStatus = 'CONNECTED';
+    console.log(`[WhatsApp Relay] Message sent successfully via ia-gonzadep:`, data);
+    return data;
+  } catch (relayErr) {
+    console.error(`[WhatsApp Relay] Relay failed:`, relayErr.message);
+    throw new Error(`El servicio de WhatsApp no está conectado (Local: ${globalThis.whatsappStatus}, Relay: ${relayErr.message})`);
   }
-
-  console.log(`Sending WhatsApp message to ${targetChatId}...`);
-  const response = await client.sendMessage(targetChatId, text);
-  return response;
 }
 
 export async function logoutWhatsApp() {

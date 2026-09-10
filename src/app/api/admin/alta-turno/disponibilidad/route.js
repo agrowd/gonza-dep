@@ -192,40 +192,12 @@ export async function GET(request) {
           }
         }
       } else {
-        // Step 30: Smart anchored slots (advancing every 30 min, preventing 10/20-min dead gaps)
+        // Step 30: Strictly 30-min stepped slots, preventing 10-min or duplicate sub-step slots
         for (const gap of gaps) {
           const gapLen = gap.end - gap.start;
           if (gapLen < duracion) continue;
 
-          const candidateStarts = new Set();
-
-          // Forward: anchored to gap.start, step 30
           for (let s = gap.start; s + duracion <= gap.end; s += 30) {
-            const remAfter = gap.end - (s + duracion);
-            if (remAfter === 0 || remAfter >= 30) {
-              candidateStarts.add(s);
-            }
-          }
-
-          // Backward: anchored to gap.end, step 30
-          for (let e = gap.end; e - duracion >= gap.start; e -= 30) {
-            const s = e - duracion;
-            const remBefore = s - gap.start;
-            if (remBefore === 0 || remBefore >= 30) {
-              candidateStarts.add(s);
-            }
-          }
-
-          // Fallback: if no slot satisfies the clean condition, offer start and end so gap is not lost
-          if (candidateStarts.size === 0) {
-            candidateStarts.add(gap.start);
-            if (gap.end - duracion !== gap.start) {
-              candidateStarts.add(gap.end - duracion);
-            }
-          }
-
-          const sortedStarts = Array.from(candidateStarts).sort((a, b) => a - b);
-          for (const s of sortedStarts) {
             slots.push({
               horaInicio: minutesToTime(s),
               horaFin: minutesToTime(s + duracion)

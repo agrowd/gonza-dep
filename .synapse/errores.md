@@ -131,4 +131,19 @@
 4. Se recompiló `ia-gonzadep` (`npm run build`) y se reinició el servicio en PM2, verificando en vivo que tras el sync no se altere ningún registro de `Cliente`.
 **Estado:** ✅ FIXED
 
+## ERR-20: Ranuras a 10 min en filtro de 30 min, fallo de notificaciones WhatsApp por doble sesión y sobreescritura de seña cargada (2026-09-10)
+**Síntoma:**
+1. En `/admin/alta-turno`, con "MOSTRAR TURNOS: Cada 30 min", el buscador ofrecía turnos espaciados por 10 minutos (ej: 14:00 -> 14:50 y 14:10 -> 15:00).
+2. Los turnos creados no enviaban confirmaciones automáticas de WhatsApp (fallando con `FALLIDO: El servicio de WhatsApp no está conectado`), a pesar de que el operador veía WhatsApp conectado en el bot de IA (`admin.depilacionparahombres.com`).
+3. Al agendar el siguiente turno para clientes con señas fijas históricas (ej: Sergio Escalante $13.000) y seleccionar zonas diferentes (Cuerpo Completo $150.000), la seña se recalculaba forzosamente al 50% ($75.000) en lugar de respetar la seña cargada.
+**Root Cause:**
+1. En `/api/admin/alta-turno/disponibilidad/route.js`, en huecos de 60 min con duración de 50 min, ni la búsqueda forward ni backward cumplían la condición limpia de remanente (`remAfter < 30`). El bloque de fallback agregaba automáticamente el inicio (`gap.start`, 14:00) y el final (`gap.end - duracion`, 14:10), creando ranuras a 10 min de separación.
+2. `gonzalo-agenda` (puerto 3006) y `ia-gonzadep` (puerto 3007) corren como procesos independientes. El cliente WhatsApp de `gonzalo-agenda` quedó en `QR_RECEIVED`/desconectado mientras el de `ia-gonzadep` estaba 100% conectado en la misma máquina.
+3. En `src/app/admin/alta-turno/page.js`, `displaySeña` dependía de `!userModifiedZones`. Al tildar zonas, `userModifiedZones` pasaba a `true`, anulando `señaParam`. En `src/app/admin/agenda/page.js`, `toggleNewTurnoZone` borraba `manualSeñaOverride: undefined`.
+**Solución:**
+1. Se reemplazó el algoritmo en disponibilidad por un avance estricto de 30 en 30 minutos desde el inicio del hueco disponible sin bifurcaciones forward/backward ni fallbacks que generen desfases menores a 30 min.
+2. Se implementó el endpoint `/api/whatsapp/send` en `ia-gonzadep` y se configuró un relay transparente en `gonzalo-dep` (`src/lib/whatsapp.js`) que delega el envío a dicho endpoint si el cliente local no está conectado, sincronizando además el estado de conexión entre ambos paneles.
+3. En `alta-turno`, `displaySeña` preserva incondicionalmente `señaParam` ("traer el valor cargado"). En la agenda, `toggleNewTurnoZone`, `toggleEditTurnoZone`, `setEditTurno` y los selectores de extras preservan `manualSeñaOverride`.
+**Estado:** ✅ FIXED
+
 

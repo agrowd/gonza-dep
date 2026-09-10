@@ -993,3 +993,25 @@
      - Se validó en vivo que tras el arranque y sincronización de WhatsApp, la base de datos no sufrió modificaciones (`Total matches: 0` registros anómalos).
      - Se verificó que en la agenda de hoy `JUE 10`, el turno de las 17:00 ahora muestra limpiamente `Claudio Maidana` y los demás turnos se encuentran en perfecto estado.
 
+## Mensaje del Usuario (2026-09-10 17:25:00-03:00)
+> [4 capturas de pantalla de WhatsApp de Gonzalo]:
+> 1. Issue 1 (1:40 p.m.): En `/admin/alta-turno`, con "MOSTRAR TURNOS: Cada 30 min", se ofrecieron turnos a 10 minutos (`14:00 -> 14:50` y `14:10 -> 15:00`). Gonzalo: "Volvio a ofrecer turnos cada 10 minutos".
+> 2. Issue 2 (2:44 p.m.): "Hola Fede, la agenda no está enviando la confirmación de Turnos. Hace un rato no le envío porque estaba desconectada. Recién cargué otro turno, corrobore que estuviera conectada y no se envió la notificación".
+> 3. Issue 3 (4:24 p.m.): Al agendar siguiente turno a Sergio Escalante seleccionando Cuerpo Completo ($150.000): Total: $150.000, Seña: $75.000. Gonzalo: "Lo de la seña aun no esta arreglado y calcula el 50% en lugar de traer el valor cargado".
+> Usuario: "Resolve esto que pide"
+
+## Diagnóstico y Solución Aplicada (D-53, D-54, ERR-20):
+1. **Disponibilidad a 30 Minutos Estrictos**:
+   - En `src/app/api/admin/alta-turno/disponibilidad/route.js`, se reemplazó la bifurcación forward/backward y el fallback por un avance estricto de 30 en 30 minutos desde el inicio del hueco (`s += 30`).
+   - Se verificó que en huecos de 60 minutos con duración de 50 min sólo se devuelve la ranura inicial (14:00 -> 14:50), eliminando por completo cualquier ranura superpuesta a 10 minutos.
+2. **Relay de WhatsApp entre Agenda (3006) e IA (3007)**:
+   - Se descubrió que en el VPS `ia-gonzadep` (3007) estaba conectado con sesión activa mientras `gonzalo-agenda` (3006) estaba desconectado en `QR_RECEIVED`. Gonzalo veía WhatsApp conectado en `admin.depilacionparahombres.com` pero los turnos se creaban en `agenda.depilacionparahombres.com`.
+   - Se implementó `/srv/ia-gonzadep/src/app/api/whatsapp/send/route.js` para despachar mensajes a través de la sesión activa de WhatsApp de `ia-gonzadep`.
+   - En `gonzalo-dep` (`src/lib/whatsapp.js`), `sendWhatsAppMessage` ahora reenvía automáticamente mediante este relay si el cliente local no está conectado o falla el envío.
+   - `getWhatsAppStatus` y los endpoints de estado y notificaciones ahora consultan el relay, reportando conexión activa y habilitando los envíos.
+   - Se recompiló y reinició `ia-gonzadep` en PM2 (id 134).
+3. **Preservación de Seña Cargada**:
+   - En `src/app/admin/alta-turno/page.js`, `displaySeña` preserva incondicionalmente `señaParam` ("traer el valor cargado") aun si el operador altera las zonas elegidas, respetando el valor acordado con clientes recurrentes como Sergio Escalante ($13.000) o Rafael ($15.500).
+   - En `src/app/admin/agenda/page.js`, `toggleNewTurnoZone`, `toggleEditTurnoZone`, los selectores de "Otros" y la inicialización de edición preservan `manualSeñaOverride`, evitando el reseteo involuntario al 50%.
+4. **Verificación y Despliegue**:
+   - Compilación exitosa en local con `npm run build` (37/37 rutas compiladas limpiamente).

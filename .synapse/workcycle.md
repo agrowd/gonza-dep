@@ -679,3 +679,20 @@
        - Se reinició el proceso PM2 `ia-gonzadep` (id 134).
        - Se verificó en los logs que la sesión se autenticó (`[WhatsApp Engine] ✅ Cliente CONECTADO y LISTO.`), se ejecutó la sincronización de contactos y no se alteró ningún registro de `Cliente` (`Total matches: 0`).
        - En la agenda de hoy `JUE 10`, el turno de las 17:00 ahora muestra limpiamente `Claudio Maidana` y los demás turnos se mantienen en perfecto estado.
+- **10 de Septiembre (17:25 - 17:45)**:
+  - Gonzalo envía 4 capturas de pantalla de WhatsApp con 3 reportes:
+    1. *Disponibilidad*: En `/admin/alta-turno`, con "Cada 30 min", el sistema ofreció turnos separados por 10 min (`14:00 -> 14:50` y `14:10 -> 15:00`). Gonzalo: *"Volvio a ofrecer turnos cada 10 minutos"*.
+    2. *WhatsApp*: *"Hola Fede, la agenda no está enviando la confirmación de Turnos... Recién cargué otro turno, corrobore que estuviera conectada y no se envió la notificación"*.
+    3. *Seña*: Al agendar siguiente turno a Sergio Escalante con Cuerpo Completo ($150.000), Total: $150.000, Seña: $75.000. Gonzalo: *"Lo de la seña aun no esta arreglado y calcula el 50% en lugar de traer el valor cargado"*.
+  - Diagnóstico y Root Cause (ERR-20):
+    1. En `/api/admin/alta-turno/disponibilidad/route.js`, en huecos de 60 min y turnos de 50 min, el fallback añadía `gap.start` (14:00) y `gap.end - duracion` (14:10), rompiendo el espaciado de 30 min.
+    2. En el VPS, `ia-gonzadep` (3007) mantenía sesión WhatsApp conectada y activa, mientras `gonzalo-agenda` (3006) estaba en `QR_RECEIVED`/desconectado. Gonzalo verificaba `admin.depilacionparahombres.com` (3007) creyendo que compartían estado.
+    3. En `alta-turno/page.js`, `displaySeña` anulaba la seña cargada ante `userModifiedZones = true`. En `agenda/page.js`, `toggleNewTurnoZone` forzaba `manualSeñaOverride: undefined`.
+  - Soluciones implementadas (D-53, D-54):
+    1. Se reescribió la generación de slots en `/api/admin/alta-turno/disponibilidad/route.js` con avance lineal de 30 min desde `gap.start` sin sub-pasos ni bifurcaciones.
+    2. Se creó `/srv/ia-gonzadep/src/app/api/whatsapp/send/route.js` y se implementó un relay automático en `src/lib/whatsapp.js` de la agenda. Se sincronizó `getWhatsAppStatus` para consultar dicho relay y evitar bloqueos en notificaciones.
+    3. Se fijó la preservación incondicional de `señaParam` in `alta-turno/page.js` y se protegió `manualSeñaOverride` en `agenda/page.js`.
+  - Verificación:
+    - Compilación local exitosa (`npm run build`, 37/37 rutas).
+    - Compilación y reinicio en VPS de `ia-gonzadep` exitosos.
+    - Prueba del endpoint `/api/whatsapp/send` en el VPS validada.

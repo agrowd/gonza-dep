@@ -752,7 +752,7 @@ export default function AgendaPage() {
                 valorTotal: dynPrices.valorTotal,
                 valorSeña: turno.valorSeña,
                 manualTotalOverride: undefined,
-                manualSeñaOverride: undefined,
+                manualSeñaOverride: turno.valorSeña !== undefined ? Number(turno.valorSeña) : undefined,
                 descuentoTipo: turno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
                 descuentoValor: turno.descuentoValor !== undefined && turno.descuentoValor !== null && turno.descuentoValor !== '' ? turno.descuentoValor : (hasDiscount ? dynPrices.bonificacion : ''),
                 bonificacion: dynPrices.bonificacion,
@@ -1805,7 +1805,7 @@ export default function AgendaPage() {
       return {
         ...prev,
         manualTotalOverride: undefined,
-        manualSeñaOverride: undefined,
+        manualSeñaOverride: prev.manualSeñaOverride,
         manualHoraFinOverride: false,
         selectedZoneIds: newZoneIds,
         horaFin: newHoraFin,
@@ -1896,7 +1896,7 @@ export default function AgendaPage() {
       return {
         ...prev,
         manualTotalOverride: undefined,
-        manualSeñaOverride: undefined,
+        manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña,
         selectedZoneIds: newZoneIds,
         horaFin: newHoraFin,
         autoHoraFin: newHoraFin
@@ -2562,7 +2562,7 @@ export default function AgendaPage() {
                         );
                       })}
                       {/* OTROS Checkbox */}
-                      <div onClick={() => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <div onClick={() => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                         <input type="checkbox" checked={editTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
                         <span style={{ fontWeight: 'bold' }}>Otros</span>
                       </div>
@@ -2593,7 +2593,7 @@ export default function AgendaPage() {
                               ...prev,
                               otrosPrecio: val,
                               manualTotalOverride: undefined,
-                              manualSeñaOverride: undefined
+                              manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
                             }));
                           }}
                         />
@@ -3075,7 +3075,7 @@ export default function AgendaPage() {
                           valorTotal: dynPrices.valorTotal,
                           valorSeña: selectedTurno.valorSeña,
                           manualTotalOverride: undefined,
-                          manualSeñaOverride: undefined,
+                          manualSeñaOverride: selectedTurno.valorSeña !== undefined ? Number(selectedTurno.valorSeña) : undefined,
                           descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
                           descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? dynPrices.bonificacion : ''),
                           bonificacion: dynPrices.bonificacion,
@@ -3532,7 +3532,7 @@ export default function AgendaPage() {
                       );
                     })}
                     {/* OTROS Checkbox */}
-                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                       <input type="checkbox" checked={newTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
                       <span style={{ fontWeight: 'bold' }}>Otros</span>
                     </div>
@@ -3563,7 +3563,7 @@ export default function AgendaPage() {
                             ...prev,
                             otrosPrecio: val,
                             manualTotalOverride: undefined,
-                            manualSeñaOverride: undefined
+                            manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
                           }));
                         }}
                       />
