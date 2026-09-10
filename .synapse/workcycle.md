@@ -696,3 +696,20 @@
     - Compilación local exitosa (`npm run build`, 37/37 rutas).
     - Compilación y reinicio en VPS de `ia-gonzadep` exitosos.
     - Prueba del endpoint `/api/whatsapp/send` en el VPS validada.
+- **10 de Septiembre (17:50 - 18:05)**:
+  - Gonzalo reitera a las 17:23 hs con capturas (tomadas a las 17:22 hs, justo antes de nuestro deploy de las 17:42 hs):
+    - Sergio Escalante ($100.000, Seña $13.000).
+    - En Alta de Turno con Cuerpo Completo y Otros ($170.000), la seña se recalculó al 50% ($85.000).
+    - Mensaje: *"Fede mira, cuando hago siguiente turno, y le sumo o cambio zonas para el siguiente turno, la seña se calcula de vuelta y se pierde la seña original, debería cambiarse solo cuando lo hago de forma manual"*.
+  - Diagnóstico Exhaustivo:
+    1. Las capturas de Gonzalo correspondían al test de las 17:22 hs previo al despliegue de las 17:42 hs.
+    2. Adicionalmente, se detectaron 4 fugas residuales donde `manualSeñaOverride: undefined` aún se ejecutaba en la agenda al alterar descuentos (`descuentoTipo` y `descuentoValor` en líneas 2692, 2705, 3663, 3676).
+    3. En `toggleEditTurnoZone` y `hasOtros`, no se garantizaba el fallback a `prev.valorSeña`.
+    4. En `src/app/admin/alta-turno/page.js`, el bloque predeterminado de `handleProceed` omitía `seña`.
+  - Soluciones implementadas (D-55):
+    1. Se erradicó toda ocurrencia de `manualSeñaOverride: undefined` en `src/app/admin/agenda/page.js`.
+    2. Se aplicó fallback seguro `prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña` en todos los selectores y toggles.
+    3. Se limpió el estado inerte `userModifiedZones` y se agregó `...(hasExplicitSeña ? { seña: displaySeña.toString() } : {})` en `alta-turno/page.js`.
+  - Verificación:
+    - Compilación local exitosa (`npm run build`, 37/37 rutas compiladas limpiamente en 20.8s).
+

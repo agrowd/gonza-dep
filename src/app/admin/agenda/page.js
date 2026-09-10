@@ -1805,7 +1805,7 @@ export default function AgendaPage() {
       return {
         ...prev,
         manualTotalOverride: undefined,
-        manualSeñaOverride: prev.manualSeñaOverride,
+        manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña,
         manualHoraFinOverride: false,
         selectedZoneIds: newZoneIds,
         horaFin: newHoraFin,
@@ -2689,7 +2689,7 @@ export default function AgendaPage() {
                     <label className={styles.inputLabel}>Tipo de Descuento</label>
                     <select
                       value={editTurno.descuentoTipo}
-                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoTipo: e.target.value }))}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoTipo: e.target.value }))}
                     >
                       <option value="NINGUNO">Sin Descuento</option>
                       <option value="PORCENTAJE">Porcentaje (%)</option>
@@ -2702,7 +2702,7 @@ export default function AgendaPage() {
                     <input
                       type="number"
                       value={editTurno.descuentoValor}
-                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoValor: e.target.value }))}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoValor: e.target.value }))}
                       placeholder="Ej. 10 o 500"
                       disabled={editTurno.descuentoTipo === 'NINGUNO'}
                     />
@@ -3532,7 +3532,7 @@ export default function AgendaPage() {
                       );
                     })}
                     {/* OTROS Checkbox */}
-                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                       <input type="checkbox" checked={newTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
                       <span style={{ fontWeight: 'bold' }}>Otros</span>
                     </div>
@@ -3660,7 +3660,7 @@ export default function AgendaPage() {
                   <label className={styles.inputLabel}>Tipo de Descuento</label>
                   <select
                     value={newTurno.descuentoTipo}
-                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoTipo: e.target.value }))}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoTipo: e.target.value }))}
                   >
                     <option value="NINGUNO">Sin Descuento</option>
                     <option value="PORCENTAJE">Porcentaje (%)</option>
@@ -3673,7 +3673,7 @@ export default function AgendaPage() {
                   <input
                     type="number"
                     value={newTurno.descuentoValor}
-                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: undefined, descuentoValor: e.target.value }))}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoValor: e.target.value }))}
                     placeholder="Ej. 10 o 500"
                     disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />

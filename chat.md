@@ -1015,3 +1015,24 @@
    - En `src/app/admin/agenda/page.js`, `toggleNewTurnoZone`, `toggleEditTurnoZone`, los selectores de "Otros" y la inicialización de edición preservan `manualSeñaOverride`, evitando el reseteo involuntario al 50%.
 4. **Verificación y Despliegue**:
    - Compilación exitosa en local con `npm run build` (37/37 rutas compiladas limpiamente).
+
+## Mensaje del Usuario (2026-09-10 17:50:00-03:00)
+> [4 nuevas capturas de WhatsApp enviadas por Gonzalo]:
+> 1. Turno previo de Sergio Escalante (10 Sep): Total $100.000, Seña: $13.000, Saldo: $87.000.
+> 2. En `/admin/alta-turno`: Cuerpo Completo (90 min) y Otros: 1/2 pier ($20.000). Total: $170.000, Seña: $85.000 (50%).
+> 3. En modal de Agenda: Total Base: $170.000, Seña Recibida: $85.000.
+> 4. Gonzalo (17:23 hs): "Fede mira, cuando hago siguiente turno, y le sumo o cambio zonas para el siguiente turno, la seña se calcula de vuelta y se pierde la seña original, debería cambiarse solo cuando lo hago de forma manual".
+
+## Diagnóstico y Solución Aplicada (D-55):
+1. **Cronología y Root Cause**:
+   - Gonzalo probó a las 17:22 hs, justo antes de nuestro deploy de las 17:42 hs (el cual ya eliminaba `!userModifiedZones` de `alta-turno/page.js`).
+   - Una auditoría completa de todas las asignaciones de estado en `src/app/admin/agenda/page.js` reveló 4 puntos residuales donde `manualSeñaOverride: undefined` todavía se asignaba al interactuar con los selectores de descuentos (`descuentoTipo` y `descuentoValor` en líneas 2692, 2705, 3663, 3676).
+   - En `toggleEditTurnoZone` y `hasOtros`, el fallback ante un override indefinido no leía `prev.valorSeña`.
+   - En `alta-turno/page.js`, el bloque por defecto de `handleProceed` no incluía la seña explícita en los parámetros de la URL.
+2. **Correcciones Aplicadas**:
+   - Se erradicaron todas las asignaciones de `manualSeñaOverride: undefined`, reemplazándolas por la preservación `prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña`.
+   - Se garantizó que la seña sólo y exclusivamente pueda cambiar cuando el operador escribe de forma manual en el input de Seña Recibida ($).
+   - Se limpió el tracking inerte `userModifiedZones` en `alta-turno/page.js` y se aseguró el paso de `seña` en el bloque por defecto de `handleProceed`.
+3. **Verificación**:
+   - `npm run build` local exitoso (37/37 rutas compiladas en 20.8s).
+

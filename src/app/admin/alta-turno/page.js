@@ -42,7 +42,6 @@ function AltaTurnoContent() {
   const [hasOtros, setHasOtros] = useState(false);
   const [otrosTexto, setOtrosTexto] = useState('');
   const [otrosPrecio, setOtrosPrecio] = useState(0);
-  const [userModifiedZones, setUserModifiedZones] = useState(false);
 
   // Duration State: automatically calculated, but operator can edit it
   const [customDuration, setCustomDuration] = useState(null);
@@ -212,7 +211,6 @@ function AltaTurnoContent() {
 
   // Handle Zone Toggle
   const toggleZone = (id) => {
-    setUserModifiedZones(true);
     setSelectedZoneIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
       setCustomDuration(null);
@@ -424,7 +422,8 @@ function AltaTurnoContent() {
       zones: selectedZoneIds.join(','),
       hasOtros: hasOtros ? 'true' : 'false',
       otrosTexto: otrosTexto || '',
-      otrosPrecio: otrosPrecio.toString()
+      otrosPrecio: otrosPrecio.toString(),
+      ...(hasExplicitSeña ? { seña: displaySeña.toString() } : {})
     });
     window.location.href = `/admin/agenda?${params.toString()}`;
   };
