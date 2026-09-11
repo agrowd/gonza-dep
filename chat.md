@@ -1036,3 +1036,18 @@
 3. **Verificación**:
    - `npm run build` local exitoso (37/37 rutas compiladas en 20.8s).
 
+## Mensaje del Usuario (2026-09-11 19:11:00-03:00)
+> [Captura de pantalla de WhatsApp de Gonzalo (6:33 p.m.)]:
+> En `/admin/alta-turno`, marcando la tarjeta "Otros (Extras) Zonas combinadas" con un círculo verde:
+> "Hola Fede nosé que paso ahora que cuánto toco otras zonas no se abre para ponelas"
+
+## Diagnóstico y Solución Aplicada (ERR-21):
+1. **Root Cause**:
+   - En `src/app/admin/alta-turno/page.js`, al eliminar el estado no utilizado `userModifiedZones`, quedaron dos llamadas residuales a `setUserModifiedZones(true)` en el `onClick` del componente de "Otros (Extras)" (línea 515) y en el `onChange` del precio de extras (línea 553).
+   - Al tocar la opción, el evento disparaba un `ReferenceError: setUserModifiedZones is not defined`, bloqueando la ejecución de `setHasOtros(prev => !prev)` y evitando que se desplieguen los campos de texto y monto.
+2. **Correcciones Aplicadas**:
+   - Se removieron las llamadas residuales a `setUserModifiedZones(true)` en ambos manejadores de eventos.
+3. **Verificación**:
+   - Compilación local exitosa con Turbopack (`npm run build`, 37/37 rutas compiladas).
+
+

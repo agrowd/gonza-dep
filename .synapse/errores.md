@@ -145,5 +145,8 @@
 2. Se implementó el endpoint `/api/whatsapp/send` en `ia-gonzadep` y se configuró un relay transparente en `gonzalo-dep` (`src/lib/whatsapp.js`) que delega el envío a dicho endpoint si el cliente local no está conectado, sincronizando además el estado de conexión entre ambos paneles.
 3. En `alta-turno`, `displaySeña` preserva incondicionalmente `señaParam` ("traer el valor cargado"). En la agenda, `toggleNewTurnoZone`, `toggleEditTurnoZone`, `setEditTurno` y los selectores de extras preservan `manualSeñaOverride`.
 **Estado:** ✅ FIXED
-
-
+## ERR-21: ReferenceError: setUserModifiedZones is not defined al tocar Otros en Alta de Turno (2026-09-11)
+**Síntoma:** Al tocar la tarjeta "Otros (Extras)" en `/admin/alta-turno`, no se abrían los campos de texto y precio para escribir la zona extra.
+**Root Cause:** En la limpieza del estado no utilizado de `userModifiedZones`, se eliminó la declaración `const [userModifiedZones, setUserModifiedZones] = useState(false);` pero quedaron dos llamadas activas a `setUserModifiedZones(true)` en el `onClick` de la tarjeta "Otros" y en el `onChange` de `otrosPrecio`. Esto producía un `ReferenceError: setUserModifiedZones is not defined` en tiempo de ejecución al interactuar con el elemento, impidiendo la alternancia de `hasOtros`.
+**Solución:** Se eliminaron las dos llamadas residuales a `setUserModifiedZones(true)` en `src/app/admin/alta-turno/page.js`.
+**Estado:** ✅ FIXED

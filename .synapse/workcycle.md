@@ -712,4 +712,15 @@
     3. Se limpió el estado inerte `userModifiedZones` y se agregó `...(hasExplicitSeña ? { seña: displaySeña.toString() } : {})` en `alta-turno/page.js`.
   - Verificación:
     - Compilación local exitosa (`npm run build`, 37/37 rutas compiladas limpiamente en 20.8s).
+- **11 de Septiembre (19:10 - 19:25)**:
+  - Gonzalo envía captura a las 18:33 hs en `/admin/alta-turno`:
+    - Mensaje: *"Hola Fede nosé que paso ahora que cuánto toco otras zonas no se abre para ponelas"*.
+  - Diagnóstico y Root Cause (ERR-21):
+    - En `src/app/admin/alta-turno/page.js`, al limpiar el estado `userModifiedZones`, quedaron dos llamadas residuales a `setUserModifiedZones(true)` en el `onClick` de la tarjeta "Otros (Extras)" (línea 515) y en el `onChange` del precio (línea 553).
+    - Al hacer clic sobre "Otros", el navegador arrojaba un `ReferenceError: setUserModifiedZones is not defined` en tiempo de ejecución, impidiendo que se ejecute `setHasOtros(prev => !prev)`.
+  - Solución:
+    - Se eliminaron las dos llamadas residuales a `setUserModifiedZones(true)` en `src/app/admin/alta-turno/page.js`.
+  - Verificación:
+    - Compilación local exitosa con Turbopack (`npm run build`, 37/37 rutas compiladas sin errores).
+
 

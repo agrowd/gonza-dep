@@ -512,7 +512,6 @@ function AltaTurnoContent() {
             <div
               className={`${styles.zoneItem} ${styles.zoneItemCustom} ${hasOtros ? styles.zoneItemActive : ''}`}
               onClick={() => {
-                setUserModifiedZones(true);
                 setHasOtros(prev => !prev);
               }}
             >
@@ -550,7 +549,6 @@ function AltaTurnoContent() {
                     placeholder="Ej. 15000"
                     value={otrosPrecio || ''}
                     onChange={(e) => {
-                      setUserModifiedZones(true);
                       setOtrosPrecio(parseInt(e.target.value, 10) || 0);
                     }}
                     className={styles.textInput}
