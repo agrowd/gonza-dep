@@ -295,3 +295,11 @@
 - Visualización compacta en un solo renglón horizontal para los slots de horarios (`white-space: nowrap`) evitando quiebres en pantallas móviles.
 - Fijación de la tarjeta de confirmación de turno fuera del scroll vertical para visibilidad inmediata al seleccionar horario.
 
+## [1.2.0] - 2026-09-12
+### Fixed
+- Soporte para relay transparente de WhatsApp (`http://localhost:3007/api/whatsapp/send`) en el cron automatizado de recordatorios de 48hs (`checkAndSendReminders`), resolviendo la omisión de envíos automáticos matutinos cuando el proceso de agenda se encuentra en `QR_RECEIVED`.
+- Remoción de la guarda local restrictiva en el bucle de despacho de turnos en `src/lib/whatsapp.js`.
+- Protección en la búsqueda de notificaciones previas para turnos reprogramados (`fechaEnvio >= now - 3 días`).
+- Incorporación de parámetro `force = true` para ejecución manual forzada de recordatorios fuera de la ventana horaria.
+
+

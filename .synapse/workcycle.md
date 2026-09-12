@@ -722,5 +722,23 @@
     - Se eliminaron las dos llamadas residuales a `setUserModifiedZones(true)` en `src/app/admin/alta-turno/page.js`.
   - Verificación:
     - Compilación local exitosa con Turbopack (`npm run build`, 37/37 rutas compiladas sin errores).
+- **12 de Septiembre (16:15 - 16:35)**:
+  - Gonzalo envía mensaje a las 10:41 hs: *"Hola fede hoy no salieron los WhatsApp de 48hs , podrías revisar gracias!"*.
+  - Diagnóstico y Root Cause (ERR-22):
+    - En `src/lib/whatsapp.js`, la función `checkAndSendReminders()` tenía `if (globalThis.whatsappStatus !== 'CONNECTED') return;`.
+    - En el proceso `gonzalo-agenda` (puerto 3006), el cliente local de Chromium está en `QR_RECEIVED` porque la sesión de WhatsApp Web compartida está vinculada a `ia-gonzadep` (puerto 3007).
+    - Por lo tanto, el cron que corre a las 10:00 AM abortaba silenciosamente todos los días al no consultar `checkRelayStatus()`.
+    - Dentro del loop de turnos, otra guarda `if (globalThis.whatsappStatus === 'CONNECTED')` impedía invocar `sendWhatsAppMessage`, anulando el fallback transparente a `http://localhost:3007/api/whatsapp/send`.
+    - Además, `existingNotification` no tenía límite temporal, bloqueando turnos reprogramados de semanas previas.
+  - Solución (D-56):
+    - Se integró `await checkRelayStatus()` y `getWhatsAppStatus()` en `checkAndSendReminders`, permitiendo el despacho cuando el relay esté conectado.
+    - Se eliminó la guarda local redundante dentro del loop de envío para despachar directamente mediante `sendWhatsAppMessage`.
+    - Se acotó `existingNotification` a los últimos 3 días (`gte: threeDaysAgo`).
+    - Se añadió soporte para `force = true` para despachos inmediatos manuales.
+    - Se protegió el watchdog para no disparar alertas si el relay está online.
+  - Verificación:
+    - `npm run build` local exitoso (37/37 rutas compiladas limpiamente en 45s).
+    - Despliegue en VPS (Producción y Staging) y ejecución inmediata de los 8 recordatorios pendientes del lunes 14 de Septiembre.
+
 
 

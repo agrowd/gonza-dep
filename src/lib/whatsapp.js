@@ -92,8 +92,8 @@ export function startWhatsAppWatchdog() {
         }
       }
 
-      // 1. If DISCONNECTED and session directory exists, attempt auto-reconnect with 3-minute backoff
-      if (status === 'DISCONNECTED' && hasAuthDir) {
+      // 1. If DISCONNECTED and session directory exists, attempt auto-reconnect with 3-minute backoff (unless relay is already handling it)
+      if (status === 'DISCONNECTED' && hasAuthDir && globalThis.whatsappRelayStatus !== 'CONNECTED') {
         if (now - lastAutoReconnectAttempt > 3 * 60 * 1000) {
           lastAutoReconnectAttempt = now;
           console.log('[WhatsApp Watchdog] WhatsApp is DISCONNECTED with active session. Triggering automatic reconnection...');
@@ -105,8 +105,8 @@ export function startWhatsAppWatchdog() {
         }
       }
 
-      // 2. Disconnect Alert Email Trigger (sent once per disconnection event)
-      if (status === 'DISCONNECTED') {
+      // 2. Disconnect Alert Email Trigger (sent once per disconnection event, only if relay is also disconnected)
+      if (status === 'DISCONNECTED' && globalThis.whatsappRelayStatus !== 'CONNECTED') {
         if (!globalThis.wasDisconnectedAlertSent) {
           globalThis.wasDisconnectedAlertSent = true;
           const reason = globalThis.whatsappError || 'Conexión interrumpida con el dispositivo o sesión desvinculada.';
@@ -464,7 +464,7 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
 
 export const parseWppTemplate = parseTemplate;
 
-export async function checkAndSendReminders() {
+export async function checkAndSendReminders(force = false) {
   try {
     // Get time in Argentina (GMT-3)
     const now = new Date();
@@ -473,19 +473,21 @@ export async function checkAndSendReminders() {
     const hour = argToday.getUTCHours();
     const todayStr = argToday.toISOString().split('T')[0];
 
-    console.log(`[Reminder Cron] Checking: hour=${hour} today=${todayStr} lastRun=${globalThis.lastReminderRunDate}`);
+    console.log(`[Reminder Cron] Checking: hour=${hour} today=${todayStr} lastRun=${globalThis.lastReminderRunDate} force=${force}`);
 
-    // Check if within the 10:00 - 12:00 PM Argentina window
-    if (hour < 10 || hour > 12) {
+    // Check if within the 10:00 - 12:00 PM Argentina window (unless force=true)
+    if (!force && (hour < 10 || hour > 12)) {
       return;
     }
 
-    if (globalThis.lastReminderRunDate === todayStr) {
+    if (!force && globalThis.lastReminderRunDate === todayStr) {
       return;
     }
 
-    if (globalThis.whatsappStatus !== 'CONNECTED') {
-      console.log(`[Reminder Cron] WhatsApp not connected yet (status: ${globalThis.whatsappStatus}). Postponing reminder check.`);
+    await checkRelayStatus();
+    const wtspStatus = getWhatsAppStatus();
+    if (wtspStatus.status !== 'CONNECTED') {
+      console.log(`[Reminder Cron] WhatsApp not connected yet (Local: ${globalThis.whatsappStatus}, Relay: ${globalThis.whatsappRelayStatus}). Postponing reminder check.`);
       return;
     }
 
@@ -537,11 +539,13 @@ export async function checkAndSendReminders() {
     let hasWppErrors = false;
 
     for (const t of turnos) {
-      // Check specifically if a WHATSAPP REMINDER notification has already been sent (or permanently failed due to invalid number)
+      // Check specifically if a WHATSAPP REMINDER notification has already been sent in the last 3 days (avoids blocking rescheduled turnos)
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
       const existingNotification = await prisma.notificacion.findFirst({
         where: {
           turnoId: t.id,
           canal: 'WHATSAPP',
+          fechaEnvio: { gte: threeDaysAgo },
           OR: [
             { estado: 'ENVIADO', mensaje: { contains: '[RECORDATORIO_48H]' } },
             { estado: 'ENVIADO', mensaje: { contains: 'NO RESPONDER ESTE MENSAJE' } },
@@ -565,27 +569,22 @@ export async function checkAndSendReminders() {
       const logMessage = `[RECORDATORIO_48H] ${rawMessage}`;
 
       try {
-        if (globalThis.whatsappStatus === 'CONNECTED') {
-          console.log(`[Reminder Cron] Sending automated 48h WhatsApp reminder for appointment ${t.id} to ${t.cliente.nombreCompleto}...`);
-          await sendWhatsAppMessage(t.cliente.whatsapp, rawMessage);
+        console.log(`[Reminder Cron] Sending automated 48h WhatsApp reminder for appointment ${t.id} to ${t.cliente.nombreCompleto}...`);
+        await sendWhatsAppMessage(t.cliente.whatsapp, rawMessage);
 
-          // Save success notification log
-          await prisma.notificacion.create({
-            data: {
-              clienteId: t.cliente.id,
-              turnoId: t.id,
-              canal: 'WHATSAPP',
-              mensaje: logMessage,
-              estado: 'ENVIADO'
-            }
-          });
+        // Save success notification log
+        await prisma.notificacion.create({
+          data: {
+            clienteId: t.cliente.id,
+            turnoId: t.id,
+            canal: 'WHATSAPP',
+            mensaje: logMessage,
+            estado: 'ENVIADO'
+          }
+        });
 
-          // Polite pause between automated WhatsApp dispatches to prevent rate-limiting
-          await new Promise(r => setTimeout(r, 2000));
-        } else {
-          console.warn('[Reminder Cron] Cannot send automated WhatsApp reminder: Client is disconnected.');
-          hasWppErrors = true;
-        }
+        // Polite pause between automated WhatsApp dispatches to prevent rate-limiting
+        await new Promise(r => setTimeout(r, 2000));
       } catch (err) {
         console.error(`[Reminder Cron] Failed to send automated WhatsApp reminder to ${t.cliente.nombreCompleto} (appointment ${t.id}):`, err);
         

@@ -1050,4 +1050,28 @@
 3. **Verificación**:
    - Compilación local exitosa con Turbopack (`npm run build`, 37/37 rutas compiladas).
 
+## Mensaje del Usuario (2026-09-12 16:15:00-03:00)
+> [Captura de mensaje de WhatsApp de Gonzalo (10:41 a.m.)]:
+> "Hola fede hoy no salieron los WhatsApp de 48hs , podrías revisar gracias!"
+> Usuario: "Que paso"
+
+## Diagnóstico y Solución Aplicada (D-56, ERR-22):
+1. **Root Cause**:
+   - En `src/lib/whatsapp.js`, la función del cron automatizado de recordatorios `checkAndSendReminders()` tenía una validación restrictiva `if (globalThis.whatsappStatus !== 'CONNECTED') return;`.
+   - En el VPS, `gonzalo-agenda` (puerto 3006) tiene su cliente local de Chromium en `QR_RECEIVED` porque la sesión de WhatsApp Web está conectada y activa en el bot de IA `ia-gonzadep` (puerto 3007).
+   - Aunque se había creado el relay `http://localhost:3007/api/whatsapp/send`, el cron nunca llamaba a `checkRelayStatus()` antes de abortar. En consecuencia, cada minuto entre las 10:00 y las 12:00 de la mañana, el cron abortaba silenciosamente.
+   - Adicionalmente, dentro del bucle de turnos (línea 568) existía otra condición `if (globalThis.whatsappStatus === 'CONNECTED')` que impedía llamar a `sendWhatsAppMessage`, bloqueando el fallback transparente hacia el relay.
+   - En la consulta a `Notificacion`, no se limitaba la fecha (`fechaEnvio`), lo que podía omitir turnos reprogramados de semanas anteriores.
+2. **Correcciones Aplicadas**:
+   - En `checkAndSendReminders`, se incorporó `await checkRelayStatus()` y `getWhatsAppStatus()`. Si el relay está conectado, el cron procede con el despacho sin trabas.
+   - Se eliminó la guarda local redundante en el bucle de envío para invocar directamente `sendWhatsAppMessage(t.cliente.whatsapp, rawMessage)`.
+   - Se acotó la búsqueda de notificaciones previas a los últimos 3 días (`gte: threeDaysAgo`).
+   - Se agregó soporte para `checkAndSendReminders(force = true)` para permitir disparos forzados inmediatos fuera de la ventana horaria de 10 a 12 hs.
+   - Se blindó el watchdog para evitar avisos por desconexión innecesarios mientras el relay esté operativo.
+3. **Verificación y Despliegue**:
+   - Compilación exitosa en local (`npm run build`, 37/37 rutas en 45s).
+   - Despliegue en VPS (Producción y Staging).
+   - Ejecución inmediata del despacho para los 8 turnos del lunes 14 de Septiembre y verificación de entrega.
+
+
 

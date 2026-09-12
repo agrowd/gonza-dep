@@ -150,3 +150,18 @@
 **Root Cause:** En la limpieza del estado no utilizado de `userModifiedZones`, se eliminó la declaración `const [userModifiedZones, setUserModifiedZones] = useState(false);` pero quedaron dos llamadas activas a `setUserModifiedZones(true)` en el `onClick` de la tarjeta "Otros" y en el `onChange` de `otrosPrecio`. Esto producía un `ReferenceError: setUserModifiedZones is not defined` en tiempo de ejecución al interactuar con el elemento, impidiendo la alternancia de `hasOtros`.
 **Solución:** Se eliminaron las dos llamadas residuales a `setUserModifiedZones(true)` en `src/app/admin/alta-turno/page.js`.
 **Estado:** ✅ FIXED
+
+## ERR-22: Fallo en el Cron de Recordatorios de 48 Horas por falta de soporte de Relay (2026-09-12)
+**Síntoma:** Gonzalo reporta el sábado 12 de septiembre a las 10:41 hs: *"Hola fede hoy no salieron los WhatsApp de 48hs , podrías revisar gracias!"*. Los 8 clientes con turno para el lunes 14 de septiembre no recibieron sus recordatorios automáticos de 48hs a las 10:00 AM.
+**Root Cause:**
+1. `checkAndSendReminders()` en `src/lib/whatsapp.js` comprobaba `if (globalThis.whatsappStatus !== 'CONNECTED') return;`. En el servidor de producción (puerto 3006), `globalThis.whatsappStatus` está en `QR_RECEIVED` porque la sesión de WhatsApp Web compartida está autenticada y activa en el proceso `ia-gonzadep` (puerto 3007).
+2. El cron ignoraba la disponibilidad del relay `http://localhost:3007/api/whatsapp/send`.
+3. En la línea 568, existía otra guarda `if (globalThis.whatsappStatus === 'CONNECTED')` que impedía llamar a `sendWhatsAppMessage()`, el cual sí contenía la lógica de reenvío por relay.
+4. En la consulta de `existingNotification`, se verificaba `turnoId: t.id` sin restricción temporal, causando que turnos reprogramados de semanas anteriores fuesen ignorados si tenían un log antiguo.
+**Solución:**
+1. `checkAndSendReminders` ahora llama a `await checkRelayStatus()` y obtiene el estado unificado con `getWhatsAppStatus()`. Si el relay está conectado, procede con el despacho.
+2. Se removió la guarda local en el bucle de envío para invocar directamente `sendWhatsAppMessage(t.cliente.whatsapp, rawMessage)`.
+3. Se añadió filtro de ventana temporal (`fechaEnvio: { gte: threeDaysAgo }`) para `existingNotification`.
+4. Se agregó parámetro `force = false` a `checkAndSendReminders` para permitir ejecuciones forzadas on-demand sin importar la franja horaria.
+5. Se protegió el watchdog para no disparar alertas por email ni reintentos agresivos si el relay está conectado.
+**Estado:** ✅ FIXED
