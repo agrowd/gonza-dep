@@ -342,6 +342,141 @@
   border-left-color: #757575;
   opacity: 0.95;
 }
+.stateConsulta {
+  background-color: #e0f7fa;
+  color: #006064;
+  border-left-color: #00acc1;
+}
+
+/* Neocita Daily View Card List */
+.neocitaDayContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.neocitaDayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.neocitaCard {
+  display: flex;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.neocitaCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  border-color: var(--color-gold);
+}
+
+.neocitaTimeCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0.85rem;
+  min-width: 110px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border-right: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.neocitaTimeRange {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  line-height: 1.2;
+}
+
+.neocitaDurationBadge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.neocitaBody {
+  flex: 1;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.neocitaTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.neocitaClientName {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.neocitaZones {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.neocitaFinancialRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.neocitaFinItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.neocitaBlockCard {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(245, 158, 11, 0.05),
+    rgba(245, 158, 11, 0.05) 12px,
+    rgba(245, 158, 11, 0.1) 12px,
+    rgba(245, 158, 11, 0.1) 24px
+  ), var(--bg-card);
+  border: 1px dashed #f59e0b;
+}
 
 
 .modalOverlay {

@@ -192,6 +192,17 @@ export default function AgendaPage() {
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCancelled, setShowCancelled] = useState(false);
+  const [bloqueos, setBloqueos] = useState([]);
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [blockForm, setBlockForm] = useState({
+    id: null,
+    fechaStr: '',
+    horaInicio: '10:00',
+    horaFin: '11:00',
+    motivo: '',
+    esDiaCompleto: false
+  });
+  const [lastClientTurnoInfo, setLastClientTurnoInfo] = useState(null);
 
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -201,6 +212,46 @@ export default function AgendaPage() {
     setTimeout(() => {
       setToast(prev => ({ ...prev, show: false }));
     }, 4000);
+  };
+
+  const handleSaveBloqueo = async () => {
+    try {
+      const url = blockForm.id ? `/api/admin/bloqueos/${blockForm.id}` : '/api/admin/bloqueos';
+      const method = blockForm.id ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(blockForm)
+      });
+      if (res.ok) {
+        setIsBlockModalOpen(false);
+        fetchAppointments();
+        showToast(blockForm.id ? 'Bloqueo actualizado' : 'Horario bloqueado con éxito');
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al guardar bloqueo', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Error de red al guardar bloqueo', 'error');
+    }
+  };
+
+  const handleDeleteBloqueo = async (id) => {
+    if (!confirm('¿Desbloquear y eliminar este bloqueo de horario?')) return;
+    try {
+      const res = await fetch(`/api/admin/bloqueos/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setIsBlockModalOpen(false);
+        fetchAppointments();
+        showToast('Bloqueo eliminado con éxito');
+      } else {
+        showToast('Error al eliminar bloqueo', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Error de red al eliminar bloqueo', 'error');
+    }
   };
 
   // Autocomplete and config states
@@ -263,7 +314,8 @@ export default function AgendaPage() {
     clienteId: null,
     hasOtros: false,
     otrosTexto: '',
-    otrosPrecio: ''
+    otrosPrecio: '',
+    enviarNotificaciones: true
   });
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
@@ -930,14 +982,19 @@ export default function AgendaPage() {
       return;
     }
 
-    fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setAppointments(data);
+    Promise.all([
+      fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`).then(res => res.json()),
+      fetch(`/api/admin/bloqueos?start=${startStr}&end=${endStr}`).then(res => res.json())
+    ])
+      .then(([turnosData, bloqueosData]) => {
+        if (Array.isArray(turnosData)) {
+          setAppointments(turnosData);
+        }
+        if (Array.isArray(bloqueosData)) {
+          setBloqueos(bloqueosData);
         }
       })
-      .catch(err => console.error('Error fetching appointments:', err))
+      .catch(err => console.error('Error fetching appointments or bloqueos:', err))
       .finally(() => setLoading(false));
   }, [viewMode, selectedDate, currentWeekStart]);
 
@@ -2102,6 +2159,24 @@ export default function AgendaPage() {
             🖨️ Imprimir Día
           </button>
 
+          <button 
+            onClick={() => {
+              setBlockForm({
+                id: null,
+                fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
+                horaInicio: '10:00',
+                horaFin: '11:00',
+                motivo: '',
+                esDiaCompleto: false
+              });
+              setIsBlockModalOpen(true);
+            }} 
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #f59e0b', color: '#f59e0b' }}
+          >
+            🚫 Bloquear Horario
+          </button>
+
           <button onClick={() => {
             setIsNextScheduling(false);
             setNewTurno({
@@ -2163,7 +2238,8 @@ export default function AgendaPage() {
                   if (!showCancelled && app.estado === 'CANCELADO') return false;
                   return true;
                 });
-                
+                const dayBloqueos = bloqueos.filter(b => getAppDateStr(b.fecha) === dateStr);
+
                 return (
                   <div 
                     key={idx} 
@@ -2177,6 +2253,41 @@ export default function AgendaPage() {
                       {date.getDate()}
                     </span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px', width: '100%', overflow: 'hidden' }}>
+                      {dayBloqueos.map(b => (
+                        <div
+                          key={`mb-${b.id}`}
+                          className={`${styles.monthAppBlock} ${styles.stateBloqueado}`}
+                          title={`🔒 ${b.motivo || 'Bloqueo'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBlockForm({
+                              id: b.id,
+                              fechaStr: getAppDateStr(b.fecha),
+                              horaInicio: b.horaInicio,
+                              horaFin: b.horaFin,
+                              motivo: b.motivo || '',
+                              esDiaCompleto: b.esDiaCompleto
+                            });
+                            setIsBlockModalOpen(true);
+                          }}
+                          style={{
+                            fontSize: '0.68rem',
+                            padding: '2px 4px',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            lineHeight: '1.2',
+                            color: '#f59e0b',
+                            border: '1px dashed #f59e0b',
+                            backgroundColor: '#262626'
+                          }}
+                        >
+                          🔒 {b.esDiaCompleto ? 'DÍA BLOQUEADO' : `${b.horaInicio} ${b.motivo || 'Bloqueo'}`}
+                        </div>
+                      ))}
                       {dayAppointments.slice(0, 4).map(app => {
                         let zonasText = '';
                         try {
@@ -2223,39 +2334,231 @@ export default function AgendaPage() {
               })}
             </div>
           </>
+        ) : viewMode === 'day' ? (
+          /* VISTA DIARIA ESTILO NEOCITA */
+          <div className={styles.neocitaDayContainer}>
+            {(() => {
+              const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
+              const dayApps = appointments.filter(app => {
+                if (getAppDateStr(app.fecha) !== dateStr) return false;
+                if (!showCancelled && app.estado === 'CANCELADO') return false;
+                return true;
+              });
+              const dayBloqueos = bloqueos.filter(b => getAppDateStr(b.fecha) === dateStr);
+
+              const totalRevenue = dayApps.filter(a => a.estado !== 'CANCELADO').reduce((sum, a) => sum + Number(a.valorTotal || 0), 0);
+              const totalSenas = dayApps.filter(a => a.estado !== 'CANCELADO').reduce((sum, a) => sum + Number(a.valorSeña || 0), 0);
+              const totalSaldos = Math.max(0, totalRevenue - totalSenas);
+              const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+
+              return (
+                <>
+                  <div className={styles.neocitaDayHeader}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-primary)', textTransform: 'capitalize', fontWeight: 800 }}>
+                        📅 {dayNameLong}
+                      </h3>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {dayApps.length} turnos agendados {dayBloqueos.length > 0 ? `• ${dayBloqueos.length} bloqueos` : ''}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Ingreso Estimado</span>
+                        <span style={{ fontWeight: 800, color: 'var(--color-gold)', fontSize: '1.05rem' }}>${totalRevenue.toLocaleString('es-ES')}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Señas Recibidas</span>
+                        <span style={{ fontWeight: 700, color: '#2e7d32' }}>${totalSenas.toLocaleString('es-ES')}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Saldo a Cobrar</span>
+                        <span style={{ fontWeight: 700, color: '#0284c7' }}>${totalSaldos.toLocaleString('es-ES')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {dayApps.length === 0 && dayBloqueos.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3rem 1.5rem', backgroundColor: 'var(--bg-card)', border: '1px dashed var(--border-color)', borderRadius: '12px' }}>
+                      <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                        No hay turnos ni bloqueos agendados para este día.
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => {
+                            setIsNextScheduling(false);
+                            setNewTurno({
+                              nombreCompleto: '', nombre: '', apellido: '', whatsapp: '', email: '', dni: '',
+                              fechaStr: dateStr, horaInicio: config.work_start, horaFin: addMinutesToTime(config.work_start, 30),
+                              selectedZoneIds: [], valorTotal: '', valorSeña: '', descuentoTipo: 'NINGUNO', descuentoValor: '',
+                              bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null
+                            });
+                            setIsNewOpen(true);
+                          }}
+                          className="btn btn-primary"
+                        >
+                          + Agendar Turno
+                        </button>
+                        <button
+                          onClick={() => {
+                            setBlockForm({ id: null, fechaStr: dateStr, horaInicio: '10:00', horaFin: '11:00', motivo: '', esDiaCompleto: false });
+                            setIsBlockModalOpen(true);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ border: '1px solid #f59e0b', color: '#f59e0b' }}
+                        >
+                          🚫 Bloquear Horario
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {(() => {
+                        const combined = [
+                          ...dayApps.map(app => ({ type: 'turno', item: app, startMin: timeToMinutes(app.horaInicio) })),
+                          ...dayBloqueos.map(b => ({ type: 'bloqueo', item: b, startMin: timeToMinutes(b.horaInicio) }))
+                        ].sort((a, b) => a.startMin - b.startMin);
+
+                        return combined.map(({ type, item }) => {
+                          if (type === 'bloqueo') {
+                            const b = item;
+                            return (
+                              <div
+                                key={`b-${b.id}`}
+                                className={`${styles.neocitaCard} ${styles.neocitaBlockCard}`}
+                                onClick={() => {
+                                  setBlockForm({
+                                    id: b.id,
+                                    fechaStr: getAppDateStr(b.fecha),
+                                    horaInicio: b.horaInicio,
+                                    horaFin: b.horaFin,
+                                    motivo: b.motivo || '',
+                                    esDiaCompleto: b.esDiaCompleto
+                                  });
+                                  setIsBlockModalOpen(true);
+                                }}
+                              >
+                                <div className={styles.neocitaTimeCol} style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: '#f59e0b40' }}>
+                                  <span className={styles.neocitaTimeRange} style={{ color: '#f59e0b' }}>
+                                    {b.esDiaCompleto ? 'DÍA COMPLETO' : `${b.horaInicio} a ${b.horaFin}`}
+                                  </span>
+                                  <span className={styles.neocitaDurationBadge} style={{ color: '#f59e0b', borderColor: '#f59e0b60' }}>
+                                    🔒 BLOQUEO
+                                  </span>
+                                </div>
+                                <div className={styles.neocitaBody}>
+                                  <div className={styles.neocitaTopRow}>
+                                    <span className={styles.neocitaClientName} style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                      🚫 {b.motivo || 'Bloqueo Administrativo'}
+                                    </span>
+                                    <span style={{ fontSize: '0.78rem', color: '#f59e0b', fontWeight: 600 }}>
+                                      Haz clic para editar / desbloquear
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          const app = item;
+                          let zonasText = '';
+                          try {
+                            const zonesArray = JSON.parse(app.zonas);
+                            zonasText = zonesArray.map(z => z.nombre).join(', ');
+                          } catch (e) {
+                            zonasText = app.zonas;
+                          }
+
+                          const sald = Math.max(0, Number(app.valorTotal || 0) - Number(app.valorSeña || 0));
+
+                          return (
+                            <div
+                              key={`t-${app.id}`}
+                              className={styles.neocitaCard}
+                              onClick={() => {
+                                setSelectedTurno(app);
+                                setIsDetailsOpen(true);
+                              }}
+                            >
+                              <div className={styles.neocitaTimeCol}>
+                                <span className={styles.neocitaTimeRange}>
+                                  {app.horaInicio} - {app.horaFin}
+                                </span>
+                                <span className={styles.neocitaDurationBadge}>
+                                  ⏱️ {app.duracionMinutos || 30} min
+                                </span>
+                              </div>
+                              <div className={styles.neocitaBody}>
+                                <div className={styles.neocitaTopRow}>
+                                  <span className={styles.neocitaClientName}>
+                                    {app.cliente?.nombreCompleto || 'Cliente'}
+                                  </span>
+                                  <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                                    {app.subEstado && (
+                                      <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--color-gold)', fontWeight: 700 }}>
+                                        {app.subEstado === 'VA_A_AVISAR' ? '⏳ Va a avisar' : app.subEstado === 'MANTENIMIENTO' ? '🛠️ Mantenimiento' : app.subEstado === 'FINALIZADO' ? '🏁 Finalizó' : app.subEstado}
+                                      </span>
+                                    )}
+                                    <span className={`${styles.monthAppBlock} ${getStatusBlockClass(app.estado)}`} style={{ position: 'static', padding: '2px 8px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                      {app.estado}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className={styles.neocitaZones}>
+                                  <strong>Zonas:</strong> {zonasText || 'Sin zonas'}
+                                </div>
+
+                                <div className={styles.neocitaFinancialRow}>
+                                  <div className={styles.neocitaFinItem}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Total:</span>
+                                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>${Number(app.valorTotal || 0).toLocaleString('es-ES')}</span>
+                                  </div>
+                                  <div className={styles.neocitaFinItem}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Seña:</span>
+                                    <span style={{ fontWeight: 700, color: '#2e7d32' }}>${Number(app.valorSeña || 0).toLocaleString('es-ES')}</span>
+                                  </div>
+                                  <div className={styles.neocitaFinItem}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Saldo:</span>
+                                    <span style={{ fontWeight: 700, color: '#0284c7' }}>${sald.toLocaleString('es-ES')}</span>
+                                  </div>
+                                  {app.descuentoTipo && app.descuentoTipo !== 'NINGUNO' && (
+                                    <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(239, 83, 80, 0.15)', color: '#ef5350', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, marginLeft: 'auto' }}>
+                                      🏷️ {app.descuentoTipo === 'PORCENTAJE' ? `${app.descuentoValor}% OFF` : `$${app.descuentoValor} OFF`}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
         ) : (
+          /* VISTA SEMANAL */
           <>
             {/* Days Header */}
-            <div className={styles.gridHeader} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr', minWidth: 'auto' } : { minWidth: '800px' }}>
+            <div className={styles.gridHeader} style={{ minWidth: '800px' }}>
               <div className={`${styles.headerCell} ${styles.timeColHeader}`}>Hora</div>
-              {viewMode === 'day' ? (
-                (() => {
-                  if (!selectedDate) return null;
-                  const isToday = new Date().toDateString() === selectedDate.toDateString();
-                  const dayName = selectedDate.toLocaleDateString('es-ES', { weekday: 'short' });
-                  return (
-                    <div className={styles.headerCell}>
-                      <span className={styles.dayName}>{dayName}</span>
-                      <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{selectedDate.getDate()}</span>
-                    </div>
-                  );
-                })()
-              ) : (
-                weekDates.map((date, index) => {
-                  const isToday = new Date().toDateString() === date.toDateString();
-                  const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
-                  return (
-                    <div key={index} className={styles.headerCell}>
-                      <span className={styles.dayName}>{dayName}</span>
-                      <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{date.getDate()}</span>
-                    </div>
-                  );
-                })
-              )}
+              {weekDates.map((date, index) => {
+                const isToday = new Date().toDateString() === date.toDateString();
+                const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+                return (
+                  <div key={index} className={styles.headerCell}>
+                    <span className={styles.dayName}>{dayName}</span>
+                    <span className={`${styles.dayNumber} ${isToday ? styles.dayNumberToday : ''}`}>{date.getDate()}</span>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Scrollable Timeline body */}
-            <div ref={gridBodyRef} className={styles.gridBody} style={viewMode === 'day' ? { gridTemplateColumns: '80px 1fr', minWidth: 'auto' } : { minWidth: '800px' }}>
+            <div ref={gridBodyRef} className={styles.gridBody} style={{ minWidth: '800px' }}>
               {/* Time Column */}
               <div className={styles.timeColumn}>
                 {timeLabels.map((time, idx) => (
@@ -2266,53 +2569,90 @@ export default function AgendaPage() {
               </div>
 
               {/* Days Columns */}
-              {viewMode === 'day' ? (
-                (() => {
-                  if (!selectedDate) return null;
-                  const dateStr = toYYYYMMDD(selectedDate);
-                  const dayAppointments = appointments.filter(app => {
-                    const appDateStr = getAppDateStr(app.fecha);
-                    if (appDateStr !== dateStr) return false;
-                    if (!showCancelled && app.estado === 'CANCELADO') return false;
-                    return true;
-                  });
+              {weekDates.map((date, dayIdx) => {
+                const dateStr = toYYYYMMDD(date);
+                const dayAppointments = appointments.filter(app => {
+                  const appDateStr = getAppDateStr(app.fecha);
+                  if (appDateStr !== dateStr) return false;
+                  if (!showCancelled && app.estado === 'CANCELADO') return false;
+                  return true;
+                });
+                const dayBloqueos = bloqueos.filter(b => getAppDateStr(b.fecha) === dateStr);
 
-                  return (
-                    <div className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
-                      {/* Background grid lines for hours */}
-                      <div className={styles.gridLines}>
-                        {Array.from({ length: endHour - startHour }).map((_, idx) => (
-                          <div key={idx} className={styles.gridLineRow}></div>
-                        ))}
+                return (
+                  <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
+                    {/* Background grid lines for hours */}
+                    <div className={styles.gridLines}>
+                      {Array.from({ length: endHour - startHour }).map((_, idx) => (
+                        <div key={idx} className={styles.gridLineRow}></div>
+                      ))}
+                    </div>
+
+                    {/* Current Time Indicator Line */}
+                    {isToday(date) && nowPosition !== null && (
+                      <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
+                        <div className={styles.currentTimeLineDot}></div>
                       </div>
+                    )}
 
-                      {/* Current Time Indicator Line */}
-                      {isToday(selectedDate) && nowPosition !== null && (
-                        <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
-                          <div className={styles.currentTimeLineDot}></div>
+                    {/* Empty slot clicks handlers */}
+                    {Array.from({ length: totalHalfHours }).map((_, idx) => {
+                      const startMin = WORK_START + idx * 30;
+                      const top = idx * 50;
+                      return (
+                        <div
+                          key={idx}
+                          className={styles.emptySlotTrigger}
+                          style={{ top: `${top}px`, height: '50px' }}
+                          onClick={() => handleEmptySlotClick(date, startMin)}
+                        ></div>
+                      );
+                    })}
+
+                    {/* Bloqueos absolute positioning */}
+                    {dayBloqueos.map(b => {
+                      const blockStyle = getBlockStyle(b.horaInicio, b.horaFin, { colIdx: 0, totalCols: 1 });
+                      return (
+                        <div
+                          key={`wb-${b.id}`}
+                          className={`${styles.appointmentBlock} ${styles.stateBloqueado}`}
+                          style={{
+                            ...blockStyle,
+                            zIndex: 8,
+                            borderLeft: '4px solid #f59e0b',
+                            backgroundColor: '#262626',
+                            color: '#f59e0b'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBlockForm({
+                              id: b.id,
+                              fechaStr: getAppDateStr(b.fecha),
+                              horaInicio: b.horaInicio,
+                              horaFin: b.horaFin,
+                              motivo: b.motivo || '',
+                              esDiaCompleto: b.esDiaCompleto
+                            });
+                            setIsBlockModalOpen(true);
+                          }}
+                          title={`🔒 Bloqueo: ${b.motivo || 'Administrativo'}`}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', padding: '3px 4px', height: '100%', overflow: 'hidden' }}>
+                            <span style={{ fontWeight: 800, fontSize: '0.78rem', color: '#f59e0b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              🔒 {b.motivo || 'BLOQUEADO'}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.9 }}>{b.horaInicio} - {b.horaFin}</span>
+                          </div>
                         </div>
-                      )}
+                      );
+                    })}
 
-                      {/* Empty slot clicks handlers */}
-                      {Array.from({ length: totalHalfHours }).map((_, idx) => {
-                        const startMin = WORK_START + idx * 30;
-                        const top = idx * 50; // 30 mins = 50px height
-                        return (
-                          <div
-                            key={idx}
-                            className={styles.emptySlotTrigger}
-                            style={{ top: `${top}px`, height: '50px' }}
-                            onClick={() => handleEmptySlotClick(selectedDate, startMin)}
-                          ></div>
-                        );
-                      })}
-
-                      {/* Appointments blocks absolute positioning */}
-                      {(() => {
-                        const layoutMap = computeOverlaps(dayAppointments);
-                        return dayAppointments.map((app) => {
-                          const blockLayout = layoutMap[app.id] || { colIdx: 0, totalCols: 1 };
-                          const blockStyle = getBlockStyle(app.horaInicio, app.horaFin, blockLayout);
+                    {/* Appointments blocks absolute positioning */}
+                    {(() => {
+                      const layoutMap = computeOverlaps(dayAppointments);
+                      return dayAppointments.map((app) => {
+                        const blockLayout = layoutMap[app.id] || { colIdx: 0, totalCols: 1 };
+                        const blockStyle = getBlockStyle(app.horaInicio, app.horaFin, blockLayout);
                         let zonasText = '';
                         try {
                           const zonesArray = JSON.parse(app.zonas);
@@ -2359,105 +2699,9 @@ export default function AgendaPage() {
                         );
                       });
                     })()}
-                    </div>
-                  );
-                })()
-              ) : (
-                weekDates.map((date, dayIdx) => {
-                  const dateStr = toYYYYMMDD(date);
-                  const dayAppointments = appointments.filter(app => {
-                    const appDateStr = getAppDateStr(app.fecha);
-                    if (appDateStr !== dateStr) return false;
-                    if (!showCancelled && app.estado === 'CANCELADO') return false;
-                    return true;
-                  });
-
-                  return (
-                    <div key={dayIdx} className={styles.dayColumn} style={{ height: `${dayColumnHeight}px` }}>
-                      {/* Background grid lines for hours */}
-                      <div className={styles.gridLines}>
-                        {Array.from({ length: endHour - startHour }).map((_, idx) => (
-                          <div key={idx} className={styles.gridLineRow}></div>
-                        ))}
-                      </div>
-
-                      {/* Current Time Indicator Line */}
-                      {isToday(date) && nowPosition !== null && (
-                        <div className={styles.currentTimeLine} style={{ top: `${nowPosition}px` }}>
-                          <div className={styles.currentTimeLineDot}></div>
-                        </div>
-                      )}
-
-                      {/* Empty slot clicks handlers */}
-                      {Array.from({ length: totalHalfHours }).map((_, idx) => {
-                        const startMin = WORK_START + idx * 30;
-                        const top = idx * 50; // 30 mins = 50px height
-                        return (
-                          <div
-                            key={idx}
-                            className={styles.emptySlotTrigger}
-                            style={{ top: `${top}px`, height: '50px' }}
-                            onClick={() => handleEmptySlotClick(date, startMin)}
-                          ></div>
-                        );
-                      })}
-
-                      {/* Appointments blocks absolute positioning */}
-                      {(() => {
-                        const layoutMap = computeOverlaps(dayAppointments);
-                        return dayAppointments.map((app) => {
-                          const blockLayout = layoutMap[app.id] || { colIdx: 0, totalCols: 1 };
-                          const blockStyle = getBlockStyle(app.horaInicio, app.horaFin, blockLayout);
-                        let zonasText = '';
-                        try {
-                          const zonesArray = JSON.parse(app.zonas);
-                          zonasText = zonesArray.map(z => z.nombre).join(', ');
-                        } catch (e) {
-                          zonasText = app.zonas;
-                        }
-
-                        return (
-                          <div
-                            key={app.id}
-                            className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
-                            style={blockStyle}
-                            onClick={() => {
-                              setSelectedTurno(app);
-                              setIsDetailsOpen(true);
-                            }}
-                          >
-                            {app.duracionMinutos <= 25 ? (
-                              <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.72rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.1' }}>
-                                  {app.cliente?.nombreCompleto || 'Cliente'} <span style={{ opacity: 0.9, fontWeight: '500', fontSize: '0.67rem' }}>({app.horaInicio})</span>
-                                </span>
-                              </div>
-                            ) : app.duracionMinutos <= 45 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '2px 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.15', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {app.cliente?.nombreCompleto || 'Cliente'}
-                                </span>
-                                <span className={styles.appTime} style={{ fontSize: '0.7rem', opacity: 0.95, lineHeight: '1.15', marginTop: '1px', fontWeight: '500' }}>
-                                  {app.horaInicio} - {app.horaFin}
-                                </span>
-                              </div>
-                            ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '3px 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.82rem', fontWeight: '700', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {app.cliente?.nombreCompleto || 'Cliente Desconocido'}
-                                </span>
-                                <span style={{ fontSize: '0.7rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
-                                <span className={styles.appTime} style={{ fontSize: '0.72rem', opacity: 0.9, marginTop: 'auto', fontWeight: '500' }}>{app.horaInicio} - {app.horaFin}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      });
-                    })()}
-                    </div>
-                  );
-                })
-              )}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
@@ -2501,6 +2745,7 @@ export default function AgendaPage() {
                       onChange={(e) => setEditTurno({ ...editTurno, estado: e.target.value })}
                     >
                       <option value="SEÑADO">Señado / Confirmado</option>
+                      <option value="CONSULTA">💡 Consulta / Evaluatorio</option>
                       {editTurno.estado === 'PENDIENTE_PAGO' && (
                         <option value="PENDIENTE_PAGO">Pendiente de Pago</option>
                       )}
@@ -3145,6 +3390,23 @@ export default function AgendaPage() {
                     {selectedTurno.cliente?.whatsapp && (
                       <button
                         type="button"
+                        onClick={() => {
+                          const clientName = selectedTurno.cliente?.nombreCompleto?.split(' ')[0] || 'Hola';
+                          const reviewMsg = `¡Hola ${clientName}! Esperamos que hayas tenido una excelente sesión en Gonzalo Depilación Masculina ✨ Nos ayudaría muchísimo que nos dejes tu opinión y reseña en Google: https://g.page/r/gonzalo-depilacion/review ¡Muchas gracias!`;
+                          const cleanPhone = selectedTurno.cliente?.whatsapp?.replace(/\D/g, '');
+                          const link = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(reviewMsg)}`;
+                          window.open(link, '_blank');
+                          showToast('Abriendo WhatsApp para pedir reseña en Google ⭐');
+                        }}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#eab308', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                      >
+                        ⭐ Mandar Reseña
+                      </button>
+                    )}
+                    {selectedTurno.cliente?.whatsapp && (
+                      <button
+                        type="button"
                         onClick={() => handleOpenResendWpp(selectedTurno)}
                         className="btn"
                         style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
@@ -3398,9 +3660,35 @@ export default function AgendaPage() {
                                 dni: client.dni || '',
                                 clienteId: client.id,
                                 fechaStr: targetDateStr,
+                                enviarNotificaciones: client.enviarNotificaciones !== false,
                                 ...(clientLastSeña !== undefined ? { valorSeña: clientLastSeña, manualSeñaOverride: clientLastSeña } : {})
                               }));
-                              
+
+                              // Fetch detailed last turno info
+                              fetch(`/api/admin/turnos/ultimo-cliente?clienteId=${client.id}`)
+                                .then(res => res.json())
+                                .then(data => {
+                                  if (data.found) {
+                                    setLastClientTurnoInfo(data);
+                                    if (data.zonas && Array.isArray(data.zonas) && data.zonas.length > 0) {
+                                      const zoneIds = data.zonas.filter(z => z.id !== 'otros').map(z => String(z.id));
+                                      const hasOtros = data.zonas.some(z => z.id === 'otros');
+                                      const otrosZone = data.zonas.find(z => z.id === 'otros');
+                                      setNewTurno(prev => ({
+                                        ...prev,
+                                        selectedZoneIds: zoneIds.length > 0 ? zoneIds : prev.selectedZoneIds,
+                                        hasOtros: hasOtros,
+                                        otrosTexto: otrosZone ? (otrosZone.nombre?.replace(/^Otros:\s*/, '') || '') : prev.otrosTexto,
+                                        otrosPrecio: otrosZone ? otrosZone.precio : prev.otrosPrecio,
+                                        ...(data.señaEstado === 'CONSERVADA' ? { valorSeña: data.valorSeña, manualSeñaOverride: data.valorSeña } : {})
+                                      }));
+                                    }
+                                  } else {
+                                    setLastClientTurnoInfo(null);
+                                  }
+                                })
+                                .catch(err => console.error('Error fetching last client info:', err));
+
                               if (isNextScheduling && targetDateStr) {
                                 setSelectedDate(new Date(targetDateStr + 'T00:00:00'));
                               }
@@ -3709,6 +3997,7 @@ export default function AgendaPage() {
                     }}
                   >
                     <option value="SEÑADO">Señado / Confirmado</option>
+                    <option value="CONSULTA">💡 Consulta / Evaluatorio</option>
                     <option value="PENDIENTE_AUTORIZACION">Pendiente de Autorización</option>
                     <option value="BLOQUEADO">🔒 BLOQUEADO (Bloqueo)</option>
                   </select>
@@ -3999,6 +4288,100 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
+      {/* BLOQUEO MODAL */}
+      {isBlockModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setIsBlockModalOpen(false)} style={{ zIndex: 10000 }}>
+          <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 style={{ fontSize: '1.2rem', color: '#f59e0b', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                🚫 {blockForm.id ? 'Editar Bloqueo' : 'Bloquear Horario o Día'}
+              </h3>
+              <button type="button" onClick={() => setIsBlockModalOpen(false)} className={styles.closeBtn}>&times;</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Fecha del Bloqueo *</label>
+                <input
+                  type="date"
+                  value={blockForm.fechaStr}
+                  onChange={(e) => setBlockForm({ ...blockForm, fechaStr: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className={styles.inputGroup} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="esDiaCompleto"
+                  checked={blockForm.esDiaCompleto}
+                  onChange={(e) => setBlockForm({ ...blockForm, esDiaCompleto: e.target.checked })}
+                  style={{ width: 'auto', cursor: 'pointer' }}
+                />
+                <label htmlFor="esDiaCompleto" style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                  Bloquear Día Completo (Jornada entera)
+                </label>
+              </div>
+
+              {!blockForm.esDiaCompleto && (
+                <div className={styles.inputRow}>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Hora Inicio *</label>
+                    <input
+                      type="time"
+                      value={blockForm.horaInicio}
+                      onChange={(e) => setBlockForm({ ...blockForm, horaInicio: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Hora Fin *</label>
+                    <input
+                      type="time"
+                      value={blockForm.horaFin}
+                      onChange={(e) => setBlockForm({ ...blockForm, horaFin: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Motivo del Bloqueo (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Médico, Feriado, Mantenimiento, Vacaciones..."
+                  value={blockForm.motivo}
+                  onChange={(e) => setBlockForm({ ...blockForm, motivo: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginTop: '1rem' }}>
+                {blockForm.id ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBloqueo(blockForm.id)}
+                    className="btn"
+                    style={{ backgroundColor: '#c62828', color: '#fff' }}
+                  >
+                    🗑️ Desbloquear
+                  </button>
+                ) : <div />}
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="button" onClick={() => setIsBlockModalOpen(false)} className="btn btn-secondary">
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={handleSaveBloqueo} className="btn btn-primary">
+                    💾 {blockForm.id ? 'Guardar Cambios' : 'Crear Bloqueo'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toast.show && (
         <div style={{

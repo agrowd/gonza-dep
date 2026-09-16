@@ -85,6 +85,36 @@ export async function GET(request) {
       });
     }
 
+    // Fetch and include administrative blockages
+    const bloqueos = await prisma.bloqueo.findMany({
+      where: {
+        fecha: {
+          gte: startDate,
+          lt: endDate
+        }
+      }
+    });
+
+    for (const b of bloqueos) {
+      const dateStr = b.fecha.toISOString().split('T')[0];
+      if (!busyByDate[dateStr]) {
+        busyByDate[dateStr] = [];
+      }
+      if (b.esDiaCompleto) {
+        busyByDate[dateStr].push({
+          start: 0,
+          end: 1440,
+          esDiaCompleto: true
+        });
+      } else {
+        busyByDate[dateStr].push({
+          start: timeToMinutes(b.horaInicio),
+          end: timeToMinutes(b.horaFin),
+          esDiaCompleto: false
+        });
+      }
+    }
+
     // Days in current month
     const daysInMonth = new Date(year, month, 0).getDate();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -132,6 +162,20 @@ export async function GET(request) {
       }
 
       const dayBusy = busyByDate[dateStr] || [];
+
+      // Check for full day administrative block
+      const hasFullDayBlock = dayBusy.some(b => b.esDiaCompleto);
+      if (hasFullDayBlock) {
+        daysResult[dateStr] = {
+          date: dateStr,
+          day,
+          dayOfWeek,
+          disponible: false,
+          motivo: 'BLOQUEADO',
+          slots: []
+        };
+        continue;
+      }
 
       // 1. Clamp busy intervals to [filterStartMin, filterEndMin]
       const clampedBusy = [];

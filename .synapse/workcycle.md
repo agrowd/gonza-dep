@@ -750,3 +750,22 @@
     3. Se recompiló `ia-gonzadep` en el VPS (`npm run build` en 20.2s) y se reinició el proceso PM2 (ID 134).
     4. Se ejecutó un script transaccional en `agenda_db` que saneó a los 50 clientes: limpió prefijos y migró de forma segura todas las notas clínicas y precios a `Cliente.notasGonzalo`.
     5. Verificación en vivo: la consulta de nombres alterados arrojó exactamente 0 registros, confirmando la resolución definitiva.
+
+## 📅 Sesión: 16 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Crear e integrar la Vista Diaria Neocita (`viewMode === 'day'`) en `src/app/admin/agenda/page.js` con listado vertical de tarjetas e importes en cabecera (Total, Señas, Saldos).
+- [x] Crear el `model Bloqueo` en `prisma/schema.prisma` y sincronizar la base de datos local SQLite (`npx prisma db push` y `npx prisma generate`).
+- [x] Desarrollar la API de ABM de Bloqueos (`/api/admin/bloqueos` y `/api/admin/bloqueos/[id]`).
+- [x] Integrar bloqueos de horario en la API de disponibilidad (`/api/admin/alta-turno/disponibilidad`) y en la agenda (vistas Día, Semana y Mes).
+- [x] Desarrollar la API de autocompletado `/api/admin/turnos/ultimo-cliente` para detectar y precargar Señas Guardadas o alertar Señas Perdidas.
+- [x] Integrar Cierre de Turnos con sub-estados (`subEstado`) y nuevo estado `CONSULTA`.
+- [x] Implementar toggle de notificaciones por turno (`enviarNotificaciones`), filtro inteligente de notificaciones de edición (`horaFin`), y botón `⭐ Mandar Reseña`.
+- [x] Actualizar la planilla de impresión PDF (`/admin/agenda/imprimir`) con precio por turno y resumen de recaudación en `<tfoot>`.
+- [x] Probar compilación local (`npm run build`) verificando 43/43 rutas exitosas.
+
+### 📝 Notas / Bitácora
+- **16 de Septiembre (Módulo 2 completado en Local)**:
+  - Se completó la implementación íntegra del **Módulo 2 (Mejoras en la Agenda)** estrictamente en el entorno local [L], probando la compilación local (`npm run build`) con **43/43 rutas compiladas limpiamente en 9.7 segundos**.
+  - Todo el trabajo queda resguardado en local (branch `main`), respetando la indicación del usuario de NO realizar `git push` ni despliegue en el VPS hasta recibir orden explícita.
+

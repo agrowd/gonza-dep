@@ -34,5 +34,7 @@ gonzalo-dep/
 ```
 
 ## 🚀 Estado Actual
-- **Producción**: Totalmente operativo bajo dominio HTTPS seguro en `https://agenda.depilacionparahombres.com`.
+- **Producción**: Totalmente operativo bajo dominio HTTPS seguro en `https://agenda.depilacionparahombres.com` (Módulo 1: Alta de Turno activo en VPS).
+- **Módulo 2 (Mejoras en la Agenda)**: Desarrollado y verificado en **Local [L]** (Vista Diaria Neocita, Bloqueos de Horario nativos `model Bloqueo`, Señas guardadas vs perdidas, Sub-estados `subEstado`, notificaciones inteligentes y plantilla PDF imprimible). Compilación limpia de 43 rutas. Pendiente de orden explícita para push/despliegue en VPS.
 - **Automatizaciones**: El servicio de WhatsApp se reconecta y restablece su sesión de Puppeteer mediante persistencia de `.wwebjs_auth`. Los correos SMTP transaccionales de Hostinger están verificados y funcionando de forma segura.
+

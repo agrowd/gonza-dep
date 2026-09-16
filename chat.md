@@ -1093,3 +1093,36 @@
 4. **Estado Actual**:
    - Base de datos 100% limpia y servicio blindado.
    - En espera de la instrucción explícita del usuario para iniciar el Módulo 2.
+
+## Mensaje del Usuario (2026-09-16)
+> "Empecemos con el modulo 2 de la agenda en local, no lo subas hasta que yo te diga"
+
+## Respuesta del Asistente (D-57)
+- **Implementación Local Completa del Módulo 2 (Mejoras en la Agenda)**:
+  1. **Vista Diaria Neocita (`viewMode === 'day'`)**:
+     - Creado contenedor `.neocitaDayContainer` rendering vertical card list ordenado por horario (`horaInicio`).
+     - Añadida barra superior con resumen financiero del día: Total Recaudado, Total Señas Cobradas y Total Saldos Pendientes.
+  2. **Bloqueo Nativo de Horarios**:
+     - Agregado `model Bloqueo` en `prisma/schema.prisma` (`id`, `fecha`, `horaInicio`, `horaFin`, `motivo`, `esDiaCompleto`, `createdAt`).
+     - Ejecutado `npx prisma db push` y `npx prisma generate` en entorno SQLite local (`dev.db`).
+     - Creados endpoints `src/app/api/admin/bloqueos/route.js` (GET range/date, POST create block) y `src/app/api/admin/bloqueos/[id]/route.js` (PUT edit, DELETE unblock).
+     - Actualizado `src/app/api/admin/alta-turno/disponibilidad/route.js` para tratar bloqueos como slots ocupados y deshabilitar días completos bloqueados.
+     - Actualizado `src/app/api/admin/turnos/[id]/route.js` para validar solapamientos con `Bloqueo`.
+     - Integrado botón `🚫 Bloquear Horario`, modal interactivo de creación/edición de bloqueos, y renderizado visual en vistas Día, Semana y Mes.
+  3. **Señas Guardadas vs Perdidas**:
+     - Creada API `src/app/api/admin/turnos/ultimo-cliente/route.js` para consultar el último estado de seña del cliente (`SEÑA_GUARDADA`, `SEÑA_PERDIDA`).
+     - Al seleccionar cliente en autocompletado, se muestran alertas visuales (`🟢 Seña guardada disponible` / `🔴 Seña previa perdida`), precargando el monto de seña guardada si existe.
+  4. **Cierre de Turnos & Sub-Estados**:
+     - Agregados campos `subEstado`, `señaEstado` y `enviarNotificaciones` a Prisma `Turno`.
+     - Integrados botones de acción rápida en detalle de turno (`📅 Siguiente Turno`, `⏳ Va a Avisar`, `🛠️ Mantenimiento`, `🏁 Finalizó`), persistiendo `subEstado` en BD.
+     - Añadida opción `CONSULTA` en selector de estados de turno y fijado `SEÑADO` como estado por defecto.
+  5. **Notificaciones y Reseñas**:
+     - Agregado checkbox por turno `enviarNotificaciones` en modales de agendamiento y edición.
+     - Filtro inteligente en `src/app/api/admin/turnos/[id]/route.js`: no se disparan alertas de reprogramación al cliente si únicamente cambia la duración (`horaFin`).
+     - Añadido botón `⭐ Mandar Reseña` en detalle del turno que genera mensaje directo por WhatsApp solicitando reseña en Google.
+  6. **Planilla Imprimible PDF**:
+     - Modificado `src/app/admin/agenda/imprimir/page.js` agregando precio individual bajo cada franja horaria y pie de tabla `<tfoot>` con el total de recaudación diaria estimada.
+- **Compilación Local y Estado**:
+  - `npm run build` ejecutado exitosamente: **43/43 rutas compiladas limpiamente en 9.7s sin ningún error**.
+  - Todos los cambios residen estrictamente en la copia local [L] en branch `main` sin haber ejecutado `git push` ni despliegue en VPS.
+

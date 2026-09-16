@@ -50,9 +50,22 @@ model Turno {
   bonificacion     Float    @default(0)
   descuentoTipo    String?  @default("NINGUNO")
   descuentoValor   Float?   @default(0)
-  estado           String   @default("PENDIENTE_PAGO") // "SEÑADO", "REALIZADO", "CANCELADO", "REPROGRAMADO", "NO_ASISTIO", "PENDIENTE_AUTORIZACION", "PENDIENTE_PAGO"
+  estado           String   @default("PENDIENTE_PAGO") // "SEÑADO", "REALIZADO", "CANCELADO", "REPROGRAMADO", "NO_ASISTIO", "PENDIENTE_AUTORIZACION", "PENDIENTE_PAGO", "CONSULTA"
+  señaEstado       String?  // "CONSERVADA", "PERDIDA"
+  subEstado        String?  // "SIGUIENTE_TURNO", "VA_A_AVISAR", "MANTENIMIENTO", "FINALIZADO"
+  enviarNotificaciones Boolean @default(true)
   observaciones    String?
   createdAt        DateTime @default(now())
+}
+
+model Bloqueo {
+  id            String   @id @default(uuid())
+  fecha         DateTime
+  horaInicio    String   // "10:00"
+  horaFin       String   // "20:00"
+  motivo        String?
+  esDiaCompleto Boolean  @default(false)
+  createdAt     DateTime @default(now())
 }
 
 model Zona {

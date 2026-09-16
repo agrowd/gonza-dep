@@ -160,6 +160,14 @@ function PrintContent() {
                 <tr key={turno.id}>
                   <td className={styles.timeCol}>
                     <strong>{turno.horaInicio} - {turno.horaFin}</strong>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111', marginTop: '4px' }}>
+                      Valor: ${Number(turno.valorTotal || 0).toLocaleString('es-AR')}
+                    </div>
+                    {Number(turno.valorSeña || 0) > 0 && (
+                      <div style={{ fontSize: '0.75rem', color: '#555', marginTop: '1px' }}>
+                        Seña: ${Number(turno.valorSeña || 0).toLocaleString('es-AR')} | Saldo: ${Number(turno.saldoPendiente || 0).toLocaleString('es-AR')}
+                      </div>
+                    )}
                   </td>
                   <td className={styles.clientCol}>
                     <div className={styles.clientName}>{turno.cliente?.nombreCompleto || 'Cliente'}</div>
@@ -176,6 +184,22 @@ function PrintContent() {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr style={{ borderTop: '2px solid #222', backgroundColor: '#f9f9f9', fontWeight: 'bold' }}>
+                <td style={{ padding: '10px 12px' }}>
+                  <strong>TOTALES DEL DÍA</strong>
+                </td>
+                <td style={{ padding: '10px 12px' }}>
+                  <strong>{turnos.length}</strong> turno{turnos.length === 1 ? '' : 's'} agendados
+                </td>
+                <td style={{ padding: '10px 12px', fontSize: '1.05rem', color: '#000' }}>
+                  <strong>Total Estimado: ${turnos.reduce((acc, t) => acc + (Number(t.valorTotal) || 0), 0).toLocaleString('es-AR')}</strong>
+                  <div style={{ fontSize: '0.75rem', color: '#666', fontWeight: 'normal', marginTop: '2px' }}>
+                    (Señas: ${turnos.reduce((acc, t) => acc + (Number(t.valorSeña) || 0), 0).toLocaleString('es-AR')} | Saldos: ${turnos.reduce((acc, t) => acc + (Number(t.saldoPendiente) || 0), 0).toLocaleString('es-AR')})
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
           </table>
         )}
 

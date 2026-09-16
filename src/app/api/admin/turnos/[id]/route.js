@@ -97,12 +97,15 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const body = await request.json();
     const {
       fechaStr,
       horaInicio,
       horaFin,
       estado,
+      subEstado,
+      señaEstado,
+      enviarNotificaciones,
+      preserveDeposit,
       valorTotal,
       valorSeña,
       bonificacion,
@@ -171,6 +174,28 @@ export async function PUT(request, { params }) {
             : `El horario seleccionado se solapa con otro turno de ${checkOverlap.cliente?.nombreCompleto || 'otro cliente'}.`
         }, { status: 400 });
       }
+
+      // Check overlap against administrative Bloqueo table
+      const targetDateObj = new Date(checkFechaStr + 'T00:00:00');
+      const overlappingBlock = await prisma.bloqueo.findFirst({
+        where: {
+          fecha: targetDateObj,
+          OR: [
+            { esDiaCompleto: true },
+            {
+              AND: [
+                { horaInicio: { lt: checkHoraFin } },
+                { horaFin: { gt: checkHoraInicio } }
+              ]
+            }
+          ]
+        }
+      });
+      if (overlappingBlock) {
+        return NextResponse.json({
+          error: `El horario seleccionado se encuentra bloqueado administrativamente (${overlappingBlock.motivo || 'Bloqueo'}).`
+        }, { status: 400 });
+      }
     }
 
     // Prepare update data
@@ -178,6 +203,16 @@ export async function PUT(request, { params }) {
     if (fechaStr) updateData.fecha = new Date(fechaStr + 'T00:00:00');
     if (horaInicio) updateData.horaInicio = horaInicio;
     if (horaFin) updateData.horaFin = horaFin;
+    if (estado) updateData.estado = estado;
+    if (subEstado !== undefined) updateData.subEstado = subEstado;
+    if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
+    if (checkEstado === 'CANCELADO') {
+      if (typeof preserveDeposit === 'boolean') {
+        updateData.señaEstado = preserveDeposit ? 'CONSERVADA' : 'PERDIDA';
+      } else if (señaEstado) {
+        updateData.señaEstado = señaEstado;
+      }
+    }
     if (estado) updateData.estado = estado;
     if (valorTotal !== undefined) updateData.valorTotal = valorTotal;
     if (valorSeña !== undefined) updateData.valorSeña = valorSeña;
@@ -294,7 +329,7 @@ export async function PUT(request, { params }) {
     }
 
     const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
-    const notificationsEnabled = clientNotificationsEnabled;
+    const notificationsEnabled = clientNotificationsEnabled && updatedTurno.enviarNotificaciones !== false;
 
     // WhatsApp Notification Trigger:
     // If state changes to "SEÑADO" (Approved) and old state was "PENDIENTE_AUTORIZACION"
