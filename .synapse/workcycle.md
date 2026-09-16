@@ -739,6 +739,14 @@
   - Verificación:
     - `npm run build` local exitoso (37/37 rutas compiladas limpiamente en 45s).
     - Despliegue en VPS (Producción y Staging) y ejecución inmediata de los 8 recordatorios pendientes del lunes 14 de Septiembre.
-
-
-
+- **15-16 de Septiembre (20:05 - 13:20)**:
+  - Gonzalo envía captura a las 19:55 hs mostrando que en la agenda web reaparecieron nombres con prefijo "Laser " y notas de precios/fechas (ej. "Laser Claudio M...", "Laser Juan P...").
+  - Diagnóstico y Root Cause (ERR-23):
+    - En el servicio `ia-gonzadep` (`/srv/ia-gonzadep/src/lib/whatsapp.js`), la línea 1507 continuaba llamando a `prisma.cliente.update` dentro de `syncWhatsAppContactsToDb`.
+    - Al reiniciarse Puppeteer por microcorte de socket a las 19:55 hs, el bot sincronizó la libreta telefónica completa y sobreescribió en masa a 50 clientes en `agenda_db`.
+  - Solución Implementada:
+    1. Se removió definitivamente la llamada a `prisma.cliente.update` en `syncWhatsAppContactsToDb` tanto en local como en el VPS. Los contactos de la libreta ahora solo actualizan `ConversacionWsp.nombreContacto` y `estadoIa`.
+    2. Se blindó la extracción de nombres de saludos para que no sobreescriba nombres válidos en `Cliente`.
+    3. Se recompiló `ia-gonzadep` en el VPS (`npm run build` en 20.2s) y se reinició el proceso PM2 (ID 134).
+    4. Se ejecutó un script transaccional en `agenda_db` que saneó a los 50 clientes: limpió prefijos y migró de forma segura todas las notas clínicas y precios a `Cliente.notasGonzalo`.
+    5. Verificación en vivo: la consulta de nombres alterados arrojó exactamente 0 registros, confirmando la resolución definitiva.

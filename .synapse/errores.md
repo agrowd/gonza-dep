@@ -165,3 +165,14 @@
 4. Se agregó parámetro `force = false` a `checkAndSendReminders` para permitir ejecuciones forzadas on-demand sin importar la franja horaria.
 5. Se protegió el watchdog para no disparar alertas por email ni reintentos agresivos si el relay está conectado.
 **Estado:** ✅ FIXED
+
+## ERR-23: Reincidencia en la sobrescritura de nombres de clientes por syncWhatsAppContactsToDb en ia-gonzadep (2026-09-15)
+**Síntoma:** Gonzalo envía captura de pantalla de la agenda web donde reaparecieron turnos con prefijo "Laser " y notas de libreta telefónica (ej. "Laser Claudio M...", "Laser Juan P...", "Laser Sergio Escalante...").
+**Root Cause:** En el servicio `ia-gonzadep` (`/srv/ia-gonzadep/src/lib/whatsapp.js`), la línea 1507 todavía conservaba la llamada `await prisma.cliente.update({ where: { id: conv.clienteId }, data: { nombreCompleto: targetName } })`. Al sufrir el bot un microcorte y reinicio por watchdog a las 19:55 hs, leyó la libreta de contactos y sobreescribió en masa los nombres de 50 clientes en `agenda_db`.
+**Solución:**
+1. En `ia-gonzadep` (local y VPS), se eliminó incondicionalmente la llamada a `prisma.cliente.update` de `syncWhatsAppContactsToDb`. Los contactos de la libreta ahora actualizan única y exclusivamente `ConversacionWsp.nombreContacto` y `estadoIa`.
+2. Se blindó la extracción de nombres de saludos para que verifique si el cliente ya cuenta con un nombre válido en `Cliente` antes de tocar `Cliente.nombreCompleto`.
+3. Se recompiló `ia-gonzadep` en el VPS (`npm run build`, 20.2s) y se reinició el proceso PM2 (ID 134).
+4. Se ejecutó un script transaccional en `agenda_db` que saneó a los 50 clientes afectados: removió prefijos ("Laser ", "Va a avisar ", etc.) y migró de forma segura todas las notas clínicas y de precios a `Cliente.notasGonzalo`.
+5. Se verificó que la consulta de nombres alterados ahora retorna 0 registros.
+**Estado:** ✅ FIXED

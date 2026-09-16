@@ -1073,5 +1073,23 @@
    - Despliegue en VPS (Producción y Staging).
    - Ejecución inmediata del despacho para los 8 turnos del lunes 14 de Septiembre y verificación de entrega.
 
+## Mensaje del Usuario (2026-09-15 20:05:00-03:00 / 2026-09-16)
+> [Captura de pantalla de WhatsApp enviada por Gonzalo]:
+> Foto de la agenda de turnos con dos círculos verdes en turnos de "Laser Claudio M..." y "Laser Juan P...":
+> Gonzalo: "Volvió a pasar en la agenda que aparecen con los contactos que tienen en wpp en vez del nombre"
+> Usuario: "Corregi el saneamiento y despues CUANDO YO TE DIGA, avanzamos con el modulo 2"
 
-
+## Diagnóstico y Solución Aplicada (ERR-23):
+1. **Root Cause**:
+   - En el VPS, dentro de `/srv/ia-gonzadep/src/lib/whatsapp.js`, la función `syncWhatsAppContactsToDb` ejecutaba `await prisma.cliente.update({ where: { id: conv.clienteId }, data: { nombreCompleto: targetName } })`.
+   - Ante un reinicio por watchdog de WhatsApp a las 19:55 hs, el bot iteró sobre los contactos del teléfono y pisó masivamente `Cliente.nombreCompleto` con las notas del celular. Se detectaron 50 clientes afectados en `agenda_db`.
+2. **Blindaje de Código**:
+   - En `ia-gonzadep` (local y VPS), se eliminó incondicionalmente la llamada `prisma.cliente.update` de `syncWhatsAppContactsToDb`. Los contactos de la libreta ahora se sincronizan únicamente en `ConversacionWsp.nombreContacto` y `estadoIa`.
+   - Se protegió la extracción de nombres en saludos para que nunca pise un nombre válido existente en `Cliente`.
+   - Se recompiló `ia-gonzadep` (`npm run build` en 20.2s) y se reinició el proceso PM2 (ID 134).
+3. **Saneamiento de Base de Datos**:
+   - Se ejecutó un script transaccional en `agenda_db` que limpió los nombres de los 50 clientes afectados (removiendo prefijos como "Laser ", "Va a avisar ", "Cancelo ", etc.) y migró todas las anotaciones clínicas/precios de forma segura al campo `Cliente.notasGonzalo`.
+   - Se constató en vivo que la consulta de clientes con nombres alterados arrojó **0 registros**.
+4. **Estado Actual**:
+   - Base de datos 100% limpia y servicio blindado.
+   - En espera de la instrucción explícita del usuario para iniciar el Módulo 2.
