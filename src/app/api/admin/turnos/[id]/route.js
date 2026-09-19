@@ -97,6 +97,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const body = await request.json();
     const {
       fechaStr,
       horaInicio,
@@ -133,12 +134,12 @@ export async function PUT(request, { params }) {
     const checkHoraFin = horaFin || oldTurn.horaFin;
     const checkEstado = estado || oldTurn.estado;
 
+    const isDateChanged = fechaStr && fechaStr !== oldTurn.fecha.toISOString().split('T')[0];
+    const isTimeChanged = (horaInicio && horaInicio !== oldTurn.horaInicio) || (horaFin && horaFin !== oldTurn.horaFin);
+    const isStateReactivated = estado && estado !== 'CANCELADO' && oldTurn.estado === 'CANCELADO';
+
     // Past Date/Time Check (only validate if date/time is actually changing and not cancelled)
     if (checkEstado !== 'CANCELADO') {
-      const isDateChanged = fechaStr && fechaStr !== oldTurn.fecha.toISOString().split('T')[0];
-      const isTimeChanged = (horaInicio && horaInicio !== oldTurn.horaInicio) || (horaFin && horaFin !== oldTurn.horaFin);
-      const isStateReactivated = estado && estado !== 'CANCELADO' && oldTurn.estado === 'CANCELADO';
-      
       if (isDateChanged || isTimeChanged || isStateReactivated) {
         if (isPastDateTime(checkFechaStr, checkHoraInicio)) {
           return NextResponse.json({ error: 'No es posible reprogramar un turno a una fecha o de horario anteriores/pasados.' }, { status: 400 });
@@ -163,8 +164,8 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Overlap Check (if the appointment is active/being reactivated)
-    if (checkEstado !== 'CANCELADO') {
+    // Overlap Check (only when date, time or reactivation changes)
+    if (checkEstado !== 'CANCELADO' && (isDateChanged || isTimeChanged || isStateReactivated)) {
       const checkOverlap = await hasOverlappingTurno(checkFechaStr, checkHoraInicio, checkHoraFin, id);
       if (checkOverlap) {
         const isBlock = checkOverlap.estado === 'BLOQUEADO';

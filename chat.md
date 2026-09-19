@@ -1126,3 +1126,51 @@
   - `npm run build` ejecutado exitosamente: **43/43 rutas compiladas limpiamente en 9.7s sin ningún error**.
   - Todos los cambios residen estrictamente en la copia local [L] en branch `main` sin haber ejecutado `git push` ni despliegue en VPS.
 
+## Mensaje del Usuario (2026-09-16 20:28-03:00)
+> "Podes subirlo al entorno aislado de pruebas para que el cliente lo pruebe? No al principal. Interpreta lo que me dijo aca"
+> [Capturas de WhatsApp de Gonzalo]:
+> 1. "Dale y avísame cuando pueda entrar a el módulo 2 en el espacio de pruebas"
+> 2. "Cuándo este para revisar, subime a la base de datos de la página de pruebas algunos clientes que estén agendados así puedo ver sus historiales y sus fichas para poder probar bien"
+
+## Respuesta del Asistente (D-58)
+- **Despliegue del Módulo 2 en Entorno de Pruebas (Staging)**:
+  - Fusionado el código del Módulo 2 a la rama `staging` y subido a GitHub (`origin/staging`).
+  - Ejecutado el script de despliegue SSH en el VPS Hostinger para el entorno aislado de Staging:
+    - URL: `http://187.127.9.216:3008`
+    - PM2: Proceso `gonzalo-agenda-staging` (ID 160).
+    - Base de Datos: PostgreSQL `agenda_db_staging` (con `WHATSAPP_ENABLED=false`).
+    - Compilación Next.js completada limpiamente (39 rutas generadas con éxito).
+- **Población de Datos Reales en Staging**:
+  - Se clonaron desde la base de datos oficial (`agenda_db`) hacia `agenda_db_staging`:
+    - **489 clientes**
+    - **555 turnos** (con historiales pasados y citas activas)
+    - **9 zonas oficiales** y configuraciones del local.
+  - Esto permite a Gonzalo probar la vista diaria Neocita, abrir fichas de clientes reales, consultar historiales, validar señas guardadas/perdidas y probar bloqueos con datos genuinos de su centro.
+- **Aislamiento de Producción**:
+  - La rama `main` en producción (`https://agenda.depilacionparahombres.com`, puerto 3006) se mantiene 100% aislada y sin cambios.
+
+## Mensaje del Usuario (2026-09-18 23:11-03:00)
+> "Me dijeron esto de lo que subimos al entorno de pruebas"
+> [Captura de WhatsApp de Gonzalo]:
+> 1. "Las opciones que me diste de Realizado, Finalizar, Mantenimiento, Va a avisar no responden, osea no pasa nada"
+> 2. "Cuando hago siguiente turno y agendo un turno nuevo para ese cliente, el turno este no queda color realizado automáticamente"
+> 3. [Captura con tachado en cian]: "Los que están rayados no van, ya están arriba" (refiriéndose a los botones duplicados de Reenviar WhatsApp y Reenviar Email al pie del modal).
+
+## Respuesta del Asistente (D-59, ERR-24)
+- **Correcciones Implementadas para el Entorno de Pruebas (Staging)**:
+  1. **Botones de Estado Rápido (`Realizado`, `Finalizar`, `Mantenimiento`, `Va a Avisar`)**:
+     - Se corrigió el bug en `src/app/api/admin/turnos/[id]/route.js` donde faltaba `const body = await request.json();` provocando un `500 ReferenceError: body is not defined`.
+     - En `handleUpdateStatus` se eliminaron los cuadros de diálogo bloqueantes `confirm(...)` nativos y se envió `subEstado` en el payload, actualizando reactivamente el estado local.
+  2. **Automatización de `REALIZADO` al Agendar `Siguiente Turno`**:
+     - Se añadió la propagación de `prevTurnoId` desde `handleAgendarSiguienteTurno` pasando por `alta-turno` de regreso a la `agenda`.
+     - En `POST /api/admin/turnos`, al crearse la nueva cita con `prevTurnoId`, la cita anterior se actualiza automáticamente en la base de datos a `estado: 'REALIZADO'` y `subEstado: 'SIGUIENTE_TURNO'`.
+  3. **Remoción de Botones Duplicados**:
+     - Se eliminaron los botones redundantes de `[ 📲 Reenviar WhatsApp (48hs) ]` y `[ 📧 Reenviar Aviso Email ]` al pie del modal de detalles, manteniéndose únicamente los interactivos ubicados junto a los datos de contacto.
+     - Se añadió además la etiqueta visual del `subEstado` en la cabecera de la ficha del turno.
+- **Despliegue Exclusivo en Staging**:
+  - Compilación local probada (`npm run build`, 39/39 rutas).
+  - Cambios fusionados a la rama `staging` y desplegados en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging`).
+  - Producción (`origin/main`, puerto 3006) 100% protegida e inalterada.
+
+
+

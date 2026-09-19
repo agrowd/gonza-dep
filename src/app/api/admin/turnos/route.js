@@ -139,7 +139,8 @@ export async function POST(request) {
       observaciones,
       hasOtros,
       otrosTexto,
-      otrosPrecio
+      otrosPrecio,
+      prevTurnoId
     } = body;
 
     if (estado !== 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin || ((!selectedZoneIds || selectedZoneIds.length === 0) && !hasOtros))) {
@@ -289,6 +290,21 @@ export async function POST(request) {
         cliente: true
       }
     });
+
+    if (prevTurnoId) {
+      try {
+        await prisma.turno.update({
+          where: { id: String(prevTurnoId) },
+          data: {
+            estado: 'REALIZADO',
+            subEstado: 'SIGUIENTE_TURNO'
+          }
+        });
+        console.log(`[Turno Create] Previous turno ${prevTurnoId} marked as REALIZADO / SIGUIENTE_TURNO.`);
+      } catch (errPrev) {
+        console.error('Error updating previous turno to REALIZADO:', errPrev);
+      }
+    }
 
     if (observaciones !== undefined && observaciones !== '' && finalClienteId) {
       await prisma.cliente.update({

@@ -33,6 +33,7 @@ function AltaTurnoContent() {
   const frecuenciaParam = searchParams.get('frecuencia') || '4';
   const descuentoTipoParam = searchParams.get('descuentoTipo') || 'NINGUNO';
   const descuentoValorParam = searchParams.get('descuentoValor') || '';
+  const prevTurnoIdParam = searchParams.get('prevTurnoId');
   const señaParam = searchParams.get('seña') ?? searchParams.get('valorSeña');
 
   // 1. Zones Catalog & Selection
@@ -391,6 +392,7 @@ function AltaTurnoContent() {
       const params = new URLSearchParams({
         newTurno: 'true',
         modo: 'siguienteTurno',
+        prevTurnoId: prevTurnoIdParam || '',
         clienteId: clienteIdParam || '',
         nombre: clienteNombreParam || '',
         whatsapp: clienteWhatsappParam || '',

@@ -176,3 +176,18 @@
 4. Se ejecutó un script transaccional en `agenda_db` que saneó a los 50 clientes afectados: removió prefijos ("Laser ", "Va a avisar ", etc.) y migró de forma segura todas las notas clínicas y de precios a `Cliente.notasGonzalo`.
 5. Se verificó que la consulta de nombres alterados ahora retorna 0 registros.
 **Estado:** ✅ FIXED
+
+## ERR-24: Botones de estado sin respuesta por ReferenceError, turno previo no se marca Realizado en Siguiente Turno y botones duplicados (2026-09-18)
+**Síntoma:** 
+1. Al tocar los botones rápidos `[ Realizado ]`, `[ Finalizar ]`, `[ Mantenimiento ]` o `[ Va a Avisar ]` en el detalle del turno, la interfaz no responde ("no pasa nada").
+2. Al agendar un nuevo turno con `[ Siguiente Turno ]`, la cita recién atendida permanecía en estado `SEÑADO` (azul) en lugar de pasar automáticamente a `REALIZADO` (verde).
+3. Los botones de `[ Reenviar WhatsApp (48hs) ]` y `[ Reenviar Aviso Email ]` aparecían duplicados al pie del modal de detalles.
+**Root Cause:**
+1. En `src/app/api/admin/turnos/[id]/route.js`, en el método `PUT`, faltaba la línea `const body = await request.json();` antes de la desestructuración de campos, lanzando un `ReferenceError: body is not defined` no controlado y retornando HTTP 500 en todas las actualizaciones de estado. En el frontend `handleUpdateStatus` fallaba silenciosamente al no cumplir `res.ok`, sumado a confirmaciones nativas `confirm(...)` que bloqueaban la interacción táctil en navegadores móviles.
+2. Al pulsar `[ Siguiente Turno ]`, ni `handleAgendarSiguienteTurno` ni `alta-turno` transferían el ID del turno previo (`prevTurnoId`). `POST /api/admin/turnos` creaba la nueva cita pero carecía de referencia a la cita anterior para actualizarla en la base de datos.
+3. El pie del modal de detalles contenía botones de reenvío duplicados que ya se encontraban presentes de forma interactiva junto a los campos de WhatsApp e Email.
+**Solución:**
+1. En `src/app/api/admin/turnos/[id]/route.js`, se añadió `const body = await request.json();` y se optimizaron las validaciones de solapamiento y pasado para que solo apliquen cuando fecha/hora o reactivación cambian efectivamente. En `src/app/admin/agenda/page.js`, se eliminaron los `confirm(...)` bloqueantes de `FINALIZADO`, `MANTENIMIENTO` y `VA_A_AVISAR`, y se envió `subEstado` en el payload de actualización.
+2. Se transmitió `prevTurnoId` en el flujo de `Siguiente Turno` (`agenda` -> `alta-turno` -> `agenda` -> `POST /api/admin/turnos`), actualizando automáticamente en la base de datos la cita anterior a `estado: 'REALIZADO'` y `subEstado: 'SIGUIENTE_TURNO'`.
+3. Se eliminaron los botones duplicados del pie del modal y se añadió el badge de `subEstado` visible en la cabecera de detalles.
+**Estado:** ✅ FIXED

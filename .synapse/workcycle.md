@@ -765,7 +765,38 @@
 - [x] Probar compilación local (`npm run build`) verificando 43/43 rutas exitosas.
 
 ### 📝 Notas / Bitácora
-- **16 de Septiembre (Módulo 2 completado en Local)**:
-  - Se completó la implementación íntegra del **Módulo 2 (Mejoras en la Agenda)** estrictamente en el entorno local [L], probando la compilación local (`npm run build`) con **43/43 rutas compiladas limpiamente en 9.7 segundos**.
-  - Todo el trabajo queda resguardado en local (branch `main`), respetando la indicación del usuario de NO realizar `git push` ni despliegue en el VPS hasta recibir orden explícita.
+- **16 de Septiembre (Módulo 2 completado en Local y Desplegado en Staging)**:
+  - Se completó la implementación íntegra del **Módulo 2 (Mejoras en la Agenda)** en local [L].
+  - A solicitud del usuario para revisión del cliente, se fusionó y subió el código a la rama `staging` (`origin/staging`).
+  - Se ejecutó el despliegue automático en el VPS Hostinger en el entorno aislado de pruebas:
+    - Directorio: `/srv/gonzalo-dep-staging` (puerto `3008`, PM2 `gonzalo-agenda-staging`, ID 160).
+    - Base de datos: `agenda_db_staging` (PostgreSQL) con `WHATSAPP_ENABLED=false` para proteger los despachos reales.
+    - Sincronización de datos: Se importaron 489 clientes y 555 turnos históricos/futuros desde `agenda_db` a `agenda_db_staging` para que Gonzalo cuente con datos reales para testear la vista diaria Neocita, fichas, historiales y señas.
+  - La rama principal de Producción (`main`, `https://agenda.depilacionparahombres.com`, puerto 3006) permanece 100% aislada e intacta.
+
+## 📅 Sesión: 18-19 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Corregir falta de respuesta en botones de estado rápido (`Realizado`, `Finalizar`, `Mantenimiento`, `Va a Avisar`).
+- [x] Automatizar paso a estado `REALIZADO` (con `subEstado: SIGUIENTE_TURNO`) del turno previo al usar `📅 Siguiente Turno`.
+- [x] Eliminar botones duplicados de reenvío de WhatsApp y Email al pie del modal de detalles del turno.
+- [x] Exponer badge de `subEstado` en cabecera del modal de detalles de la cita.
+- [x] Probar compilación local (`npm run build`) verificando 39/39 rutas exitosas.
+- [x] Desplegar exclusivamente en el entorno aislado de Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+
+### 📝 Notas / Bitácora
+- **18-19 de Septiembre (Corrección de feedback del cliente en Staging)**:
+  - Gonzalo reportó tras probar en Staging:
+    1. Los botones de acción rápida no respondían ("no pasa nada").
+    2. Al agendar un siguiente turno, la cita atendida no quedaba de color verde / Realizado.
+    3. Había botones duplicados de WhatsApp y Email rayados en su captura de pantalla.
+  - Diagnóstico y Solución (ERR-24, D-59):
+    1. Se añadió `const body = await request.json();` en `PUT /api/admin/turnos/[id]` (solucionando 500 ReferenceError) y se enviaron `subEstado` y remoción de `confirm(...)` en `src/app/admin/agenda/page.js`.
+    2. Se integró `prevTurnoId` en el flujo de `handleAgendarSiguienteTurno` -> `alta-turno` -> `agenda` -> `POST /api/admin/turnos`, actualizando la cita previa a `REALIZADO` y `SIGUIENTE_TURNO`.
+    3. Se eliminaron los botones duplicados del pie de la modal de detalles.
+  - Verificación y Despliegue:
+    - Compilación local exitosa con Turbopack (39/39 rutas en 36.7s).
+    - Despliegue en VPS Staging en puerto 3008 sin tocar Producción.
+
+
 

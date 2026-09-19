@@ -315,6 +315,7 @@ export default function AgendaPage() {
     hasOtros: false,
     otrosTexto: '',
     otrosPrecio: '',
+    prevTurnoId: null,
     enviarNotificaciones: true
   });
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
@@ -698,6 +699,7 @@ export default function AgendaPage() {
       const dniParam = searchParams.get('dni') || '';
       const descuentoTipoParam = searchParams.get('descuentoTipo');
       const descuentoValorParam = searchParams.get('descuentoValor');
+      const prevTurnoIdParam = searchParams.get('prevTurnoId');
       const señaParam = searchParams.get('seña') ?? searchParams.get('valorSeña');
       const initialSeña = (señaParam !== null && señaParam !== undefined && señaParam !== '')
         ? Number(señaParam)
@@ -751,7 +753,8 @@ export default function AgendaPage() {
           descuentoTipo: descuentoTipoParam || prev.descuentoTipo || 'NINGUNO',
           descuentoValor: descuentoValorParam !== null && descuentoValorParam !== undefined && descuentoValorParam !== '' ? descuentoValorParam : prev.descuentoValor,
           valorSeña: initialSeña !== undefined ? initialSeña : prev.valorSeña,
-          manualSeñaOverride: initialSeña !== undefined ? initialSeña : prev.manualSeñaOverride
+          manualSeñaOverride: initialSeña !== undefined ? initialSeña : prev.manualSeñaOverride,
+          prevTurnoId: prevTurnoIdParam || null
         }));
         setIsNewOpen(true);
       }
@@ -1131,22 +1134,16 @@ export default function AgendaPage() {
       }
       
       if (actionType === 'FINALIZADO' || actionType === 'MANTENIMIENTO') {
-        const isFin = actionType === 'FINALIZADO';
-        const confirmFin = confirm(isFin 
-          ? '¿Finalizar tratamiento del cliente?\n\nEsto marcará el turno como Realizado, el estado del cliente como Finalizado y activará el seguimiento de mantenimiento.'
-          : '¿Marcar al cliente en Mantenimiento?\n\nEsto marcará el turno como Realizado, el estado del cliente en Mantenimiento y programará el recordatorio de mantenimiento de 2 meses.');
-        if (!confirmFin) return;
         markClientFinalizado = true;
       }
 
       if (actionType === 'VA_A_AVISAR') {
-        const confirmAviso = confirm('¿Registrar que el cliente "Va a avisar"?\n\nEsto marcará el turno como Realizado y dejará una nota para que avise cuando desee agendar su próximo turno.');
-        if (!confirmAviso) return;
         markClientVaAAvisar = true;
       }
 
       const updateBody = { 
         estado: newStatus, 
+        subEstado: actionType ? actionType : (newStatus === 'REALIZADO' ? null : undefined),
         preserveDeposit, 
         markClientFinalizado, 
         markClientVaAAvisar
@@ -1179,6 +1176,11 @@ export default function AgendaPage() {
         body: JSON.stringify(updateBody)
       });
       if (res.ok) {
+        setSelectedTurno(prev => prev ? {
+          ...prev,
+          estado: newStatus,
+          subEstado: actionType || (newStatus === 'REALIZADO' ? null : prev.subEstado)
+        } : null);
         setIsDetailsOpen(false);
         fetchAppointments();
         if (actionType === 'FINALIZADO') {
@@ -1190,9 +1192,13 @@ export default function AgendaPage() {
         } else {
           showToast(`Turno actualizado a ${newStatus}.`);
         }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || 'Error al actualizar estado del turno.', 'error');
       }
     } catch (e) {
       console.error('Error updating status:', e);
+      showToast('Error de conexión al actualizar estado.', 'error');
     }
   };
 
@@ -1378,6 +1384,7 @@ export default function AgendaPage() {
 
     const params = new URLSearchParams({
       modo: 'siguienteTurno',
+      prevTurnoId: turno.id || '',
       clienteId: turno.cliente?.id || turno.clienteId || '',
       clienteNombre: turno.cliente?.nombreCompleto || turno.nombreCompleto || '',
       clienteWhatsapp: turno.cliente?.whatsapp || turno.whatsapp || '',
@@ -1542,7 +1549,8 @@ export default function AgendaPage() {
         clienteId: null,
         hasOtros: false,
         otrosTexto: '',
-        otrosPrecio: ''
+        otrosPrecio: '',
+        prevTurnoId: null
       });
     }
     setIsNewOpen(true);
@@ -3022,9 +3030,23 @@ export default function AgendaPage() {
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Estado</span>
-                    <span className={`${styles.statusPill} ${getStatusLabelClass(selectedTurno.estado)}`}>
-                      {selectedTurno.estado}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span className={`${styles.statusPill} ${getStatusLabelClass(selectedTurno.estado)}`}>
+                        {selectedTurno.estado}
+                      </span>
+                      {selectedTurno.subEstado && (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '6px',
+                          backgroundColor: selectedTurno.subEstado === 'FINALIZADO' ? '#1e3a8a' : selectedTurno.subEstado === 'MANTENIMIENTO' ? '#1e40af' : selectedTurno.subEstado === 'VA_A_AVISAR' ? '#b45309' : '#047857',
+                          color: '#ffffff'
+                        }}>
+                          {selectedTurno.subEstado === 'VA_A_AVISAR' ? '⏳ Va a avisar' : selectedTurno.subEstado === 'MANTENIMIENTO' ? '🛠️ Mantenimiento' : selectedTurno.subEstado === 'FINALIZADO' ? '🏁 Finalizó' : selectedTurno.subEstado === 'SIGUIENTE_TURNO' ? '📅 Siguiente Turno' : selectedTurno.subEstado}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Día</span>
@@ -3402,26 +3424,6 @@ export default function AgendaPage() {
                         style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#eab308', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
                       >
                         ⭐ Mandar Reseña
-                      </button>
-                    )}
-                    {selectedTurno.cliente?.whatsapp && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenResendWpp(selectedTurno)}
-                        className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
-                      >
-                        📲 Reenviar WhatsApp (48hs)
-                      </button>
-                    )}
-                    {selectedTurno.cliente && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenResendEmail(selectedTurno)}
-                        className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#4f46e5', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
-                      >
-                        📧 Reenviar Aviso Email
                       </button>
                     )}
                     {selectedTurno.cliente?.email && (
