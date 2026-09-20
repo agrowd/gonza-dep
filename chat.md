@@ -1196,6 +1196,25 @@
   - Despliegue en el entorno aislado de Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, base de datos `agenda_db_staging`).
   - Producción (`origin/main`, puerto 3006) 100% aislada e intacta.
 
+## Mensaje del Usuario (2026-09-20 11:10-03:00)
+> "Procede y recorda aislar el main, solo trabajar en el con el problema planteado, y lo que es del staging en este mismo" (Resolución de feedback con capturas: 1. Vista diaria con slots libres y total único; 2. Envoltura mobile y estructura de comentarios en historial; 3. Purga de 'Nota de Contacto' en notas del operador).
+
+## Respuesta del Asistente (D-61)
+- **1. Saneamiento de Base de Datos en Producción y Staging (Problema Planteado en Main)**:
+  - Se identificó la causa raíz: un script anterior de sanitización de contactos anexó `[Nota de Contacto]: ...` y `| [WPP: ...]` a `Cliente.notasGonzalo`.
+  - Se ejecutó script de migración SQL en `agenda_db` (PROD) y `agenda_db_staging` (STAGING) eliminando estos residuos de las anotaciones de 46 y 50 clientes respectivamente, restaurando las observaciones clínicas limpias de Gonzalo (ej. Ivan Burgos ahora tiene únicamente `120,40,5`).
+  - Cero código nuevo fue desplegado en Producción; `origin/main` (puerto 3006) permanece intacto y aislado.
+- **2. Vista Diaria Neocita Simplificada con Huecos Disponibles Interactivos (Staging)**:
+  - Se removió el desglose de señas recibidas y saldo a cobrar en el encabezado del día y en cada tarjeta individual, dejando únicamente el Total / Ingreso Estimado.
+  - Se incorporaron bloques de huecos libres `🟢 Libre: HH:MM a HH:MM (duración)` para espacios libres $\ge 10$ minutos entre citas consecutivas, con botón directo `+ Agendar` que precompleta fecha y hora de inicio sin generar bloqueos restrictivos en la base de datos.
+- **3. Ficha de Cliente y Formateo Móvil del Historial de Turnos (Staging)**:
+  - Se corrigió `.paperMeta` con `flex-wrap: wrap` y `white-space: nowrap` en los spans de Costo, Seña y Saldo, eliminando la rotura y apilamiento antiestético de cifras en pantallas móviles angostas.
+  - En cada tarjeta de turno se organizaron los comentarios en dos niveles claros: `🛡️ Observaciones del Operador` arriba (con las notas clínicas del cliente) y `📝 Comentarios del Turno` abajo (con las notas exclusivas de esa cita), omitiendo observaciones generales del cliente.
+- **4. Compilación y Despliegue en Staging**:
+  - Compilación local y remota exitosa con Next.js 16.2.9 (Turbopack, 39/39 rutas).
+  - Desplegado y verificado en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging`).
+  - Rama `main` local reseteada y alineada con `origin/main`.
+
 
 
 

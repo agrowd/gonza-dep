@@ -807,7 +807,12 @@
 - [x] Agregar botones `[ ⤢ Ampliar ]` / `[ ⤡ Reducir ]` en las 3 cajas de texto para escritura cómoda en celulares.
 - [x] Mostrar banner de Notas del Operador en cabecera del historial de turnos y comentarios específicos en cada tarjeta (omitiendo observaciones generales en el historial).
 - [x] Probar compilación local (`npm run build`) verificando 39/39 rutas exitosas en Turbopack.
-- [ ] Desplegar en entorno aislado de Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, base de datos `agenda_db_staging`).
+- [x] Desplegar en entorno aislado de Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, base de datos `agenda_db_staging`).
+- [x] Resolver 3 puntos de feedback de Gonzalo (capturas de pantalla):
+  - [x] Vista diaria Neocita: remoción de desglose señas/saldo en cabecera y tarjetas (solo Total/Ingreso Estimado), e inserción de slots interactivos de huecos libres `🟢 Libre: HH:MM a HH:MM` con botón `+ Agendar` precompletado que no bloquea la DB.
+  - [x] Historial de Turnos en Ficha: corrección de `paperMeta` con `flex-wrap: wrap` y `white-space: nowrap` para evitar quiebre/apilamiento de números en celular, y jerarquía con Observaciones de Operador arriba y Comentarios de Turno abajo en cada tarjeta.
+  - [x] Purga de base de datos: saneamiento de `[Nota de Contacto]: ...` y `[WPP: ...]` en `Cliente.notasGonzalo` tanto en `agenda_db` (PROD) como en `agenda_db_staging` (STAGING), dejando notas clínicas limpias (Ivan Burgos y 45 clientes más).
+- [x] Aislamiento estricto de `origin/main` (código de producción intacto; solo cambios de datos en agenda_db).
 
 ### 📝 Notas / Bitácora
 - **20 de Septiembre (Nuevas funcionalidades clínicas y de usabilidad solicitadas por Gonzalo)**:
@@ -823,7 +828,12 @@
     - Exposición de `Fecha Primer Turno` en las estadísticas rápidas de la ficha.
     - Banner destacado de Notas del Operador (`notasGonzalo`) arriba del Historial de Turnos y visualización de observaciones de cada turno con etiqueta "Comentario del Turno:".
     - Campos de edición en la pestaña "Notas y Configuración".
-  - Compilación local probada y limpia (39/39 rutas en 32.1s).
+  - Se atendió el nuevo feedback de Gonzalo:
+    - Vista diaria neocita simplificada: cabecera y tarjetas muestran únicamente el Total/Ingreso Estimado. Huecos disponibles entre turnos se muestran con tarjetas interactivas de color verde claro con duración y botón `+ Agendar`.
+    - En la ficha de clientes, los números monetarios ya no se quiebran ni se apilan verticalmente en smartphones estrechos, y cada turno muestra sus comentarios estructurados.
+    - Se ejecutó script de migración SQL en `agenda_db` y `agenda_db_staging` eliminando todos los prefijos y residuos de libretas de contacto de WhatsApp (`[Nota de Contacto]: ...` y `| [WPP: ...]`).
+    - Despliegue completado con éxito en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging`).
+    - Rama `main` verificada y alineada estrictamente con `origin/main` (cero código nuevo en producción).
 
 
 
