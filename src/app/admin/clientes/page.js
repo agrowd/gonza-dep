@@ -883,13 +883,40 @@ function ClientesPageContent() {
                                 </div>
                                 <div className={styles.paperZonas}>Zonas: {zonas}</div>
                                 <div className={styles.paperMeta}>
-                                  <span>Costo: ${t.valorTotal.toLocaleString()}</span>
-                                  <span>Seña: ${t.valorSeña.toLocaleString()}</span>
-                                  <span>Saldo: ${t.saldoPendiente.toLocaleString()}</span>
+                                  <span><strong>Costo:</strong> ${t.valorTotal.toLocaleString('es-ES')}</span>
+                                  <span><strong>Seña:</strong> ${t.valorSeña.toLocaleString('es-ES')}</span>
+                                  <span><strong>Saldo:</strong> ${t.saldoPendiente.toLocaleString('es-ES')}</span>
                                 </div>
+                                {selectedClient.notasGonzalo && (
+                                  <div style={{
+                                    marginTop: '0.6rem',
+                                    backgroundColor: 'rgba(212, 165, 77, 0.08)',
+                                    border: '1px solid rgba(212, 165, 77, 0.25)',
+                                    borderRadius: '4px',
+                                    padding: '0.45rem 0.65rem'
+                                  }}>
+                                    <div style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.75rem', marginBottom: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      🛡️ Observaciones del Operador:
+                                    </div>
+                                    <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.35 }}>
+                                      {selectedClient.notasGonzalo}
+                                    </div>
+                                  </div>
+                                )}
                                 {t.observaciones && (
-                                  <div className={styles.paperNotes} style={{ marginTop: '0.5rem', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
-                                    <strong style={{ color: 'var(--color-gold)' }}>Comentario del Turno:</strong> {t.observaciones}
+                                  <div style={{
+                                    marginTop: selectedClient.notasGonzalo ? '0.4rem' : '0.6rem',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '4px',
+                                    padding: '0.45rem 0.65rem'
+                                  }}>
+                                    <div style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.75rem', marginBottom: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      📝 Comentarios del Turno:
+                                    </div>
+                                    <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.35 }}>
+                                      {t.observaciones}
+                                    </div>
                                   </div>
                                 )}
                               </div>

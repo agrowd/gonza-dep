@@ -2477,15 +2477,7 @@ export default function AgendaPage() {
                     <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>Ingreso Estimado</span>
-                        <span style={{ fontWeight: 800, color: 'var(--color-gold)', fontSize: '1.05rem' }}>${totalRevenue.toLocaleString('es-ES')}</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.85rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Señas Recibidas</span>
-                        <span style={{ fontWeight: 700, color: '#2e7d32' }}>${totalSenas.toLocaleString('es-ES')}</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.85rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Saldo a Cobrar</span>
-                        <span style={{ fontWeight: 700, color: '#0284c7' }}>${totalSaldos.toLocaleString('es-ES')}</span>
+                        <span style={{ fontWeight: 800, color: 'var(--color-gold)', fontSize: '1.1rem' }}>${totalRevenue.toLocaleString('es-ES')}</span>
                       </div>
                     </div>
                   </div>
@@ -2524,16 +2516,115 @@ export default function AgendaPage() {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                       {(() => {
-                        const combined = [
-                          ...dayApps.map(app => ({ type: 'turno', item: app, startMin: timeToMinutes(app.horaInicio) })),
-                          ...dayBloqueos.map(b => ({ type: 'bloqueo', item: b, startMin: timeToMinutes(b.horaInicio) }))
+                        const sortedEvents = [
+                          ...dayApps.map(app => ({
+                            type: 'turno',
+                            item: app,
+                            startMin: timeToMinutes(app.horaInicio),
+                            endMin: timeToMinutes(app.horaFin)
+                          })),
+                          ...dayBloqueos.map(b => ({
+                            type: 'bloqueo',
+                            item: b,
+                            startMin: timeToMinutes(b.horaInicio),
+                            endMin: timeToMinutes(b.horaFin)
+                          }))
                         ].sort((a, b) => a.startMin - b.startMin);
 
-                        return combined.map(({ type, item }) => {
-                          if (type === 'bloqueo') {
-                            const b = item;
+                        // Build combined list inserting free gap slots between consecutive appointments/blockades
+                        const combined = [];
+                        for (let i = 0; i < sortedEvents.length; i++) {
+                          const current = sortedEvents[i];
+                          combined.push(current);
+
+                          if (i < sortedEvents.length - 1) {
+                            const next = sortedEvents[i + 1];
+                            const gapMin = next.startMin - current.endMin;
+                            if (gapMin >= 10) {
+                              combined.push({
+                                type: 'free_slot',
+                                startMin: current.endMin,
+                                endMin: next.startMin,
+                                duration: gapMin
+                              });
+                            }
+                          }
+                        }
+
+                        return combined.map((entry, idx) => {
+                          if (entry.type === 'free_slot') {
+                            const gap = entry;
+                            const startH = Math.floor(gap.startMin / 60).toString().padStart(2, '0');
+                            const startM = (gap.startMin % 60).toString().padStart(2, '0');
+                            const endH = Math.floor(gap.endMin / 60).toString().padStart(2, '0');
+                            const endM = (gap.endMin % 60).toString().padStart(2, '0');
+                            const startTimeStr = `${startH}:${startM}`;
+                            const endTimeStr = `${endH}:${endM}`;
+                            const durationText = gap.duration >= 60
+                              ? `${Math.floor(gap.duration / 60)}h${gap.duration % 60 > 0 ? ` ${gap.duration % 60}m` : ''}`
+                              : `${gap.duration} min`;
+
+                            return (
+                              <div
+                                key={`gap-${gap.startMin}-${gap.endMin}-${idx}`}
+                                onClick={() => {
+                                  setIsNextScheduling(false);
+                                  setNewTurno({
+                                    nombreCompleto: '',
+                                    nombre: '',
+                                    apellido: '',
+                                    whatsapp: '',
+                                    email: '',
+                                    dni: '',
+                                    fechaStr: dateStr,
+                                    horaInicio: startTimeStr,
+                                    horaFin: endTimeStr,
+                                    autoHoraFin: endTimeStr,
+                                    selectedZoneIds: [],
+                                    valorTotal: '',
+                                    valorSeña: '',
+                                    descuentoTipo: 'NINGUNO',
+                                    descuentoValor: '',
+                                    bonificacion: 0,
+                                    estado: 'SEÑADO',
+                                    observaciones: '',
+                                    clienteId: null
+                                  });
+                                  setIsNewOpen(true);
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '0.4rem 0.85rem',
+                                  borderRadius: '8px',
+                                  backgroundColor: 'rgba(34, 197, 94, 0.05)',
+                                  border: '1px dashed rgba(34, 197, 94, 0.35)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title="Espacio libre: haz clic para agendar un turno en este horario"
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                  <span style={{ fontSize: '0.75rem' }}>🟢</span>
+                                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#16a34a' }}>
+                                    Libre: {startTimeStr} a {endTimeStr}
+                                  </span>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                                    ({durationText})
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-gold)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                                  + Agendar
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          if (entry.type === 'bloqueo') {
+                            const b = entry.item;
                             return (
                               <div
                                 key={`b-${b.id}`}
@@ -2572,7 +2663,7 @@ export default function AgendaPage() {
                             );
                           }
 
-                          const app = item;
+                          const app = entry.item;
                           let zonasText = '';
                           try {
                             const zonesArray = JSON.parse(app.zonas);
@@ -2580,8 +2671,6 @@ export default function AgendaPage() {
                           } catch (e) {
                             zonasText = app.zonas;
                           }
-
-                          const sald = Math.max(0, Number(app.valorTotal || 0) - Number(app.valorSeña || 0));
 
                           return (
                             <div
@@ -2624,15 +2713,7 @@ export default function AgendaPage() {
                                 <div className={styles.neocitaFinancialRow}>
                                   <div className={styles.neocitaFinItem}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Total:</span>
-                                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>${Number(app.valorTotal || 0).toLocaleString('es-ES')}</span>
-                                  </div>
-                                  <div className={styles.neocitaFinItem}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Seña:</span>
-                                    <span style={{ fontWeight: 700, color: '#2e7d32' }}>${Number(app.valorSeña || 0).toLocaleString('es-ES')}</span>
-                                  </div>
-                                  <div className={styles.neocitaFinItem}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Saldo:</span>
-                                    <span style={{ fontWeight: 700, color: '#0284c7' }}>${sald.toLocaleString('es-ES')}</span>
+                                    <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>${Number(app.valorTotal || 0).toLocaleString('es-ES')}</span>
                                   </div>
                                   {app.descuentoTipo && app.descuentoTipo !== 'NINGUNO' && (
                                     <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(239, 83, 80, 0.15)', color: '#ef5350', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, marginLeft: 'auto' }}>
