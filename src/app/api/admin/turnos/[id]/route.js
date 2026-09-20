@@ -72,7 +72,17 @@ export async function GET(request, { params }) {
     const turno = await prisma.turno.findUnique({
       where: { id: String(id) },
       include: {
-        cliente: true
+        cliente: {
+          include: {
+            turnos: {
+              select: {
+                id: true,
+                fecha: true,
+                estado: true
+              }
+            }
+          }
+        }
       }
     });
 
@@ -222,16 +232,22 @@ export async function PUT(request, { params }) {
     if (descuentoValor !== undefined) updateData.descuentoValor = Number(descuentoValor);
     if (observaciones !== undefined) updateData.observaciones = observaciones;
 
-    // Sync client-level observations, operator notes and frequency (protect against accidental empty string wipes)
+    // Sync client-level operator notes and frequency, or clientObservaciones if explicitly passed
     const clientUpdateData = {};
-    if (observaciones !== undefined && (observaciones.trim() !== '' || body.forceClearObservaciones)) {
-      clientUpdateData.observaciones = observaciones;
+    if (body.clientObservaciones !== undefined && (body.clientObservaciones.trim() !== '' || body.forceClearObservaciones)) {
+      clientUpdateData.observaciones = body.clientObservaciones;
     }
     if (body.notasGonzalo !== undefined && (typeof body.notasGonzalo === 'string' && body.notasGonzalo.trim() !== '' || body.forceClearNotasGonzalo)) {
       clientUpdateData.notasGonzalo = body.notasGonzalo;
     }
     if (body.frecuencia !== undefined && !isNaN(Number(body.frecuencia))) {
       clientUpdateData.frecuencia = Number(body.frecuencia);
+    }
+    if (body.fechaPrimerTurno !== undefined) {
+      clientUpdateData.fechaPrimerTurno = body.fechaPrimerTurno ? new Date(body.fechaPrimerTurno) : null;
+    }
+    if (body.sesionesPrevias !== undefined && !isNaN(Number(body.sesionesPrevias))) {
+      clientUpdateData.sesionesPrevias = Number(body.sesionesPrevias);
     }
     
     if (Object.keys(clientUpdateData).length > 0 && oldTurn.clienteId) {
@@ -249,33 +265,30 @@ export async function PUT(request, { params }) {
       console.log(`Client ${oldTurn.clienteId} marked as FINALIZADO / MANTENIMIENTO.`);
     }
 
-    if (body.markClientVaAAvisar && oldTurn.clienteId) {
-      const clientCurrent = await prisma.cliente.findUnique({ where: { id: oldTurn.clienteId } });
-      const currentObs = clientCurrent?.observaciones || '';
+    // Append "Va a avisar" tag to TURNO observaciones (exclusive to this session)
+    if (body.markClientVaAAvisar) {
+      const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
       const noticeTag = '[Va a avisar próximo turno]';
-      const updatedObs = currentObs.includes(noticeTag) ? currentObs : `${currentObs ? currentObs + ' | ' : ''}${noticeTag}`;
-      
-      await prisma.cliente.update({
-        where: { id: oldTurn.clienteId },
-        data: { 
-          observaciones: updatedObs
-        }
-      });
-      console.log(`Client ${oldTurn.clienteId} marked as Va a avisar.`);
+      if (!currentTurnoObs.includes(noticeTag)) {
+        updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${noticeTag}` : noticeTag;
+      }
     }
 
-    if (estado === 'CANCELADO' && body.preserveDeposit && oldTurn.clienteId && Number(oldTurn.valorSeña) > 0) {
-      const clientCurrent = await prisma.cliente.findUnique({ where: { id: oldTurn.clienteId } });
-      const currentObs = clientCurrent?.observaciones || '';
+    // Append deposit preservation / loss tag to TURNO observaciones (exclusive to this session)
+    if (estado === 'CANCELADO' && Number(oldTurn.valorSeña) > 0) {
+      const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
       const dateStr = oldTurn.fecha ? new Date(oldTurn.fecha).toLocaleDateString('es-ES') : '';
-      const creditTag = `[Seña a favor: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Guardada por cancelación ${dateStr})]`;
-      const updatedObs = currentObs.includes(creditTag) ? currentObs : `${currentObs ? currentObs + ' | ' : ''}${creditTag}`;
-      
-      await prisma.cliente.update({
-        where: { id: oldTurn.clienteId },
-        data: { observaciones: updatedObs }
-      });
-      console.log(`Client ${oldTurn.clienteId} registered preserved deposit: ${creditTag}`);
+      if (body.preserveDeposit) {
+        const creditTag = `[Seña a favor: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Guardada por cancelación ${dateStr})]`;
+        if (!currentTurnoObs.includes(creditTag)) {
+          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${creditTag}` : creditTag;
+        }
+      } else {
+        const lossTag = `[Pierde seña: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Cancelación con menos de 72hs)]`;
+        if (!currentTurnoObs.includes(lossTag)) {
+          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${lossTag}` : lossTag;
+        }
+      }
     }
 
     if (selectedZoneIds !== undefined) {

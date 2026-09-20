@@ -798,5 +798,32 @@
     - Compilación local exitosa con Turbopack (39/39 rutas en 36.7s).
     - Despliegue en VPS Staging en puerto 3008 sin tocar Producción.
 
+## 📅 Sesión: 20 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Agregar `fechaPrimerTurno` editable en ficha y modal de detalles del turno.
+- [x] Implementar conteo acumulativo de sesiones (`sesionesPrevias` + turnos con estado `REALIZADO` en el sistema) editable por el operador.
+- [x] Crear campo exclusivo `Comentarios de este Turno` (`Turno.observaciones`) aislado de la ficha del cliente, reservado para notas de la sesión y tags de estado (`[Va a avisar...]`, señas guardadas/perdidas).
+- [x] Agregar botones `[ ⤢ Ampliar ]` / `[ ⤡ Reducir ]` en las 3 cajas de texto para escritura cómoda en celulares.
+- [x] Mostrar banner de Notas del Operador en cabecera del historial de turnos y comentarios específicos en cada tarjeta (omitiendo observaciones generales en el historial).
+- [x] Probar compilación local (`npm run build`) verificando 39/39 rutas exitosas en Turbopack.
+- [ ] Desplegar en entorno aislado de Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, base de datos `agenda_db_staging`).
+
+### 📝 Notas / Bitácora
+- **20 de Septiembre (Nuevas funcionalidades clínicas y de usabilidad solicitadas por Gonzalo)**:
+  - Se añadieron `fechaPrimerTurno DateTime?` y `sesionesPrevias Int @default(0)` al `model Cliente` en `prisma/schema.prisma`.
+  - Se adaptaron los endpoints `PUT /api/admin/clientes/[id]`, `GET/PUT /api/admin/turnos/[id]` y `GET/POST /api/admin/turnos` para soportar `fechaPrimerTurno`, `sesionesPrevias` y desacoplar `Turno.observaciones` de `Cliente.observaciones`.
+  - Se implementó en `src/app/admin/agenda/page.js`:
+    - Bloque intermedio entre Frecuencia y Observaciones con `Fecha Primer Turno` y `Sesiones Realizadas` con desglose dinámico `(X en sistema + Y previas)`.
+    - Textarea `Comentarios de este Turno (Exclusivo de esta sesión)` guardado en `Turno.observaciones`.
+    - Toggles `[ ⤢ Ampliar ]` / `[ ⤡ Reducir ]` en los 3 textareas para pantallas móviles.
+    - Soporte completo en el formulario de edición `editTurno`.
+  - Se implementó en `src/app/admin/clientes/page.js`:
+    - Conteo acumulativo en la columna "Sesiones" de la tabla principal y en el resumen de la ficha.
+    - Exposición de `Fecha Primer Turno` en las estadísticas rápidas de la ficha.
+    - Banner destacado de Notas del Operador (`notasGonzalo`) arriba del Historial de Turnos y visualización de observaciones de cada turno con etiqueta "Comentario del Turno:".
+    - Campos de edición en la pestaña "Notas y Configuración".
+  - Compilación local probada y limpia (39/39 rutas en 32.1s).
+
 
 

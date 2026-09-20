@@ -313,6 +313,8 @@ function ClientesPageContent() {
             dni: data.dni || '',
             canalAdquisicion: data.canalAdquisicion || 'ORGANICO',
             frecuencia: data.frecuencia,
+            fechaPrimerTurno: data.fechaPrimerTurno ? new Date(data.fechaPrimerTurno).toISOString().split('T')[0] : '',
+            sesionesPrevias: data.sesionesPrevias !== undefined && data.sesionesPrevias !== null ? data.sesionesPrevias : 0,
             observaciones: data.observaciones || '',
             notasGonzalo: data.notasGonzalo || '',
             enviarNotificaciones: data.enviarNotificaciones !== false
@@ -444,7 +446,9 @@ function ClientesPageContent() {
       const payload = {
         ...editNotes,
         whatsapp: fullPhone,
-        nombreCompleto: `${editNotes.nombre.trim()} ${editNotes.apellido.trim()}`.trim()
+        nombreCompleto: `${editNotes.nombre.trim()} ${editNotes.apellido.trim()}`.trim(),
+        fechaPrimerTurno: editNotes.fechaPrimerTurno || null,
+        sesionesPrevias: Number(editNotes.sesionesPrevias) || 0
       };
       const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
         method: 'PUT',
@@ -462,6 +466,8 @@ function ClientesPageContent() {
           dni: data.dni,
           canalAdquisicion: data.canalAdquisicion,
           frecuencia: data.frecuencia,
+          fechaPrimerTurno: data.fechaPrimerTurno,
+          sesionesPrevias: data.sesionesPrevias,
           observaciones: data.observaciones,
           notasGonzalo: data.notasGonzalo,
           enviarNotificaciones: data.enviarNotificaciones
@@ -507,10 +513,12 @@ function ClientesPageContent() {
 
   // Calculations for profile overview
   const getProfileStats = (client) => {
-    if (!client || !client.turnos) return { count: 0, lastDate: 'Nunca', timeSinceLast: 'N/A' };
+    if (!client || !client.turnos) return { count: 0, totalCount: 0, previasCount: 0, lastDate: 'Nunca', firstDate: 'Sin turnos', timeSinceLast: 'N/A', nextTurn: null };
     
     const turnosRealizados = client.turnos.filter(t => t.estado === 'REALIZADO');
     const count = turnosRealizados.length;
+    const previasCount = Number(client.sesionesPrevias) || 0;
+    const totalCount = count + previasCount;
     
     let lastDate = 'Nunca';
     let timeSinceLast = 'N/A';
@@ -539,6 +547,17 @@ function ClientesPageContent() {
       }
     }
 
+    // Determine first date
+    let firstDate = 'Sin turnos';
+    if (client.fechaPrimerTurno) {
+      firstDate = formatLocalDateMedium(client.fechaPrimerTurno);
+    } else if (client.turnos.length > 0) {
+      const sortedAsc = [...client.turnos].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+      firstDate = formatLocalDateMedium(sortedAsc[0].fecha);
+    } else if (client.fechaAlta) {
+      firstDate = formatLocalDateMedium(client.fechaAlta);
+    }
+
     // Next turn if any (strictly tomorrow or later, ignoring today/past)
     const startOfTomorrow = new Date();
     startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
@@ -553,7 +572,10 @@ function ClientesPageContent() {
 
     return {
       count,
+      totalCount,
+      previasCount,
       lastDate,
+      firstDate,
       timeSinceLast,
       nextTurn
     };
@@ -642,7 +664,7 @@ function ClientesPageContent() {
             </thead>
             <tbody>
               {clients.map(client => {
-                const realizadosCount = client.turnos.filter(t => t.estado === 'REALIZADO').length;
+                const realizadosCount = (Number(client.sesionesPrevias) || 0) + (client.turnos ? client.turnos.filter(t => t.estado === 'REALIZADO').length : 0);
                 return (
                   <tr key={client.id}>
                     <td onClick={() => handleClientClick(client.id)} className={styles.clientName}>
@@ -705,7 +727,17 @@ function ClientesPageContent() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     <div className={styles.cardSection}>
                       <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Sesiones Realizadas</span>
-                      <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-gold)' }}>{stats.count}</span>
+                      <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-gold)' }}>{stats.totalCount}</span>
+                      {stats.previasCount > 0 && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.2rem' }}>
+                          ({stats.count} en sistema + {stats.previasCount} previas)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.cardSection}>
+                      <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Fecha Primer Turno</span>
+                      <span className={styles.detailValue} style={{ fontSize: '1.05rem' }}>{stats.firstDate}</span>
                     </div>
                     
                     <div className={styles.cardSection}>
@@ -783,6 +815,25 @@ function ClientesPageContent() {
                   <div className={styles.cardSection}>
                     <h3 className={styles.cardSectionTitle}>Historial de Turnos</h3>
                     
+                    {/* Operator Clinical / Laser Notes Banner */}
+                    {selectedClient.notasGonzalo && (
+                      <div style={{
+                        backgroundColor: 'rgba(212, 165, 77, 0.08)',
+                        border: '1px solid rgba(212, 165, 77, 0.35)',
+                        borderRadius: '8px',
+                        padding: '0.75rem 1rem',
+                        marginBottom: '1rem',
+                        fontSize: '0.85rem'
+                      }}>
+                        <strong style={{ color: 'var(--color-gold)', display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
+                          🛡️ Observaciones del Operador (Potencia / Clínica):
+                        </strong>
+                        <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                          {selectedClient.notasGonzalo}
+                        </div>
+                      </div>
+                    )}
+
                     {selectedClient.turnos.length === 0 ? (
                       <div className={styles.emptyState}>Sin historial registrado</div>
                     ) : (
@@ -837,8 +888,8 @@ function ClientesPageContent() {
                                   <span>Saldo: ${t.saldoPendiente.toLocaleString()}</span>
                                 </div>
                                 {t.observaciones && (
-                                  <div className={styles.paperNotes}>
-                                    <strong>Nota:</strong> {t.observaciones}
+                                  <div className={styles.paperNotes} style={{ marginTop: '0.5rem', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
+                                    <strong style={{ color: 'var(--color-gold)' }}>Comentario del Turno:</strong> {t.observaciones}
                                   </div>
                                 )}
                               </div>
@@ -1029,6 +1080,27 @@ function ClientesPageContent() {
                           required
                           min="1"
                           max="24"
+                        />
+                      </div>
+                    </div>
+
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Fecha Primer Turno</label>
+                        <input
+                          type="date"
+                          value={editNotes.fechaPrimerTurno || ''}
+                          onChange={(e) => setEditNotes({ ...editNotes, fechaPrimerTurno: e.target.value })}
+                        />
+                      </div>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>Sesiones Previas (Externas)</label>
+                        <input
+                          type="number"
+                          value={editNotes.sesionesPrevias ?? 0}
+                          onChange={(e) => setEditNotes({ ...editNotes, sesionesPrevias: Number(e.target.value) })}
+                          min="0"
+                          max="999"
                         />
                       </div>
                     </div>

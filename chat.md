@@ -1172,5 +1172,30 @@
   - Cambios fusionados a la rama `staging` y desplegados en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging`).
   - Producción (`origin/main`, puerto 3006) 100% protegida e inalterada.
 
+## Mensaje del Usuario (2026-09-20 10:25-03:00)
+> "Acá en medio agrégale 2 espacios par modificar, el primero sería la fecha en la que se hizo el primer turno(modificable), y después al lado para poner cuántas sesiones lleva hecha (también modificable y va a arrancar en la cantidad de sesiones que tome el sistema) (así si le ponemos que lleva 8 sesiones, y tiene 3 ya realizadas en la agenda, va a contar como que son 5 sesiones previas, y aparecerán 8 sesiones que se irán sumando según se haga sesiones realizadas. Y abajo del todo, abajo de los comentarios de operador, vamos a sumar un espacio más para 'comentarios de turno' donde lo que escribanos en ese turno, solo se guardara para ese turno, para el siguiente no anteriores, además los comentarios de 'Va a avisar', y 'pierde seña' etc que ahora aparecen en comentarios del operador, ahora van a aparecer en ese espacio. Así en el historial de turnos, solo va a aparecer la información de los comentarios del operador, y de los comentarios de cada turno, NO HACE FALTA QUE APAREZCAN LOS COMENTARIOS GENERALES... Además que se puedan agrandar los espacios de texto desde el celular porque es muy difícil agrandarlo"
+
+## Respuesta del Asistente (D-60)
+- **Implementación de las 4 Mejoras Clínicas y de Usabilidad**:
+  1. **Fecha del Primer Turno (Editable)**:
+     - Añadido campo `fechaPrimerTurno DateTime?` en modelo `Cliente` (`prisma/schema.prisma`).
+     - Renderizado como input de fecha editable en el modal del turno (entre Frecuencia y Observaciones) y en la ficha del cliente.
+  2. **Conteo Acumulativo de Sesiones (`sesionesPrevias` + turnos `REALIZADO`)**:
+     - Añadido campo `sesionesPrevias Int @default(0)` en modelo `Cliente`.
+     - Si Gonzalo edita el total (ej. pone 8 habiendo 3 en el sistema), se calcula `sesionesPrevias = 5` y se muestra `8 (3 en sistema + 5 previas)`. Conforme se completen futuros turnos en la agenda, el total aumenta dinámicamente.
+     - Reflejado también en la columna "Sesiones" de la tabla del directorio de clientes y en el resumen de la ficha.
+  3. **Comentarios de este Turno (Exclusivo de la Sesión)**:
+     - Nuevo textarea dedicado ubicado debajo de Observaciones del Operador.
+     - Lo que se escribe se guarda estrictamente en `Turno.observaciones`, sin copiarse a turnos anteriores ni siguientes y sin contaminar las observaciones del cliente.
+     - Los avisos de estado (`[Va a avisar próximo turno]`, señas guardadas/perdidas) ahora se adjuntan exclusivamente a este campo.
+     - En el Historial de Turnos de la ficha del cliente se muestra el banner destacado de Notas del Operador (`notasGonzalo`) en la cabecera y el comentario de cada sesión en su tarjeta correspondiente, sin repetir notas generales.
+  4. **Botón [ ⤢ Ampliar ] / [ ⤡ Reducir ] en Textareas**:
+     - Incorporado botón de expansión táctil junto a la etiqueta de cada uno de los 3 bloques de notas (Observaciones Generales, Notas del Operador y Comentarios de Turno) para alternar cómodamente entre 75px y 210px en pantallas táctiles de celulares.
+- **Verificación y Despliegue en Staging**:
+  - Compilación local exitosa con Turbopack (39/39 rutas en 32.1s).
+  - Despliegue en el entorno aislado de Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, base de datos `agenda_db_staging`).
+  - Producción (`origin/main`, puerto 3006) 100% aislada e intacta.
+
+
 
 

@@ -96,7 +96,17 @@ export async function GET(request) {
         }
       },
       include: {
-        cliente: true
+        cliente: {
+          include: {
+            turnos: {
+              select: {
+                id: true,
+                fecha: true,
+                estado: true
+              }
+            }
+          }
+        }
       },
       orderBy: {
         horaInicio: 'asc'
@@ -306,13 +316,13 @@ export async function POST(request) {
       }
     }
 
-    if (observaciones !== undefined && observaciones !== '' && finalClienteId) {
+    if (body.clientObservaciones !== undefined && body.clientObservaciones !== '' && finalClienteId) {
       await prisma.cliente.update({
         where: { id: finalClienteId },
-        data: { observaciones }
+        data: { observaciones: body.clientObservaciones }
       }).catch(err => console.error('Error updating client observaciones:', err));
       if (newTurno.cliente) {
-        newTurno.cliente.observaciones = observaciones;
+        newTurno.cliente.observaciones = body.clientObservaciones;
       }
     }
 

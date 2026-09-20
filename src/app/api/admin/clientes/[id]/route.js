@@ -58,6 +58,8 @@ export async function PUT(request, { params }) {
       frecuencia,
       observaciones,
       notasGonzalo,
+      fechaPrimerTurno,
+      sesionesPrevias,
       enviarNotificaciones
     } = body;
 
@@ -112,6 +114,8 @@ export async function PUT(request, { params }) {
     if (frecuencia !== undefined) updateData.frecuencia = Number(frecuencia);
     if (observaciones !== undefined) updateData.observaciones = observaciones;
     if (notasGonzalo !== undefined) updateData.notasGonzalo = notasGonzalo;
+    if (fechaPrimerTurno !== undefined) updateData.fechaPrimerTurno = fechaPrimerTurno ? new Date(fechaPrimerTurno) : null;
+    if (sesionesPrevias !== undefined && !isNaN(Number(sesionesPrevias))) updateData.sesionesPrevias = Number(sesionesPrevias);
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = enviarNotificaciones;
 
     const updated = await prisma.cliente.update({

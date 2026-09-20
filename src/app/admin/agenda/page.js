@@ -320,6 +320,13 @@ export default function AgendaPage() {
   });
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
+  const [tempClientFechaPrimerTurno, setTempClientFechaPrimerTurno] = useState('');
+  const [tempClientSesionesTotal, setTempClientSesionesTotal] = useState(0);
+  const [tempClientSesionesPrevias, setTempClientSesionesPrevias] = useState(0);
+  const [tempTurnoObservaciones, setTempTurnoObservaciones] = useState('');
+  const [expandedObsGeneral, setExpandedObsGeneral] = useState(false);
+  const [expandedNotasGonzalo, setExpandedNotasGonzalo] = useState(false);
+  const [expandedTurnoObs, setExpandedTurnoObs] = useState(false);
   const [sendingReceipt, setSendingReceipt] = useState({});
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
   const [cancelModalTurno, setCancelModalTurno] = useState(null);
@@ -580,56 +587,137 @@ export default function AgendaPage() {
 
   useEffect(() => {
     if (selectedTurno) {
+      setTempTurnoObservaciones(selectedTurno.observaciones || '');
       if (selectedTurno.cliente) {
         setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
         setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
         setTempClientNotasGonzalo(selectedTurno.cliente.notasGonzalo || '');
+
+        const clientTurnos = selectedTurno.cliente.turnos || [];
+        const completedInSystem = clientTurnos.filter(t => t.estado === 'REALIZADO').length;
+        const previas = selectedTurno.cliente.sesionesPrevias || 0;
+        setTempClientSesionesPrevias(previas);
+        setTempClientSesionesTotal(completedInSystem + previas);
+
+        if (selectedTurno.cliente.fechaPrimerTurno) {
+          try {
+            setTempClientFechaPrimerTurno(new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0]);
+          } catch {
+            setTempClientFechaPrimerTurno('');
+          }
+        } else {
+          let earliestDate = null;
+          if (clientTurnos.length > 0) {
+            const sorted = [...clientTurnos].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            earliestDate = sorted[0]?.fecha;
+          }
+          if (!earliestDate && selectedTurno.cliente.fechaAlta) {
+            earliestDate = selectedTurno.cliente.fechaAlta;
+          }
+          if (!earliestDate) {
+            earliestDate = selectedTurno.fecha;
+          }
+          try {
+            setTempClientFechaPrimerTurno(new Date(earliestDate).toISOString().split('T')[0]);
+          } catch {
+            setTempClientFechaPrimerTurno('');
+          }
+        }
       } else {
         setTempClientObservaciones('');
         setTempClientFrecuencia(4);
         setTempClientNotasGonzalo('');
+        setTempClientFechaPrimerTurno('');
+        setTempClientSesionesTotal(0);
+        setTempClientSesionesPrevias(0);
       }
     } else {
+      setTempTurnoObservaciones('');
       setTempClientObservaciones('');
       setTempClientFrecuencia(4);
       setTempClientNotasGonzalo('');
+      setTempClientFechaPrimerTurno('');
+      setTempClientSesionesTotal(0);
+      setTempClientSesionesPrevias(0);
+      setExpandedObsGeneral(false);
+      setExpandedNotasGonzalo(false);
+      setExpandedTurnoObs(false);
     }
   }, [selectedTurno]);
 
-  const handleSaveClientObservaciones = async (silent = false) => {
+  const handleTotalSesionesChange = (newTotalVal) => {
+    const val = Math.max(0, parseInt(newTotalVal, 10) || 0);
+    setTempClientSesionesTotal(val);
+    const clientTurnos = selectedTurno?.cliente?.turnos || [];
+    const completedInSystem = clientTurnos.filter(t => t.estado === 'REALIZADO').length;
+    const computedPrevias = Math.max(0, val - completedInSystem);
+    setTempClientSesionesPrevias(computedPrevias);
+  };
+
+  const handleSaveClientObservaciones = async (silent = false, overrides = {}) => {
     if (!selectedTurno || !selectedTurno.cliente) return;
     try {
+      const payload = {
+        observaciones: overrides.observaciones !== undefined ? overrides.observaciones : tempClientObservaciones,
+        frecuencia: overrides.frecuencia !== undefined ? overrides.frecuencia : tempClientFrecuencia,
+        notasGonzalo: overrides.notasGonzalo !== undefined ? overrides.notasGonzalo : tempClientNotasGonzalo,
+        fechaPrimerTurno: overrides.fechaPrimerTurno !== undefined ? overrides.fechaPrimerTurno : (tempClientFechaPrimerTurno || null),
+        sesionesPrevias: overrides.sesionesPrevias !== undefined ? overrides.sesionesPrevias : tempClientSesionesPrevias
+      };
+
       const res = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          observaciones: tempClientObservaciones,
-          frecuencia: tempClientFrecuencia,
-          notasGonzalo: tempClientNotasGonzalo
-        })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
-        if (!silent) showToast('Observaciones del cliente guardadas.');
+        if (!silent) showToast('Datos del cliente guardados.');
         setSelectedTurno(prev => {
           if (!prev) return prev;
           return {
             ...prev,
             cliente: {
               ...prev.cliente,
-              observaciones: tempClientObservaciones,
-              frecuencia: tempClientFrecuencia,
-              notasGonzalo: tempClientNotasGonzalo
+              observaciones: payload.observaciones,
+              frecuencia: payload.frecuencia,
+              notasGonzalo: payload.notasGonzalo,
+              fechaPrimerTurno: payload.fechaPrimerTurno,
+              sesionesPrevias: payload.sesionesPrevias
             }
           };
         });
         fetchAppointments();
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         if (!silent) showToast(err.error || 'Error al guardar datos del cliente.', 'error');
       }
     } catch (e) {
       console.error('Error saving client observations/frecuencia:', e);
       if (!silent) showToast('Error de red al guardar datos.', 'error');
+    }
+  };
+
+  const handleSaveTurnoObservaciones = async (silent = false) => {
+    if (!selectedTurno) return;
+    try {
+      const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          observaciones: tempTurnoObservaciones
+        })
+      });
+      if (res.ok) {
+        if (!silent) showToast('Comentarios de este turno guardados.');
+        setSelectedTurno(prev => prev ? { ...prev, observaciones: tempTurnoObservaciones } : null);
+        fetchAppointments();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        if (!silent) showToast(err.error || 'Error al guardar comentarios del turno.', 'error');
+      }
+    } catch (e) {
+      console.error('Error saving turno observaciones:', e);
+      if (!silent) showToast('Error de conexión al guardar comentarios.', 'error');
     }
   };
   // Generate hourly labels for time column dynamically
@@ -779,8 +867,9 @@ export default function AgendaPage() {
               const hasDiscount = (turno.bonificacion || 0) > 0;
               const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
               const dynPrices = getUpdatedTurnoPrices(turno);
-              const initialObs = (turno.cliente?.observaciones || turno.observaciones || '').trim();
+              const initialObs = (turno.cliente?.observaciones || '').trim();
               const initialNotas = (turno.cliente?.notasGonzalo || '').trim();
+              const initialTurnoObs = (turno.observaciones || '').trim();
               const initialFreq = turno.cliente?.frecuencia || 4;
 
               const zonesFromUrl = zonesParam ? zonesParam.split(',').filter(Boolean) : null;
@@ -799,6 +888,7 @@ export default function AgendaPage() {
                 initialOtrosPrecio: String(finalOtrosPrecio || ''),
                 initialObservaciones: initialObs,
                 initialNotasGonzalo: initialNotas,
+                initialTurnoObservaciones: initialTurnoObs,
                 initialFrecuencia: initialFreq,
                 fechaStr: newDate || (typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha)),
                 horaInicio: newTime || turno.horaInicio,
@@ -817,6 +907,7 @@ export default function AgendaPage() {
                 selectedZoneIds: finalZoneIds,
                 observaciones: initialObs,
                 notasGonzalo: initialNotas,
+                turnoObservaciones: initialTurnoObs,
                 frecuencia: initialFreq,
                 hasOtros: Boolean(finalHasOtros),
                 otrosTexto: finalOtrosTexto || '',
@@ -1459,8 +1550,9 @@ export default function AgendaPage() {
           bonificacion: Number(editTurno.bonificacion || 0),
           descuentoTipo: editTurno.descuentoTipo,
           descuentoValor: Number(editTurno.descuentoValor || 0),
-          observaciones: editTurno.observaciones,
-          notasGonzalo: editTurno.notasGonzalo && editTurno.notasGonzalo.trim() !== '' ? editTurno.notasGonzalo : undefined,
+          observaciones: editTurno.turnoObservaciones !== undefined ? editTurno.turnoObservaciones : (selectedTurno.observaciones || ''),
+          clientObservaciones: editTurno.observaciones !== undefined ? editTurno.observaciones : undefined,
+          notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : undefined,
           frecuencia: editTurno.frecuencia,
           selectedZoneIds: editTurno.selectedZoneIds,
           hasOtros: editTurno.hasOtros,
@@ -1472,6 +1564,16 @@ export default function AgendaPage() {
         setIsEditing(false);
         setIsDetailsOpen(false);
         showToast('Turno guardado con éxito.');
+        setSelectedTurno(prev => prev ? {
+          ...prev,
+          observaciones: editTurno.turnoObservaciones !== undefined ? editTurno.turnoObservaciones : prev.observaciones,
+          cliente: prev.cliente ? {
+            ...prev.cliente,
+            observaciones: editTurno.observaciones !== undefined ? editTurno.observaciones : prev.cliente.observaciones,
+            notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.cliente.notasGonzalo,
+            frecuencia: editTurno.frecuencia !== undefined ? editTurno.frecuencia : prev.cliente.frecuencia
+          } : prev.cliente
+        } : null);
         fetchAppointments();
       } else {
         const errData = await res.json();
@@ -1896,6 +1998,7 @@ export default function AgendaPage() {
       const isValorSeñaChanged = editTurno.manualSeñaOverride !== undefined && Number(editTurno.manualSeñaOverride) !== Number(editTurno.initialValorSeña);
       const isObsChanged = (editTurno.observaciones || '').trim() !== (editTurno.initialObservaciones || '');
       const isNotasChanged = (editTurno.notasGonzalo || '').trim() !== (editTurno.initialNotasGonzalo || '');
+      const isTurnoObsChanged = (editTurno.turnoObservaciones || '').trim() !== (editTurno.initialTurnoObservaciones || '');
       const isFreqChanged = editTurno.frecuencia !== (editTurno.initialFrecuencia || 4);
       
       const isOtrosChanged = Boolean(editTurno.hasOtros) !== Boolean(editTurno.initialHasOtros) ||
@@ -1906,13 +2009,14 @@ export default function AgendaPage() {
       const currentZonesStr = JSON.stringify([...(editTurno.selectedZoneIds || [])].sort());
       const isZonesChanged = initialZonesStr !== currentZonesStr;
 
-      return isFechaChanged || isHoraInicioChanged || isHoraFinChanged || isEstadoChanged || isValorTotalChanged || isValorSeñaChanged || isObsChanged || isNotasChanged || isFreqChanged || isOtrosChanged || isZonesChanged;
+      return isFechaChanged || isHoraInicioChanged || isHoraFinChanged || isEstadoChanged || isValorTotalChanged || isValorSeñaChanged || isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged || isOtrosChanged || isZonesChanged;
     } else {
       const isObsChanged = (tempClientObservaciones || '').trim() !== (selectedTurno.cliente?.observaciones || '').trim();
       const isNotasChanged = (tempClientNotasGonzalo || '').trim() !== (selectedTurno.cliente?.notasGonzalo || '').trim();
+      const isTurnoObsChanged = (tempTurnoObservaciones || '').trim() !== (selectedTurno.observaciones || '').trim();
       const isFreqChanged = tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4);
 
-      return isObsChanged || isNotasChanged || isFreqChanged;
+      return isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged;
     }
   };
 
@@ -3006,6 +3110,18 @@ export default function AgendaPage() {
                       rows="2"
                     />
                   </div>
+
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                    <label className={styles.inputLabel}>
+                      📝 Comentarios de este Turno (Exclusivo de esta sesión)
+                    </label>
+                    <textarea
+                      value={editTurno.turnoObservaciones || ''}
+                      onChange={(e) => setEditTurno({ ...editTurno, turnoObservaciones: e.target.value })}
+                      placeholder="Comentarios exclusivos de este turno en particular..."
+                      rows="2"
+                    />
+                  </div>
                 </div>
 
                 {editTurnoWarning && (
@@ -3220,49 +3336,165 @@ export default function AgendaPage() {
                     </div>
                   )}
 
+                  {selectedTurno.clienteId && (
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginTop: '0.25rem' }}>
+                        <div>
+                          <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.35rem', color: 'var(--text-secondary)' }}>
+                            📅 Fecha Primer Turno
+                          </span>
+                          <input
+                            type="date"
+                            value={tempClientFechaPrimerTurno}
+                            onChange={(e) => setTempClientFechaPrimerTurno(e.target.value)}
+                            onBlur={() => handleSaveClientObservaciones(true, { fechaPrimerTurno: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '0.55rem',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-secondary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.85rem',
+                              fontWeight: 600,
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.25rem' }}>
+                            <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)' }}>
+                              🔢 Sesiones Realizadas
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                              ({(selectedTurno.cliente?.turnos || []).filter(t => t.estado === 'REALIZADO').length} en sistema + {tempClientSesionesPrevias} previas)
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            value={tempClientSesionesTotal}
+                            onChange={(e) => handleTotalSesionesChange(e.target.value)}
+                            onBlur={() => handleSaveClientObservaciones(true)}
+                            style={{
+                              width: '100%',
+                              padding: '0.55rem',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-secondary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.9rem',
+                              fontWeight: 700,
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                      </div>
+                      {(tempClientFechaPrimerTurno !== (selectedTurno.cliente?.fechaPrimerTurno ? new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0] : '') ||
+                        tempClientSesionesPrevias !== (selectedTurno.cliente?.sesionesPrevias || 0)) && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveClientObservaciones(false)}
+                          className="btn btn-primary"
+                          style={{ alignSelf: 'flex-end', marginTop: '0.5rem', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          💾 Guardar Fecha y Sesiones
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <span className={styles.detailLabel}>Observaciones Generales del Cliente</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span className={styles.detailLabel}>Observaciones Generales del Cliente</span>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedObsGeneral(prev => !prev)}
+                        style={{
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-secondary)',
+                          borderRadius: '6px',
+                          padding: '0.2rem 0.55rem',
+                          fontSize: '0.72rem',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        {expandedObsGeneral ? '⤡ Reducir' : '⤢ Ampliar'}
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
                       <textarea
                         value={tempClientObservaciones}
                         onChange={(e) => setTempClientObservaciones(e.target.value)}
                         onBlur={() => handleSaveClientObservaciones(true)}
                         placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
-                        rows={2}
+                        rows={expandedObsGeneral ? 8 : 2}
                         style={{
                           width: '100%',
+                          height: expandedObsGeneral ? '200px' : '70px',
                           padding: '0.6rem',
                           borderRadius: '8px',
                           border: '1px solid var(--border-color)',
                           backgroundColor: 'var(--bg-secondary)',
                           color: 'var(--text-primary)',
                           fontSize: '0.85rem',
-                          resize: 'vertical'
+                          resize: 'vertical',
+                          boxSizing: 'border-box',
+                          transition: 'height 0.2s ease'
                         }}
                       />
                     </div>
                   </div>
 
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <span className={styles.detailLabel}>
-                      Observaciones del Operador (Potencia, Clínica, Indicaciones)
-                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span className={styles.detailLabel} style={{ color: 'var(--color-gold)' }}>
+                        🛡️ Observaciones del Operador (Potencia, Clínica, Indicaciones)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedNotasGonzalo(prev => !prev)}
+                        style={{
+                          background: 'rgba(212, 165, 77, 0.1)',
+                          border: '1px solid #d4a54d60',
+                          color: 'var(--color-gold)',
+                          borderRadius: '6px',
+                          padding: '0.2rem 0.55rem',
+                          fontSize: '0.72rem',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        {expandedNotasGonzalo ? '⤡ Reducir' : '⤢ Ampliar'}
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
                       <textarea
                         value={tempClientNotasGonzalo}
                         onChange={(e) => setTempClientNotasGonzalo(e.target.value)}
                         onBlur={() => handleSaveClientObservaciones(true)}
                         placeholder="Potencia utilizada (J), tolerancia al dolor, zonas sensibles o notas clínicas..."
-                        rows={3}
+                        rows={expandedNotasGonzalo ? 8 : 3}
                         style={{
                           width: '100%',
+                          height: expandedNotasGonzalo ? '220px' : '85px',
                           padding: '0.6rem',
                           borderRadius: '8px',
                           border: '1px solid #d4a54d50',
                           backgroundColor: 'var(--bg-secondary)',
                           color: 'var(--text-primary)',
                           fontSize: '0.85rem',
-                          resize: 'vertical'
+                          resize: 'vertical',
+                          boxSizing: 'border-box',
+                          transition: 'height 0.2s ease'
                         }}
                       />
                       {(tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') || 
@@ -3274,6 +3506,65 @@ export default function AgendaPage() {
                           style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
                         >
                           💾 Guardar Cambios
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span className={styles.detailLabel} style={{ color: '#38bdf8' }}>
+                        📝 Comentarios de este Turno (Exclusivos de esta cita)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedTurnoObs(prev => !prev)}
+                        style={{
+                          background: 'rgba(56, 189, 248, 0.1)',
+                          border: '1px solid #38bdf860',
+                          color: '#38bdf8',
+                          borderRadius: '6px',
+                          padding: '0.2rem 0.55rem',
+                          fontSize: '0.72rem',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        {expandedTurnoObs ? '⤡ Reducir' : '⤢ Ampliar'}
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <textarea
+                        value={tempTurnoObservaciones}
+                        onChange={(e) => setTempTurnoObservaciones(e.target.value)}
+                        onBlur={() => handleSaveTurnoObservaciones(true)}
+                        placeholder="Comentarios exclusivos de este turno (no se repiten en turnos futuros)..."
+                        rows={expandedTurnoObs ? 8 : 3}
+                        style={{
+                          width: '100%',
+                          height: expandedTurnoObs ? '200px' : '75px',
+                          padding: '0.6rem',
+                          borderRadius: '8px',
+                          border: '1px solid #38bdf850',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.85rem',
+                          resize: 'vertical',
+                          boxSizing: 'border-box',
+                          transition: 'height 0.2s ease'
+                        }}
+                      />
+                      {tempTurnoObservaciones !== (selectedTurno.observaciones || '') && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveTurnoObservaciones(false)}
+                          className="btn btn-primary"
+                          style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          💾 Guardar Comentarios del Turno
                         </button>
                       )}
                     </div>
@@ -3320,8 +3611,9 @@ export default function AgendaPage() {
                         const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
                         const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
                         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
-                        const initialObs = (tempClientObservaciones || selectedTurno.cliente?.observaciones || selectedTurno.observaciones || '').trim();
+                        const initialObs = (tempClientObservaciones || selectedTurno.cliente?.observaciones || '').trim();
                         const initialNotas = (tempClientNotasGonzalo || selectedTurno.cliente?.notasGonzalo || '').trim();
+                        const initialTurnoObs = (tempTurnoObservaciones || selectedTurno.observaciones || '').trim();
                         const initialFreq = tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4;
 
                         setEditTurno({
@@ -3334,6 +3626,7 @@ export default function AgendaPage() {
                           initialOtrosPrecio: String(otrosPrecio || ''),
                           initialObservaciones: initialObs,
                           initialNotasGonzalo: initialNotas,
+                          initialTurnoObservaciones: initialTurnoObs,
                           initialFrecuencia: initialFreq,
                           fechaStr: typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha),
                           horaInicio: selectedTurno.horaInicio,
@@ -3352,6 +3645,7 @@ export default function AgendaPage() {
                           selectedZoneIds: preselectedZoneIds,
                           observaciones: initialObs,
                           notasGonzalo: initialNotas,
+                          turnoObservaciones: initialTurnoObs,
                           frecuencia: initialFreq,
                           hasOtros: Boolean(hasOtros),
                           otrosTexto: otrosTexto || '',
