@@ -838,30 +838,45 @@ function ClientesPageContent() {
       {/* PROFILE MODAL (Ficha completa) */}
       {isProfileOpen && selectedClient && stats && (
         <div className={agendaStyles.modalOverlay}>
-          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '850px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', padding: 0 }}>
-            <div className={agendaStyles.modalHeader} style={{ padding: '1.5rem 1.5rem 0.75rem 1.5rem', marginBottom: 0 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <h3 className={styles.ficheTitle}>{selectedClient.nombreCompleto}</h3>
-                  {selectedClient.enviarNotificaciones === false && (
-                    <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#d4a54d', color: '#000', fontWeight: 'bold' }}>
-                      ⚠️ Notificaciones Desactivadas
+          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ width: '100%', maxWidth: '850px', display: 'flex', flexDirection: 'column', maxHeight: '92vh', padding: 0, margin: '0 auto', boxSizing: 'border-box' }}>
+            <div className={agendaStyles.modalHeader} style={{ padding: '1.25rem 1.25rem 0.75rem 1.25rem', marginBottom: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%', boxSizing: 'border-box', borderBottom: '1px solid var(--border-color)' }}>
+              {/* Row 1: Client Title & Close Button */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '0.75rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h3 className={styles.ficheTitle} style={{ margin: 0, fontSize: '1.3rem', wordBreak: 'break-word', color: 'var(--text-primary)' }}>
+                      {selectedClient.nombreCompleto}
+                    </h3>
+                    {selectedClient.enviarNotificaciones === false && (
+                      <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.45rem', borderRadius: '4px', backgroundColor: '#d4a54d', color: '#000', fontWeight: 'bold' }}>
+                        ⚠️ Notificaciones Desactivadas
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem 0.6rem', alignItems: 'center' }}>
+                    <span>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')}</span>
+                    <span>•</span>
+                    <span>DNI: {selectedClient.dni || 'Sin registrar'}</span>
+                    <span>•</span>
+                    <span>
+                      Nacimiento: {selectedClient.fechaNacimiento ? `${new Date(selectedClient.fechaNacimiento).toLocaleDateString('es-ES')}${stats.edad !== null ? ` (${stats.edad} años)` : ''}` : 'Sin registrar'}
                     </span>
-                  )}
+                    <span>•</span>
+                    <span>Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem 0.75rem', alignItems: 'center' }}>
-                  <span>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')}</span>
-                  <span>|</span>
-                  <span>DNI: {selectedClient.dni || 'Sin registrar'}</span>
-                  <span>|</span>
-                  <span>
-                    Nacimiento: {selectedClient.fechaNacimiento ? `${new Date(selectedClient.fechaNacimiento).toLocaleDateString('es-ES')}${stats.edad !== null ? ` (${stats.edad} años)` : ''}` : 'Sin registrar'}
-                  </span>
-                  <span>|</span>
-                  <span>Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseProfile}
+                  className={agendaStyles.closeBtn}
+                  style={{ fontSize: '1.8rem', lineHeight: 1, flexShrink: 0, marginTop: '-0.25rem' }}
+                >
+                  &times;
+                </button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+
+              {/* Row 2: Action button on its own line */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
                 <button
                   type="button"
                   onClick={() => window.open(`/admin/clientes/${selectedClient.id}/imprimir`, '_blank')}
@@ -872,26 +887,26 @@ function ClientesPageContent() {
                     color: '#e5e7eb',
                     border: '1px solid #374151',
                     borderRadius: '6px',
-                    padding: '0.4rem 0.8rem',
-                    fontSize: '0.8rem',
+                    padding: '0.45rem 0.85rem',
+                    fontSize: '0.82rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '0.4rem'
+                    gap: '0.4rem',
+                    boxSizing: 'border-box'
                   }}
                 >
                   📄 Descargar PDF / Imprimir
                 </button>
-                <button onClick={handleCloseProfile} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
               </div>
             </div>
 
             {/* Tabs */}
-            <div className={styles.tabs} style={{ padding: '0 1.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-              <button onClick={() => setActiveTab('history')} className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`}>Ficha Histórica</button>
-              <button onClick={() => setActiveTab('logs')} className={`${styles.tabBtn} ${activeTab === 'logs' ? styles.tabBtnActive : ''}`}>Historial Notificaciones</button>
-              <button onClick={() => setActiveTab('settings')} className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`}>Notas y Configuración</button>
+            <div className={styles.tabs} style={{ padding: '0 1.25rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexWrap: 'nowrap', gap: '0.25rem' }}>
+              <button onClick={() => setActiveTab('history')} className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`} style={{ whiteSpace: 'nowrap' }}>Ficha Histórica</button>
+              <button onClick={() => setActiveTab('logs')} className={`${styles.tabBtn} ${activeTab === 'logs' ? styles.tabBtnActive : ''}`} style={{ whiteSpace: 'nowrap' }}>Historial Notificaciones</button>
+              <button onClick={() => setActiveTab('settings')} className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`} style={{ whiteSpace: 'nowrap' }}>Notas y Configuración</button>
             </div>
 
             {/* Scrollable Content Container */}

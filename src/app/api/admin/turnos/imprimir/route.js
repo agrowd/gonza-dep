@@ -48,10 +48,30 @@ export async function GET(request) {
       return rawIsoStr === fecha;
     });
 
+    // Fetch bloqueos for the date
+    const bloqueos = await prisma.bloqueo.findMany({
+      where: {
+        fecha: {
+          gte: new Date(startDate.getTime() - 12 * 3600 * 1000),
+          lte: new Date(endDate.getTime() + 12 * 3600 * 1000)
+        }
+      }
+    });
+
+    const filteredBloqueos = bloqueos.filter(b => {
+      if (!b.fecha) return false;
+      const rawIsoStr = typeof b.fecha === 'string' ? b.fecha.split('T')[0] : b.fecha.toISOString().split('T')[0];
+      return rawIsoStr === fecha;
+    });
+
     // Sort chronologically by start time in minutes
     filteredTurnos.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+    filteredBloqueos.sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
 
-    return NextResponse.json(filteredTurnos);
+    return NextResponse.json({
+      turnos: filteredTurnos,
+      bloqueos: filteredBloqueos
+    });
   } catch (error) {
     console.error('Error fetching printable turnos:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
