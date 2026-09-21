@@ -261,3 +261,17 @@
 3. Se eliminaron los paddings inline fijos (`6px 10px`, `8px 10px`, `10px 12px`).
 4. Se incorporó `.tableWrapper` con `overflow-x: auto` para garantizar una lectura fluida sin desbordamientos en cualquier resolución móvil.
 **Estado:** ✅ FIXED
+
+## ERR-30: Detección fallida de clientes agendados y nombres ruidosos de contactos en IA WhatsApp (2026-09-21)
+**Síntoma:** Clientes registrados en la agenda (ej: Alberto Kliphart, `+54 9 29 8469-6364`) aparecían en el panel de chats de la IA con nombres ruidosos de Google Contacts (`Laser Alberto Kliphart 17-9-26 Comp 150k`), y 82 conversaciones de clientes agendados figuraban con `clienteId: null`. La IA respondía con nombres extensos o sin presentarse adecuadamente como asistente virtual.
+**Root Cause:** 
+1. `contextBuilder.js` y `whatsapp.js` priorizaban `contactName` / `addressBookName` por sobre `Cliente.nombreCompleto`.
+2. `autoMergeDuplicateConversations()` limitaba la vinculación a `take: 50`, dejando 82 conversaciones con clientes existentes sin `clienteId`.
+3. `outputCleaner.js` eliminaba la presentación del asistente virtual ("Soy el asistente virtual de Gonzalo...") cuando la conversación ya tenía mensajes previos (`!isFirstMessage`), contradiciendo la exigencia de Gonzalo de presentarse siempre ante clientes en tratamiento.
+**Solución:**
+1. Se creó `src/lib/clienteResolver.js` con `findClientByPhone` (evaluando todas las variantes de dígitos con y sin prefijos internacionales) y `syncAllUnlinkedConversations()` para vincular el 100% de las conversaciones huérfanas con la tabla `Cliente`.
+2. Regla de oro de Gonzalo: si el teléfono coincide con `Cliente` (activo, mantenimiento, etc.), se clasifica incondicionalmente como `CLIENTE_PACIENTE`, usando prioritariamente `Cliente.nombreCompleto` y su primer nombre para el saludo.
+3. En `outputCleaner.js`, se añadió `isPatient = false` a `cleanOngoingGreetings`, preservando la presentación de asistente virtual ante pacientes.
+4. En `/chats`, `getBestDisplayName` y las filas de chat priorizan el nombre oficial del cliente, con iniciales limpias ("AK"), badge `⚡ Cliente`, y panel de ficha con observaciones, notas del operador y link a la agenda.
+**Estado:** ✅ FIXED
+

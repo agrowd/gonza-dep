@@ -1320,6 +1320,26 @@
 - **Despliegue y Validación:**
   - Build local exitoso (39/39 rutas). Commit `42993bd` en `staging`.
   - Desplegado en VPS Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging` PID 1234406). Producción intacta.
+## Mensaje del Usuario (2026-09-21 20:20-03:00)
+> [Audio y Capturas de Gonzalo Siri - `media_1790032615634.png` y `media_1790032666993.png`]
+> "Acá me parece que sería conveniente, para no confundir a la IA porque eso es lo que va a estar pasando, una regla mucho más sencilla de que si lo valida el número de teléfono con la base de datos de clientes de la agenda y está agendado, ya está, es un cliente, sea activo, sea mantenimiento, sea lo que fuera, pero ya está dado de alta. Creo que eso lo simplificás y no tiene el error para ver cómo está cargado, porque no lo está trayendo correctamente."
+> "Revisa eso y el diseño"
 
-
-
+## Respuesta del Asistente:
+- **Diagnóstico y Causas Raíz**:
+  1. En `ia-gonzadep` (`contextBuilder.js` y `whatsapp.js`), el sistema priorizaba el nombre de la libreta de contactos de Google Contacts (`addressBookName` o `contactName`) por sobre la ficha del cliente (`Cliente.nombreCompleto`). Esto provocaba que clientes guardados con notas de turnos en el celular (ej. `Laser Alberto Kliphart 17-9-26 Comp 150k`) confundieran a la IA al extraer el nombre.
+  2. En `ConversacionWsp` de la base de datos de producción (`agenda_db`), 82 conversaciones con clientes agendados tenían `clienteId: null` debido a un límite estricto de `take: 50` en `autoMergeDuplicateConversations()`.
+  3. En `outputCleaner.js`, `cleanOngoingGreetings` eliminaba la presentación del asistente virtual cuando la conversación tenía mensajes previos (`!isFirstMessage`), contradiciendo la directiva de Gonzalo de presentarse siempre como asistente virtual ante pacientes.
+  4. En `/chats`, `getBestDisplayName` priorizaba el nombre de la libreta antes que la ficha del cliente.
+- **Solución Implementada**:
+  1. Creado `src/lib/clienteResolver.js` con `findClientByPhone` (búsqueda normalizada por teléfono en `Cliente`, reconociendo clientes sin importar estado) y `syncAllUnlinkedConversations` (auto-vinculación del 100% de chats con clientes).
+  2. `contextBuilder.js`: Clasificación estricta `contactType = 'CLIENTE_PACIENTE'` si el teléfono coincide con un cliente en base de datos. Prioridad #1 a `Cliente.nombreCompleto` para el saludo del asistente virtual.
+  3. `outputCleaner.js`: Si `isPatient === true`, preserva íntegramente la presentación `"¡Hola [Nombre]! Te saluda el asistente virtual de Gonzalo 😊"`.
+  4. `whatsapp.js`: Asocia automáticamente `clienteId` y el nombre oficial de la agenda al recibir mensajes y procesar conversaciones.
+  5. Rediseño de Bandeja de Chats (`/chats`): Prioridad a `chat.cliente.nombreCompleto`, avatar con iniciales legibles, subtítulo con teléfono y estado, badge `⚡ Cliente`, filtros por pestañas (`⚡ Clientes` / `🟢 Prospectos`), y panel de ficha con observaciones, notas del operador y enlace directo a la agenda.
+- **Despliegue y Validación en Producción (VPS `187.127.9.216`)**:
+  - Compilación Next.js 16 con Turbopack exitosa (código 0).
+  - 82 conversaciones vinculadas exitosamente a sus fichas de Cliente en `agenda_db`. Alberto Kliphart vinculado a su ficha.
+  - PM2 `ia-gonzadep` reiniciado y online (puerto 3007).
+  - Prueba en vivo con OpenAI y Alberto Kliphart: IA reconoció `CLIENTE_PACIENTE`, saludó: *"¡Hola Alberto! Te saluda el asistente virtual de Gonzalo 😊. Tenés turno confirmado para el martes 27 de octubre a las 15:00 hs para cuerpo completo..."* y la presentación se conservó sin recortes.
+  - Bandeja `/chats` 100% funcional y verificada.
