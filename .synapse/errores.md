@@ -203,6 +203,15 @@
 **Solución:**
 1. Se terminaron los procesos zombi huérfanos de Chromium (`PID 1156480` y `1206509`), se eliminaron los bloqueos residuales (`Singleton*`) y se reinició `ia-gonzadep` limpiamente (consumo normal: 0% CPU, 18 MB RAM).
 2. Se verificó que los recordatorios de 48hs del domingo salieron todos correctamente y que el lunes 21 estuvo marcado como bloqueado (no se perdieron turnos).
-3. Se dejó el servicio emitiendo el código QR limpio para que Gonzalo vuelva a escanearlo desde `https://admin.depilacionparahombres.com` y reactive la sesión unificada.
+## ERR-26: Deformación de cabecera en modal de Ficha en móviles y visualización no deseada de datos financieros/teléfonos en planilla de impresión (2026-09-21)
+**Síntoma:** Gonzalo envía 2 capturas de pantalla de WhatsApp con feedback:
+1. En celulares, al abrir la ficha del cliente en `/admin/clientes`, el nombre y datos se comprimían verticalmente en una columna de 1 letra de ancho ("N \n i \n 3 \n r \n e \n g \n i...").
+2. En la planilla imprimible (`/admin/agenda/imprimir`), aparecían el teléfono del cliente, la seña y el saldo (que no deben verse en la hoja física de la clínica), y no se distinguían los espacios libres/vacíos entre turnos.
+**Root Cause:**
+1. En `src/app/admin/clientes/page.js`, `agendaStyles.modalHeader` utilizaba flexbox con `justify-content: space-between` conteniendo en la misma fila el nombre del cliente y el botón con texto rígido `📄 Descargar PDF / Imprimir`. En pantallas de menos de 400px, el botón empujaba al contenedor del título a encogerse hasta ~20px de ancho forzando quiebre carácter por carácter.
+2. En `/admin/agenda/imprimir`, la plantilla mostraba teléfono, seña y saldo tanto en las filas como en el pie de tabla (`<tfoot>`), y solo iteraba turnos sin calcular huecos vacíos ni consultar bloqueos.
+**Solución:**
+1. En `src/app/admin/clientes/page.js`, se reestructuró la cabecera del modal en capas responsivas: Fila 1 con título del cliente (`wordBreak: 'break-word'`) y botón de cerrar (`&times;`), Fila 2 con metadatos (DNI, Alta, Edad, Canal), y Fila 3 con el botón de Descargar PDF en su propia línea completa. Se agregaron reglas `@media (max-width: 640px)` en `clientes.module.css` y scroll horizontal suave en las pestañas (`.tabs`).
+2. En `src/app/api/admin/turnos/imprimir/route.js`, se incorporó la consulta de `bloqueos` de la fecha y se retorna `{ turnos, bloqueos }`.
+3. En `src/app/admin/agenda/imprimir/page.js`, se eliminaron el teléfono, la seña y el saldo de las filas de turnos y del `<tfoot>` (dejando solo `Total Estimado`). En la columna de Zonas se muestran exclusivamente las notas clínicas (`Obs. Operador`) y comentarios de la sesión (`Comentario Turno`). Se implementó el cálculo de huecos de tiempo entre eventos (turnos y bloqueos), renderizando filas con fondo gris claro (`#f1f3f5`) con etiqueta `🟢 Libre (X min)` y "Espacio Disponible".
 **Estado:** ✅ FIXED
-

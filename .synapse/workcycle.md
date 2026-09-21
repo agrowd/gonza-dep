@@ -869,3 +869,18 @@
     - Verificación HTTP y TCP exitosa: el servicio responde y el puerto 3008 está activo y accesible desde internet.
   - **Aislamiento Total:**
     - La rama productiva `main` (`https://agenda.depilacionparahombres.com`, puerto 3006) y su base de datos `agenda_db` no sufrieron ninguna alteración.
+- **21 de Septiembre (17:20 - 17:30: Ajustes por Feedback de Gonzalo en Módulo 2 y 3 - Staging)**:
+  - Gonzalo envió 2 capturas de WhatsApp con feedback crítico:
+    1. *Ficha Modal en celular:* En `/admin/clientes`, al abrir la ficha del cliente, el encabezado se deformaba verticalmente apilando letras individuales ("N \n i \n 3..."). Se reestructuró `agendaStyles.modalHeader` en 3 filas independientes (Fila 1: Título con `wordBreak: break-word` + botón cerrar; Fila 2: Metadatos con DNI, Alta, Edad y Canal; Fila 3: Botón `📄 Descargar PDF / Imprimir` en fila completa). Se habilitó scroll horizontal en pestañas (`.tabs`).
+    2. *Planilla Imprimible de Agenda Diaria (`/admin/agenda/imprimir`):* 
+       - Se quitó el número de teléfono (WhatsApp) bajo el nombre del cliente.
+       - Se eliminaron seña y saldo de la columna Horario y del `<tfoot>` (dejando solo `Total Estimado`).
+       - En la columna Zonas se muestran exclusivamente las notas clínicas (`Obs. Operador`) y notas de la sesión (`Comentario Turno`).
+       - Se incorporaron los espacios libres/vacíos entre eventos (turnos y bloqueos) con fondo gris claro (`#f1f3f5`), etiqueta `🟢 Libre (X min)` y "Espacio Disponible".
+       - Se agregaron los bloqueos a la consulta de la API `/api/admin/turnos/imprimir` para incluirlos en la cronología diaria con fondo ámbar (`#fffbeb`).
+  - **Compilación y Despliegue:**
+    - `npm run build` local exitoso (39/39 rutas compiladas con Turbopack).
+    - Commit `db3ca3f` empujado a `origin/staging`.
+    - Despliegue exitoso al VPS Staging vía `scratch/deploy_vps_staging.js`. PM2 `gonzalo-agenda-staging` reiniciado (PID 1225389, puerto 3008).
+    - Verificación HTTP 200 OK en `http://187.127.9.216:3008`.
+

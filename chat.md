@@ -1262,8 +1262,30 @@
 
 ## Respuesta del Asistente:
 - **Respuesta sobre la integración futura en Main**:
-  - **Sí, va a ser sumamente fácil y seguro**. Todo se está desarrollando en la rama `staging` de forma modular y compatible hacia atrás. Una vez que Gonzalo pruebe y dé el visto bueno al Módulo 2 y al Módulo 3, el paso a `main` consistirá únicamente en un `git merge staging` en `main`, un `npx prisma db push` para aplicar las columnas nuevas sin pérdida de datos, `npm run build` y recarga en PM2.
-- **Preparación del Módulo 3 (Ficha)**:
-  - Creación del plan de implementación en [implementation_plan.md](file:///C:/Users/Try%20Hard/.gemini/antigravity/brain/01478f61-fff4-40e9-b3b8-fb734b8f792d/implementation_plan.md) abarcando los 7 puntos del cliente: historial interactivo bidireccional con agenda, descarga PDF de ficha, exportación de clientes a Excel/CSV, plantilla de recibo comercial oficial (image3.png), estampillado automático de fecha en observaciones, campo `fechaNacimiento` opcional y validación numérica estricta en DNI y WhatsApp.
+  - **Sí, va a ser sumamente fácil y seguro**. Todo se está desarrollando en la rama `staging` de forma modular y compatible hacia atrás.
+- **Implementación y Despliegue de Módulo 3**:
+  - Se implementaron los 7 puntos de la ficha: historial bidireccional, PDF de ficha, exportación Excel/CSV, recibo comercial tipo factura X, estampillado de fecha, fechaNacimiento/edad y validación numérica.
+  - Se desplegó en Staging (`http://187.127.9.216:3008`).
+
+## Mensaje del Usuario (2026-09-21 17:23-03:00)
+> [2 capturas de WhatsApp con feedback directo de Gonzalo]
+> 1. Ficha en celular: texto comprimido en columna vertical de una letra.
+> 2. Planilla de impresión: quitar teléfono, seña y saldo; dejar solo observaciones de operador y turno; agregar huecos libres con fondo gris claro.
+
+## Respuesta del Asistente:
+- **Corrección en Ficha Modal Mobile (`src/app/admin/clientes/page.js` y `clientes.module.css`)**:
+  - Reestructuración del header en filas responsivas con `wordBreak: break-word` y botón de impresión en su propia línea, eliminando la compresión de caracteres.
+  - Scroll horizontal suave en tabs (`.tabs`).
+- **Ajustes en Planilla Imprimible (`src/app/admin/agenda/imprimir/page.js` y API `route.js`)**:
+  - Removido el teléfono de la columna Cliente.
+  - Removidos seña y saldo de la columna Horario y del pie de tabla (solo `Total Estimado`).
+  - Solo se muestran `Obs. Operador` y `Comentario Turno` en la columna Zonas.
+  - Incorporados los huecos vacíos (`free_slot`) >= 10 min con fondo gris claro (`#f1f3f5`), "🟢 Libre (X min)" y "Espacio Disponible".
+  - Incorporados los bloqueos del día con fondo ámbar (`#fffbeb`).
+- **Verificación y Despliegue**:
+  - `npm run build` local exitoso (39/39 rutas).
+  - Push a `origin/staging` (commit `db3ca3f`).
+  - Despliegue a Staging VPS en `http://187.127.9.216:3008` (PM2 PID 1225389).
+  - Producción (`origin/main`, puerto 3006) 100% aislada e intacta.
 
 
