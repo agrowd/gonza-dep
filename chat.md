@@ -1289,5 +1289,22 @@
   - En `agenda_db_staging`, se sincronizaron las notas por turno y se restablecieron las citas de julio de Luciano Gomez como no afectadas.
   - Desplegado con éxito en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging` PID 1228223). Producción (`main`, puerto 3006) 100% aislada.
 
+## Mensaje del Usuario (2026-09-21 19:50-03:00)
+> "Revisa eso y el diseño" [junto con capturas de WhatsApp de Gonzalo mostrando que el turno del 20 de octubre cambió a 127/22 al editar el de noviembre a 127/22, y que en mobile la píldora SEÑADO se comprimía letra por letra, Ver en Agenda se partía en 4 líneas y había doble scrollbar]
+
+## Respuesta del Asistente:
+- **Diagnóstico y Corrección de Cascada de Notas**:
+  - En `src/app/api/admin/clientes/[id]/route.js`, un `prisma.turno.updateMany` masivo (`fecha >= todayIso`) sobreescribía todos los turnos futuros a la fecha de hoy. Se eliminó completamente.
+  - En `src/app/admin/agenda/page.js`, se quitó `notasGonzalo` del payload a la API de clientes para que el guardado se realice únicamente vía `PUT /api/admin/turnos/[id]` con avance cronológico estricto.
+  - Se corrigió la base de datos `agenda_db_staging` para Luciano Gomez (20 oct y 26 sep a `126/22`, nov a `127/22`).
+- **Corrección del Diseño Mobile en la Ficha**:
+  - En `agenda.module.css`, se añadió `white-space: nowrap !important; flex-shrink: 0 !important;` a `.statusPill`.
+  - En `clientes.module.css`, se creó `.modalBody` con padding fluido responsivo, clases `.clientMetaList` y `.clientMetaItem` con viñetas `::after` (evitando viñetas huérfanas) y se eliminó el scroll interno de `.paperList` en pantallas móviles (`max-height: none; overflow-y: visible;`).
+  - En `src/app/admin/clientes/page.js`, se reestructuró la tarjeta: Fila 1 con Fecha + Píldora de estado, Fila 2 con `↗ Ver en Agenda`.
+- **Despliegue y Validación en Staging**:
+  - `npm run build` local exitoso (39/39 rutas).
+  - Commit `186c6d4` empujado a `staging`.
+  - Desplegado y corriendo en el VPS Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging` PID 1233745). Producción intacta.
+
 
 

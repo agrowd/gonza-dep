@@ -897,7 +897,22 @@
   - **Despliegue y Migración:**
     - `npx prisma db push` y `npx prisma generate` locales y en VPS Staging.
     - `npm run build` local exitoso (39/39 rutas, 16.3s).
-    - Despliegue completado con éxito al VPS Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging` PID 1228223).
-    - Ejecutado script SQL en `agenda_db_staging` sincronizando turnos y manteniendo las sesiones anteriores de Luciano Gomez intactas sin la nota `124/22`.
+- **21 de Septiembre (19:50 - 20:05: Corrección de Cascada de Notas de Operador y Rediseño Mobile de Ficha de Cliente en Staging)**:
+  - Gonzalo reportó en WhatsApp que al editar las observaciones de operador del turno de noviembre a `127/22`, el turno del 20 de octubre también cambió a `127/22` (ambos tenían `126/22`), debiendo quedarse en `126/22`. Además, se reportó el colapso del diseño mobile en la ficha del cliente (píldora `SEÑADO` verticalizada letra por letra, `↗ Ver en Agenda` partida en 4 líneas, trampa de doble scrollbar y padding anidado excesivo).
+  - **Diagnóstico y Corrección de Notas del Operador:**
+    1. Se detectó que `src/app/api/admin/clientes/[id]/route.js` contenía un `prisma.turno.updateMany({ where: { clienteId: id, fecha: { gte: todayIso } } })`. Como hoy es 21 de septiembre, tanto el turno del 26 de septiembre como el del 20 de octubre y el de noviembre cumplían `fecha >= todayIso`, sobreescribiendo indiscriminadamente todas las citas desde hoy en adelante.
+    2. En `src/app/admin/agenda/page.js` (`handleSaveClientObservaciones`), se enviaba `notasGonzalo` a la API de clientes tras haberlo enviado a la API de turnos.
+    3. Se eliminó el `updateMany` masivo de `src/app/api/admin/clientes/[id]/route.js`: `Cliente.notasGonzalo` es estrictamente el baseline para nuevos turnos futuros, nunca modifica turnos agendados.
+    4. En `src/app/admin/agenda/page.js`, se removió `notasGonzalo` del payload a la API de clientes, delegando el guardado exclusivamente a `PUT /api/admin/turnos/[id]` con su avance cronológico estricto hacia adelante.
+    5. Se ejecutó script de saneamiento en `agenda_db_staging` para Luciano Gomez (20 oct y 26 sep restaurados a `126/22`, nov en `127/22`).
+  - **Diagnóstico y Corrección de Diseño Mobile:**
+    1. En `src/app/admin/agenda/agenda.module.css`, se añadió `white-space: nowrap !important; flex-shrink: 0 !important;` a `.statusPill`.
+    2. En `src/app/admin/clientes/clientes.module.css`, se creó `.modalBody` con padding responsivo fluido (`1.5rem` escritorio, `0.65rem 1rem` móviles), se añadieron `.clientMetaList` y `.clientMetaItem` con separadores `::after` (eliminando viñetas huérfanas) y en `@media (max-width: 768px)` se eliminó el scroll interno de `.paperList` (`max-height: none; overflow-y: visible;`).
+    3. En `src/app/admin/clientes/page.js`, se reestructuró la tarjeta de sesión: Fila 1 con Fecha + Píldora de estado protegida, Fila 2 con `↗ Ver en Agenda` en renglón propio.
+  - **Compilación, Despliegue y Validación:**
+    - `npm run build` local exitoso (39/39 rutas compiladas sin errores).
+    - Commit `186c6d4` empujado a `staging`.
+    - Despliegue completado al VPS Staging vía `scratch/deploy_vps_staging.js`. PM2 `gonzalo-agenda-staging` reiniciado y online en puerto 3008 (PID 1233745).
+    - Comprobado el aislamiento 100% de la producción (puerto 3006).
 
 

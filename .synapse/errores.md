@@ -233,3 +233,18 @@
 4. En `src/app/admin/clientes/page.js`, cada tarjeta de sesión renderiza su nota específica `{t.notasGonzalo || selectedClient.notasGonzalo}`.
 5. En `agenda_db_staging`, se sincronizaron las notas a los turnos y se mantuvieron limpias/inmodificadas las sesiones de julio de Luciano Gomez.
 **Estado:** ✅ FIXED
+
+## ERR-28: Sobreescritura masiva de notas al editar cliente y colapso de tarjeta de turno en móviles (2026-09-21)
+**Síntoma:** 
+1. Al editar las notas de operador de un turno (14/16 de noviembre a 127/22), turnos anteriores (20 de octubre y 26 de septiembre) también se modificaron a 127/22 en lugar de retener 126/22.
+2. En teléfonos móviles, la tarjeta de turno en el modal de ficha del cliente se colapsaba: la píldora `SEÑADO` se estiraba verticalmente letra por letra (`S\nE\nÑ\nA\nD\nO`), `↗ Ver en Agenda` se partía en 4 renglones, y se generaba una trampa de doble scrollbar (`max-height: 400px; overflow-y: auto;`).
+**Root Cause:**
+1. En `src/app/api/admin/clientes/[id]/route.js`, el bloque de actualización contenía `prisma.turno.updateMany({ where: { clienteId: id, fecha: { gte: todayIso } }, data: { notasGonzalo } })`. Como la fecha actual es 21 de septiembre, tanto el turno del 26 de septiembre como el del 20 de octubre y el de noviembre cumplían `fecha >= todayIso`, sobreescribiendo indiscriminadamente todos los turnos futuros a la fecha de hoy. Además, en `src/app/admin/agenda/page.js` (`handleSaveClientObservaciones`), se enviaba redundadamente `notasGonzalo` a la API de clientes tras haberlo enviado a la de turnos.
+2. En `src/app/admin/clientes/page.js`, `.paperItemHeader` agrupaba la fecha, `↗ Ver en Agenda` y la píldora en una sola fila flex. En viewports móviles (< 400px), el padding excesivo (>120px) dejaba apenas 240px útiles, aplastando los textos sin `white-space: nowrap`. Además, `.paperList` tenía `max-height: 400px; overflow-y: auto;`, creando un scroll anidado dentro del modal.
+**Solución:**
+1. Se eliminó el `updateMany` masivo en `src/app/api/admin/clientes/[id]/route.js` (la nota del cliente es estrictamente el baseline para nuevas citas). En `src/app/admin/agenda/page.js`, se removió `notasGonzalo` del payload a la API de clientes, delegando el guardado exclusivamente a `PUT /api/admin/turnos/[id]` con su lógica estricta de avance cronológico hacia adelante.
+2. En `agenda.module.css`, se agregó `white-space: nowrap !important; flex-shrink: 0 !important;` a `.statusPill`.
+3. En `clientes.module.css`, se añadió `.modalBody` con padding responsivo, `.clientMetaList` y `.clientMetaItem` con pseudo-elemento `::after` (evitando viñetas huérfanas), y en `@media (max-width: 768px)` se eliminó el scroll interno de `.paperList` (`max-height: none; overflow-y: visible;`).
+4. En `src/app/admin/clientes/page.js`, se reestructuró la tarjeta de turno: Fila 1 con Fecha + Píldora de estado, y Fila 2 con `↗ Ver en Agenda`.
+5. Se corrigieron los datos en `agenda_db_staging` para Luciano Gomez (20 oct y 26 sep a `126/22`, nov a `127/22`).
+**Estado:** ✅ FIXED
