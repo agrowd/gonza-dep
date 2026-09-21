@@ -85,6 +85,9 @@ function ClientesPageContent() {
     whatsappCustomCode: '',
     email: '',
     dni: '',
+    fechaNacimiento: '',
+    fechaPrimerTurno: '',
+    sesionesPrevias: 0,
     frecuencia: 4,
     observaciones: '',
     notesGonzalo: '',
@@ -102,6 +105,9 @@ function ClientesPageContent() {
     whatsappCustomCode: '',
     email: '',
     dni: '',
+    fechaNacimiento: '',
+    fechaPrimerTurno: '',
+    sesionesPrevias: 0,
     canalAdquisicion: 'ORGANICO',
     frecuencia: 4,
     observaciones: '',
@@ -127,6 +133,109 @@ function ClientesPageContent() {
       default:
         return String(canal).charAt(0).toUpperCase() + String(canal).slice(1).toLowerCase().replace('_', ' ');
     }
+  };
+
+  // Helper to calculate age
+  const calculateAge = (dateInput) => {
+    if (!dateInput) return null;
+    const birthDate = new Date(dateInput);
+    if (isNaN(birthDate.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : null;
+  };
+
+  // Helper to insert date stamp into notes
+  const insertDateStamp = (field) => {
+    const today = new Date();
+    const dStr = today.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const prefix = `[${dStr}]: `;
+    setEditNotes(prev => {
+      const currentVal = prev[field] || '';
+      const newVal = currentVal.trim().length > 0
+        ? `${currentVal}\n${prefix}`
+        : prefix;
+      return { ...prev, [field]: newVal };
+    });
+  };
+
+  // Export filtered clients to Excel/CSV with UTF-8 BOM
+  const handleExportClients = () => {
+    if (!clients || clients.length === 0) {
+      showToast('No hay clientes para exportar con los filtros actuales.', 'error');
+      return;
+    }
+
+    const headers = [
+      'Nombre Completo',
+      'WhatsApp',
+      'Email',
+      'DNI',
+      'Fecha Nacimiento',
+      'Sesiones Realizadas',
+      'Fecha Primer Turno',
+      'Canal de Adquisición',
+      'Frecuencia (Semanas)',
+      'Estado',
+      'Notificaciones Activas',
+      'Fecha de Alta',
+      'Observaciones del Operador',
+      'Observaciones Administrativas'
+    ];
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""').replace(/\r?\n/g, ' ');
+      return `"${str}"`;
+    };
+
+    const rows = clients.map(c => {
+      const sesionesCount = (Number(c.sesionesPrevias) || 0) + (c.turnos ? c.turnos.filter(t => t.estado === 'REALIZADO').length : 0);
+      const birthStr = c.fechaNacimiento ? new Date(c.fechaNacimiento).toLocaleDateString('es-AR') : '';
+      const firstDateStr = c.fechaPrimerTurno ? new Date(c.fechaPrimerTurno).toLocaleDateString('es-AR') : '';
+      const altaStr = c.fechaAlta ? new Date(c.fechaAlta).toLocaleDateString('es-AR') : '';
+
+      return [
+        escapeCsv(c.nombreCompleto),
+        escapeCsv(formatDisplayPhone(c.whatsapp)),
+        escapeCsv(c.email),
+        escapeCsv(c.dni || ''),
+        escapeCsv(birthStr),
+        escapeCsv(sesionesCount),
+        escapeCsv(firstDateStr),
+        escapeCsv(formatCanalAdquisicion(c.canalAdquisicion)),
+        escapeCsv(c.frecuencia || 4),
+        escapeCsv(c.estado || 'ACTIVO'),
+        escapeCsv(c.enviarNotificaciones !== false ? 'SÍ' : 'NO'),
+        escapeCsv(altaStr),
+        escapeCsv(c.notasGonzalo || ''),
+        escapeCsv(c.observaciones || '')
+      ].join(';');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const dateStamp = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `clientes_gonzalo_${dateStamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Se exportaron ${clients.length} clientes a Excel/CSV exitosamente.`);
+  };
+
+  // Bidirectional navigation: Open appointment in Agenda
+  const handleGoToTurnoInAgenda = (turno) => {
+    if (!turno) return;
+    const dateStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : new Date(turno.fecha).toISOString().split('T')[0];
+    router.push(`/admin/agenda?date=${dateStr}&view=day&turnoId=${turno.id}&fromClient=${selectedClient?.id || ''}`);
   };
 
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -314,6 +423,7 @@ function ClientesPageContent() {
             canalAdquisicion: data.canalAdquisicion || 'ORGANICO',
             frecuencia: data.frecuencia,
             fechaPrimerTurno: data.fechaPrimerTurno ? new Date(data.fechaPrimerTurno).toISOString().split('T')[0] : '',
+            fechaNacimiento: data.fechaNacimiento ? new Date(data.fechaNacimiento).toISOString().split('T')[0] : '',
             sesionesPrevias: data.sesionesPrevias !== undefined && data.sesionesPrevias !== null ? data.sesionesPrevias : 0,
             observaciones: data.observaciones || '',
             notasGonzalo: data.notasGonzalo || '',
@@ -388,10 +498,13 @@ function ClientesPageContent() {
     e.preventDefault();
     try {
       const fullPhone = buildFullPhone(newClient.whatsappCountry, newClient.whatsappCustomCode, newClient.whatsapp);
+      const cleanDni = newClient.dni ? String(newClient.dni).replace(/\D/g, '').trim() : null;
       const payload = {
         ...newClient,
+        dni: cleanDni,
         whatsapp: fullPhone,
-        nombreCompleto: `${newClient.nombre.trim()} ${newClient.apellido.trim()}`.trim()
+        nombreCompleto: `${newClient.nombre.trim()} ${newClient.apellido.trim()}`.trim(),
+        fechaNacimiento: newClient.fechaNacimiento || null
       };
       const res = await fetch('/api/admin/clientes', {
         method: 'POST',
@@ -409,6 +522,9 @@ function ClientesPageContent() {
           whatsappCustomCode: '',
           email: '',
           dni: '',
+          fechaNacimiento: '',
+          fechaPrimerTurno: '',
+          sesionesPrevias: 0,
           frecuencia: 4,
           observaciones: '',
           notesGonzalo: '',
@@ -443,11 +559,14 @@ function ClientesPageContent() {
     setIsSavingNotes(true);
     try {
       const fullPhone = buildFullPhone(editNotes.whatsappCountry, editNotes.whatsappCustomCode, editNotes.whatsapp);
+      const cleanDni = editNotes.dni ? String(editNotes.dni).replace(/\D/g, '').trim() : null;
       const payload = {
         ...editNotes,
+        dni: cleanDni,
         whatsapp: fullPhone,
         nombreCompleto: `${editNotes.nombre.trim()} ${editNotes.apellido.trim()}`.trim(),
         fechaPrimerTurno: editNotes.fechaPrimerTurno || null,
+        fechaNacimiento: editNotes.fechaNacimiento || null,
         sesionesPrevias: Number(editNotes.sesionesPrevias) || 0
       };
       const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
@@ -467,6 +586,7 @@ function ClientesPageContent() {
           canalAdquisicion: data.canalAdquisicion,
           frecuencia: data.frecuencia,
           fechaPrimerTurno: data.fechaPrimerTurno,
+          fechaNacimiento: data.fechaNacimiento,
           sesionesPrevias: data.sesionesPrevias,
           observaciones: data.observaciones,
           notasGonzalo: data.notasGonzalo,
@@ -577,7 +697,9 @@ function ClientesPageContent() {
       lastDate,
       firstDate,
       timeSinceLast,
-      nextTurn
+      nextTurn,
+      lastTurno: count > 0 ? turnosRealizados[0] : null,
+      edad: calculateAge(client.fechaNacimiento)
     };
   };
 
@@ -591,26 +713,50 @@ function ClientesPageContent() {
           <h2>Directorio de Clientes</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Busca, filtra y revisa las fichas digitales de tus clientes.</p>
         </div>
-        <button onClick={() => {
-          setNewClient({
-            nombre: '',
-            apellido: '',
-            nombreCompleto: '',
-            whatsapp: '',
-            whatsappCountry: '54',
-            whatsappCustomCode: '',
-            email: '',
-            dni: '',
-            frecuencia: 4,
-            observaciones: '',
-            notesGonzalo: '',
-            canalAdquisicion: 'ORGANICO',
-            enviarNotificaciones: true
-          });
-          setIsCreateOpen(true);
-        }} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: '8px' }}>
-          + Crear Nuevo Cliente
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleExportClients}
+            className="btn"
+            style={{
+              padding: '0.75rem 1.25rem',
+              borderRadius: '8px',
+              backgroundColor: '#16a34a',
+              color: '#ffffff',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            📥 Exportar Excel / CSV
+          </button>
+          <button onClick={() => {
+            setNewClient({
+              nombre: '',
+              apellido: '',
+              nombreCompleto: '',
+              whatsapp: '',
+              whatsappCountry: '54',
+              whatsappCustomCode: '',
+              email: '',
+              dni: '',
+              fechaNacimiento: '',
+              fechaPrimerTurno: '',
+              sesionesPrevias: 0,
+              frecuencia: 4,
+              observaciones: '',
+              notesGonzalo: '',
+              canalAdquisicion: 'ORGANICO',
+              enviarNotificaciones: true
+            });
+            setIsCreateOpen(true);
+          }} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: '8px' }}>
+            + Crear Nuevo Cliente
+          </button>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -694,8 +840,8 @@ function ClientesPageContent() {
         <div className={agendaStyles.modalOverlay}>
           <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '850px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', padding: 0 }}>
             <div className={agendaStyles.modalHeader} style={{ padding: '1.5rem 1.5rem 0.75rem 1.5rem', marginBottom: 0 }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <h3 className={styles.ficheTitle}>{selectedClient.nombreCompleto}</h3>
                   {selectedClient.enviarNotificaciones === false && (
                     <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#d4a54d', color: '#000', fontWeight: 'bold' }}>
@@ -703,9 +849,42 @@ function ClientesPageContent() {
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')} | DNI: {selectedClient.dni || 'Sin registrar'} | Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem 0.75rem', alignItems: 'center' }}>
+                  <span>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')}</span>
+                  <span>|</span>
+                  <span>DNI: {selectedClient.dni || 'Sin registrar'}</span>
+                  <span>|</span>
+                  <span>
+                    Nacimiento: {selectedClient.fechaNacimiento ? `${new Date(selectedClient.fechaNacimiento).toLocaleDateString('es-ES')}${stats.edad !== null ? ` (${stats.edad} años)` : ''}` : 'Sin registrar'}
+                  </span>
+                  <span>|</span>
+                  <span>Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
+                </div>
               </div>
-              <button onClick={handleCloseProfile} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => window.open(`/admin/clientes/${selectedClient.id}/imprimir`, '_blank')}
+                  className="btn"
+                  title="Imprimir o Descargar Ficha en PDF"
+                  style={{
+                    backgroundColor: '#1f2937',
+                    color: '#e5e7eb',
+                    border: '1px solid #374151',
+                    borderRadius: '6px',
+                    padding: '0.4rem 0.8rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  📄 Descargar PDF / Imprimir
+                </button>
+                <button onClick={handleCloseProfile} className={agendaStyles.closeBtn} style={{ fontSize: '2rem', marginTop: '-0.5rem' }}>&times;</button>
+              </div>
             </div>
 
             {/* Tabs */}
@@ -740,16 +919,43 @@ function ClientesPageContent() {
                       <span className={styles.detailValue} style={{ fontSize: '1.05rem' }}>{stats.firstDate}</span>
                     </div>
                     
-                    <div className={styles.cardSection}>
-                      <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Última sesión</span>
+                    <div
+                      className={styles.cardSection}
+                      onClick={() => stats.lastTurno && handleGoToTurnoInAgenda(stats.lastTurno)}
+                      style={{ cursor: stats.lastTurno ? 'pointer' : 'default', transition: 'background-color 0.15s ease' }}
+                      title={stats.lastTurno ? "Haz clic para ver y abrir este turno en la Agenda" : undefined}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span className={styles.detailLabel}>Última sesión</span>
+                        {stats.lastTurno && (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                            ↗ Ver en Agenda
+                          </span>
+                        )}
+                      </div>
                       <span className={styles.detailValue} style={{ fontSize: '1.05rem' }}>{stats.lastDate}</span>
                       {stats.count > 0 && (
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>Hace: {stats.timeSinceLast}</span>
                       )}
                     </div>
 
-                    <div className={styles.cardSection}>
-                      <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Próximo Turno</span>
+                    <div
+                      className={styles.cardSection}
+                      onClick={(e) => {
+                        if (e.target.closest('button')) return;
+                        if (stats.nextTurn) handleGoToTurnoInAgenda(stats.nextTurn);
+                      }}
+                      style={{ cursor: stats.nextTurn ? 'pointer' : 'default', transition: 'background-color 0.15s ease' }}
+                      title={stats.nextTurn ? "Haz clic para ver y abrir este turno en la Agenda" : undefined}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span className={styles.detailLabel}>Próximo Turno</span>
+                        {stats.nextTurn && (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                            ↗ Ver en Agenda
+                          </span>
+                        )}
+                      </div>
                       {stats.nextTurn ? (
                         <div>
                           <span className={styles.detailValue} style={{ color: 'var(--color-gold)', fontSize: '1.05rem', fontWeight: 700 }}>
@@ -872,14 +1078,25 @@ function ClientesPageContent() {
                             const prefix = sessionNum ? `${sessionNum}) ` : '';
 
                             return (
-                              <div key={t.id} className={`${styles.paperItem} ${isCanceled ? styles.paperItemCanceled : ''}`}>
+                              <div
+                                key={t.id}
+                                className={`${styles.paperItem} ${isCanceled ? styles.paperItemCanceled : ''}`}
+                                onClick={() => handleGoToTurnoInAgenda(t)}
+                                style={{ cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
+                                title="Haz clic para ver y editar este turno en la Agenda"
+                              >
                                 <div className={styles.paperItemHeader}>
                                   <span className={styles.paperDate}>
                                     {prefix}{formatLocalDate(t.fecha)} - {t.horaInicio} hs
                                   </span>
-                                  <span className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.5rem' }}>
-                                    {t.estado}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span style={{ fontSize: '0.68rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                                      ↗ Ver en Agenda
+                                    </span>
+                                    <span className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.5rem' }}>
+                                      {t.estado}
+                                    </span>
+                                  </div>
                                 </div>
                                 <div className={styles.paperZonas}>Zonas: {zonas}</div>
                                 <div className={styles.paperMeta}>
@@ -1031,14 +1248,33 @@ function ClientesPageContent() {
                       </div>
                     </div>
 
-                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                      <label className={styles.inputLabel}>DNI (Opcional)</label>
-                      <input
-                        type="text"
-                        value={editNotes.dni}
-                        onChange={(e) => setEditNotes({ ...editNotes, dni: e.target.value })}
-                        placeholder="Ej. 12345678"
-                      />
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>
+                          Fecha de Nacimiento (Opcional)
+                          {editNotes.fechaNacimiento && calculateAge(editNotes.fechaNacimiento) !== null && (
+                            <span style={{ color: 'var(--color-gold)', marginLeft: '0.5rem', fontWeight: 600 }}>
+                              ({calculateAge(editNotes.fechaNacimiento)} años)
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="date"
+                          value={editNotes.fechaNacimiento || ''}
+                          onChange={(e) => setEditNotes({ ...editNotes, fechaNacimiento: e.target.value })}
+                        />
+                      </div>
+
+                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                        <label className={styles.inputLabel}>DNI (Solo números)</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={editNotes.dni || ''}
+                          onChange={(e) => setEditNotes({ ...editNotes, dni: e.target.value.replace(/\D/g, '') })}
+                          placeholder="Ej. 12345678"
+                        />
+                      </div>
                     </div>
 
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
@@ -1133,7 +1369,26 @@ function ClientesPageContent() {
                     </div>
 
                     <div className={styles.inputGroup}>
-                      <label className={styles.inputLabel}>Observaciones Administrativas (Comentarios personales, CBU, trabajo, etc.)</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <label className={styles.inputLabel} style={{ marginBottom: 0 }}>
+                          Observaciones Administrativas (Comentarios personales, CBU, trabajo, etc.)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => insertDateStamp('observaciones')}
+                          style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '4px',
+                            color: '#e5e7eb',
+                            fontSize: '0.72rem',
+                            padding: '0.2rem 0.5rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📅 Insertar Fecha Hoy
+                        </button>
+                      </div>
                       <textarea
                         value={editNotes.observaciones}
                         onChange={(e) => setEditNotes({ ...editNotes, observaciones: e.target.value })}
@@ -1143,7 +1398,26 @@ function ClientesPageContent() {
                     </div>
 
                     <div className={styles.inputGroup} style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '1.25rem' }}>
-                      <label className={styles.inputLabel} style={{ color: 'var(--color-gold)' }}>🛡️ Observaciones del Operador</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <label className={styles.inputLabel} style={{ color: 'var(--color-gold)', marginBottom: 0 }}>
+                          🛡️ Observaciones del Operador
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => insertDateStamp('notasGonzalo')}
+                          style={{
+                            backgroundColor: 'rgba(212, 165, 77, 0.15)',
+                            border: '1px solid rgba(212, 165, 77, 0.35)',
+                            borderRadius: '4px',
+                            color: 'var(--color-gold)',
+                            fontSize: '0.72rem',
+                            padding: '0.2rem 0.5rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📅 Insertar Fecha Hoy
+                        </button>
+                      </div>
                       <textarea
                         value={editNotes.notasGonzalo}
                         onChange={(e) => setEditNotes({ ...editNotes, notasGonzalo: e.target.value })}
@@ -1201,14 +1475,33 @@ function ClientesPageContent() {
                   </div>
                 </div>
 
-                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                  <label className={styles.inputLabel}>DNI (Opcional)</label>
-                  <input
-                    type="text"
-                    value={newClient.dni}
-                    onChange={(e) => setNewClient({ ...newClient, dni: e.target.value })}
-                    placeholder="Ej. 12345678"
-                  />
+                <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>
+                      Fecha de Nacimiento (Opcional)
+                      {newClient.fechaNacimiento && calculateAge(newClient.fechaNacimiento) !== null && (
+                        <span style={{ color: 'var(--color-gold)', marginLeft: '0.5rem', fontWeight: 600 }}>
+                          ({calculateAge(newClient.fechaNacimiento)} años)
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="date"
+                      value={newClient.fechaNacimiento || ''}
+                      onChange={(e) => setNewClient({ ...newClient, fechaNacimiento: e.target.value })}
+                    />
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>DNI (Solo números)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={newClient.dni || ''}
+                      onChange={(e) => setNewClient({ ...newClient, dni: e.target.value.replace(/\D/g, '') })}
+                      placeholder="Ej. 12345678"
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>

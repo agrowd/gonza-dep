@@ -1,0 +1,262 @@
+.pageContainer {
+  min-height: 100vh;
+  background-color: #e5e7eb;
+  padding: 2rem 1rem;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #111111;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.actionBar {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: #ffffff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btnSecondary {
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnSecondary:hover {
+  background-color: #e5e7eb;
+}
+
+.btnPrint {
+  background-color: #16a34a;
+  border: 1px solid #15803d;
+  color: #ffffff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btnPrint:hover {
+  background-color: #15803d;
+}
+
+/* Receipt Sheet matching image3.png */
+.receiptBox {
+  width: 100%;
+  max-width: 800px;
+  background-color: #ffffff;
+  border: 1.5px solid #222222;
+  padding: 2.5rem;
+  box-sizing: border-box;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.headerSection {
+  border: 1px solid #666666;
+  border-radius: 2px;
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 1.5rem;
+}
+
+.headerLeft {
+  flex: 4;
+  padding: 1rem 1.25rem;
+}
+
+.brandTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.2px;
+}
+
+.domicilio {
+  font-size: 0.88rem;
+  color: #222222;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.headerCenter {
+  flex: 1.5;
+  border-left: 1px solid #888888;
+  border-right: 1px solid #888888;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+}
+
+.letterX {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #000000;
+}
+
+.noValido {
+  font-size: 0.62rem;
+  color: #333333;
+  margin-top: 0.25rem;
+  line-height: 1.1;
+  max-width: 90px;
+}
+
+.headerRight {
+  flex: 3.5;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: right;
+}
+
+.reciboWord {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 0.25rem 0;
+  letter-spacing: 0.5px;
+}
+
+.reciboNumero {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111111;
+  margin-bottom: 0.35rem;
+}
+
+.reciboFecha {
+  font-size: 0.85rem;
+  color: #222222;
+}
+
+.clientBar {
+  border: 1px solid #cccccc;
+  background-color: #fafafa;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  color: #111111;
+}
+
+.servicesTable {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #cccccc;
+  margin-bottom: 2rem;
+}
+
+.servicesTable th {
+  background-color: #f1f3f5;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #222222;
+  border-bottom: 1px solid #cccccc;
+}
+
+.servicesTable td {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #111111;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.servicesTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.totalSection {
+  margin-top: auto;
+  border-top: 2px solid #222222;
+  padding-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2rem;
+}
+
+.totalLabel {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.totalValue {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #000000;
+}
+
+.footerSection {
+  text-align: center;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.footerText {
+  font-size: 0.82rem;
+  color: #555555;
+  margin: 0 0 0.35rem 0;
+}
+
+.pageText {
+  font-size: 0.78rem;
+  color: #777777;
+  margin: 0;
+}
+
+/* Print Optimization */
+@media print {
+  body {
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+
+  .pageContainer {
+    background: #ffffff !important;
+    padding: 0 !important;
+    min-height: auto;
+  }
+
+  .actionBar {
+    display: none !important;
+  }
+
+  .receiptBox {
+    border: 1.5px solid #000000 !important;
+    box-shadow: none !important;
+    padding: 1.5rem !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}

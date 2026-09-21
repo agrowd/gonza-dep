@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import PhoneInput from '@/components/PhoneInput.js';
@@ -182,11 +183,13 @@ function computeOverlaps(apps) {
 }
 
 export default function AgendaPage() {
+  const router = useRouter();
   const calendarRef = useRef(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
   const [viewMode, setViewMode] = useState('week'); // 'week', 'day', 'month'
   const [selectedDate, setSelectedDate] = useState(null);
+  const [fromClientId, setFromClientId] = useState(null);
   const [isNextScheduling, setIsNextScheduling] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
@@ -758,6 +761,12 @@ export default function AgendaPage() {
       const searchParams = new URLSearchParams(window.location.search);
       const dateParam = searchParams.get('date');
       const viewParam = searchParams.get('view');
+      const fromClientParam = searchParams.get('fromClient');
+      const turnoIdParam = searchParams.get('turnoId');
+      
+      if (fromClientParam) {
+        setFromClientId(fromClientParam);
+      }
       
       if (dateParam) {
         const parsedDate = parseYYYYMMDD(dateParam);
@@ -931,13 +940,32 @@ export default function AgendaPage() {
           });
       }
 
+      if (turnoIdParam && !reprogramarTurnoId && !isNewTurnoReq) {
+        fetch(`/api/admin/turnos/${turnoIdParam}`)
+          .then(res => res.json())
+          .then(turno => {
+            if (turno && !turno.error) {
+              setSelectedTurno(turno);
+              setIsDetailsOpen(true);
+              if (turno.fecha) {
+                const pDate = parseYYYYMMDD(turno.fecha);
+                setSelectedDate(pDate);
+                setCurrentWeekStart(getStartOfWeek(pDate));
+              }
+            } else {
+              console.error('Error fetching turno from URL param:', turno);
+            }
+          })
+          .catch(err => console.error('Error loading turno:', err));
+      }
+
       if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
         initialView = viewParam;
       } else if (window.innerWidth < 768) {
         initialView = 'day';
       }
 
-      if (dateParam && !isNewTurnoReq && !reprogramarTurnoId) {
+      if (dateParam && !isNewTurnoReq && !reprogramarTurnoId && !turnoIdParam) {
         try {
           window.history.replaceState({}, '', window.location.pathname);
         } catch (e) {}
@@ -2027,6 +2055,9 @@ export default function AgendaPage() {
     }
     setIsDetailsOpen(false);
     setIsEditing(false);
+    if (fromClientId) {
+      router.push(`/admin/clientes?id=${fromClientId}`);
+    }
   };
 
   const checkHasUnsavedNewTurnoChanges = () => {
@@ -3801,6 +3832,14 @@ export default function AgendaPage() {
                         ⭐ Mandar Reseña
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => window.open(`/admin/recibos/${selectedTurno.id}`, '_blank')}
+                      className="btn"
+                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                    >
+                      📄 Ver Recibo Oficial
+                    </button>
                     {selectedTurno.cliente?.email && (
                       <button
                         onClick={() => handleSendReceipt(selectedTurno.id)}
