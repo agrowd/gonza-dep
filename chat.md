@@ -1276,16 +1276,18 @@
 - **Corrección en Ficha Modal Mobile (`src/app/admin/clientes/page.js` y `clientes.module.css`)**:
   - Reestructuración del header en filas responsivas con `wordBreak: break-word` y botón de impresión en su propia línea, eliminando la compresión de caracteres.
   - Scroll horizontal suave en tabs (`.tabs`).
-- **Ajustes en Planilla Imprimible (`src/app/admin/agenda/imprimir/page.js` y API `route.js`)**:
-  - Removido el teléfono de la columna Cliente.
-  - Removidos seña y saldo de la columna Horario y del pie de tabla (solo `Total Estimado`).
-  - Solo se muestran `Obs. Operador` y `Comentario Turno` en la columna Zonas.
-  - Incorporados los huecos vacíos (`free_slot`) >= 10 min con fondo gris claro (`#f1f3f5`), "🟢 Libre (X min)" y "Espacio Disponible".
-  - Incorporados los bloqueos del día con fondo ámbar (`#fffbeb`).
-- **Verificación y Despliegue**:
-  - `npm run build` local exitoso (39/39 rutas).
-  - Push a `origin/staging` (commit `db3ca3f`).
-  - Despliegue a Staging VPS en `http://187.127.9.216:3008` (PM2 PID 1225389).
-  - Producción (`origin/main`, puerto 3006) 100% aislada e intacta.
+## Mensaje del Usuario (2026-09-21 17:49-03:00)
+> [Captura de WhatsApp de Gonzalo con foto de la ficha de Luciano Gomez]:
+> "En observaciones del operador, cuando cambio el valor, solo quiero que se cambie para ese turno y todos los siguientes, no los anteriores, acá en el historial cambie los comentarios de operador del turno de arriba, y se cambió el valor del de abajo. Tuvo que haberse quedado el anterior valor sin cambiar"
+
+## Respuesta del Asistente:
+- **Diagnóstico y Solución**:
+  - `notasGonzalo` residía solo en la tabla `Cliente`, provocando que todas las tarjetas históricas renderizaran la misma nota global.
+  - Se desacopló agregando `notasGonzalo String?` a `model Turno`.
+  - En `PUT /api/admin/turnos/[id]`, al modificar la nota en una cita $T$, se actualiza $T$ y en cascada todos los turnos cronológicamente posteriores (`fecha > T.fecha` o misma fecha hora $\ge$), dejando intactos los turnos anteriores.
+  - En `src/app/admin/clientes/page.js`, cada tarjeta de sesión renderiza su propio `t.notasGonzalo || selectedClient.notasGonzalo`.
+  - En `agenda_db_staging`, se sincronizaron las notas por turno y se restablecieron las citas de julio de Luciano Gomez como no afectadas.
+  - Desplegado con éxito en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging` PID 1228223). Producción (`main`, puerto 3006) 100% aislada.
+
 
 

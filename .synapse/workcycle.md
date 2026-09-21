@@ -883,4 +883,21 @@
     - Commit `db3ca3f` empujado a `origin/staging`.
     - Despliegue exitoso al VPS Staging vía `scratch/deploy_vps_staging.js`. PM2 `gonzalo-agenda-staging` reiniciado (PID 1225389, puerto 3008).
     - Verificación HTTP 200 OK en `http://187.127.9.216:3008`.
+- **21 de Septiembre (17:50 - 18:05: Desacoplamiento de Observaciones del Operador por Turno y Cascada hacia Posteriores)**:
+  - Gonzalo envió captura de WhatsApp señalando que al editar las Observaciones del Operador (potencia de láser `124/22`) en un turno reciente de Luciano Gomez, se sobreescribió también la sesión histórica anterior (julio de 2026), requiriendo que *"solo se cambie para ese turno y todos los siguientes, no los anteriores... Tuvo que haberse quedado el anterior valor sin cambiar"*.
+  - **Implementación:**
+    1. Base de datos: Añadido `notasGonzalo String?` a `model Turno` en `prisma/schema.prisma`.
+    2. Backend (`PUT /api/admin/turnos/[id]`): Al actualizar `notasGonzalo`, se actualiza el turno actual y todos los turnos del cliente cronológicamente posteriores (`fecha > T.fecha` o misma fecha con hora $\ge$). Los turnos anteriores permanecen 100% intactos. Se sincroniza `Cliente.notasGonzalo`.
+    3. Backend (`POST /api/admin/turnos`): Turnos nuevos heredan automáticamente la nota de la sesión anterior o el baseline del cliente.
+    4. Backend (`PUT /api/admin/clientes/[id]`): Al modificar notas desde la configuración del cliente, solo se propagan a turnos futuros, preservando el historial clínico previo.
+    5. Frontend:
+       - En `/admin/clientes`, cada tarjeta del historial de turnos renderiza su nota específica `t.notasGonzalo || selectedClient.notasGonzalo`.
+       - En `/admin/agenda`, `tempClientNotasGonzalo` y `editTurno.notasGonzalo` se inicializan con `selectedTurno.notasGonzalo` y se sincronizan al turno.
+       - En `/admin/agenda/imprimir` y `/admin/clientes/[id]/imprimir`, se utiliza la nota propia del turno.
+  - **Despliegue y Migración:**
+    - `npx prisma db push` y `npx prisma generate` locales y en VPS Staging.
+    - `npm run build` local exitoso (39/39 rutas, 16.3s).
+    - Despliegue completado con éxito al VPS Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging` PID 1228223).
+    - Ejecutado script SQL en `agenda_db_staging` sincronizando turnos y manteniendo las sesiones anteriores de Luciano Gomez intactas sin la nota `124/22`.
+
 

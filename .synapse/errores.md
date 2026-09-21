@@ -215,3 +215,21 @@
 2. En `src/app/api/admin/turnos/imprimir/route.js`, se incorporó la consulta de `bloqueos` de la fecha y se retorna `{ turnos, bloqueos }`.
 3. En `src/app/admin/agenda/imprimir/page.js`, se eliminaron el teléfono, la seña y el saldo de las filas de turnos y del `<tfoot>` (dejando solo `Total Estimado`). En la columna de Zonas se muestran exclusivamente las notas clínicas (`Obs. Operador`) y comentarios de la sesión (`Comentario Turno`). Se implementó el cálculo de huecos de tiempo entre eventos (turnos y bloqueos), renderizando filas con fondo gris claro (`#f1f3f5`) con etiqueta `🟢 Libre (X min)` y "Espacio Disponible".
 **Estado:** ✅ FIXED
+
+## ERR-27: Sobrescritura no deseada de observaciones del operador históricas al editar turnos recientes (2026-09-21)
+**Síntoma:** Gonzalo envía captura de WhatsApp de la ficha de Luciano Gomez: al cambiar las Observaciones del Operador (potencia de láser `124/22`) en un turno reciente (arriba en el historial), el turno antiguo previo (abajo, `16 de julio`) también cambió a `124/22`. Gonzalo señaló: *"En observaciones del operador, cuando cambio el valor, solo quiero que se cambie para ese turno y todos los siguientes, no los anteriores... Tuvo que haberse quedado el anterior valor sin cambiar"*.
+**Root Cause:**
+1. En `prisma/schema.prisma`, `notasGonzalo` existía exclusivamente a nivel de `Cliente`. `Turno` no almacenaba sus propias notas clínicas de operador.
+2. En `src/app/admin/clientes/page.js`, cada tarjeta del historial de turnos renderizaba indiscriminadamente `{selectedClient.notasGonzalo}`, mostrando la misma nota clínica para todas las sesiones sin importar la fecha.
+3. Al editar un turno en la agenda (`PUT /api/admin/turnos/[id]`), solo se actualizaba `Cliente.notasGonzalo`, distorsionando el registro histórico de potencias de sesiones pasadas.
+**Solución:**
+1. Se agregó `notasGonzalo String?` a `model Turno` en `prisma/schema.prisma` y se ejecutó `npx prisma db push`.
+2. En `PUT /api/admin/turnos/[id]`, cuando se actualiza `notasGonzalo` para el turno $T$:
+   - Se actualiza $T$: `notasGonzalo = newNotas`.
+   - Se identifican y actualizan en masa todos los turnos cronológicamente POSTERIORES (`fecha > T.fecha` o (`fecha == T.fecha` y `horaInicio >= T.horaInicio`)).
+   - Los turnos ANTERIORES (`fecha < T.fecha` o hora previa) permanecen 100% INTACTOS con sus valores originales.
+   - Se sincroniza `Cliente.notasGonzalo` para que nuevos turnos futuros hereden este último valor.
+3. En `POST /api/admin/turnos`, los nuevos turnos heredan la nota del turno anterior o del baseline del cliente.
+4. En `src/app/admin/clientes/page.js`, cada tarjeta de sesión renderiza su nota específica `{t.notasGonzalo || selectedClient.notasGonzalo}`.
+5. En `agenda_db_staging`, se sincronizaron las notas a los turnos y se mantuvieron limpias/inmodificadas las sesiones de julio de Luciano Gomez.
+**Estado:** ✅ FIXED
