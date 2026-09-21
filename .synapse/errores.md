@@ -248,3 +248,16 @@
 4. En `src/app/admin/clientes/page.js`, se reestructuró la tarjeta de turno: Fila 1 con Fecha + Píldora de estado, y Fila 2 con `↗ Ver en Agenda`.
 5. Se corrigieron los datos en `agenda_db_staging` para Luciano Gomez (20 oct y 26 sep a `126/22`, nov a `127/22`).
 **Estado:** ✅ FIXED
+
+## ERR-29: Solapamiento visual de nombres, horarios y valores en la planilla de impresión en móviles (2026-09-21)
+**Síntoma:** Gonzalo envía captura de pantalla de su celular al abrir la planilla diaria `/admin/agenda/imprimir`: el nombre del cliente ("Carlos Mariano Gilardi") aparece encimado y superpuesto arriba del horario ("12:30 - 13:20") y del valor ("Valor: $77.000"). Asimismo, en los huecos libres, "Espacio Disponible" se monta sobre "13:20 - 14:00".
+**Root Cause:** 
+1. En `src/app/admin/agenda/imprimir/page.js`, `<colgroup>` fijaba inline un ancho de apenas `24%` para la columna de Horarios, `36%` para Clientes y `40%` para Zonas.
+2. En `imprimir.module.css`, `.printTable` tiene `table-layout: fixed;` y `.timeCol` tenía `white-space: nowrap;`. En pantallas de smartphones de ~360px de ancho, el 24% equivale a escasos 84px.
+3. El texto `12:30 - 13:20` mide 95px, y `Valor: $77.000` con `fontSize: 0.9rem` inline mide 110px. Sumado a paddings inline rígidos (`padding: '6px 10px'`), el contenido del Horario no cabía en 84px y se desbordaba hacia la derecha, superponiéndose directamente sobre la celda de Cliente que comenzaba en ese mismo punto.
+**Solución:**
+1. En `imprimir.module.css`, se crearon las clases `.colTime`, `.colClient` y `.colZones`. En pantallas móviles (< 650px), Horario recibe el 35% del ancho (~120px), Cliente el 28% y Zonas el 37%.
+2. Se eliminó `white-space: nowrap;` global de `.timeCol`. Se encapsuló la franja horaria en `.timeRange` y el valor en `.timeValor` con tamaño de fuente escalable y proporcional (`0.74rem` en móviles = 86px, cabiendo perfectamente dentro de los 120px con más de 25px de margen).
+3. Se eliminaron los paddings inline fijos (`6px 10px`, `8px 10px`, `10px 12px`).
+4. Se incorporó `.tableWrapper` con `overflow-x: auto` para garantizar una lectura fluida sin desbordamientos en cualquier resolución móvil.
+**Estado:** ✅ FIXED

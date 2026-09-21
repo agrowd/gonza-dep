@@ -1306,5 +1306,20 @@
   - Commit `186c6d4` empujado a `staging`.
   - Desplegado y corriendo en el VPS Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging` PID 1233745). Producción intacta.
 
+## Mensaje del Usuario (2026-09-21 20:09-03:00)
+> [Captura de WhatsApp de Gonzalo con foto de la planilla /admin/agenda/imprimir en su celular con círculos verdes]:
+> "Acá los nombres se ven encimados de los horarios y el valor"
+
+## Respuesta del Asistente:
+- **Causa Raíz:** En `imprimir/page.js`, `<colgroup>` tenía `width: 24%` para Horario y `.timeCol` tenía `white-space: nowrap;` con fuentes grandes (`0.9rem`) y paddings fijos de `10px`. En un celular de ~360px, la columna Horario medía apenas 84px pero su texto medía más de 105px, desbordándose físicamente sobre el texto de la columna Cliente.
+- **Solución Aplicada:**
+  - Clases `.colTime` (35% en mobile), `.colClient` (28%) y `.colZones` (37%) aplicadas en `<colgroup>`.
+  - Horario y Valor aislados con `.timeRange` y `.timeValor` escalables a `0.74rem` (86px, dejando >25px de aire en la celda).
+  - Removidos paddings inline rígidos de `free_slot`, `bloqueo` y turnos.
+  - Tabla envuelta en `.tableWrapper` con `overflow-x: auto`.
+- **Despliegue y Validación:**
+  - Build local exitoso (39/39 rutas). Commit `42993bd` en `staging`.
+  - Desplegado en VPS Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging` PID 1234406). Producción intacta.
+
 
 

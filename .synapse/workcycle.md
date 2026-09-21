@@ -914,5 +914,18 @@
     - Commit `186c6d4` empujado a `staging`.
     - Despliegue completado al VPS Staging vía `scratch/deploy_vps_staging.js`. PM2 `gonzalo-agenda-staging` reiniciado y online en puerto 3008 (PID 1233745).
     - Comprobado el aislamiento 100% de la producción (puerto 3006).
+- **21 de Septiembre (20:10 - 20:18: Corrección de Solapamiento en Planilla de Impresión Mobile - Staging)**:
+  - Gonzalo reportó con captura de pantalla (`media_1790032156896.png`) que al ver la planilla `/admin/agenda/imprimir` en el celular, los nombres de clientes se enciman con los horarios y el valor ("12:30 - 13:20 Carlos Mariano", "Valor: $77.000 Gilardi", y "13:20 - 14:00 Espacio Disponible").
+  - **Causa Raíz:** En `imprimir/page.js` la columna Horario estaba fijada rígidamente a 24% (~84px en móviles) y `timeCol` tenía `white-space: nowrap;` con fuentes de 0.9rem y paddings inline de 10px. Al sumar más de 105px de texto en una celda de 84px, el contenido desbordaba y se pintaba encima de la columna Cliente.
+  - **Solución:**
+    1. Se crearon clases de columna `.colTime`, `.colClient`, `.colZones` en `imprimir.module.css`. En móviles (< 650px), Horario recibe 35% (~120px), Cliente 28% y Zonas 37%.
+    2. Se quitó `white-space: nowrap;` de la celda completa, encapsulando la hora en `.timeRange` y el importe en `.timeValor` con tamaño tipográfico escalable (0.74rem en móviles = 86px, dejando >25px de margen antes del límite de celda).
+    3. Se eliminaron todos los paddings inline fijos (6px 10px, 8px 10px, 10px 12px) de `free_slot`, `bloqueo` y turnos, usando clases CSS responsivas.
+    4. Se envolvió la tabla en `.tableWrapper` con `overflow-x: auto` como capa de seguridad anti-desbordamiento.
+  - **Compilación y Despliegue:**
+    - `npm run build` local exitoso (39/39 rutas, 31.8s).
+    - Commit `42993bd` empujado a `origin/staging`.
+    - Despliegue en VPS Staging exitoso (`deploy_vps_staging.js`). PM2 `gonzalo-agenda-staging` reiniciado en puerto 3008 (PID 1234406).
+
 
 
