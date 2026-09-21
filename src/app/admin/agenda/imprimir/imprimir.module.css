@@ -134,6 +134,24 @@
   margin-top: 1rem;
 }
 
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.colTime {
+  width: 28%;
+}
+
+.colClient {
+  width: 32%;
+}
+
+.colZones {
+  width: 40%;
+}
+
 .printTable {
   width: 100%;
   table-layout: fixed;
@@ -146,7 +164,7 @@
   background-color: #f7f6f2;
   color: #7a1f1e;
   text-align: left;
-  padding: 0.5rem 0.6rem;
+  padding: 0.5rem 0.5rem;
   font-weight: 700;
   font-size: 0.78rem;
   text-transform: uppercase;
@@ -155,7 +173,7 @@
 }
 
 .printTable td {
-  padding: 0.5rem 0.6rem;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid #e5e5e5;
   vertical-align: top;
   font-size: 0.85rem;
@@ -169,12 +187,32 @@
   font-size: 0.85rem;
   color: #7a1f1e;
   font-weight: 700;
-  white-space: nowrap;
   line-height: 1.25;
+  vertical-align: top;
+  padding: 0.5rem 0.5rem;
+}
+
+.timeRange {
+  white-space: nowrap;
+  display: block;
+  font-weight: 700;
+  color: #7a1f1e;
+}
+
+.timeValor {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #111111;
+  margin-top: 3px;
+  display: block;
+  white-space: nowrap;
 }
 
 .clientCol {
   vertical-align: top;
+  padding: 0.5rem 0.5rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .clientName {
@@ -182,7 +220,9 @@
   font-size: 0.86rem;
   margin-bottom: 0.1rem;
   color: #111111;
-  line-height: 1.2;
+  line-height: 1.25;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .clientPhone {
@@ -195,6 +235,51 @@
   font-weight: 500;
   font-size: 0.82rem;
   line-height: 1.25;
+  padding: 0.5rem 0.5rem;
+  vertical-align: top;
+}
+
+/* Free slot styling */
+.freeSlotRow td {
+  background-color: #f1f3f5 !important;
+  border-top: 1px dashed #cbd5e1 !important;
+  border-bottom: 1px dashed #cbd5e1 !important;
+  padding: 6px 8px !important;
+}
+
+.freeBadge {
+  font-size: 0.78rem;
+  color: #16a34a;
+  font-weight: 700;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.freeClient {
+  color: #64748b;
+  font-style: italic;
+  font-size: 0.88rem;
+  display: block;
+  word-break: break-word;
+}
+
+/* Bloqueo styling */
+.bloqueoRow td {
+  background-color: #fffbeb !important;
+  padding: 8px 8px !important;
+}
+
+.bloqueoBadge {
+  font-size: 0.78rem;
+  color: #b45309;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.bloqueoClient {
+  color: #92400e;
+  font-weight: 600;
+  word-break: break-word;
 }
 
 .obsText {
@@ -305,9 +390,21 @@
     padding: 0.12rem 0.4rem !important;
   }
 
+  .colTime {
+    width: 35% !important;
+  }
+
+  .colClient {
+    width: 28% !important;
+  }
+
+  .colZones {
+    width: 37% !important;
+  }
+
   .printTable th {
-    padding: 0.4rem 0.25rem !important;
-    font-size: 0.72rem !important;
+    padding: 0.35rem 0.25rem !important;
+    font-size: 0.68rem !important;
   }
 
   .printTable td {
@@ -317,10 +414,25 @@
 
   .timeCol {
     font-size: 0.76rem !important;
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  .timeRange {
+    font-size: 0.75rem !important;
+  }
+
+  .timeValor {
+    font-size: 0.72rem !important;
+    margin-top: 1px !important;
+  }
+
+  .clientCol {
+    padding: 0.4rem 0.25rem !important;
   }
 
   .clientName {
-    font-size: 0.78rem !important;
+    font-size: 0.76rem !important;
+    line-height: 1.2 !important;
   }
 
   .clientPhone {
@@ -328,7 +440,23 @@
   }
 
   .zonesCol {
-    font-size: 0.74rem !important;
+    font-size: 0.72rem !important;
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  .freeSlotRow td,
+  .bloqueoRow td {
+    padding: 0.35rem 0.25rem !important;
+  }
+
+  .freeBadge,
+  .bloqueoBadge {
+    font-size: 0.66rem !important;
+  }
+
+  .freeClient,
+  .bloqueoClient {
+    font-size: 0.72rem !important;
   }
 }
 
@@ -418,6 +546,18 @@
     background-color: #7a1f1e !important;
     color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
+  }
+
+  .colTime {
+    width: 26% !important;
+  }
+
+  .colClient {
+    width: 32% !important;
+  }
+
+  .colZones {
+    width: 42% !important;
   }
 
   .printTable {
