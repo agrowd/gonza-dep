@@ -833,7 +833,39 @@
     - En la ficha de clientes, los números monetarios ya no se quiebran ni se apilan verticalmente en smartphones estrechos, y cada turno muestra sus comentarios estructurados.
     - Se ejecutó script de migración SQL en `agenda_db` y `agenda_db_staging` eliminando todos los prefijos y residuos de libretas de contacto de WhatsApp (`[Nota de Contacto]: ...` y `| [WPP: ...]`).
     - Despliegue completado con éxito en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging`).
-    - Rama `main` verificada y alineada estrictamente con `origin/main` (cero código nuevo en producción).
-
-
-
+- **21 de Septiembre (09:10 - 09:25)**:
+  - Usuario consulta: *"Revisar por que se desconecto el whatsapp de la agenda"*.
+  - Diagnóstico y Root Cause (ERR-25):
+    - En el VPS, la Agenda (`gonzalo-agenda`, puerto 3006) delega el estado y envío de WhatsApp a través del relay `ia-gonzadep` (puerto 3007) para evitar sesiones dobles concurrentes.
+    - El domingo 20 de septiembre a las 22:21 hs (Arg), el watchdog de `ia-gonzadep` registró 3 fallos consecutivos de socket por timeout (`[WhatsApp Watchdog] 🚨 3 fallos consecutivos de verificación. Reiniciando cliente...`).
+    - Al dispararse `initWhatsAppClient(true)` sin esperar (`await`) la destrucción de la instancia previa, el proceso de Chromium anterior (`PID 1156480`, activo desde el 17 de septiembre acumulando 1.6 GB de RAM) quedó huérfano reteniendo los bloqueos del perfil (`SingletonLock`).
+    - Un segundo proceso de Chromium (`PID 1206509`) intentó acceder a la misma carpeta de sesión bloqueada, provocando colisión de perfil (`Protocol error: Execution context was destroyed` y `Failed to add page binding with name onQRChangedEvent`), consumiendo 23% de CPU y forzando a los servidores de WhatsApp Web a desvincular la sesión.
+    - Al quedar `ia-gonzadep` en `QR_RECEIVED`, el relay reportó inmediatamente la desconexión a la Agenda Web.
+  - Mitigación y Estado Actual:
+    - Se constató que los recordatorios de 48hs del domingo salieron exitosamente (8 clientes para el martes 22) y que el lunes 21 estuvo totalmente bloqueado (no hubo turnos desatendidos).
+    - Se terminaron los procesos zombi de Chromium, se purgaron los locks residuales de `.wwebjs_auth/session` y se reinició `ia-gonzadep` limpiamente (consumo normal: 0% CPU, 18 MB RAM).
+    - El servicio emitió el código QR limpio y queda a la espera de que Gonzalo lo escanee en `https://admin.depilacionparahombres.com` para reanudar la conexión unificada.
+- **21 de Septiembre (14:20)**:
+  - Consulta del usuario sobre cuántos módulos faltan y cuál sigue según el documento maestro `Mejoras AppWeb.docx` ([.synapse/mejoras_appweb.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/.synapse/mejoras_appweb.md)).
+  - Relevamiento:
+    - Total de módulos en la jerarquía: **11 módulos**.
+    - Completados: **2** (Módulo 1: Alta de Turno en Prod/Staging; Módulo 2: Agenda en Staging).
+    - Faltan: **9 módulos**.
+    - Siguiente en orden estricto: **Módulo 3: Ficha (Ficha del Cliente / Historial Clínico)**.
+- **21 de Septiembre (14:25 - 14:55: Implementación y Despliegue de Módulo 3 en Staging)**:
+  - Se completó al 100% la implementación del **Módulo 3: Ficha (Ficha del Cliente / Historial Clínico)** en el entorno de pruebas Staging (`staging` branch, puerto 3008):
+    1. **Historial interactivo bidireccional:** Tanto "Última sesión", "Próximo Turno" como cada tarjeta individual del Historial de Turnos (`paperItem`) son clickeables y navegan hacia la agenda (`/admin/agenda?date=...&view=day&turnoId=...&fromClient=...`) abriendo automáticamente el modal del turno. Al cerrar el modal (`handleCloseDetailsModal`), el sistema redirige de vuelta fluidamente a la ficha del cliente en `/admin/clientes?id=...`.
+    2. **Descarga de Ficha en PDF / Impresión:** Creada la vista imprimible `/admin/clientes/[id]/imprimir` con layout estructurado (datos personales, resumen de métricas, observaciones del operador y administrativas, y tabla cronológica de turnos). Botón `📄 Descargar PDF / Imprimir` incorporado en la cabecera del modal de la ficha.
+    3. **Exportación de Clientes a Excel / CSV:** Botón `📥 Exportar Excel / CSV` en el directorio de clientes (`/admin/clientes`), con descarga inmediata codificada en UTF-8 con BOM (`\uFEFF`) y punto y coma (`;`), respetando los filtros activos de búsqueda y tabla.
+    4. **Recibo Comercial Oficial:** Implementado formato exacto a `image3.png` en visualización e impresión (`/admin/recibos/[id]`) y en plantilla de correo `sendReceiptEmail` (`/api/admin/turnos/[id]/recibo` y `/enviar-recibo`), con cabecera Paraná 597, recuadro de letra X "Documento no válido como factura", Nº correlativo, tabla de servicios/subtotales y total. Botón `📄 Ver Recibo Oficial` añadido en el modal de detalle del turno en la agenda.
+    5. **Estampillado automático de fecha en observaciones:** Botones `[ 📅 Insertar Fecha Hoy ]` sobre los textareas de observaciones administrativas y notas del operador, insertando `[DD/MM/AAAA]: ` para facilitar anotaciones cronológicas limpias.
+    6. **Fecha de Nacimiento opcional con cálculo de edad:** Agregado campo `fechaNacimiento DateTime?` en el modelo `Cliente` de Prisma, inputs en creación y edición de cliente, y visualización calculada de edad en el encabezado de la ficha y en la vista imprimible.
+    7. **Validación numérica estricta:** Inputs de DNI y WhatsApp filtran caracteres no numéricos en tiempo real (`replace(/\D/g, '')`) y utilizan `inputMode="numeric"`.
+  - **Verificación Local y Remota:**
+    - `npx prisma db push` y `npx prisma generate` ejecutados exitosamente.
+    - `npm run build` ejecutado localmente con éxito (39/39 rutas compiladas sin errores).
+    - Commit `edd2cf1` empujado a `origin/staging`.
+    - Despliegue remoto ejecutado en el VPS de Hostinger vía `scratch/deploy_vps_staging.js`: código actualizado en `/srv/gonzalo-dep-staging`, base de datos PostgreSQL `agenda_db_staging` sincronizada con `fechaNacimiento`, `npm run build` finalizado con éxito y PM2 reiniciado (`gonzalo-agenda-staging`, PID 1222461).
+    - Verificación HTTP y TCP exitosa: el servicio responde y el puerto 3008 está activo y accesible desde internet.
+  - **Aislamiento Total:**
+    - La rama productiva `main` (`https://agenda.depilacionparahombres.com`, puerto 3006) y su base de datos `agenda_db` no sufrieron ninguna alteración.

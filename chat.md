@@ -1215,6 +1215,55 @@
   - Desplegado y verificado en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging`).
   - Rama `main` local reseteada y alineada con `origin/main`.
 
+## Mensaje del Usuario (2026-09-21 09:08-03:00)
+> "Revisar por que se desconecto el whatsapp de la agenda"
 
+## Diagnóstico y Solución Aplicada (ERR-25):
+1. **Causa Raíz de la Desconexión**:
+   - En el VPS, la Agenda (`gonzalo-agenda`, puerto 3006) utiliza como relay el cliente de WhatsApp Web en `ia-gonzadep` (puerto 3007) para evitar sesiones dobles concurrentes (D-53, D-56).
+   - El domingo 20 de septiembre a las 22:21 hs (Arg), el watchdog de `ia-gonzadep` registró 3 fallos consecutivos de socket por timeout y ejecutó un reinicio forzado (`initWhatsAppClient(true)`).
+   - Al no esperar `destroy()` ni forzar la detención de procesos previos, el proceso de Chromium anterior (`PID 1156480`, activo desde el 17 de septiembre con 1.6 GB de RAM) quedó huérfano reteniendo los bloqueos de perfil (`SingletonLock`).
+   - Un segundo Chromium (`PID 1206509`) intentó montar la misma carpeta bloqueada, generando colisiones (`Protocol error: Execution context was destroyed` y `Failed to add page binding with name onQRChangedEvent`), consumiendo 23% de CPU y forzando a los servidores de WhatsApp Web a desvincular la sesión.
+   - Al quedar `ia-gonzadep` en estado `QR_RECEIVED`, el relay reportó inmediatamente la desconexión a la Agenda Web.
+2. **Auditoría de Turnos y Recordatorios**:
+   - Los recordatorios de 48hs del domingo 20 salieron todos exitosamente a las 10:00 AM (8 turnos para el martes 22).
+   - El lunes 21 (hoy) está registrado como día completamente bloqueado (`13:00 a 22:00 hs`), por lo que no hubo clientes desatendidos.
+   - Para el miércoles 23 de septiembre hay 12 turnos agendados cuyos recordatorios corresponden despacharse hoy a partir de las 10:00 hs.
+3. **Acciones Aplicadas**:
+   - Se terminaron los procesos zombi de Chromium (`PID 1156480` y `1206509`), se eliminaron los bloqueos residuales de `.wwebjs_auth/session` y se reinició `ia-gonzadep` limpiamente (consumo actual: 0% CPU, 18 MB RAM).
+   - El servicio emitió el código QR limpio y queda listo para que Gonzalo lo escanee en `https://admin.depilacionparahombres.com` para reanudar la conexión unificada.
+
+## Mensaje del Usuario (2026-09-21 14:20-03:00)
+> "Cuantos modulos faltan y cual sigue? @[conversation:"Recuperar Contexto Anterior"]"
+
+## Respuesta del Asistente:
+- **Estado General**:
+  - Total de módulos planificados en la Jerarquía de la Etapa 2 (`Mejoras AppWeb.docx`): **11 módulos**.
+  - Módulos completados a la fecha: **2 módulos** (1. Alta de Turno y 2. Agenda).
+  - Módulos restantes: **9 módulos**.
+- **Siguiente Módulo a Implementar**:
+  - **Módulo 3: Ficha (Ficha del Cliente / Historial Clínico)**.
+  - Alcance: Navegación interactiva bidireccional entre historial y agenda, exportación a Excel/CSV y PDF de ficha, sellado automático de fecha en observaciones, fecha de nacimiento opcional para saludos de cumpleaños, y validación numérica estricta en WhatsApp y DNI.
+- **Detalle de la Jerarquía Completa**:
+  1. Alta de turno (✅ Completado)
+  2. Agenda (✅ Completado en Staging)
+  3. Ficha (⏳ SIGUIENTE)
+  4. Estadísticas (⏳ Pendiente)
+  5. Gastos (⏳ Pendiente)
+  6. Notificaciones (⏳ Pendiente)
+  7. Configuración (⏳ Pendiente)
+  8. Clientes (⏳ Pendiente)
+  9. Generales (⏳ Pendiente)
+  10. Autogestión (⏳ Pendiente)
+  11. Multioperador y Agenda paralela (⏳ Pendiente)
+
+## Mensaje del Usuario (2026-09-21 14:24-03:00)
+> "Segui con el modulo 3 en el staging. Despues va a ser facil implementarlo en el main?"
+
+## Respuesta del Asistente:
+- **Respuesta sobre la integración futura en Main**:
+  - **Sí, va a ser sumamente fácil y seguro**. Todo se está desarrollando en la rama `staging` de forma modular y compatible hacia atrás. Una vez que Gonzalo pruebe y dé el visto bueno al Módulo 2 y al Módulo 3, el paso a `main` consistirá únicamente en un `git merge staging` en `main`, un `npx prisma db push` para aplicar las columnas nuevas sin pérdida de datos, `npm run build` y recarga en PM2.
+- **Preparación del Módulo 3 (Ficha)**:
+  - Creación del plan de implementación en [implementation_plan.md](file:///C:/Users/Try%20Hard/.gemini/antigravity/brain/01478f61-fff4-40e9-b3b8-fb734b8f792d/implementation_plan.md) abarcando los 7 puntos del cliente: historial interactivo bidireccional con agenda, descarga PDF de ficha, exportación de clientes a Excel/CSV, plantilla de recibo comercial oficial (image3.png), estampillado automático de fecha en observaciones, campo `fechaNacimiento` opcional y validación numérica estricta en DNI y WhatsApp.
 
 

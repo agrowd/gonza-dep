@@ -191,3 +191,18 @@
 2. Se transmitió `prevTurnoId` en el flujo de `Siguiente Turno` (`agenda` -> `alta-turno` -> `agenda` -> `POST /api/admin/turnos`), actualizando automáticamente en la base de datos la cita anterior a `estado: 'REALIZADO'` y `subEstado: 'SIGUIENTE_TURNO'`.
 3. Se eliminaron los botones duplicados del pie del modal y se añadió el badge de `subEstado` visible en la cabecera de detalles.
 **Estado:** ✅ FIXED
+
+## ERR-25: Desconexión de WhatsApp por colisión de procesos Chromium en reinicio de watchdog (2026-09-21)
+**Síntoma:** La Agenda Web (`agenda.depilacionparahombres.com`) muestra el indicador de WhatsApp en estado Desconectado / rojo.
+**Root Cause:**
+1. En el VPS, la Agenda (`gonzalo-agenda`, puerto 3006) utiliza como relay el bot de WhatsApp en `ia-gonzadep` (puerto 3007) para evitar sesiones dobles de WhatsApp Web concurrentes.
+2. El domingo 20 de septiembre a las 22:21 hs (Arg), el watchdog de `ia-gonzadep` registró 3 timeouts de verificación de socket y forzó el reinicio de la instancia (`initWhatsAppClient(true)`).
+3. `destroy()` no fue esperado de forma asíncrona ni se cerró forzosamente el navegador anterior. El proceso viejo de Chromium (`PID 1156480`, activo desde el 17 de septiembre con 1.6 GB de RAM) quedó zombi reteniendo los bloqueos de perfil (`SingletonLock`).
+4. Una nueva instancia de Chromium (`PID 1206509`) intentó montar la misma carpeta bloqueada, generando colisiones (`Protocol error: Execution context was destroyed` y `Failed to add page binding with name onQRChangedEvent`), consumiendo 23% de CPU y forzando a los servidores de WhatsApp Web a desvincular la sesión.
+5. Al quedar `ia-gonzadep` en estado `QR_RECEIVED`, el relay reportó inmediatamente desconexión a la Agenda Web.
+**Solución:**
+1. Se terminaron los procesos zombi huérfanos de Chromium (`PID 1156480` y `1206509`), se eliminaron los bloqueos residuales (`Singleton*`) y se reinició `ia-gonzadep` limpiamente (consumo normal: 0% CPU, 18 MB RAM).
+2. Se verificó que los recordatorios de 48hs del domingo salieron todos correctamente y que el lunes 21 estuvo marcado como bloqueado (no se perdieron turnos).
+3. Se dejó el servicio emitiendo el código QR limpio para que Gonzalo vuelva a escanearlo desde `https://admin.depilacionparahombres.com` y reactive la sesión unificada.
+**Estado:** ✅ FIXED
+
