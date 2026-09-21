@@ -200,7 +200,9 @@ export default function FichaImprimirPage({ params }) {
                         <span className={styles.statusBadge}>{t.estado}</span>
                       </td>
                       <td style={{ fontSize: '0.8rem', color: '#444' }}>
-                        {t.observaciones || '-'}
+                        {t.notasGonzalo && <div style={{ fontWeight: 600, color: '#92400e' }}>Op: {t.notasGonzalo}</div>}
+                        {t.observaciones && <div>{t.observaciones}</div>}
+                        {!t.notasGonzalo && !t.observaciones && '-'}
                       </td>
                     </tr>
                   );

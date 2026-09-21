@@ -594,7 +594,7 @@ export default function AgendaPage() {
       if (selectedTurno.cliente) {
         setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
         setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
-        setTempClientNotasGonzalo(selectedTurno.cliente.notasGonzalo || '');
+        setTempClientNotasGonzalo(selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente.notasGonzalo || ''));
 
         const clientTurnos = selectedTurno.cliente.turnos || [];
         const completedInSystem = clientTurnos.filter(t => t.estado === 'REALIZADO').length;
@@ -660,13 +660,23 @@ export default function AgendaPage() {
   const handleSaveClientObservaciones = async (silent = false, overrides = {}) => {
     if (!selectedTurno || !selectedTurno.cliente) return;
     try {
+      const targetNotas = overrides.notasGonzalo !== undefined ? overrides.notasGonzalo : tempClientNotasGonzalo;
       const payload = {
         observaciones: overrides.observaciones !== undefined ? overrides.observaciones : tempClientObservaciones,
         frecuencia: overrides.frecuencia !== undefined ? overrides.frecuencia : tempClientFrecuencia,
-        notasGonzalo: overrides.notasGonzalo !== undefined ? overrides.notasGonzalo : tempClientNotasGonzalo,
+        notasGonzalo: targetNotas,
         fechaPrimerTurno: overrides.fechaPrimerTurno !== undefined ? overrides.fechaPrimerTurno : (tempClientFechaPrimerTurno || null),
         sesionesPrevias: overrides.sesionesPrevias !== undefined ? overrides.sesionesPrevias : tempClientSesionesPrevias
       };
+
+      // Save notasGonzalo to the current turno (cascading to subsequent turnos without altering previous turnos)
+      if (selectedTurno.id && targetNotas !== undefined) {
+        await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notasGonzalo: targetNotas })
+        }).catch(e => console.error('Error syncing notasGonzalo to turno:', e));
+      }
 
       const res = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
         method: 'PUT',
@@ -679,11 +689,12 @@ export default function AgendaPage() {
           if (!prev) return prev;
           return {
             ...prev,
+            notasGonzalo: targetNotas,
             cliente: {
               ...prev.cliente,
               observaciones: payload.observaciones,
               frecuencia: payload.frecuencia,
-              notasGonzalo: payload.notasGonzalo,
+              notasGonzalo: targetNotas,
               fechaPrimerTurno: payload.fechaPrimerTurno,
               sesionesPrevias: payload.sesionesPrevias
             }
@@ -877,7 +888,7 @@ export default function AgendaPage() {
               const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
               const dynPrices = getUpdatedTurnoPrices(turno);
               const initialObs = (turno.cliente?.observaciones || '').trim();
-              const initialNotas = (turno.cliente?.notasGonzalo || '').trim();
+              const initialNotas = (turno.notasGonzalo !== null && turno.notasGonzalo !== undefined ? turno.notasGonzalo : (turno.cliente?.notasGonzalo || '')).trim();
               const initialTurnoObs = (turno.observaciones || '').trim();
               const initialFreq = turno.cliente?.frecuencia || 4;
 
@@ -1594,6 +1605,7 @@ export default function AgendaPage() {
         showToast('Turno guardado con éxito.');
         setSelectedTurno(prev => prev ? {
           ...prev,
+          notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
           observaciones: editTurno.turnoObservaciones !== undefined ? editTurno.turnoObservaciones : prev.observaciones,
           cliente: prev.cliente ? {
             ...prev.cliente,
@@ -2040,7 +2052,7 @@ export default function AgendaPage() {
       return isFechaChanged || isHoraInicioChanged || isHoraFinChanged || isEstadoChanged || isValorTotalChanged || isValorSeñaChanged || isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged || isOtrosChanged || isZonesChanged;
     } else {
       const isObsChanged = (tempClientObservaciones || '').trim() !== (selectedTurno.cliente?.observaciones || '').trim();
-      const isNotasChanged = (tempClientNotasGonzalo || '').trim() !== (selectedTurno.cliente?.notasGonzalo || '').trim();
+      const isNotasChanged = (tempClientNotasGonzalo || '').trim() !== (selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente?.notasGonzalo || '')).trim();
       const isTurnoObsChanged = (tempTurnoObservaciones || '').trim() !== (selectedTurno.observaciones || '').trim();
       const isFreqChanged = tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4);
 
@@ -3611,7 +3623,7 @@ export default function AgendaPage() {
                       />
                       {(tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') || 
                         tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4) ||
-                        tempClientNotasGonzalo !== (selectedTurno.cliente?.notasGonzalo || '')) && (
+                        tempClientNotasGonzalo !== (selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente?.notasGonzalo || ''))) && (
                         <button
                           onClick={handleSaveClientObservaciones}
                           className="btn btn-primary"
@@ -3724,7 +3736,7 @@ export default function AgendaPage() {
                         const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
                         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
                         const initialObs = (tempClientObservaciones || selectedTurno.cliente?.observaciones || '').trim();
-                        const initialNotas = (tempClientNotasGonzalo || selectedTurno.cliente?.notasGonzalo || '').trim();
+                        const initialNotas = (tempClientNotasGonzalo || selectedTurno.notasGonzalo || selectedTurno.cliente?.notasGonzalo || '').trim();
                         const initialTurnoObs = (tempTurnoObservaciones || selectedTurno.observaciones || '').trim();
                         const initialFreq = tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4;
 
