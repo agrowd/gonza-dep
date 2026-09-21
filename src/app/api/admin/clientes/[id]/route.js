@@ -118,25 +118,6 @@ export async function PUT(request, { params }) {
     if (observaciones !== undefined) updateData.observaciones = observaciones;
     if (notasGonzalo !== undefined) {
       updateData.notasGonzalo = notasGonzalo;
-      try {
-        const todayIso = new Date().toISOString().split('T')[0];
-        const futureTurnos = await prisma.turno.findMany({
-          where: {
-            clienteId: id,
-            fecha: { gte: new Date(todayIso + 'T00:00:00') },
-            estado: { not: 'CANCELADO' }
-          },
-          select: { id: true }
-        });
-        if (futureTurnos.length > 0) {
-          await prisma.turno.updateMany({
-            where: { id: { in: futureTurnos.map(t => t.id) } },
-            data: { notasGonzalo }
-          });
-        }
-      } catch (errFuture) {
-        console.error('Error updating future turnos notasGonzalo from client update:', errFuture);
-      }
     }
     if (fechaPrimerTurno !== undefined) updateData.fechaPrimerTurno = fechaPrimerTurno ? new Date(fechaPrimerTurno) : null;
     if (fechaNacimiento !== undefined) updateData.fechaNacimiento = fechaNacimiento ? new Date(fechaNacimiento) : null;

@@ -853,16 +853,13 @@ function ClientesPageContent() {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem 0.6rem', alignItems: 'center' }}>
-                    <span>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')}</span>
-                    <span>•</span>
-                    <span>DNI: {selectedClient.dni || 'Sin registrar'}</span>
-                    <span>•</span>
-                    <span>
+                  <div className={styles.clientMetaList}>
+                    <span className={styles.clientMetaItem}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')}</span>
+                    <span className={styles.clientMetaItem}>DNI: {selectedClient.dni || 'Sin registrar'}</span>
+                    <span className={styles.clientMetaItem}>
                       Nacimiento: {selectedClient.fechaNacimiento ? `${new Date(selectedClient.fechaNacimiento).toLocaleDateString('es-ES')}${stats.edad !== null ? ` (${stats.edad} años)` : ''}` : 'Sin registrar'}
                     </span>
-                    <span>•</span>
-                    <span>Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
+                    <span className={styles.clientMetaItem}>Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
                   </div>
                 </div>
                 <button
@@ -910,7 +907,7 @@ function ClientesPageContent() {
             </div>
 
             {/* Scrollable Content Container */}
-            <div style={{ overflowY: 'auto', padding: '0 1.5rem 1.5rem 1.5rem', flex: 1 }}>
+            <div className={styles.modalBody}>
 
             {/* TAB CONTENT: History */}
             {activeTab === 'history' && (
@@ -1104,14 +1101,22 @@ function ClientesPageContent() {
                                   <span className={styles.paperDate}>
                                     {prefix}{formatLocalDate(t.fecha)} - {t.horaInicio} hs
                                   </span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <span style={{ fontSize: '0.68rem', color: 'var(--color-gold)', fontWeight: 600 }}>
-                                      ↗ Ver en Agenda
-                                    </span>
-                                    <span className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.5rem' }}>
-                                      {t.estado}
-                                    </span>
-                                  </div>
+                                  <span
+                                    className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`}
+                                    style={{
+                                      fontSize: '0.68rem',
+                                      padding: '0.15rem 0.55rem',
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    {t.estado}
+                                  </span>
+                                </div>
+                                <div style={{ marginBottom: '0.4rem', marginTop: '-0.15rem' }}>
+                                  <span style={{ fontSize: '0.74rem', color: 'var(--color-gold)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    ↗ Ver en Agenda
+                                  </span>
                                 </div>
                                 <div className={styles.paperZonas}>Zonas: {zonas}</div>
                                 <div className={styles.paperMeta}>

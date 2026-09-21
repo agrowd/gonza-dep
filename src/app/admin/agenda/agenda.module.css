@@ -704,12 +704,16 @@
 /* Status Pill badge style */
 .statusPill {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.25rem 0.75rem;
   border-radius: 50px;
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   width: fit-content;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .badgeSenado { background-color: var(--status-senado-bg); color: var(--status-senado); }

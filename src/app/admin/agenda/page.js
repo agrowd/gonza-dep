@@ -664,7 +664,6 @@ export default function AgendaPage() {
       const payload = {
         observaciones: overrides.observaciones !== undefined ? overrides.observaciones : tempClientObservaciones,
         frecuencia: overrides.frecuencia !== undefined ? overrides.frecuencia : tempClientFrecuencia,
-        notasGonzalo: targetNotas,
         fechaPrimerTurno: overrides.fechaPrimerTurno !== undefined ? overrides.fechaPrimerTurno : (tempClientFechaPrimerTurno || null),
         sesionesPrevias: overrides.sesionesPrevias !== undefined ? overrides.sesionesPrevias : tempClientSesionesPrevias
       };
