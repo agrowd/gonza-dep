@@ -36,6 +36,7 @@ model Cliente {
   enviarNotificaciones Boolean @default(true)
   turnos           Turno[]
   notificaciones   Notificacion[]
+  conversaciones   ConversacionWsp[]
 }
 
 model Turno {
@@ -95,3 +96,88 @@ model Configuracion {
   key   String @id
   value String
 }
+
+// ==========================================
+// MODELOS ESPECÍFICOS DE IA & WHATSAPP (SHARED DATABASE)
+// ==========================================
+
+model IaConfig {
+  key         String   @id
+  value       String
+  descripcion String?
+  updatedAt   DateTime @updatedAt
+}
+
+model IaHorario {
+  id         String  @id @default(uuid())
+  diaSemana  Int     @unique
+  nombreDia  String
+  activo     Boolean @default(true)
+  horaInicio String  @default("09:00")
+  horaFin    String  @default("20:00")
+}
+
+model ConversacionWsp {
+  id                 String       @id @default(uuid())
+  telefono           String       @unique
+  nombreContacto     String?
+  clienteId          String?
+  cliente            Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  estadoIa           String       @default("ACTIVA")
+  etiquetas          String?
+  ultimoMensaje      String?
+  ultimoMensajeFecha DateTime     @default(now())
+  ultimoRemitente    String?
+  mensajesNoLeidos   Int          @default(0)
+  mensajes           MensajeWsp[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model MensajeWsp {
+  id             String          @id @default(uuid())
+  conversacionId String
+  conversacion   ConversacionWsp @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  remitente      String
+  texto          String
+  timestamp      DateTime        @default(now())
+  tokensUsados   Int?            @default(0)
+  fueRespondido  Boolean         @default(true)
+  metadata       String?
+}
+
+model IaFaq {
+  id        String   @id @default(uuid())
+  pregunta  String
+  respuesta String
+  categoria String   @default("GENERAL")
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model IaDocumentoWeb {
+  id                   String   @id @default(uuid())
+  url                  String   @unique
+  titulo               String
+  seccion              String   @default("BLOG")
+  contenidoTexto       String
+  resumen              String?
+  hash                 String
+  activo               Boolean  @default(true)
+  ultimaSincronizacion DateTime @default(now())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model IaSyncLog {
+  id                  String   @id @default(uuid())
+  tipo                String   @default("AUTO_CRON")
+  estado              String   @default("SUCCESS")
+  paginasTotal        Int      @default(0)
+  paginasNuevas       Int      @default(0)
+  preciosModificados  Int      @default(0)
+  detalle             String?
+  duracionMs          Int      @default(0)
+  timestamp           DateTime @default(now())
+}
+
