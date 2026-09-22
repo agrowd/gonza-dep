@@ -666,12 +666,12 @@ Duración: ${duracionMinutos} min`;
                         WhatsApp *
                       </label>
                       <PhoneInput
-                        country={formData.whatsappCountry}
+                        countryCode={formData.whatsappCountry}
                         customCode={formData.whatsappCustomCode}
-                        number={formData.whatsapp}
+                        phoneNumber={formData.whatsapp}
                         onCountryChange={c => setFormData(prev => ({ ...prev, whatsappCountry: c }))}
                         onCustomCodeChange={code => setFormData(prev => ({ ...prev, whatsappCustomCode: code }))}
-                        onNumberChange={num => setFormData(prev => ({ ...prev, whatsapp: num }))}
+                        onPhoneChange={num => setFormData(prev => ({ ...prev, whatsapp: num }))}
                         placeholder="Ej: 11 2345 6789"
                       />
                     </div>
