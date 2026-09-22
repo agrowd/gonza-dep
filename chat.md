@@ -1406,3 +1406,16 @@
   * Validación E2E con Puppeteer (`scratch/test_puppeteer_autogestion.mjs`) completó todos los pasos, verificó la plantilla de WhatsApp y capturó el popup emergente en la agenda administrativa (`scratch/agenda_autogestion_popup.png`).
   * Producción (`main`, puerto 3006) 100% aislada e intacta.
 
+## Mensaje del Usuario (2026-09-22 13:15-03:00)
+> [Screenshot showing the header with a tiny logo and text "GONZALO / Depilación Masculina"]
+> "Saca lo que esta hecho en texto y hace mas grande el logo"
+
+## Respuesta del Asistente (D-66):
+- **Optimización y Rediseño de Cabecera en Autogestión**:
+  1. Se removió el bloque de texto HTML redundante (`styles.logoTitle` y `styles.logoSubtitle`).
+  2. Se recortaron los márgenes transparentes vacíos de `public/logo.png` mediante `sharp` (dejando la imagen en 1283 x 394 px, sin el 61% de aire vertical que la encogía).
+  3. Se incorporó la clase `.logoImg` con dimensionamiento adaptativo (58px en desktop, 46px en móviles), cursor clickeable hacia el inicio/Paso 1 y padding balanceado en el header (`1rem 1.25rem`).
+  4. Compilación y despliegue exitoso en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1249933).
+  5. Verificación visual mediante capturas Puppeteer (`staging_header_desktop.png` y `staging_header_mobile.png`), comprobando estética limpia, nítida y perfectamente proporcionada. Producción (`main`, puerto 3006) 100% aislada.
+
+

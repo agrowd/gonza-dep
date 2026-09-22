@@ -1033,6 +1033,20 @@
         `🔔 Nueva Reserva Online: Cliente Autogestión hizo una reserva online para el 2026-09-26 a las 20:00 hs. Zonas: Cuerpo Completo [Ver Turno ↗] [Entendido]`.
       * Capturas guardadas en `scratch/agenda_autogestion_popup.png` y directorio de artefactos.
       * Test finalizó con código de salida 0 y cero errores.
+- **22 de Septiembre (13:20 - Ajuste Visual de Cabecera de Autogestión a Pedido del Usuario)**:
+  - **Solicitud del Usuario**: *"Saca lo que esta hecho en texto y hace mas grande el logo"*.
+  - **Diagnóstico**:
+    1. En `src/app/page.js` se renderizaba un bloque HTML con `styles.logoTitle` ("Gonzalo") y `styles.logoSubtitle` ("Depilación Masculina") junto a un icono minúsculo de 48x48.
+    2. El archivo original `public/logo.png` contenía 288px de espacio transparente vacío arriba y 342px abajo (61% de la altura total), haciendo que al escalar en contenedores de altura limitada, la marca gráfica se redujera a apenas ~12px de altura visible.
+  - **Acciones Realizadas**:
+    1. Se eliminó por completo el bloque HTML de texto en `src/app/page.js`.
+    2. Se recortaron con exactitud los márgenes transparentes vacíos de `public/logo.png` mediante `sharp` (dimensiones limpias: 1283 x 394 px, relación 3.25:1).
+    3. Se implementó la clase `.logoImg` en `src/app/page.module.css` con altura de 58px en desktop y 46px en mobile, cursor interactivo hacia el Paso 1 y padding balanceado en el header (`1rem 1.25rem`).
+    4. Compilación local limpia (`npm run build`, 40/40 rutas estáticas y dinámicas).
+    5. Despliegue en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1249933).
+    6. Verificación visual mediante capturas Puppeteer (`scratch/staging_header_desktop.png` y `scratch/staging_header_mobile.png`): logo perfectamente legible, nítido y balanceado tanto en desktop como en dispositivos móviles.
+    7. Decisión registrada: `D-66` en `.synapse/decisions.md`. Producción (`main`, puerto 3006) 100% aislada.
+
 
 
 
