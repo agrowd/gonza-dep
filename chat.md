@@ -1341,5 +1341,40 @@
   - Compilación Next.js 16 con Turbopack exitosa (código 0).
   - 82 conversaciones vinculadas exitosamente a sus fichas de Cliente en `agenda_db`. Alberto Kliphart vinculado a su ficha.
   - PM2 `ia-gonzadep` reiniciado y online (puerto 3007).
-  - Prueba en vivo con OpenAI y Alberto Kliphart: IA reconoció `CLIENTE_PACIENTE`, saludó: *"¡Hola Alberto! Te saluda el asistente virtual de Gonzalo 😊. Tenés turno confirmado para el martes 27 de octubre a las 15:00 hs para cuerpo completo..."* y la presentación se conservó sin recortes.
   - Bandeja `/chats` 100% funcional y verificada.
+
+## Mensaje del Usuario (2026-09-22 12:18-03:00)
+> "Que modulo estamos y cuales faltan"
+
+## Respuesta del Asistente:
+- Se detalló la hoja de ruta oficial de 11 módulos de `Mejoras AppWeb.docx`:
+  * Módulo 1 (Alta de Turno), Módulo 2 (Agenda) y Módulo 3 (Ficha) completados.
+  * Módulo 4 (Estadísticas): En curso / Siguiente.
+  * Módulos faltantes: 5 (Gastos), 6 (Notificaciones), 7 (Configuración), 8 (Clientes), 9 (Generales), 10 (Autogestión), 11 (Multioperador y Agendas Paralelas).
+
+## Mensaje del Usuario (2026-09-22 12:21-03:00)
+> "segui con el modulo 4"
+
+## Mensaje del Usuario (2026-09-22 12:26-03:00)
+> "Procede"
+
+## Respuesta del Asistente (D-64):
+- **Implementación Completa de Módulo 4: Estadísticas (Avanzadas y Generales)**:
+  1. **Criterio Contable de Señas**:
+     - Las señas se suman como ingreso el día en que se cargó el turno (`createdAt`), no para el día del turno (`fecha`).
+     - Al realizarse la sesión en su fecha, solo se suma el saldo cobrado (`valorTotal - valorSeña`), evitando duplicaciones.
+     - Caja del Día desglosada: `Turnos cobrados hoy` + `Señas recibidas hoy` = `Total del Día`.
+  2. **Doble Vista / Pestañas**:
+     - `⚡ Estadísticas Avanzadas` (Vista principal por defecto) con selector de 11 métricas operativas.
+     - `📊 Estadísticas Generales` (Renovada) con rendimiento de turnos, clientes nuevos vs recurrentes, clientes en "Va a avisar", "Finalizado", y pérdidas por cancelaciones y ausencias.
+  3. **Tabla Interactiva DETALLES con 3 Acciones Clave**:
+     - Botón `[✕]`: Exclusión temporal de un cliente/turno en memoria con recálculo al vuelo de cantidades, facturación y ticket promedio, más banner de alerta y botón de restauración.
+     - Botón `[Turno ↗]`: Redirige a `/admin/agenda?date=...&view=day&turnoId=...&fromStats=true`, abriendo el modal en la agenda y regresando a Estadísticas al cerrar.
+     - Botón `[Ficha 👤]`: Abre modal embebido con la ficha completa del paciente (datos de contacto, observaciones clínicas del operador `notasGonzalo` y generales).
+  4. **Histogramas Visuales**:
+     - Gráfico de barras para Clientes Nuevos por Canal de Adquisición con checkboxes interactivos.
+     - Gráfico de barras ordenado de mayor a menor para Zonas Más Demandadas con filtros por estado (Realizados, Señados, Todos).
+- **Despliegue y Validación Automatizada en Staging (`http://187.127.9.216:3008`)**:
+  - Compilación remota con Next.js 16 (Turbopack, código 0) y reinicio de PM2 `gonzalo-agenda-staging` (PID 1247955).
+  - Prueba E2E con Puppeteer (Headless Chrome) validó el login, el renderizado de caja ($0 hoy, $190.000 semana, $6.563.500 período), 92 citas realizadas ($6.081.000), exclusión dinámica con `[✕]` (bajó a 91 y recalculó), restauración a 92, y modal de ficha. 0 errores de consola.
+  - Producción (`main`, puerto 3006) 100% aislada e intacta.

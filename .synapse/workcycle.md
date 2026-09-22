@@ -974,5 +974,21 @@
     5. Botón de exclusión temporal `[X]` con recálculo dinámico en memoria de totales y ticket promedio.
     6. Botones de acción bidireccional `[Turno]` (apertura en Agenda) y `[Ficha]` (modal de cliente).
     7. Histogramas visuales para Canales de Adquisición y Ranking de Zonas más demandadas.
-  - Plan de implementación elaborado en `implementation_plan.md` y presentado para aprobación del usuario.
+  - Plan de implementación elaborado en `implementation_plan.md` y aprobado por el usuario ("Procede").
+  - **Ejecución y Desarrollo**:
+    1. Backend (`/api/admin/estadisticas`): Lógica de caja contable con separación estricta de señas por fecha de alta (`createdAt`) y saldos por fecha de sesión (`fecha`). Soporte para las 11 métricas avanzadas e histogramas.
+    2. Frontend (`/admin/estadisticas/page.js` y `estadisticas.module.css`): Implementadas dos pestañas (Avanzadas y Generales), banner de Caja del Día, selector de 11 métricas, tabla DETALLES con exclusión en vivo `[✕]`, navegación a agenda `[Turno ↗]` y modal embebido `[Ficha 👤]`, además de histogramas de Canales y Zonas.
+    3. Agenda (`/admin/agenda/page.js`): Soporte para `fromStats=true` permitiendo regresar directamente a Estadísticas al cerrar el modal de turno.
+  - **Despliegue y Validación en VPS Staging (`187.127.9.216:3008`)**:
+    - Compilación remota con Next.js 16 (Turbopack, código 0).
+    - PM2 `gonzalo-agenda-staging` reiniciado (PID 1247955).
+    - Prueba E2E automatizada con Puppeteer (Headless Chrome):
+      * Login y carga de 184 turnos de septiembre.
+      * Renderizado de caja: `$0` hoy, `$190.000` semana, `$6.563.500` período.
+      * Renderizado de Realizados: 92 turnos, `$6.081.000` facturación, `$66.098` ticket promedio.
+      * Exclusión interactiva con `[✕]`: redujo a 91 turnos y recalculó importes en vivo.
+      * Botón restablecer: restauró los 92 turnos.
+      * Modal de Ficha: abrió datos de Carlos Aquino y cerró limpiamente.
+      * Cero errores de consola.
+    - Producción (`main`, puerto 3006, PID 1067263, uptime 9D) 100% aislada e intacta.
 
