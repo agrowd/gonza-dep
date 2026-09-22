@@ -1007,8 +1007,32 @@
   - **Elaboración de Plan de Implementación (`implementation_plan.md`)**:
     - Estructurado el plan detallado para el desarrollo integral del Módulo 5 en Staging (`http://187.127.9.216:3008`).
     - Contempla el motor de disponibilidad con días abiertos/cerrados, el algoritmo de proximidad $2\times$, el diferimiento de alta de cliente en BD, el bypass a WhatsApp con botón verde "Pagar Seña", el salto directo al reagendar con regla de 72hs, la limpieza del footer y las notificaciones emergentes en la agenda administrativa.
-  - **Aprobación del Usuario e Inicio de Desarrollo (12:56 hs)**:
+  - **Aprobación del Usuario y Desarrollo Completo (12:56 - 13:10 hs)**:
     - El usuario aprueba el plan ("Si, procede, viste bien todo?").
-    - Iniciando desarrollo en Staging: endpoints de disponibilidad, reservas, rediseño del frontend público y alertas en la agenda administrativa.
+    - **Backend Desarrollado**:
+      1. `/api/admin/autogestion-alertas`: Endpoint para monitoreo de actividad de autogestión en tiempo real.
+      2. `/api/disponibilidad`: Soporte para modo mensual, regla de días abiertos vs cerrados (filtro $65.000), algoritmo de proximidad $2\times \text{Duración}$ y detección de días llenos (rojo).
+      3. `/api/reservas/crear`: Diferimiento estricto del alta de clientes en BD y generación del mensaje oficial de WhatsApp para seña.
+      4. `/api/reservas/reprogramar` y `/api/reservas/cancelar`: Verificación de 72hs y etiquetado para alertas.
+    - **Frontend Desarrollado**:
+      1. `src/app/page.js` y `page.module.css`: Flujo público de 4 pasos (Paso 1: Login/registro diferido con footer de redes; Paso 2: Selección de zonas con banner de $65k; Paso 3: Calendario mensual de Alta de Turno con días verdes/rojos/grises y slots pegados; Paso 4: Resumen y botón verde "Pagar Seña"). Footer oculto en pasos 2, 3 y 4.
+      2. `src/app/admin/agenda/page.js`: Componente popup flotante en la esquina inferior derecha con consulta periódica cada 20s, mostrando alertas en tiempo real de reservas, reprogramaciones y cancelaciones con botones "Ver Turno ↗" y "Entendido".
+    - **Compilación y Despliegue en VPS Staging (`http://187.127.9.216:3008`)**:
+      * Compilación remota con Next.js 16 (Turbopack, código 0).
+      * PM2 `gonzalo-agenda-staging` reiniciado (PID 1249118, puerto 3008).
+      * Producción (`main`, puerto 3006) 100% aislada e intacta.
+    - **Validación Automatizada E2E con Puppeteer (`scratch/test_puppeteer_autogestion.mjs`)**:
+      * Paso 1: Footer visible con enlaces de Instagram, Web y Maps.
+      * Registro diferido: Cliente nuevo completó datos sin guardarse en DB antes de señar.
+      * Paso 2: Footer oculto. Banner de días cerrados (<$65k) activo.
+      * Selección de Cuerpo Completo ($140.000 >= $65.000): Banner preferencial activado.
+      * Paso 3: Calendario mensual desplegó 3 días disponibles en verde y 4 días llenos en rojo. Al clickear día verde, desplegó slots agrupados por proximidad de 2x duración.
+      * Paso 4: Botón verde con gradiente y texto "Pagar Seña". Al clickear, generó la URL de WhatsApp con la plantilla oficial exacta de Luciano:
+        `Hola 👋 Quiero reservar este turno:\n\nNombre: Cliente Autogestión\nFecha: 26/09/2026\nHorario: 20:00\nZonas: Cuerpo Completo\nDuración: 90 min\nTotal: $150.000\n\nQuedo a la espera de los datos para realizar el pago de la seña y confirmar el turno.`
+      * Agenda Administrativa: Detectó la nueva reserva y desplegó el popup emergente:
+        `🔔 Nueva Reserva Online: Cliente Autogestión hizo una reserva online para el 2026-09-26 a las 20:00 hs. Zonas: Cuerpo Completo [Ver Turno ↗] [Entendido]`.
+      * Capturas guardadas en `scratch/agenda_autogestion_popup.png` y directorio de artefactos.
+      * Test finalizó con código de salida 0 y cero errores.
+
 
 

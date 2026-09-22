@@ -1387,3 +1387,22 @@
 - Identificación del reordenamiento de la jerarquía oficial: **Autogestión pasa a ser el Módulo 5** (inmediatamente después de Estadísticas).
 - Análisis detallado de las 10 especificaciones operativas añadidas para Autogestión (UI modelo Alta de Turno, días abiertos vs cerrados con filtro $65.000, algoritmo de horarios pegados con proximidad 2x, diferimiento de alta de cliente en BD, bypass temporal de MercadoPago a WhatsApp con botón verde "Pagar Seña", regla de 72hs al reagendar con salto directo a horarios, limpieza de footer y popups emergentes en la agenda administrativa).
 - Elaboración del Plan de Implementación (`implementation_plan.md`) para aprobación del usuario antes de ejecutar en Staging.
+
+## Mensaje del Usuario (2026-09-22 12:56-03:00)
+> "Si, procede, viste bien todo?"
+
+## Respuesta del Asistente (D-65):
+- **Implementación Completa de Módulo 5: Autogestión de Turnos Online**:
+  1. **UI Modelo Alta de Turno**: Calendario mensual con navegación y días codificados por color (verde disponible, rojo lleno/sin hueco, gris no abierto/pasado).
+  2. **Días Abiertos vs Cerrados + Regla $65.000**: Días sin turnos agendados permanecen cerrados a menos que el valor total de las zonas sea >= $65.000 (excepción de alto valor).
+  3. **Algoritmo de Horarios Pegados (Proximidad 2x)**: Horarios ofrecidos estrictamente dentro de la ventana de 2x Duración del turno antes y después de citas existentes para erradicar baches muertos.
+  4. **Diferimiento de Alta de Cliente**: Clientes nuevos completan sus datos pero no se guardan en la base de datos hasta que el turno sea señado/reservado.
+  5. **Bypass de MercadoPago a WhatsApp ("Pagar Seña")**: Botón verde destacado que agenda el turno en `PENDIENTE_PAGO` y redirige a WhatsApp con la plantilla oficial exacta requerida por Luciano.
+  6. **Reagendamiento y Regla de 72hs**: Verificación estricta de 72hs hábiles de anticipación. Al reagendar se saltea la pantalla de zonas (zonas fijas) y se accede directamente al calendario y horarios.
+  7. **Footer Limpio**: Enlaces de Instagram, Sitio Web y Google Maps visibles exclusivamente en el Paso 1.
+  8. **Popups en Tiempo Real en Agenda Administrativa**: Componente popup flotante en `/admin/agenda` que alerta al operador cuando ocurre una reserva, cancelación o reprogramación online con botón "Ver Turno ↗".
+- **Despliegue y Validación Automatizada en Staging (`http://187.127.9.216:3008`)**:
+  * Compilación remota con Next.js 16 (Turbopack, código 0) y reinicio de PM2 `gonzalo-agenda-staging` (PID 1249118).
+  * Validación E2E con Puppeteer (`scratch/test_puppeteer_autogestion.mjs`) completó todos los pasos, verificó la plantilla de WhatsApp y capturó el popup emergente en la agenda administrativa (`scratch/agenda_autogestion_popup.png`).
+  * Producción (`main`, puerto 3006) 100% aislada e intacta.
+
