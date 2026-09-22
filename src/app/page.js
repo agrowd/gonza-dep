@@ -440,19 +440,15 @@ Duración: ${duracionMinutos} min`;
       {/* Top Header */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <div className={styles.logoContainer}>
+          <div className={styles.logoContainer} onClick={() => setStep(1)} style={{ cursor: 'pointer' }}>
             <Image
               src="/logo.png"
-              alt="Gonzalo Depilación Láser"
-              width={48}
-              height={48}
+              alt="Gonzalo Depilación para Hombres"
+              width={220}
+              height={68}
               priority
-              style={{ objectFit: 'contain' }}
+              className={styles.logoImg}
             />
-            <div>
-              <span className={styles.logoTitle}>Gonzalo</span>
-              <span className={styles.logoSubtitle}>Depilación Masculina</span>
-            </div>
           </div>
           {step > 1 && (
             <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-gold)' }}>

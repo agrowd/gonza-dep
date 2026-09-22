@@ -23,7 +23,7 @@
 
 .header {
   border-bottom: 1px solid var(--border-color);
-  padding: 1.5rem 1rem;
+  padding: 1rem 1.25rem;
   background-color: #ffffff;
 }
 
@@ -41,17 +41,27 @@
   gap: 1rem;
 }
 
-.logoTitle {
-  font-size: 1.3rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.logoImg {
+  height: 58px;
+  width: auto;
+  max-width: 230px;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.2s ease;
 }
 
-.logoSubtitle {
-  color: var(--color-gold);
-  font-size: 0.8rem;
-  font-weight: 500;
-  display: block;
+.logoContainer:hover .logoImg {
+  transform: scale(1.02);
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 0.85rem 1rem;
+  }
+  .logoImg {
+    height: 46px;
+    max-width: 180px;
+  }
 }
 
 .main {
