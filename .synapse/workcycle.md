@@ -1046,6 +1046,31 @@
     5. Despliegue en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1249933).
     6. Verificación visual mediante capturas Puppeteer (`scratch/staging_header_desktop.png` y `scratch/staging_header_mobile.png`): logo perfectamente legible, nítido y balanceado tanto en desktop como en dispositivos móviles.
     7. Decisión registrada: `D-66` en `.synapse/decisions.md`. Producción (`main`, puerto 3006) 100% aislada.
+- **22 de Septiembre (14:15 - Despliegue Exclusivo de Módulo 2 en Producción Real y Verificación E2E)**:
+  - **Solicitud del Cliente (Gonzalo)**: *"Primero subí el 2 y que quede terminado ese módulo y luego continuar con autogestión por favor"*.
+  - **Solicitud del Usuario**: *"Si y verifica que en la vista de neocita se vea todo como se debe ver"*.
+  - **Acciones Ejecutadas**:
+    1. **Aislamiento Estricto de Módulo 2**:
+       * En Git, se avanzó la rama `main` de producción mediante fast-forward limpio exactamente hasta el commit `9a3d403` (la cima del Módulo 2 antes de la creación del Módulo 3, 4 y 5).
+       * Se blindó `prisma/schema.prisma` incorporando los modelos específicos de IA/WhatsApp (`ConversacionWsp`, `MensajeWsp`, etc.) que comparten la base de datos PostgreSQL `agenda_db`, garantizando sincronización segura y protegiendo todas las 14 tablas relacionales sin alertas de pérdida de datos.
+       * Compilación limpia local de `main` con Turbopack (`npm run build`, 39/39 rutas).
+       * Push exitoso a `origin/main`.
+    2. **Despliegue en VPS Producción (`http://187.127.9.216:3006`)**:
+       * Ejecutado `deploy_vps_workspace.js`: `git fetch`, `git reset --hard origin/main`, `prisma db push`, `npm run build` y reinicio de PM2 `gonzalo-agenda` (PID 1252288, puerto 3006).
+       * Base de datos productiva `agenda_db` sincronizada con modelo `Bloqueo`, columnas `subEstado` y `señaEstado`.
+    3. **Verificación Automatizada E2E con Puppeteer en Producción (`scratch/verify_prod_neocita.mjs`)**:
+       * Acceso por `/login` con credenciales de administrador (código 200 OK).
+       * Navegación a `/admin/agenda` y activación de Vista Diaria Neocita (`viewMode = 'day'`).
+       * Cabecera verificada: `📅 Martes, 22 De Septiembre De 2026`, `12 turnos agendados`, `Ingreso Estimado $606.000`.
+       * 12 tarjetas verticales renderizadas con horarios de inicio/fin, duraciones (`⏱️ 40 min`), clientes reales, zonas, importes y badges de descuento (`🏷️ 10% OFF`).
+       * 3 huecos libres interactivos detectados e intercalados: `🟢 Libre: 14:10 a 14:40`, `🟢 Libre: 17:30 a 18:10` y `🟢 Libre: 19:50 a 20:20`, con botón `+ Agendar`.
+       * Botones de acción operativos: `[Día] [Semana] [Mes]`, `📅 Hoy`, `👁️ Ver Cancelados`, `🖨️ Imprimir Día`, `🚫 Bloquear Horario` y `+ Nuevo Turno`.
+       * Captura de pantalla guardada en `scratch/prod_neocita_verified.png` y directorio de artefactos.
+    4. **Sincronización de Entornos**:
+       * Rama local retornada a `staging` y sincronizada con el schema blindado de `main`.
+       * Staging (`puerto 3008`) preserva los Módulos 3, 4 y 5 listos para cuando Gonzalo decida activarlos.
+    5. **Decisión registrada**: `D-67` en `.synapse/decisions.md`.
+
 
 
 

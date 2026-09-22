@@ -1415,7 +1415,35 @@
   1. Se removió el bloque de texto HTML redundante (`styles.logoTitle` y `styles.logoSubtitle`).
   2. Se recortaron los márgenes transparentes vacíos de `public/logo.png` mediante `sharp` (dejando la imagen en 1283 x 394 px, sin el 61% de aire vertical que la encogía).
   3. Se incorporó la clase `.logoImg` con dimensionamiento adaptativo (58px en desktop, 46px en móviles), cursor clickeable hacia el inicio/Paso 1 y padding balanceado en el header (`1rem 1.25rem`).
-  4. Compilación y despliegue exitoso en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1249933).
-  5. Verificación visual mediante capturas Puppeteer (`staging_header_desktop.png` y `staging_header_mobile.png`), comprobando estética limpia, nítida y perfectamente proporcionada. Producción (`main`, puerto 3006) 100% aislada.
+## Mensaje del Usuario (2026-09-22 13:42-03:00)
+> [Captura de pantalla de la agenda diaria con 5 turnos visibles y cabecera "10 turnos agendados $546.000"]
+> "Esto esta funcionando bien o deberia mostrar a todos? Que esta pasando y otra consulta ---SIN TOCAR EL CODIGO RESPONDEME LO SIGUIENTE---: SE PUEDE SUBIR SOLO EL MODULO 2 A LA RAMA PRINCIPAL? SOLO EL 2"
+
+## Respuesta del Asistente:
+- Explicación de la Vista Diaria Neocita: está funcionando 100% perfecto. Los 10 turnos están cargados y los 5 restantes se acceden haciendo scroll hacia abajo. Para ver la semana completa se puede presionar `[Semana]`.
+- Confirmación de que es 100% posible subir EXCLUSIVAMENTE el Módulo 2 a producción sin arrastrar los módulos 3, 4 ni 5.
+
+## Mensaje del Usuario (2026-09-22 13:51-03:00)
+> [Captura de WhatsApp de Gonzalo: "Primero subí el 2 y que quede terminado ese módulo y luego continuar con autogestión por favor"]
+> "antes de la actualizacion el modulo 2 era otro? o cual es el modulo 2? me dijo esto gonzalo"
+
+## Respuesta del Asistente:
+- Aclaración de que el Módulo 2 nunca cambió: siempre fue "AGENDA" (Mejoras en la Agenda). Se detallan sus 6 componentes y se solicita confirmación para proceder con el despliegue exclusivo.
+
+## Mensaje del Usuario (2026-09-22 14:03-03:00)
+> "Si y verifica que en la vista de neocita se vea todo como se debe ver"
+
+## Respuesta del Asistente (D-67):
+- **Despliegue Aislado de Módulo 2 a Producción (`main`, puerto 3006)**:
+  1. Rama `main` avanzada por fast-forward exactamente hasta `9a3d403` (la cima del Módulo 2 antes del inicio de Módulo 3, 4 y 5).
+  2. Blindaje de `prisma/schema.prisma` incorporando los modelos de IA/WhatsApp para proteger de manera definitiva las 14 tablas de la base de datos PostgreSQL compartida `agenda_db`.
+  3. Despliegue en VPS Producción (`http://187.127.9.216:3006`, PM2 `gonzalo-agenda`, PID 1252288) ejecutado con código 0.
+- **Verificación Automatizada E2E con Puppeteer en Producción**:
+  1. Inicio de sesión exitoso como administrador en Producción.
+  2. Conmutación a Vista Diaria Neocita (`[Día]`).
+  3. Verificación de 12 citas del día Martes 22 de Septiembre ($606.000 estimado), 3 huecos libres interactivos (`🟢 Libre`) con botón `+ Agendar`, tarjetas con duraciones, zonas, señas y descuentos (`🏷️ 10% OFF`), y controles de navegación (`[Día] [Semana] [Mes]`, `🖨️ Imprimir Día`, `🚫 Bloquear Horario`).
+  4. Captura guardada en `scratch/prod_neocita_verified.png`.
+  5. Rama de trabajo retornada a `staging` (puerto 3008), lista para retomar Autogestión cuando el cliente lo disponga.
+
 
 
