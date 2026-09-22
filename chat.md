@@ -1378,3 +1378,12 @@
   - Compilación remota con Next.js 16 (Turbopack, código 0) y reinicio de PM2 `gonzalo-agenda-staging` (PID 1247955).
   - Prueba E2E con Puppeteer (Headless Chrome) validó el login, el renderizado de caja ($0 hoy, $190.000 semana, $6.563.500 período), 92 citas realizadas ($6.081.000), exclusión dinámica con `[✕]` (bajó a 91 y recalculó), restauración a 92, y modal de ficha. 0 errores de consola.
   - Producción (`main`, puerto 3006) 100% aislada e intacta.
+
+## Mensaje del Usuario (2026-09-22 12:47-03:00)
+> "Fijate en descargas esta esto que dice Luciano sobre la actualizacion de un modulo" (con captura de WhatsApp de Luciano indicando actualización en el archivo descargado sobre el módulo de autogestión).
+
+## Respuesta del Asistente:
+- Detección, extracción y sincronización del archivo `C:\Users\Try Hard\Downloads\Mejoras AppWeb.docx` (actualizado a las 12:46 hs).
+- Identificación del reordenamiento de la jerarquía oficial: **Autogestión pasa a ser el Módulo 5** (inmediatamente después de Estadísticas).
+- Análisis detallado de las 10 especificaciones operativas añadidas para Autogestión (UI modelo Alta de Turno, días abiertos vs cerrados con filtro $65.000, algoritmo de horarios pegados con proximidad 2x, diferimiento de alta de cliente en BD, bypass temporal de MercadoPago a WhatsApp con botón verde "Pagar Seña", regla de 72hs al reagendar con salto directo a horarios, limpieza de footer y popups emergentes en la agenda administrativa).
+- Elaboración del Plan de Implementación (`implementation_plan.md`) para aprobación del usuario antes de ejecutar en Staging.

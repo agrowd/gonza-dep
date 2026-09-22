@@ -990,5 +990,22 @@
       * Botón restablecer: restauró los 92 turnos.
       * Modal de Ficha: abrió datos de Carlos Aquino y cerró limpiamente.
       * Cero errores de consola.
-    - Producción (`main`, puerto 3006, PID 1067263, uptime 9D) 100% aislada e intacta.
+- **22 de Septiembre (12:48 - Actualización de Requerimientos de Luciano y Reordenamiento de Jerarquía)**:
+  - **Mensaje de WhatsApp de Luciano**: *"Dale, y ya después se puede arrancar con el módulo de autogestión que te lo arregle al archivo, si lo descargaste está desactualizado por las dudas"*.
+  - **Detección y Sincronización**: Se localizó el archivo recién descargado `C:\Users\Try Hard\Downloads\Mejoras AppWeb.docx` (actualizado a las 12:46 hs). Se copió y sincronizó con el repositorio.
+  - **Cambios Clave Detectados**:
+    1. **Jerarquía Oficial Actualizada**: Autogestión fue promovido a la posición **5** (inmediatamente después de Estadísticas).
+    2. **Autogestión con UI de "Alta de Turno"**: Calendario interactivo verde/gris y selección de horarios cada 10 min.
+    3. **Días Abiertos vs Cerrados**: Solo muestra días con turnos agendados previamente (priorizando Mar, Mié, Jue). Solo si el importe $\ge \$65.000$ se habilitan días no abiertos.
+    4. **Agrupamiento de Horarios Pegados (Proximidad 2x)**: Horarios restringidos a $2 \times \text{Duración}$ a cada lado de citas existentes (evitando baches).
+    5. **Diferimiento de Alta de Cliente**: No guardar clientes en base de datos hasta que el turno sea señado.
+    6. **Bypass Temporal de MercadoPago a WhatsApp**: Botón verde "Pagar Seña" que guarda la reserva y redirige a WhatsApp con mensaje estructurado.
+    7. **Regla 72hs**: Advertencia explícita de pérdida de seña al reagendar con menos de 72hs.
+    8. **Modificación Directa de Horario**: Saltear pantalla de zonas al modificar turno existente.
+    9. **Limpieza de Footer**: Links de redes solo en pantalla de login (email).
+    10. **Popups en Agenda Administrativa**: Notificaciones emergentes para avisar al operador sobre reservas/cancelaciones por autogestión.
+  - **Elaboración de Plan de Implementación (`implementation_plan.md`)**:
+    - Estructurado el plan detallado para el desarrollo integral del Módulo 5 en Staging (`http://187.127.9.216:3008`).
+    - Contempla el motor de disponibilidad con días abiertos/cerrados, el algoritmo de proximidad $2\times$, el diferimiento de alta de cliente en BD, el bypass a WhatsApp con botón verde "Pagar Seña", el salto directo al reagendar con regla de 72hs, la limpieza del footer y las notificaciones emergentes en la agenda administrativa.
+    - A la espera de la confirmación del usuario para proceder a la ejecución.
 
