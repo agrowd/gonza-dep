@@ -190,6 +190,7 @@ export default function AgendaPage() {
   const [viewMode, setViewMode] = useState('week'); // 'week', 'day', 'month'
   const [selectedDate, setSelectedDate] = useState(null);
   const [fromClientId, setFromClientId] = useState(null);
+  const [fromStats, setFromStats] = useState(false);
   const [isNextScheduling, setIsNextScheduling] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
@@ -772,10 +773,14 @@ export default function AgendaPage() {
       const dateParam = searchParams.get('date');
       const viewParam = searchParams.get('view');
       const fromClientParam = searchParams.get('fromClient');
+      const fromStatsParam = searchParams.get('fromStats') === 'true';
       const turnoIdParam = searchParams.get('turnoId');
       
       if (fromClientParam) {
         setFromClientId(fromClientParam);
+      }
+      if (fromStatsParam) {
+        setFromStats(true);
       }
       
       if (dateParam) {
@@ -2066,7 +2071,9 @@ export default function AgendaPage() {
     }
     setIsDetailsOpen(false);
     setIsEditing(false);
-    if (fromClientId) {
+    if (fromStats) {
+      router.push('/admin/estadisticas');
+    } else if (fromClientId) {
       router.push(`/admin/clientes?id=${fromClientId}`);
     }
   };

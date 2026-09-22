@@ -964,7 +964,15 @@
       * Responde: *"¡Hola Alberto! Te saluda el asistente virtual de Gonzalo 😊. Tenés turno confirmado para el martes 27 de octubre a las 15:00 hs para cuerpo completo..."*
       * `cleanOngoingGreetings(..., isPatient = true)` preserva la presentación sin eliminarla.
       * `/chats` responde HTTP 200 OK y muestra a todos los clientes con su ficha oficial.
-
-
-
+- **22 de Septiembre (12:20 - Módulo 4: Estadísticas - Inicio y Planificación)**:
+  - **Objetivo**: Implementar el Módulo 4 de la Etapa 2 (`Mejoras y Ampliaciones — App Web`), correspondiente al rediseño integral de Estadísticas (Avanzadas y Generales).
+  - **Alcance Planificado**:
+    1. División en dos pestañas: Estadísticas Avanzadas (vista principal interactiva) y Estadísticas Generales (renovada).
+    2. Criterio contable de señas: ingresan y se computan como ganancia el día de carga (`createdAt`), deduciéndose de las ganancias del día del turno para evitar duplicación.
+    3. Desglose de caja diaria: Entradas de turnos + Entradas de señas pagadas + Total.
+    4. Selector avanzado de 11 métricas con tabla interactiva de "DETALLES".
+    5. Botón de exclusión temporal `[X]` con recálculo dinámico en memoria de totales y ticket promedio.
+    6. Botones de acción bidireccional `[Turno]` (apertura en Agenda) y `[Ficha]` (modal de cliente).
+    7. Histogramas visuales para Canales de Adquisición y Ranking de Zonas más demandadas.
+  - Plan de implementación elaborado en `implementation_plan.md` y presentado para aprobación del usuario.
 
