@@ -47,9 +47,14 @@ export async function POST(request) {
     const withLossOfDeposit = true;
 
     // Perform cancellation in DB
+    const currentObs = turno.observaciones || '';
+    const newObs = currentObs.includes('[CANCELADO_AUTOGESTION]') ? currentObs : `${currentObs} [CANCELADO_AUTOGESTION]`.trim();
     const updatedTurno = await prisma.turno.update({
       where: { id: turnoId },
-      data: { estado: 'CANCELADO' },
+      data: {
+        estado: 'CANCELADO',
+        observaciones: newObs
+      },
       include: { cliente: true }
     });
 

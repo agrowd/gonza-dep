@@ -347,6 +347,62 @@ export default function AgendaPage() {
   const [sendingWppNotice, setSendingWppNotice] = useState(false);
   const [wppConnectionStatus, setWppConnectionStatus] = useState('UNKNOWN');
 
+  // Autogestión Real-time Notifications Popup State
+  const [autogestionAlert, setAutogestionAlert] = useState(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
+
+  // Poll for autogestión bookings, reschedules, and cancellations
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAutogestionAlerts = async () => {
+      try {
+        const res = await fetch('/api/admin/autogestion-alertas?limit=10&sinceHours=24');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.alertas && data.alertas.length > 0 && isMounted) {
+          const unread = data.alertas.find(a => !dismissedAlerts.has(a.id));
+          if (unread) {
+            setAutogestionAlert(unread);
+          }
+        }
+      } catch (e) {
+        // silent catch
+      }
+    };
+
+    fetchAutogestionAlerts();
+    const interval = setInterval(fetchAutogestionAlerts, 20000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [dismissedAlerts]);
+
+  const handleVerTurnoAutogestion = async (alert) => {
+    setDismissedAlerts(prev => new Set([...prev, alert.id]));
+    setAutogestionAlert(null);
+    if (alert.fecha) {
+      const targetDate = parseYYYYMMDD(alert.fecha);
+      setSelectedDate(targetDate);
+      setViewMode('day');
+    }
+    try {
+      const res = await fetch(`/api/admin/turnos/${alert.turnoId}`);
+      if (res.ok) {
+        const app = await res.json();
+        setSelectedTurno(app);
+        setIsDetailsOpen(true);
+      }
+    } catch (e) {
+      console.error('Error fetching autogestion turno details:', e);
+    }
+  };
+
+  const handleDismissAutogestion = (alert) => {
+    setDismissedAlerts(prev => new Set([...prev, alert.id]));
+    setAutogestionAlert(null);
+  };
+
   const savedScrollRef = useRef(0);
   const gridBodyRef = useRef(null);
 
@@ -4853,6 +4909,83 @@ export default function AgendaPage() {
           >
             &times;
           </button>
+        </div>
+      )}
+      {/* Autogestión Notification Popup Modal */}
+      {autogestionAlert && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          maxWidth: '420px',
+          width: 'calc(100% - 48px)',
+          backgroundColor: '#ffffff',
+          border: '2px solid #7a1e1e',
+          borderRadius: '16px',
+          padding: '18px 20px',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+          zIndex: 9999,
+          animation: 'slideIn 0.25s ease forwards'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.25rem' }}>🔔</span>
+              <strong style={{ color: '#7a1e1e', fontSize: '0.98rem' }}>
+                {autogestionAlert.tipo === 'RESERVA' ? 'Nueva Reserva Online' : (autogestionAlert.tipo === 'REPROGRAMACION' ? 'Turno Reprogramado' : 'Turno Cancelado')}
+              </strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleDismissAutogestion(autogestionAlert)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b', lineHeight: 1 }}
+              title="Cerrar notificación"
+            >
+              &times;
+            </button>
+          </div>
+          <div style={{ fontSize: '0.92rem', color: '#1e293b', marginBottom: '14px', lineHeight: 1.45 }}>
+            <strong>{autogestionAlert.clienteNombre}</strong> {autogestionAlert.tipo === 'RESERVA' ? 'hizo una reserva online' : (autogestionAlert.tipo === 'REPROGRAMACION' ? 'reprogramó su turno' : 'canceló su turno')} para el <strong>{autogestionAlert.fecha}</strong> a las <strong>{autogestionAlert.horaInicio} hs</strong>.
+            {autogestionAlert.zonasTexto && (
+              <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
+                Zonas: {autogestionAlert.zonasTexto}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => handleVerTurnoAutogestion(autogestionAlert)}
+              style={{
+                flex: 1,
+                background: '#7a1e1e',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '9px 14px',
+                fontWeight: '700',
+                fontSize: '0.88rem',
+                cursor: 'pointer'
+              }}
+            >
+              Ver Turno ↗
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDismissAutogestion(autogestionAlert)}
+              style={{
+                background: '#f1f5f9',
+                color: '#475569',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '9px 14px',
+                fontWeight: '600',
+                fontSize: '0.88rem',
+                cursor: 'pointer'
+              }}
+            >
+              Entendido
+            </button>
+          </div>
         </div>
       )}
     </div>
