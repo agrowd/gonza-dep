@@ -94,8 +94,27 @@ export default function PhoneInput({
         pattern="[0-9]*"
         value={phoneNumber}
         onChange={(e) => {
-          const cleanNum = e.target.value.replace(/\D/g, '');
+          let cleanNum = e.target.value.replace(/\D/g, '');
+          if (countryCode === '54') {
+            if (cleanNum.startsWith('549') && cleanNum.length > 10) cleanNum = cleanNum.substring(3);
+            else if (cleanNum.startsWith('54') && cleanNum.length > 10) cleanNum = cleanNum.substring(2);
+            if (cleanNum.startsWith('0') && cleanNum.length > 10) cleanNum = cleanNum.substring(1);
+          }
           if (onPhoneChange) onPhoneChange(cleanNum);
+        }}
+        onPaste={(e) => {
+          const pasted = e.clipboardData?.getData('text') || '';
+          if (pasted) {
+            e.preventDefault();
+            let clean = pasted.replace(/\D/g, '');
+            if (countryCode === '54') {
+              if (clean.startsWith('549')) clean = clean.substring(3);
+              else if (clean.startsWith('54')) clean = clean.substring(2);
+              if (clean.startsWith('0')) clean = clean.substring(1);
+              if (clean.startsWith('15') && clean.length === 10) clean = '11' + clean.substring(2);
+            }
+            if (onPhoneChange) onPhoneChange(clean);
+          }
         }}
         required={required}
         placeholder={placeholder || defaultPlaceholder}
@@ -108,7 +127,9 @@ export default function PhoneInput({
           outline: 'none',
           backgroundColor: 'transparent',
           color: 'var(--text-primary, #ffffff)',
-          fontSize: '0.9rem',
+          fontSize: '16px',
+          userSelect: 'text',
+          WebkitUserSelect: 'text',
           boxSizing: 'border-box',
           margin: 0
         }}
