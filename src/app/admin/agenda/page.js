@@ -651,7 +651,7 @@ export default function AgendaPage() {
       if (selectedTurno.cliente) {
         setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
         setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
-        setTempClientNotasGonzalo(selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente.notasGonzalo || ''));
+        setTempClientNotasGonzalo(selectedTurno.notasGonzalo || '');
 
         const clientTurnos = selectedTurno.cliente.turnos || [];
         const completedInSystem = clientTurnos.filter(t => t.estado === 'REALIZADO').length;
@@ -841,13 +841,8 @@ export default function AgendaPage() {
       
       if (dateParam) {
         const parsedDate = parseYYYYMMDD(dateParam);
-        const now = new Date();
         if (!isNaN(parsedDate.getTime())) {
-          const diffDays = (now.getTime() - parsedDate.getTime()) / (1000 * 3600 * 24);
-          // Only use dateParam if it is not a stale past date (older than 7 days in the past)
-          if (diffDays <= 7) {
-            initialDate = parsedDate;
-          }
+          initialDate = parsedDate;
         }
       }
       
@@ -1344,7 +1339,7 @@ export default function AgendaPage() {
         if (tempClientObservaciones !== (selectedTurno.cliente.observaciones || '')) {
           updateBody.observaciones = tempClientObservaciones;
         }
-        const currentTurnoNotas = selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente.notasGonzalo || '');
+        const currentTurnoNotas = selectedTurno.notasGonzalo || '';
         if (tempClientNotasGonzalo !== currentTurnoNotas) {
           updateBody.notasGonzalo = tempClientNotasGonzalo;
         }
@@ -1541,7 +1536,7 @@ export default function AgendaPage() {
   const [pendingNextScheduleData, setPendingNextScheduleData] = useState(null);
 
   // Schedule next turno: redirect to Alta de Turno highlighting recommended week based on frequency
-  const handleScheduleNextTurn = (turno) => {
+  const handleScheduleNextTurn = async (turno) => {
     if (!turno || !turno.cliente) return;
     
     const fechaStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha);
@@ -1559,13 +1554,13 @@ export default function AgendaPage() {
       if (calcsZ.duracionMinutos > 0) previousDuration = calcsZ.duracionMinutos;
     }
 
-    const currentTurnoNotas = turno.notasGonzalo !== null && turno.notasGonzalo !== undefined ? turno.notasGonzalo : (turno.cliente?.notasGonzalo || '');
+    const currentTurnoNotas = turno.notasGonzalo || '';
     if (turno.cliente?.id && (
       tempClientObservaciones !== (turno.cliente?.observaciones || '') ||
-      tempClientNotasGonzalo !== currentTurnoNotas ||
+      (tempClientNotasGonzalo || '').trim() !== currentTurnoNotas.trim() ||
       tempClientFrecuencia !== (turno.cliente?.frecuencia || 4)
     )) {
-      handleSaveClientObservaciones(true);
+      await handleSaveClientObservaciones(true);
     }
 
     const prevDescuentoTipo = turno.descuentoTipo || ((turno.bonificacion || 0) > 0 ? 'PESOS' : 'NINGUNO');
@@ -1598,8 +1593,17 @@ export default function AgendaPage() {
   };
 
   // Reprogramar turno: redirect to Alta de Turno with current appointment details to choose a new free slot
-  const handleReprogramarTurno = (turno) => {
+  const handleReprogramarTurno = async (turno) => {
     if (!turno) return;
+
+    if (turno.cliente?.id && (
+      tempClientObservaciones !== (turno.cliente?.observaciones || '') ||
+      (tempClientNotasGonzalo || '').trim() !== (turno.notasGonzalo || '').trim() ||
+      tempClientFrecuencia !== (turno.cliente?.frecuencia || 4)
+    )) {
+      await handleSaveClientObservaciones(true);
+    }
+
     const fechaStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha);
     const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
 
@@ -2114,7 +2118,7 @@ export default function AgendaPage() {
       return isFechaChanged || isHoraInicioChanged || isHoraFinChanged || isEstadoChanged || isValorTotalChanged || isValorSeñaChanged || isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged || isOtrosChanged || isZonesChanged;
     } else {
       const isObsChanged = (tempClientObservaciones || '').trim() !== (selectedTurno.cliente?.observaciones || '').trim();
-      const isNotasChanged = (tempClientNotasGonzalo || '').trim() !== (selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente?.notasGonzalo || '')).trim();
+      const isNotasChanged = (tempClientNotasGonzalo || '').trim() !== (selectedTurno.notasGonzalo || '').trim();
       const isTurnoObsChanged = (tempTurnoObservaciones || '').trim() !== (selectedTurno.observaciones || '').trim();
       const isFreqChanged = tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4);
 
@@ -2129,6 +2133,10 @@ export default function AgendaPage() {
     }
     setIsDetailsOpen(false);
     setIsEditing(false);
+    setSelectedTurno(null);
+    setTempClientNotasGonzalo('');
+    setTempClientObservaciones('');
+    setTempTurnoObservaciones('');
     if (fromStats) {
       router.push('/admin/estadisticas');
     } else if (fromClientId) {
@@ -3684,13 +3692,28 @@ export default function AgendaPage() {
                       />
                       {(tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') || 
                         tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4) ||
-                        tempClientNotasGonzalo !== (selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente?.notasGonzalo || ''))) && (
+                        (tempClientNotasGonzalo || '').trim() !== (selectedTurno.notasGonzalo || '').trim()) && (
                         <button
-                          onClick={handleSaveClientObservaciones}
+                          type="button"
+                          onClick={() => handleSaveClientObservaciones(false)}
                           className="btn btn-primary"
-                          style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                          style={{
+                            alignSelf: 'flex-end',
+                            fontSize: '0.8rem',
+                            padding: '0.4rem 0.9rem',
+                            backgroundColor: '#2e7d32',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }}
                         >
-                          💾 Guardar Cambios
+                          💾 Guardar Notas Operador
                         </button>
                       )}
                     </div>
@@ -3763,7 +3786,11 @@ export default function AgendaPage() {
                     {selectedTurno.clienteId && (
                       <>
                         <button
-                          onClick={() => {
+                          type="button"
+                          onClick={async () => {
+                            if (checkHasUnsavedChanges()) {
+                              await handleSaveClientObservaciones(true);
+                            }
                             if (typeof window !== 'undefined' && gridBodyRef.current) {
                               sessionStorage.setItem('agenda_scroll_pos', gridBodyRef.current.scrollTop.toString());
                             }
@@ -3797,7 +3824,7 @@ export default function AgendaPage() {
                         const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
                         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
                         const initialObs = (tempClientObservaciones || selectedTurno.cliente?.observaciones || '').trim();
-                        const initialNotas = (tempClientNotasGonzalo || selectedTurno.notasGonzalo || selectedTurno.cliente?.notasGonzalo || '').trim();
+                        const initialNotas = (tempClientNotasGonzalo || selectedTurno.notasGonzalo || '').trim();
                         const initialTurnoObs = (tempTurnoObservaciones || selectedTurno.observaciones || '').trim();
                         const initialFreq = tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4;
 

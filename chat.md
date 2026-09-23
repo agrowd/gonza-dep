@@ -1503,7 +1503,36 @@
   2. **Renderizado Histórico Exclusivo**: En `src/app/admin/clientes/page.js`, cada cita del historial evalúa y renderiza estrictamente `{t.notasGonzalo}` sin caer en fallbacks dinámicos.
   3. **Cascada Temporal Segura en Backend**: En `PUT /api/admin/turnos/[id]`, se actualiza ese turno y los turnos cronológicamente posteriores (`>= fecha/hora`), junto con `Cliente.notasGonzalo` para citas futuras a agendarse, excluyendo incondicionalmente todos los turnos anteriores.
   4. **Herencia en Creación**: En `/api/admin/turnos` y `/api/reservas/crear`, cada nuevo turno congela su propio valor de `notasGonzalo` al momento de agendar.
+  - **Decisión Registrada**: `D-69` en `.synapse/decisions.md`.
 
+## Mensaje del Usuario (2026-09-23 13:41-03:00)
+> [Captura de WhatsApp donde Gonzalo responde: "Sisi exacto así se distinguen los espacios disponibles"]
+> "Lo quiere como se ve en la foto grande"
 
+## Respuesta del Asistente:
+- **Confirmación y Verificación en Vivo**:
+  * La "foto grande" enviada a Gonzalo es exactamente la captura de la planilla imprimible (`/admin/agenda/imprimir`) que implementamos y desplegamos en el paso anterior.
+  * Gonzalo confirmó su aprobación total al ver los espacios disponibles destacados con `🟢 Libre (X min)`.
+  * Se verificó en tiempo real contra el servidor VPS de Producción (`http://187.127.9.216:3006`) y Staging (`http://187.127.9.216:3008`):
+    1. Encabezado institucional con logo, fecha y badge de turnos.
+    2. Columnas limpias: `HORARIO` (con Valor debajo), `CLIENTE` (nombre en negrita) y `ZONAS A REALIZAR` (sin cajas amarillas de comentarios ni notas).
+    3. Franjas libres resaltadas suavemente con `🟢 Libre` y `Espacio Disponible`.
+    4. Resumen de totales con cantidad de turnos e ingreso total estimado.
+    5. Modo de impresión (`@media print`) verificado para salida perfecta en PDF y papel A4.
 
+## Mensaje del Usuario (2026-09-23 13:54-03:00)
+> [4 Capturas de WhatsApp con feedback directo de Gonzalo]:
+> 1. "Ahora cuando voy a un turno y hago cambios en sus comentarios de operador, no se cambia en su historial (al turno de 26 de septiembre le puse 118 y le sigue apareciendo el de antes)"
+> 2. "Pero cuando me voy a un turno mas viejo (que en su historial aparece 113, está bien es el que tenía antes) aparece 118 que nunca lo puse yo"
+> 3. "Cada turno tiene su comentario de operador, donde a menos que se modifiqué el comentario, toma el mismo del turno anterior. Si en un turno se modifica el comentarios, en los anteriores no deberían cambiarse, y los próximos van a tomar ese nuevo valor"
+
+## Respuesta del Asistente (D-70):
+- **Diagnóstico Integral y Root Cause**:
+  1. **Cancelación de Petición HTTP al Navegar**: Gonzalo editaba `118` en el modal de la Agenda y clickeaba de inmediato `📁 Ficha Cliente`. El `onClick` ejecutaba `window.location.href = ...` de forma sincrónica, abortando la petición de guardado en el navegador antes de que el servidor la procesara. Por ende, la cita del 26/09 mantenía su valor anterior (`114`).
+  2. **Fallback Erróneo a la Línea de Base en Frontend**: En `agenda/page.js`, `setTempClientNotasGonzalo` utilizaba `selectedTurno.notasGonzalo || selectedTurno.cliente.notasGonzalo`. Al abrir citas pasadas que no tenían nota o tenían nota previa, el fallback leía `Cliente.notasGonzalo` (que tenía 118), mostrando 118 en citas de julio donde nunca se había colocado.
+  3. **Restricción de 7 Días en URL**: El parámetro `dateParam` descartaba fechas con más de 7 días de antigüedad (`diffDays <= 7`), impidiendo abrir en el calendario turnos de meses anteriores desde el historial del cliente.
+- **Solución y Despliegue**:
+  1. En `src/app/admin/agenda/page.js`: `setTempClientNotasGonzalo(selectedTurno.notasGonzalo || '')` sin fallback a cliente; botón `📁 Ficha Cliente`, `📅 Siguiente Turno` y `🔄 Reprogramar` convertidos a asíncronos esperando `await handleSaveClientObservaciones(true)`; agregado botón prominente `💾 Guardar Notas Operador`; y removida la restricción de 7 días en `dateParam`.
+  2. En `src/app/api/admin/clientes/[id]`: la edición en la pestaña de Notas actualiza la línea de base y los turnos vigentes (`fecha >= today`), protegiendo el historial pasado.
+  3. En `agenda_db` y `agenda_db_staging`: sincronizado el turno de Luciano Gomez del 26/09 en `118` y preservados los turnos históricos de julio en `113`.
 

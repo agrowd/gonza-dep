@@ -204,6 +204,13 @@ export async function POST(request) {
 
     const obsText = observaciones ? `[AUTOGESTION] ${observaciones}` : '[AUTOGESTION] Reserva creada por autogestión';
 
+    const lastClientTurno = await prisma.turno.findFirst({
+      where: { clienteId: client.id, fecha: { lte: targetDate } },
+      orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
+      select: { notasGonzalo: true }
+    });
+    const inheritedNotas = lastClientTurno?.notasGonzalo || client.notasGonzalo || null;
+
     const turno = await prisma.turno.create({
       data: {
         clienteId: client.id,
@@ -217,7 +224,7 @@ export async function POST(request) {
         saldoPendiente: valorTotal - valorSeña,
         estado: 'PENDIENTE_PAGO',
         observaciones: obsText,
-        notasGonzalo: client.notasGonzalo || null
+        notasGonzalo: inheritedNotas
       }
     });
 
