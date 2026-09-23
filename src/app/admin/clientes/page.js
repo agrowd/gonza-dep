@@ -739,57 +739,6 @@ function ClientesPageContent() {
                       <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Fecha Primer Turno</span>
                       <span className={styles.detailValue} style={{ fontSize: '1.05rem' }}>{stats.firstDate}</span>
                     </div>
-                    
-                    <div className={styles.cardSection}>
-                      <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Última sesión</span>
-                      <span className={styles.detailValue} style={{ fontSize: '1.05rem' }}>{stats.lastDate}</span>
-                      {stats.count > 0 && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.25rem' }}>Hace: {stats.timeSinceLast}</span>
-                      )}
-                    </div>
-
-                    <div className={styles.cardSection}>
-                      <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Próximo Turno</span>
-                      {stats.nextTurn ? (
-                        <div>
-                          <span className={styles.detailValue} style={{ color: 'var(--color-gold)', fontSize: '1.05rem', fontWeight: 700 }}>
-                            {formatLocalDateMedium(stats.nextTurn.fecha)}
-                          </span>
-                          <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginTop: '0.25rem' }}>
-                            {stats.nextTurn.horaInicio} a {stats.nextTurn.horaFin}
-                          </span>
-                          <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                            Zonas: {JSON.parse(stats.nextTurn.zonas).map(z => z.nombre).join(', ')}
-                          </span>
-                          <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            Saldo: ${stats.nextTurn.saldoPendiente.toLocaleString()}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenResendEmail(stats.nextTurn)}
-                            className="btn btn-primary"
-                            style={{
-                              marginTop: '0.6rem',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.4rem',
-                              backgroundColor: '#4f46e5',
-                              borderColor: '#4f46e5',
-                              color: '#fff',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              padding: '0.35rem 0.65rem',
-                              width: '100%'
-                            }}
-                          >
-                            📧 Reenviar Aviso de Turno
-                          </button>
-                        </div>
-                      ) : (
-                        <span className={styles.detailValue} style={{ color: 'var(--text-muted)' }}>Sin turnos próximos</span>
-                      )}
-                    </div>
 
                     {/* Quick Contacts Actions */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -815,25 +764,6 @@ function ClientesPageContent() {
                   <div className={styles.cardSection}>
                     <h3 className={styles.cardSectionTitle}>Historial de Turnos</h3>
                     
-                    {/* Operator Clinical / Laser Notes Banner */}
-                    {selectedClient.notasGonzalo && (
-                      <div style={{
-                        backgroundColor: 'rgba(212, 165, 77, 0.08)',
-                        border: '1px solid rgba(212, 165, 77, 0.35)',
-                        borderRadius: '8px',
-                        padding: '0.75rem 1rem',
-                        marginBottom: '1rem',
-                        fontSize: '0.85rem'
-                      }}>
-                        <strong style={{ color: 'var(--color-gold)', display: 'block', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
-                          🛡️ Observaciones del Operador (Potencia / Clínica):
-                        </strong>
-                        <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-primary)', lineHeight: 1.4 }}>
-                          {selectedClient.notasGonzalo}
-                        </div>
-                      </div>
-                    )}
-
                     {selectedClient.turnos.length === 0 ? (
                       <div className={styles.emptyState}>Sin historial registrado</div>
                     ) : (

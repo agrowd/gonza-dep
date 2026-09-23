@@ -3219,15 +3219,27 @@ export default function AgendaPage() {
             ) : (
               <>
                 <div className={styles.detailGrid}>
-                  <div className={styles.detailItem}>
+                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <span className={styles.detailLabel}>Cliente</span>
-                    <span className={styles.detailValue} style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                    <span className={styles.detailValue} style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                       {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
                     </span>
                   </div>
                   <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Estado</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span className={styles.detailLabel}>Día</span>
+                    <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 600 }}>{formatLocalDate(selectedTurno.fecha)}</span>
+                  </div>
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Horario</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                      <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700 }}>
+                        {selectedTurno.horaInicio} a {selectedTurno.horaFin} ({(() => {
+                          const startM = timeToMinutes(selectedTurno.horaInicio);
+                          const endM = timeToMinutes(selectedTurno.horaFin);
+                          const diff = endM - startM;
+                          return diff > 0 ? diff : selectedTurno.duracionMinutos;
+                        })()} min)
+                      </span>
                       <span className={`${styles.statusPill} ${getStatusLabelClass(selectedTurno.estado)}`}>
                         {selectedTurno.estado}
                       </span>
@@ -3245,28 +3257,13 @@ export default function AgendaPage() {
                       )}
                     </div>
                   </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Día</span>
-                    <span className={styles.detailValue}>{formatLocalDate(selectedTurno.fecha)}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Horario</span>
-                    <span className={styles.detailValue}>
-                      {selectedTurno.horaInicio} a {selectedTurno.horaFin} ({(() => {
-                        const startM = timeToMinutes(selectedTurno.horaInicio);
-                        const endM = timeToMinutes(selectedTurno.horaFin);
-                        const diff = endM - startM;
-                        return diff > 0 ? diff : selectedTurno.duracionMinutos;
-                      })()} min)
-                    </span>
-                  </div>
                   {(() => {
                     const dynPrices = getUpdatedTurnoPrices(selectedTurno);
                     return (
                       <>
                         <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                           <span className={styles.detailLabel}>Zonas a depilar</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          <span className={styles.detailValue} style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                             {(() => {
                               try {
                                 return JSON.parse(selectedTurno.zonas).map(z => z.nombre || z.name).filter(Boolean).join(', ') || 'Ninguna (Bloqueo)';
@@ -3384,42 +3381,7 @@ export default function AgendaPage() {
 
                   {selectedTurno.clienteId && (
                     <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                      <span className={styles.detailLabel}>Frecuencia Estimada del Tratamiento (Semanas)</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
-                        <select
-                          value={tempClientFrecuencia}
-                          onChange={(e) => setTempClientFrecuencia(Number(e.target.value))}
-                          style={{
-                            padding: '0.5rem',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-secondary)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            flex: 1
-                          }}
-                        >
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(w => (
-                            <option key={w} value={w}>Cada {w} semana{w > 1 ? 's' : ''}</option>
-                          ))}
-                        </select>
-                        {(tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4) || tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '')) && (
-                          <button
-                            onClick={handleSaveClientObservaciones}
-                            className="btn btn-primary"
-                            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                          >
-                            💾 Guardar Frecuencia
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedTurno.clienteId && (
-                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginTop: '0.25rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginTop: '0.25rem' }}>
                         <div>
                           <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.35rem', color: 'var(--text-secondary)' }}>
                             📅 Fecha Primer Turno
@@ -3448,7 +3410,7 @@ export default function AgendaPage() {
                               🔢 Sesiones Realizadas
                             </span>
                             <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
-                              ({(selectedTurno.cliente?.turnos || []).filter(t => t.estado === 'REALIZADO').length} en sistema + {tempClientSesionesPrevias} previas)
+                              ({(selectedTurno.cliente?.turnos || []).filter(t => t.estado === 'REALIZADO').length} sis + {tempClientSesionesPrevias} prev)
                             </span>
                           </div>
                           <input
@@ -3482,6 +3444,41 @@ export default function AgendaPage() {
                           💾 Guardar Fecha y Sesiones
                         </button>
                       )}
+                    </div>
+                  )}
+
+                  {selectedTurno.clienteId && (
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
+                      <span className={styles.detailLabel}>Frecuencia Estimada del Tratamiento (Semanas)</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+                        <select
+                          value={tempClientFrecuencia}
+                          onChange={(e) => setTempClientFrecuencia(Number(e.target.value))}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            flex: 1
+                          }}
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(w => (
+                            <option key={w} value={w}>Cada {w} semana{w > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                        {(tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4) || tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '')) && (
+                          <button
+                            onClick={handleSaveClientObservaciones}
+                            className="btn btn-primary"
+                            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          >
+                            💾 Guardar Frecuencia
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 
