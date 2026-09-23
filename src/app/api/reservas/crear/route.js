@@ -216,7 +216,8 @@ export async function POST(request) {
         valorSeña,
         saldoPendiente: valorTotal - valorSeña,
         estado: 'PENDIENTE_PAGO',
-        observaciones: obsText
+        observaciones: obsText,
+        notasGonzalo: client.notasGonzalo || null
       }
     });
 

@@ -1445,5 +1445,65 @@
   4. Captura guardada en `scratch/prod_neocita_verified.png`.
   5. Rama de trabajo retornada a `staging` (puerto 3008), lista para retomar Autogestión cuando el cliente lo disponga.
 
+## Mensaje del Usuario (2026-09-23 10:25-03:00)
+> [5 Capturas de pantalla con feedback explícito de Gonzalo con anotaciones rojas sobre la interfaz en producción]
+> "Me dijeron esto, analiza bien todo"
+
+## Respuesta del Asistente:
+- Análisis quirúrgico de cada una de las 5 imágenes:
+  1. Modal Detalle: Agrandar tipografía de Nombre del Cliente y Zonas a depilar; Mover Estado al lado del Horario en el mismo renglón.
+  2. Modal Detalle (Clínica): Colocar Fecha Primer Turno y Sesiones Realizadas en el mismo renglón (2 columnas); Mover Frecuencia Estimada debajo.
+  3. Ficha Cliente: Eliminar el banner amarillo superior de Observaciones del Operador.
+  4. Ficha Cliente: Eliminar las tarjetas de resumen "Última sesión" y "Próximo Turno".
+  5. Planilla Imprimible: Eliminar Obs. Operador y Comentarios de Turno de las filas, y ajustar encabezado a "Zonas a Realizar".
+- Solicitud de confirmación para proceder.
+
+## Mensaje del Usuario (2026-09-23 10:29-03:00)
+> "Te doy el ok"
+
+## Respuesta del Asistente (D-68):
+- **Implementación de los 5 Puntos de Feedback**:
+  1. En `src/app/admin/agenda/page.js`:
+     * Nombre del Cliente ampliado a `fontSize: '1.35rem', fontWeight: 800`.
+     * Zonas a Depilar ampliado a `fontSize: '1.25rem', fontWeight: 800`.
+     * Horario y Estado unificados en una sola fila (`display: 'flex', alignItems: 'center', gap: '0.5rem'`) eliminando la fila independiente de Estado.
+     * Grilla de 2 columnas (`1fr 1fr`) para Fecha Primer Turno y Sesiones Realizadas en el mismo renglón.
+     * Frecuencia Estimada reubicada inmediatamente debajo.
+  2. En `src/app/admin/clientes/page.js`:
+     * Eliminadas las 2 tarjetas de resumen `Última sesión` y `Próximo Turno` del sidebar.
+     * Eliminado el banner amarillo `🛡️ Observaciones del Operador` del historial.
+  3. En `src/app/admin/agenda/imprimir/page.js`:
+     * Encabezado actualizado a `<th>Zonas a Realizar</th>`.
+     * Eliminados los bloques de observaciones y comentarios en cada fila de la planilla.
+- **Compilación, Control de Versiones y Despliegue en VPS**:
+  * Compilaciones limpias en local (`npm run build`, 40/40 en staging y 39/39 en main).
+  * Commits `1e02f15` (staging) y `aa99fba` (main) subidos a GitHub.
+  * Desplegado en simultáneo a VPS Producción (puerto 3006, PM2 `gonzalo-agenda`, PID 1274388) y VPS Staging (puerto 3008, PM2 `gonzalo-agenda-staging`, PID 1274630) con código 0.
+- **Validación Automatizada E2E con Puppeteer en Producción Real**:
+  * Capturas generadas y verificadas visualmente:
+    - `prod_modal_verified.png`: Nombre y Zonas en letra grande, Estado al lado de Horario.
+    - `prod_modal_clinical.png`: Fecha Primer Turno y Sesiones en 50%/50%, Frecuencia debajo.
+    - `prod_ficha_verified.png`: Sidebar limpio sin Última Sesión ni Próximo Turno, historial sin banner amarillo superior.
+    - `prod_imprimir_verified.png`: Planilla limpia con encabezado "ZONAS A REALIZAR" y sin observaciones ni comentarios en las filas.
+- **Decisión Registrada**: `D-68` en `.synapse/decisions.md`.
+
+## Mensaje del Usuario (2026-09-23 11:27-03:00)
+> [3 Capturas de WhatsApp de Gonzalo mostrando la ficha de Luciano Gomez con 114 en turnos anteriores]:
+> "Con el tema de los comentarios de operador, cuando cambio el comentario de un turno, se cambian los comentarios de operador de los turnos anteriores todavía"
+> "Eso no debe pasar sino perdemos todos los valores anteriores, solo se debe actualizar ese turno y los siguientes que se agenden pero nunca los anteriores"
+> "Te doy el ok"
+
+## Respuesta del Asistente (D-69):
+- **Diagnóstico Integral y Root Cause**:
+  1. En la base de datos PostgreSQL de producción (`agenda_db`), la tabla `Turno` no poseía la columna `notasGonzalo`.
+  2. En `src/app/admin/clientes/page.js`, el historial de turnos renderizaba `{selectedClient.notasGonzalo}` de forma genérica para todas las sesiones.
+  3. Al editar las notas en una cita reciente de Luciano Gomez cambiando de 113 a 114, se mutaba la columna global del cliente, haciendo que citas pasadas (ej: 16 de julio de 2026) mostraran 114 en lugar de conservar su valor original de 113.
+- **Solución y Despliegue**:
+  1. **Migración PostgreSQL**: Añadida la columna `notasGonzalo` a la tabla `Turno` en `agenda_db` y `agenda_db_staging`, poblando con los valores históricos y congelando `113` para turnos anteriores de Luciano Gomez y `114` para el más reciente.
+  2. **Renderizado Histórico Exclusivo**: En `src/app/admin/clientes/page.js`, cada cita del historial evalúa y renderiza estrictamente `{t.notasGonzalo}` sin caer en fallbacks dinámicos.
+  3. **Cascada Temporal Segura en Backend**: En `PUT /api/admin/turnos/[id]`, se actualiza ese turno y los turnos cronológicamente posteriores (`>= fecha/hora`), junto con `Cliente.notasGonzalo` para citas futuras a agendarse, excluyendo incondicionalmente todos los turnos anteriores.
+  4. **Herencia en Creación**: En `/api/admin/turnos` y `/api/reservas/crear`, cada nuevo turno congela su propio valor de `notasGonzalo` al momento de agendar.
+
+
 
 

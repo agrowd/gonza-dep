@@ -255,13 +255,22 @@ export async function PUT(request, { params }) {
           select: { id: true, fecha: true, horaInicio: true }
         });
 
+        // Robust UTC date extractor to prevent timezone shift issues
+        const toUtcDateStr = (d) => {
+          if (!d) return '';
+          if (typeof d === 'string' && d.includes('T')) return d.split('T')[0];
+          if (typeof d === 'string' && d.length === 10) return d;
+          const dt = new Date(d);
+          return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+        };
+
         // Determine chronological boundary of oldTurn
-        const currentTurnDateIso = (checkFechaStr || new Date(oldTurn.fecha).toISOString().split('T')[0]);
+        const currentTurnDateIso = (checkFechaStr || toUtcDateStr(oldTurn.fecha));
         const currentTurnStartMin = timeToMinutes(checkHoraInicio || oldTurn.horaInicio);
 
         // Subsequent turnos: date is strictly after, or same date and time >= current
         const subsequentIds = allClientTurnos.filter(t => {
-          const tDateIso = new Date(t.fecha).toISOString().split('T')[0];
+          const tDateIso = toUtcDateStr(t.fecha);
           if (tDateIso > currentTurnDateIso) return true;
           if (tDateIso === currentTurnDateIso) {
             return timeToMinutes(t.horaInicio) >= currentTurnStartMin;

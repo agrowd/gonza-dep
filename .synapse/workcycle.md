@@ -1070,6 +1070,53 @@
        * Rama local retornada a `staging` y sincronizada con el schema blindado de `main`.
        * Staging (`puerto 3008`) preserva los Módulos 3, 4 y 5 listos para cuando Gonzalo decida activarlos.
     5. **Decisión registrada**: `D-67` en `.synapse/decisions.md`.
+- **23 de Septiembre (10:30 - 10:48 hs - Implementación y Despliegue de los 5 Ajustes de Feedback de Gonzalo)**:
+  - **Aprobación del Usuario**: *"Te doy el ok"*.
+  - **Diagnóstico y Modificaciones Realizadas en Código**:
+    1. **Modal Detalle del Turno (`src/app/admin/agenda/page.js`)**:
+       * Nombre del Cliente: ampliado a `fontSize: '1.35rem', fontWeight: 800` para lectura inmediata en celulares.
+       * Horario y Estado: unificados en la misma fila con `display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap'`, ubicando el badge de Estado (`SEÑADO`, `CONFIRMADO`, etc.) al lado del Horario y eliminando la fila independiente de Estado para acortar la altura vertical del modal.
+       * Zonas a Depilar: ampliado a `fontSize: '1.25rem', fontWeight: 800`.
+       * Sección Clínica: agrupados `📅 Fecha Primer Turno` y `🔢 Sesiones Realizadas` en una grilla de 2 columnas estrictas (`gridTemplateColumns: '1fr 1fr'`) en el mismo renglón (50%/50%), y reubicado el selector de `Frecuencia Estimada del Tratamiento (Semanas)` inmediatamente debajo.
+    2. **Ficha del Cliente (`src/app/admin/clientes/page.js`)**:
+       * Eliminadas las 2 tarjetas de resumen en el sidebar: `Última sesión` y `Próximo Turno`.
+       * Eliminado el banner amarillo superior `🛡️ Observaciones del Operador (Potencia / Clínica)` en la cabecera del Historial de Turnos, manteniendo las notas clínicas individualmente dentro de cada tarjeta de cita.
+    3. **Planilla Imprimible (`src/app/admin/agenda/imprimir/page.js`)**:
+       * Actualizado el encabezado de columna a `<th>Zonas a Realizar</th>`.
+       * Eliminados completamente los bloques de `Obs. Operador:` y `Comentario Turno:` en cada fila, dejando la tabla limpia para papel.
+  - **Compilación Local y Control de Versiones**:
+    * Compilación limpia local de Next.js Turbopack (`npm run build`, 40/40 rutas en staging y 39/39 en main).
+    * Commits en ambas ramas: `1e02f15` en `staging` y `aa99fba` en `main`.
+    * Pushes exitosos a `origin/staging` y `origin/main`.
+  - **Despliegue Integral en Servidor VPS (`http://187.127.9.216`)**:
+    * Ejecutado `scratch/deploy_both_vps.cjs` con adaptación dinámica de provider PostgreSQL para Prisma.
+    * Producción (`/srv/gonzalo-dep`, puerto 3006, PM2 `gonzalo-agenda`, PID 1274388): compilación de Next.js y reinicio exitoso (código 0).
+    * Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, PID 1274630): compilación de Next.js y reinicio exitoso (código 0).
+    * Ambos procesos online al 0% de CPU.
+  - **Validación Automatizada E2E con Puppeteer en Producción Real (`scratch/verify_feedback_adjustments.mjs`)**:
+    * Modal Detalle verificado: Cliente `21.6px` (800 weight), Horario unificado con badge (`SEÑADO`), Zonas `20px` (800 weight), Fecha Primer Turno y Sesiones en grilla de 2 columnas en la misma línea, Frecuencia debajo.
+    * Ficha de Cliente verificada: `hasUltimaSesion: false`, `hasProximoTurno: false`, `hasYellowBanner: false`.
+    * Planilla Imprimible verificada: `headers: ["HORARIO", "CLIENTE", "ZONAS A REALIZAR"]`, `hasObsOperador: false`, `hasComentarioTurno: false`.
+    * Capturas de pantalla guardadas y analizadas: `prod_modal_verified.png`, `prod_modal_clinical.png`, `prod_ficha_verified.png` y `prod_imprimir_verified.png`.
+  - **Decisión Registrada**: `D-68` en `.synapse/decisions.md`.
+- **23 de Septiembre (11:30 - 11:45 hs - Desacoplamiento Estricto e Inmutable de Observaciones del Operador por Turno)**:
+  - **Solicitud del Cliente (Gonzalo)**: *"Con el tema de los comentarios de operador, cuando cambio el comentario de un turno, se cambian los comentarios de operador de los turnos anteriores todavía. Eso no debe pasar sino perdemos todos los valores anteriores, solo se debe actualizar ese turno y los siguientes que se agenden pero nunca los anteriores"*.
+  - **Diagnóstico Integral y Root Cause**:
+    1. En PostgreSQL `agenda_db` (Producción), la columna `notasGonzalo` no existía a nivel de tabla `Turno`.
+    2. En `src/app/admin/clientes/page.js`, el historial renderizaba directamente `{selectedClient.notasGonzalo}` (o caía en fallback cuando `t.notasGonzalo` era null).
+    3. Al editar las notas en un turno de Luciano Gomez pasando de 113 a 114, se mutaba la columna global del cliente, provocando que turnos antiguos (ej: 16 de julio de 2026) mostraran 114 en lugar de su 113 original.
+  - **Acciones Ejecutadas**:
+    1. **Migración de Base de Datos en VPS**:
+       * En `agenda_db` y `agenda_db_staging`: ejecutado `ALTER TABLE "Turno" ADD COLUMN IF NOT EXISTS "notasGonzalo" text;`.
+       * Poblado masivo de turnos existentes con la nota clínica histórica del cliente (`UPDATE "Turno" SET "notasGonzalo" = c."notasGonzalo"...`).
+       * Restaurado el turno histórico de Luciano Gomez (16 de julio de 2026) con su valor original `113`, preservando `114` en el turno más reciente (26 de septiembre de 2026).
+    2. **Frontend Ficha del Cliente (`src/app/admin/clientes/page.js`)**:
+       * Modificado el historial para renderizar de forma exclusiva `{t.notasGonzalo}` eliminando cualquier fallback a `selectedClient.notasGonzalo`.
+    3. **Backend y Cascada Segura (`src/app/api/admin/turnos/[id]/route.js`)**:
+       * Filtrado estricto con `toUtcDateStr`: al cambiar la nota en un turno, se actualiza ese turno y los turnos cronológicamente posteriores (`>= fecha/hora`), actualizando `Cliente.notasGonzalo` para nuevas citas que se agenden en el futuro, pero excluyendo incondicionalmente todos los turnos anteriores.
+    4. **Congelamiento en Creación (`/api/admin/turnos` y `/api/reservas/crear`)**:
+       * Nuevos turnos heredan y congelan su propio `notasGonzalo` al momento de ser creados.
+  - **Decisión Registrada**: `D-69` en `.synapse/decisions.md`.
 
 
 
