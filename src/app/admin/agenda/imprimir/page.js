@@ -201,7 +201,7 @@ function PrintContent() {
                 <tr>
                   <th>Horario</th>
                   <th>Cliente</th>
-                  <th>Zonas a Realizar / Observaciones</th>
+                  <th>Zonas a Realizar</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,16 +269,6 @@ function PrintContent() {
                       </td>
                       <td className={styles.zonesCol}>
                         <div style={{ fontWeight: 600, color: '#111' }}>{getZonasList(turno.zonas, turno.otrosTexto)}</div>
-                        {(turno.notasGonzalo || turno.cliente?.notasGonzalo) && (
-                          <div style={{ marginTop: '5px', fontSize: '0.8rem', color: '#111', backgroundColor: '#fef3c7', borderLeft: '3px solid #d97706', padding: '3px 6px', borderRadius: '3px' }}>
-                            <strong>Obs. Operador:</strong> {turno.notasGonzalo || turno.cliente.notasGonzalo}
-                          </div>
-                        )}
-                        {turno.observaciones && (
-                          <div style={{ marginTop: '4px', fontSize: '0.8rem', color: '#111', backgroundColor: '#eff6ff', borderLeft: '3px solid #2563eb', padding: '3px 6px', borderRadius: '3px' }}>
-                            <strong>Comentario Turno:</strong> {turno.observaciones}
-                          </div>
-                        )}
                       </td>
                     </tr>
                   );
