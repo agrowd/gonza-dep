@@ -1155,3 +1155,36 @@
          - 26/09: `118`
          - `Cliente.notasGonzalo`: `118`.
 
+- **23 de Septiembre (18:50 - 19:15 hs - Asistente de Pegado Móvil, Prevención de Zoom iOS 16px y Sincronización de Fernando Kocsis)**:
+  - **Solicitud del Cliente (Gonzalo)**:
+    1. *"Quiero copiar y pegar datos para dar de alta a un cliente y no me funciona la opción de pegar y me marca el botón arriba de la pantalla"* (`media_1790195025573.png`).
+    2. *"Esto no se deberia de ver asi. Fecha de primer turno: 11/11/26. Cant de sesiones: 8"* (`media_1790195043486.png`).
+  - **Diagnóstico Integral y Root Causes**:
+    1. **Fallo de Pegado Móvil**:
+       * Los inputs tenían `font-size: 0.9rem` (14.4px). iOS Safari fuerza zoom automático sobre cualquier input con tamaño < 16px.
+       * El zoom sumado al contenedor scrollable desplazaba la posición del menú contextual nativo ("Pegar | Autorrelleno") montándolo directamente sobre el botón de cierre [✕] de la barra de la app/navegador, cerrando la ventana en lugar de pegar.
+    2. **Ficha de Fernando Kocsis**:
+       * En base de datos registraba 3 turnos en sistema y 0 previas. Se requerían 8 sesiones totales (5 previas + 3 en sistema) y fecha de primer turno en 11/11/2026.
+  - **Acciones Ejecutadas**:
+    1. **Frontend Móvil y Asistente de Pegado**:
+       * `src/components/PhoneInput.js`: Implementado `onPaste` inteligente que remueve caracteres no numéricos y limpia prefijos `+54`, `9`, `0` y convierte `15` en `11`. Forzado `fontSize: 16px` y `userSelect: text`.
+       * `src/app/admin/agenda/agenda.module.css` y `clientes.module.css`: Forzado `font-size: 16px !important` en todos los inputs, selects y textareas para erradicar el auto-zoom de iOS Safari.
+       * `src/app/admin/clientes/page.js`:
+         - Añadido bloque superior "📋 ¿Tenés los datos copiados? [📋 Pegar y Autocompletar]" para parsear en 1 tap bloques de texto (WhatsApp, Nombre, Apellido, DNI, Email).
+         - Añadidos botones individuales "📋 Pegar" en Nombre, Apellido, DNI, WhatsApp y Email en modales de creación y edición.
+    2. **Sincronización Clínica de Fernando Kocsis**:
+       * En `agenda_db` (Producción) y `agenda_db_staging`: actualizados `fechaPrimerTurno = '2026-11-11 00:00:00'` y `sesionesPrevias = 5`.
+       * En `src/app/admin/agenda/page.js`: Vinculados `tempClientFechaPrimerTurnoRef` y `tempClientSesionesPreviasRef` para evitar cierres de estado obsoletos (stale state closures) al disparar `onBlur` o guardar.
+    3. **Compilación y Control de Versiones**:
+       * Next.js build limpio en local (`npm run build`, 39/39 rutas en `main` y 40/40 en `staging`).
+       * Commits: `8e1c984` en `staging` y `89bf385` en `main`. Ambos ramas empujadas a GitHub.
+    4. **Despliegue VPS (`http://187.127.9.216`)**:
+       * Producción (`/srv/gonzalo-dep`, puerto 3006, PM2 `gonzalo-agenda`, PID 1291183).
+       * Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, PID 1291481).
+       * Ambos procesos online al 0% de CPU.
+    5. **Validación E2E con Puppeteer en Producción Real**:
+       * Ficha de Fernando Kocsis verificada: `SESIONES REALIZADAS: 8 (3 en sistema + 5 previas)` y `Fecha Primer Turno: 11 nov 2026`.
+       * Modal "+ Crear Nuevo Cliente" verificado: `hasSmartPaste: true`, 6 botones de pegado disponibles, todos los inputs a `16px`.
+       * Capturas guardadas: `live_prod_fernando_history_verified.png` y `live_prod_mobile_create_modal_verified.png`.
+    6. **Decisión registrada**: `D-71` en `.synapse/decisions.md`.
+

@@ -1536,3 +1536,32 @@
   2. En `src/app/api/admin/clientes/[id]`: la edición en la pestaña de Notas actualiza la línea de base y los turnos vigentes (`fecha >= today`), protegiendo el historial pasado.
   3. En `agenda_db` y `agenda_db_staging`: sincronizado el turno de Luciano Gomez del 26/09 en `118` y preservados los turnos históricos de julio en `113`.
 
+## Mensaje del Usuario (2026-09-23 18:11-03:00)
+> [2 Capturas de WhatsApp con feedback directo de Gonzalo]:
+> 1. `media_1790195025573.png`: "Quiero copiar y pegar datos para dar de alta a un cliente y no me funciona la opción de pegar y me marca el botón arriba de la pantalla"
+> 2. `media_1790195043486.png`: "Esto no se deberia de ver asi. Fecha de primer turno: 11/11/26. Cant de sesiones: 8"
+
+## Respuesta del Asistente (D-71):
+- **Diagnóstico y Causas Raíz**:
+  1. **Fallo de Pegado Móvil**:
+     * Los inputs utilizaban `font-size: 0.9rem` (14.4px). iOS Safari fuerza zoom automático sobre cualquier input con tamaño < 16px.
+     * Al hacer zoom, el menú flotante "Pegar" se desplazaba a la coordenada superior montándose sobre la cruz [✕] de la barra de la app/navegador, cerrando la vista.
+  2. **Datos Clínicos de Fernando Kocsis**:
+     * En PostgreSQL, el cliente tenía 3 turnos en sistema y 0 sesiones previas. Se requerían 8 sesiones en total (5 previas + 3 en sistema) y fecha de primer turno en 11/11/2026.
+- **Acciones Ejecutadas**:
+  1. **Frontend Móvil y Asistente de Pegado**:
+     * En `src/components/PhoneInput.js`: Implementado `onPaste` inteligente que limpia `+54`, `9`, `0` y convierte `15` en `11`. Establecido `fontSize: 16px` y `userSelect: text`.
+     * En `agenda.module.css` y `clientes.module.css`: Forzado `font-size: 16px !important` en todos los inputs, selects y textareas para eliminar el auto-zoom de iOS Safari.
+     * En `src/app/admin/clientes/page.js`:
+       - Agregado bloque superior de 1 toque: `📋 ¿Tenés los datos copiados? [📋 Pegar y Autocompletar]` para parsear texto copiado de WhatsApp.
+       - Agregados botones dedicados `📋 Pegar` en Nombre, Apellido, DNI, WhatsApp y Email en modales de creación y edición.
+  2. **Persistencia y Base de Datos**:
+     * En `agenda/page.js`: Vinculados `tempClientFechaPrimerTurnoRef` y `tempClientSesionesPreviasRef` garantizando persistencia síncrona en `onBlur` y botones sin depender de cierres de estado (closures) asíncronos.
+     * En `agenda_db` (Producción) y `agenda_db_staging` (Staging): actualizados `fechaPrimerTurno = '2026-11-11'` y `sesionesPrevias = 5` para Fernando Kocsis (3 turnos en sistema + 5 previas = 8 sesiones totales).
+  3. **Despliegue y Verificación E2E con Puppeteer en Producción Real**:
+     * Commits `8e1c984` (`staging`) y `89bf385` (`main`) compilados sin errores y desplegados en VPS (puertos 3006 y 3008).
+     * Ficha de Fernando Kocsis verificada: `SESIONES REALIZADAS: 8 (3 en sistema + 5 previas)` y `Fecha Primer Turno: 11 nov 2026`.
+     * Modal "+ Crear Nuevo Cliente" verificado: `hasSmartPaste: true`, 6 botones de pegado disponibles, inputs con tamaño de fuente `16px`.
+- **Decisión Registrada**: `D-71` en `.synapse/decisions.md`.
+
+
