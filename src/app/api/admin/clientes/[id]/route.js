@@ -113,7 +113,19 @@ export async function PUT(request, { params }) {
     if (estado) updateData.estado = estado;
     if (frecuencia !== undefined) updateData.frecuencia = Number(frecuencia);
     if (observaciones !== undefined) updateData.observaciones = observaciones;
-    if (notasGonzalo !== undefined) updateData.notasGonzalo = notasGonzalo;
+    if (notasGonzalo !== undefined) {
+      updateData.notasGonzalo = notasGonzalo;
+      // Also update upcoming turnos (today or future) for this client so active appointments reflect the change
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      await prisma.turno.updateMany({
+        where: {
+          clienteId: id,
+          fecha: { gte: today }
+        },
+        data: { notasGonzalo }
+      });
+    }
     if (fechaPrimerTurno !== undefined) updateData.fechaPrimerTurno = fechaPrimerTurno ? new Date(fechaPrimerTurno) : null;
     if (sesionesPrevias !== undefined && !isNaN(Number(sesionesPrevias))) updateData.sesionesPrevias = Number(sesionesPrevias);
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = enviarNotificaciones;

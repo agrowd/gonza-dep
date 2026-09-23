@@ -293,6 +293,19 @@ export async function POST(request) {
           finalNotasGonzalo = prevTurno.notasGonzalo;
         }
       }
+      if (!finalNotasGonzalo && finalClienteId) {
+        const lastTurno = await prisma.turno.findFirst({
+          where: {
+            clienteId: finalClienteId,
+            fecha: { lte: targetDate }
+          },
+          orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
+          select: { notasGonzalo: true }
+        });
+        if (lastTurno?.notasGonzalo) {
+          finalNotasGonzalo = lastTurno.notasGonzalo;
+        }
+      }
       if (!finalNotasGonzalo && clientRecord?.notasGonzalo) {
         finalNotasGonzalo = clientRecord.notasGonzalo;
       }

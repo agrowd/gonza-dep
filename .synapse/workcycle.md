@@ -1116,9 +1116,42 @@
        * Filtrado estricto con `toUtcDateStr`: al cambiar la nota en un turno, se actualiza ese turno y los turnos cronológicamente posteriores (`>= fecha/hora`), actualizando `Cliente.notasGonzalo` para nuevas citas que se agenden en el futuro, pero excluyendo incondicionalmente todos los turnos anteriores.
     4. **Congelamiento en Creación (`/api/admin/turnos` y `/api/reservas/crear`)**:
        * Nuevos turnos heredan y congelan su propio `notasGonzalo` al momento de ser creados.
-  - **Decisión Registrada**: `D-69` en `.synapse/decisions.md`.
-
-
-
-
+- **23 de Septiembre (13:45 - 13:55 hs - Confirmación y Verificación de Planilla Imprimible Aprobada por Gonzalo)**:
+  - **Solicitud del Usuario**: *"Lo quiere como se ve en la foto grande"*, adjuntando captura de WhatsApp con Gonzalo.
+  - **Análisis de la Captura y Contexto**:
+    * En el chat de WhatsApp, el usuario compartió la captura generada en D-68 (`prod_imprimir_verified.png`) consultando *"Asi entonces?"*.
+    * Gonzalo confirmó explícitamente: *"Sisi exacto así se distinguen los espacios disponibles"*.
+    * La "foto grande" corresponde exactamente a la planilla imprimible (`/admin/agenda/imprimir`) limpia y con detección visual de huecos libres.
+  - **Verificación Live en Producción y Staging con Puppeteer**:
+    * Se ejecutó verificación sobre el servidor VPS en vivo (`scratch/verify_live_imprimir.mjs` y `scratch/verify_print_emulated.mjs`).
+    * Producción (`http://187.127.9.216:3006/admin/agenda/imprimir?fecha=2026-09-22`) y Staging (`http://187.127.9.216:3008/admin/agenda/imprimir?fecha=2026-09-22`) responden 100% idénticos a la foto aprobada por Gonzalo.
+    * Verificados:
+      1. Encabezado con logo oficial a la izquierda, título "TURNOS PROGRAMADOS", fecha del día y badge bordó de cantidad de turnos.
+      2. Columnas: `HORARIO` (con `Valor: $...` debajo), `CLIENTE` (nombre en negrita) y `ZONAS A REALIZAR` (sólo zonas limpias, sin notas ni comentarios).
+      3. Franjas libres (`🟢 Libre (X min)` / `Espacio Disponible` / `—`) con fondo `#f1f3f5` y borde punteado `#cbd5e1`.
+      4. Pie de tabla con `TOTALES` | `X turnos` | `Total Estimado: $...`.
+      5. Emulación de impresión (`@media print`) verificada: oculta botones, preserva contraste y colores exactos para PDF y papel A4.
+    * Capturas guardadas en `live_prod_imprimir_verified.png` y `live_prod_print_emulated.png`.
+- **23 de Septiembre (14:30 - 15:10 hs - Resolución Integral de Sincronización y Persistencia de Notas del Operador)**:
+  - **Solicitud del Cliente (Gonzalo)**: *"Ahora cuando voy a un turno y hago cambios en sus comentarios de operador, no se cambia en su historial (al turno de 26 de septiembre le puse 118 y le sigue apareciendo el de antes). Pero cuando me voy a un turno mas viejo (que en su historial aparece 113) aparece 118 que nunca lo puse yo. Cada turno tiene su comentario de operador, donde a menos que se modifique, toma el mismo del turno anterior. Si en un turno se modifica, en los anteriores no deberían cambiarse, y los próximos van a tomar ese nuevo valor"*.
+  - **Diagnóstico Integral de los 2 Fallos**:
+    1. **Cancelación de Petición de Red al Navegar**: Gonzalo escribía `118` en el modal de Agenda y clickeaba inmediatamente `📁 Ficha Cliente`. El botón ejecutaba `window.location.href = ...` sincrónicamente, cancelando la petición HTTP antes de impactar en PostgreSQL.
+    2. **Fallback Erróneo a Línea de Base del Cliente en Frontend**: `setTempClientNotasGonzalo` utilizaba `selectedTurno.notasGonzalo || selectedTurno.cliente.notasGonzalo`. Al abrir turnos antiguos en la Agenda sin nota propia o con nota histórica, el fallback inyectaba `118` (la nota más reciente del cliente) sobreescribiendo visualmente el turno pasado.
+    3. **Restricción de 7 Días en Apertura de Turnos Pasados**: El parámetro `dateParam` descartaba fechas con más de 7 días de antigüedad (`diffDays <= 7`), impidiendo abrir turnos de Julio en el calendario al clickear "↗ Ver en Agenda".
+  - **Solución y Modificaciones Implementadas**:
+    1. **Frontend Agenda (`src/app/admin/agenda/page.js`)**:
+       * `setTempClientNotasGonzalo` desacoplado: ahora se inicializa estrictamente con `selectedTurno.notasGonzalo || ''` sin fallback al cliente.
+       * `handleCloseDetailsModal`: reseteo explícito de `selectedTurno(null)` y vaciado de estados temporales de notas al cerrar para evitar contaminación entre aperturas.
+       * `📁 Ficha Cliente`: convertido a handler asíncrono que ejecuta `await handleSaveClientObservaciones(true)` antes de redirigir a `/admin/clientes`.
+       * `📅 Siguiente Turno` y `🔄 Reprogramar`: convertidos a asíncronos con guardado previo antes de navegar a `/admin/alta-turno`.
+       * Botón de guardado prominente: `💾 Guardar Notas Operador` verde con sombra y feedback instantáneo.
+       * Apertura de fechas históricas: eliminada la condición `diffDays <= 7` para que cualquier fecha en `dateParam` abra el día exacto en la agenda.
+    2. **Backend APIs**:
+       * `PUT /api/admin/clientes/[id]`: al modificar notas en la ficha del cliente, actualiza `Cliente.notasGonzalo` y en cascada los turnos activos (`fecha >= today`), preservando los turnos históricos intactos.
+       * `POST /api/admin/turnos` y `POST /api/reservas/crear`: heredan la nota del turno inmediatamente anterior (`fecha <= targetDate`) o la línea de base del cliente.
+    3. **Base de Datos PostgreSQL**:
+       * Sincronizados en `agenda_db` y `agenda_db_staging` los turnos de Luciano Gomez:
+         - 03/07, 11/07, 16/07: `113`
+         - 26/09: `118`
+         - `Cliente.notasGonzalo`: `118`.
 

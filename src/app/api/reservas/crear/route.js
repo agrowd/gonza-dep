@@ -209,6 +209,13 @@ export async function POST(request) {
     }
 
     // 4. Create Turno in database in PENDIENTE_PAGO state
+    const lastClientTurno = await prisma.turno.findFirst({
+      where: { clienteId: client.id, fecha: { lte: targetDate } },
+      orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
+      select: { notasGonzalo: true }
+    });
+    const inheritedNotas = lastClientTurno?.notasGonzalo || client.notasGonzalo || null;
+
     const turno = await prisma.turno.create({
       data: {
         clienteId: client.id,
@@ -221,7 +228,8 @@ export async function POST(request) {
         valorSeña,
         saldoPendiente: valorTotal - valorSeña,
         estado: 'PENDIENTE_PAGO',
-        observaciones: observaciones ? `[ONLINE] ${observaciones}` : '[ONLINE]'
+        observaciones: observaciones ? `[ONLINE] ${observaciones}` : '[ONLINE]',
+        notasGonzalo: inheritedNotas
       }
     });
 
