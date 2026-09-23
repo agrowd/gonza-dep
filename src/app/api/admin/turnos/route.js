@@ -278,6 +278,26 @@ export async function POST(request) {
 
     const targetDate = new Date(fechaStr + 'T00:00:00');
 
+    // Determine notasGonzalo for the new appointment
+    let finalNotasGonzalo = body.notasGonzalo !== undefined 
+      ? (typeof body.notasGonzalo === 'string' ? body.notasGonzalo.trim() : body.notasGonzalo)
+      : null;
+
+    if (finalNotasGonzalo === null) {
+      if (prevTurnoId) {
+        const prevTurno = await prisma.turno.findUnique({
+          where: { id: String(prevTurnoId) },
+          select: { notasGonzalo: true }
+        });
+        if (prevTurno?.notasGonzalo) {
+          finalNotasGonzalo = prevTurno.notasGonzalo;
+        }
+      }
+      if (!finalNotasGonzalo && clientRecord?.notasGonzalo) {
+        finalNotasGonzalo = clientRecord.notasGonzalo;
+      }
+    }
+
     // 4. Create appointment
     const newTurno = await prisma.turno.create({
       data: {
@@ -294,7 +314,8 @@ export async function POST(request) {
         descuentoTipo: descuentoTipo || 'NINGUNO',
         descuentoValor: Number(descuentoValor || 0),
         estado: estado || 'SEÑADO',
-        observaciones
+        observaciones,
+        notasGonzalo: finalNotasGonzalo
       },
       include: {
         cliente: true
@@ -323,6 +344,16 @@ export async function POST(request) {
       }).catch(err => console.error('Error updating client observaciones:', err));
       if (newTurno.cliente) {
         newTurno.cliente.observaciones = body.clientObservaciones;
+      }
+    }
+
+    if (body.notasGonzalo !== undefined && finalClienteId) {
+      await prisma.cliente.update({
+        where: { id: finalClienteId },
+        data: { notasGonzalo: finalNotasGonzalo }
+      }).catch(err => console.error('Error updating client notasGonzalo:', err));
+      if (newTurno.cliente) {
+        newTurno.cliente.notasGonzalo = finalNotasGonzalo;
       }
     }
 

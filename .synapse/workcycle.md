@@ -833,7 +833,292 @@
     - En la ficha de clientes, los números monetarios ya no se quiebran ni se apilan verticalmente en smartphones estrechos, y cada turno muestra sus comentarios estructurados.
     - Se ejecutó script de migración SQL en `agenda_db` y `agenda_db_staging` eliminando todos los prefijos y residuos de libretas de contacto de WhatsApp (`[Nota de Contacto]: ...` y `| [WPP: ...]`).
     - Despliegue completado con éxito en `http://187.127.9.216:3008` (PM2 `gonzalo-agenda-staging`).
-    - Rama `main` verificada y alineada estrictamente con `origin/main` (cero código nuevo en producción).
+- **21 de Septiembre (09:10 - 09:25)**:
+  - Usuario consulta: *"Revisar por que se desconecto el whatsapp de la agenda"*.
+  - Diagnóstico y Root Cause (ERR-25):
+    - En el VPS, la Agenda (`gonzalo-agenda`, puerto 3006) delega el estado y envío de WhatsApp a través del relay `ia-gonzadep` (puerto 3007) para evitar sesiones dobles concurrentes.
+    - El domingo 20 de septiembre a las 22:21 hs (Arg), el watchdog de `ia-gonzadep` registró 3 fallos consecutivos de socket por timeout (`[WhatsApp Watchdog] 🚨 3 fallos consecutivos de verificación. Reiniciando cliente...`).
+    - Al dispararse `initWhatsAppClient(true)` sin esperar (`await`) la destrucción de la instancia previa, el proceso de Chromium anterior (`PID 1156480`, activo desde el 17 de septiembre acumulando 1.6 GB de RAM) quedó huérfano reteniendo los bloqueos del perfil (`SingletonLock`).
+    - Un segundo proceso de Chromium (`PID 1206509`) intentó acceder a la misma carpeta de sesión bloqueada, provocando colisión de perfil (`Protocol error: Execution context was destroyed` y `Failed to add page binding with name onQRChangedEvent`), consumiendo 23% de CPU y forzando a los servidores de WhatsApp Web a desvincular la sesión.
+    - Al quedar `ia-gonzadep` en `QR_RECEIVED`, el relay reportó inmediatamente la desconexión a la Agenda Web.
+  - Mitigación y Estado Actual:
+    - Se constató que los recordatorios de 48hs del domingo salieron exitosamente (8 clientes para el martes 22) y que el lunes 21 estuvo totalmente bloqueado (no hubo turnos desatendidos).
+    - Se terminaron los procesos zombi de Chromium, se purgaron los locks residuales de `.wwebjs_auth/session` y se reinició `ia-gonzadep` limpiamente (consumo normal: 0% CPU, 18 MB RAM).
+    - El servicio emitió el código QR limpio y queda a la espera de que Gonzalo lo escanee en `https://admin.depilacionparahombres.com` para reanudar la conexión unificada.
+- **21 de Septiembre (14:20)**:
+  - Consulta del usuario sobre cuántos módulos faltan y cuál sigue según el documento maestro `Mejoras AppWeb.docx` ([.synapse/mejoras_appweb.md](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/.synapse/mejoras_appweb.md)).
+  - Relevamiento:
+    - Total de módulos en la jerarquía: **11 módulos**.
+    - Completados: **2** (Módulo 1: Alta de Turno en Prod/Staging; Módulo 2: Agenda en Staging).
+    - Faltan: **9 módulos**.
+    - Siguiente en orden estricto: **Módulo 3: Ficha (Ficha del Cliente / Historial Clínico)**.
+- **21 de Septiembre (14:25 - 14:55: Implementación y Despliegue de Módulo 3 en Staging)**:
+  - Se completó al 100% la implementación del **Módulo 3: Ficha (Ficha del Cliente / Historial Clínico)** en el entorno de pruebas Staging (`staging` branch, puerto 3008):
+    1. **Historial interactivo bidireccional:** Tanto "Última sesión", "Próximo Turno" como cada tarjeta individual del Historial de Turnos (`paperItem`) son clickeables y navegan hacia la agenda (`/admin/agenda?date=...&view=day&turnoId=...&fromClient=...`) abriendo automáticamente el modal del turno. Al cerrar el modal (`handleCloseDetailsModal`), el sistema redirige de vuelta fluidamente a la ficha del cliente en `/admin/clientes?id=...`.
+    2. **Descarga de Ficha en PDF / Impresión:** Creada la vista imprimible `/admin/clientes/[id]/imprimir` con layout estructurado (datos personales, resumen de métricas, observaciones del operador y administrativas, y tabla cronológica de turnos). Botón `📄 Descargar PDF / Imprimir` incorporado en la cabecera del modal de la ficha.
+    3. **Exportación de Clientes a Excel / CSV:** Botón `📥 Exportar Excel / CSV` en el directorio de clientes (`/admin/clientes`), con descarga inmediata codificada en UTF-8 con BOM (`\uFEFF`) y punto y coma (`;`), respetando los filtros activos de búsqueda y tabla.
+    4. **Recibo Comercial Oficial:** Implementado formato exacto a `image3.png` en visualización e impresión (`/admin/recibos/[id]`) y en plantilla de correo `sendReceiptEmail` (`/api/admin/turnos/[id]/recibo` y `/enviar-recibo`), con cabecera Paraná 597, recuadro de letra X "Documento no válido como factura", Nº correlativo, tabla de servicios/subtotales y total. Botón `📄 Ver Recibo Oficial` añadido en el modal de detalle del turno en la agenda.
+    5. **Estampillado automático de fecha en observaciones:** Botones `[ 📅 Insertar Fecha Hoy ]` sobre los textareas de observaciones administrativas y notas del operador, insertando `[DD/MM/AAAA]: ` para facilitar anotaciones cronológicas limpias.
+    6. **Fecha de Nacimiento opcional con cálculo de edad:** Agregado campo `fechaNacimiento DateTime?` en el modelo `Cliente` de Prisma, inputs en creación y edición de cliente, y visualización calculada de edad en el encabezado de la ficha y en la vista imprimible.
+    7. **Validación numérica estricta:** Inputs de DNI y WhatsApp filtran caracteres no numéricos en tiempo real (`replace(/\D/g, '')`) y utilizan `inputMode="numeric"`.
+  - **Verificación Local y Remota:**
+    - `npx prisma db push` y `npx prisma generate` ejecutados exitosamente.
+    - `npm run build` ejecutado localmente con éxito (39/39 rutas compiladas sin errores).
+    - Commit `edd2cf1` empujado a `origin/staging`.
+    - Despliegue remoto ejecutado en el VPS de Hostinger vía `scratch/deploy_vps_staging.js`: código actualizado en `/srv/gonzalo-dep-staging`, base de datos PostgreSQL `agenda_db_staging` sincronizada con `fechaNacimiento`, `npm run build` finalizado con éxito y PM2 reiniciado (`gonzalo-agenda-staging`, PID 1222461).
+    - Verificación HTTP y TCP exitosa: el servicio responde y el puerto 3008 está activo y accesible desde internet.
+  - **Aislamiento Total:**
+    - La rama productiva `main` (`https://agenda.depilacionparahombres.com`, puerto 3006) y su base de datos `agenda_db` no sufrieron ninguna alteración.
+- **21 de Septiembre (17:20 - 17:30: Ajustes por Feedback de Gonzalo en Módulo 2 y 3 - Staging)**:
+  - Gonzalo envió 2 capturas de WhatsApp con feedback crítico:
+    1. *Ficha Modal en celular:* En `/admin/clientes`, al abrir la ficha del cliente, el encabezado se deformaba verticalmente apilando letras individuales ("N \n i \n 3..."). Se reestructuró `agendaStyles.modalHeader` en 3 filas independientes (Fila 1: Título con `wordBreak: break-word` + botón cerrar; Fila 2: Metadatos con DNI, Alta, Edad y Canal; Fila 3: Botón `📄 Descargar PDF / Imprimir` en fila completa). Se habilitó scroll horizontal en pestañas (`.tabs`).
+    2. *Planilla Imprimible de Agenda Diaria (`/admin/agenda/imprimir`):* 
+       - Se quitó el número de teléfono (WhatsApp) bajo el nombre del cliente.
+       - Se eliminaron seña y saldo de la columna Horario y del `<tfoot>` (dejando solo `Total Estimado`).
+       - En la columna Zonas se muestran exclusivamente las notas clínicas (`Obs. Operador`) y notas de la sesión (`Comentario Turno`).
+       - Se incorporaron los espacios libres/vacíos entre eventos (turnos y bloqueos) con fondo gris claro (`#f1f3f5`), etiqueta `🟢 Libre (X min)` y "Espacio Disponible".
+       - Se agregaron los bloqueos a la consulta de la API `/api/admin/turnos/imprimir` para incluirlos en la cronología diaria con fondo ámbar (`#fffbeb`).
+  - **Compilación y Despliegue:**
+    - `npm run build` local exitoso (39/39 rutas compiladas con Turbopack).
+    - Commit `db3ca3f` empujado a `origin/staging`.
+    - Despliegue exitoso al VPS Staging vía `scratch/deploy_vps_staging.js`. PM2 `gonzalo-agenda-staging` reiniciado (PID 1225389, puerto 3008).
+    - Verificación HTTP 200 OK en `http://187.127.9.216:3008`.
+- **21 de Septiembre (17:50 - 18:05: Desacoplamiento de Observaciones del Operador por Turno y Cascada hacia Posteriores)**:
+  - Gonzalo envió captura de WhatsApp señalando que al editar las Observaciones del Operador (potencia de láser `124/22`) en un turno reciente de Luciano Gomez, se sobreescribió también la sesión histórica anterior (julio de 2026), requiriendo que *"solo se cambie para ese turno y todos los siguientes, no los anteriores... Tuvo que haberse quedado el anterior valor sin cambiar"*.
+  - **Implementación:**
+    1. Base de datos: Añadido `notasGonzalo String?` a `model Turno` en `prisma/schema.prisma`.
+    2. Backend (`PUT /api/admin/turnos/[id]`): Al actualizar `notasGonzalo`, se actualiza el turno actual y todos los turnos del cliente cronológicamente posteriores (`fecha > T.fecha` o misma fecha con hora $\ge$). Los turnos anteriores permanecen 100% intactos. Se sincroniza `Cliente.notasGonzalo`.
+    3. Backend (`POST /api/admin/turnos`): Turnos nuevos heredan automáticamente la nota de la sesión anterior o el baseline del cliente.
+    4. Backend (`PUT /api/admin/clientes/[id]`): Al modificar notas desde la configuración del cliente, solo se propagan a turnos futuros, preservando el historial clínico previo.
+    5. Frontend:
+       - En `/admin/clientes`, cada tarjeta del historial de turnos renderiza su nota específica `t.notasGonzalo || selectedClient.notasGonzalo`.
+       - En `/admin/agenda`, `tempClientNotasGonzalo` y `editTurno.notasGonzalo` se inicializan con `selectedTurno.notasGonzalo` y se sincronizan al turno.
+       - En `/admin/agenda/imprimir` y `/admin/clientes/[id]/imprimir`, se utiliza la nota propia del turno.
+  - **Despliegue y Migración:**
+    - `npx prisma db push` y `npx prisma generate` locales y en VPS Staging.
+    - `npm run build` local exitoso (39/39 rutas, 16.3s).
+- **21 de Septiembre (19:50 - 20:05: Corrección de Cascada de Notas de Operador y Rediseño Mobile de Ficha de Cliente en Staging)**:
+  - Gonzalo reportó en WhatsApp que al editar las observaciones de operador del turno de noviembre a `127/22`, el turno del 20 de octubre también cambió a `127/22` (ambos tenían `126/22`), debiendo quedarse en `126/22`. Además, se reportó el colapso del diseño mobile en la ficha del cliente (píldora `SEÑADO` verticalizada letra por letra, `↗ Ver en Agenda` partida en 4 líneas, trampa de doble scrollbar y padding anidado excesivo).
+  - **Diagnóstico y Corrección de Notas del Operador:**
+    1. Se detectó que `src/app/api/admin/clientes/[id]/route.js` contenía un `prisma.turno.updateMany({ where: { clienteId: id, fecha: { gte: todayIso } } })`. Como hoy es 21 de septiembre, tanto el turno del 26 de septiembre como el del 20 de octubre y el de noviembre cumplían `fecha >= todayIso`, sobreescribiendo indiscriminadamente todas las citas desde hoy en adelante.
+    2. En `src/app/admin/agenda/page.js` (`handleSaveClientObservaciones`), se enviaba `notasGonzalo` a la API de clientes tras haberlo enviado a la API de turnos.
+    3. Se eliminó el `updateMany` masivo de `src/app/api/admin/clientes/[id]/route.js`: `Cliente.notasGonzalo` es estrictamente el baseline para nuevos turnos futuros, nunca modifica turnos agendados.
+    4. En `src/app/admin/agenda/page.js`, se removió `notasGonzalo` del payload a la API de clientes, delegando el guardado exclusivamente a `PUT /api/admin/turnos/[id]` con su avance cronológico estricto hacia adelante.
+    5. Se ejecutó script de saneamiento en `agenda_db_staging` para Luciano Gomez (20 oct y 26 sep restaurados a `126/22`, nov en `127/22`).
+  - **Diagnóstico y Corrección de Diseño Mobile:**
+    1. En `src/app/admin/agenda/agenda.module.css`, se añadió `white-space: nowrap !important; flex-shrink: 0 !important;` a `.statusPill`.
+    2. En `src/app/admin/clientes/clientes.module.css`, se creó `.modalBody` con padding responsivo fluido (`1.5rem` escritorio, `0.65rem 1rem` móviles), se añadieron `.clientMetaList` y `.clientMetaItem` con separadores `::after` (eliminando viñetas huérfanas) y en `@media (max-width: 768px)` se eliminó el scroll interno de `.paperList` (`max-height: none; overflow-y: visible;`).
+    3. En `src/app/admin/clientes/page.js`, se reestructuró la tarjeta de sesión: Fila 1 con Fecha + Píldora de estado protegida, Fila 2 con `↗ Ver en Agenda` en renglón propio.
+  - **Compilación, Despliegue y Validación:**
+    - `npm run build` local exitoso (39/39 rutas compiladas sin errores).
+    - Commit `186c6d4` empujado a `staging`.
+    - Despliegue completado al VPS Staging vía `scratch/deploy_vps_staging.js`. PM2 `gonzalo-agenda-staging` reiniciado y online en puerto 3008 (PID 1233745).
+    - Comprobado el aislamiento 100% de la producción (puerto 3006).
+- **21 de Septiembre (20:10 - 20:18: Corrección de Solapamiento en Planilla de Impresión Mobile - Staging)**:
+  - Gonzalo reportó con captura de pantalla (`media_1790032156896.png`) que al ver la planilla `/admin/agenda/imprimir` en el celular, los nombres de clientes se enciman con los horarios y el valor ("12:30 - 13:20 Carlos Mariano", "Valor: $77.000 Gilardi", y "13:20 - 14:00 Espacio Disponible").
+  - **Causa Raíz:** En `imprimir/page.js` la columna Horario estaba fijada rígidamente a 24% (~84px en móviles) y `timeCol` tenía `white-space: nowrap;` con fuentes de 0.9rem y paddings inline de 10px. Al sumar más de 105px de texto en una celda de 84px, el contenido desbordaba y se pintaba encima de la columna Cliente.
+  - **Solución:**
+    1. Se crearon clases de columna `.colTime`, `.colClient`, `.colZones` en `imprimir.module.css`. En móviles (< 650px), Horario recibe 35% (~120px), Cliente 28% y Zonas 37%.
+    2. Se quitó `white-space: nowrap;` de la celda completa, encapsulando la hora en `.timeRange` y el importe en `.timeValor` con tamaño tipográfico escalable (0.74rem en móviles = 86px, dejando >25px de margen antes del límite de celda).
+    3. Se eliminaron todos los paddings inline fijos (6px 10px, 8px 10px, 10px 12px) de `free_slot`, `bloqueo` y turnos, usando clases CSS responsivas.
+    4. Se envolvió la tabla en `.tableWrapper` con `overflow-x: auto` como capa de seguridad anti-desbordamiento.
+  - **Compilación y Despliegue:**
+    - `npm run build` local exitoso (39/39 rutas, 31.8s).
+    - Commit `42993bd` empujado a `origin/staging`.
+    - Despliegue en VPS Staging exitoso (`deploy_vps_staging.js`). PM2 `gonzalo-agenda-staging` reiniciado en puerto 3008 (PID 1234406).
+- **21 de Septiembre (20:20 - 20:45: Regla Universal de Detección de Clientes por Teléfono en IA (`ia-gonzadep`) y Rediseño de Bandeja de Chats)**:
+  - **Solicitud de Gonzalo (Audio WhatsApp y Capturas `media_1790032615634.png` / `media_1790032666993.png`)**:
+    > *"Acá me parece que sería conveniente, para no confundir a la IA porque eso es lo que va a estar pasando, una regla mucho más sencilla de que si lo valida el número de teléfono con la base de datos de clientes de la agenda y está agendado, ya está, es un cliente, sea activo, sea mantenimiento, sea lo que fuera, pero ya está dado de alta. Creo que eso lo simplificás y no tiene el error para ver cómo está cargado, porque no lo está trayendo correctamente."*
+    > Además el usuario solicitó: *"Revisa eso y el diseño"*.
+  - **Diagnóstico Preciso (Causa Raíz)**:
+    1. En `ia-gonzadep` (`contextBuilder.js` y `whatsapp.js`), el sistema priorizaba el nombre de la libreta de contactos de Google Contacts (`addressBookName` o `contactName`) por sobre la ficha del cliente (`Cliente.nombreCompleto`). Esto provocaba que clientes cargados con notas en el celular (ej. `Laser Alberto Kliphart 17-9-26 Comp 150k`) fueran tratados por ese nombre largo y ruidoso, confundiendo a la IA al extraer el nombre para el saludo.
+    2. En `ConversacionWsp` de la base de datos de producción (`agenda_db`), 82 conversaciones con clientes agendados tenían `clienteId: null` debido a que `autoMergeDuplicateConversations()` estaba limitado a `take: 50`.
+    3. En `outputCleaner.js`, la función `cleanOngoingGreetings` eliminaba incondicionalmente la presentación de asistente virtual (`Soy el asistente virtual de Gonzalo...`) cuando la conversación ya tenía mensajes previos (`!isFirstMessage`), contradiciendo la regla explícita de Gonzalo que exige que la IA SIEMPRE se presente ante pacientes agendados para no ser confundida con él.
+    4. En `/chats` (`chats/page.js`), la función `getBestDisplayName` y la lista de conversaciones le daban prioridad a `contactName` antes que a `chat.cliente.nombreCompleto`.
+  - **Solución Implementada**:
+    1. **Módulo Centralizado `src/lib/clienteResolver.js`**:
+       - Creado `findClientByPhone(phone, { includeTurnos })` que genera todas las variaciones posibles de dígitos (exactos, con +, sin 549, con 549, sufijos de 10 y 8 dígitos) y consulta `prisma.cliente`. Si existe un registro (sin importar si su estado es ACTIVO, MANTENIMIENTO o FINALIZADO), devuelve la ficha oficial.
+       - Creado `syncAllUnlinkedConversations()` que indexa en memoria a todos los clientes y vincula el 100% de las conversaciones huérfanas asignando `clienteId` y el nombre oficial de la agenda.
+    2. **`contextBuilder.js`**:
+       - Búsqueda de cliente mediante `findClientByPhone(lookupPhone, { includeTurnos: true })`.
+       - Regla de oro de Gonzalo: si `cliente !== null`, `contactType = 'CLIENTE_PACIENTE'`, cargando su historial clínico y turnos.
+       - Prioridad #1 para `savedFullName`: usa `cliente.nombreCompleto` limpio y extrae `clientFirstName` (ej: "Alberto") para el saludo mandatorio del asistente virtual.
+    3. **`outputCleaner.js`**:
+       - `cleanOngoingGreetings(text, isFirstMessage, isPatient)`: si `isPatient === true`, preserva íntegramente la presentación `"¡Hola [Nombre]! Te saluda el asistente virtual de Gonzalo 😊"` ante clientes.
+    4. **`whatsapp.js`**:
+       - En `processIncomingMessage`: busca `matchedCliente = await findClientByPhone(phone)` y, si existe, marca `isLaserClient = true`, guardando en `conversacionWsp` el nombre limpio del cliente y su `clienteId`.
+       - En `autoMergeDuplicateConversations()`: delega a `syncAllUnlinkedConversations()` vinculando todas las conversaciones existentes.
+       - Pasa `isPatient` a `cleanOngoingGreetings`.
+    5. **Rediseño de Bandeja de Chats (`chats/page.js` y `api/chats/route.js`)**:
+       - `getBestDisplayName`: Prioridad #1 a `chat.cliente?.nombreCompleto`.
+       - Fila de chat: Título limpio con el nombre oficial del cliente, avatar con iniciales legibles (ej: "AK" para Alberto Kliphart), subtítulo con teléfono y estado (`📱 +54 9 29 8469-6364 · ACTIVO`), y badge destacado `⚡ Cliente` (`#7a1e1e`).
+       - Nuevos filtros por pestaña: agregados botones `⚡ Clientes` y `🟢 Prospectos`.
+       - Panel lateral de Ficha: incorporados estado, observaciones clínicas, notas del operador (`notasGonzalo`) y enlace directo `↗ Ver Ficha en Agenda`.
+  - **Despliegue y Validación en Vivo**:
+    - Build local compilado exitosamente con Next.js 16 (Turbopack, código 0).
+    - Despliegue completado al VPS de producción (`187.127.9.216`) vía `scratch/deploy_client_resolver.mjs`.
+    - En base de datos PostgreSQL (`agenda_db`), se vincularon exitosamente 82 conversaciones huérfanas con sus fichas de Cliente. Alberto Kliphart vinculado con `clienteId: '864d0b49-c1c0-4491-b183-39d64a52fa65'`.
+    - PM2 `ia-gonzadep` reiniciado y verificado online (PID 1235398, puerto 3007).
+    - Prueba en vivo con OpenAI y Alberto Kliphart (`5492984696364`):
+      * La IA reconoce inmediatamente `contactType: CLIENTE_PACIENTE`.
+      * Responde: *"¡Hola Alberto! Te saluda el asistente virtual de Gonzalo 😊. Tenés turno confirmado para el martes 27 de octubre a las 15:00 hs para cuerpo completo..."*
+      * `cleanOngoingGreetings(..., isPatient = true)` preserva la presentación sin eliminarla.
+      * `/chats` responde HTTP 200 OK y muestra a todos los clientes con su ficha oficial.
+- **22 de Septiembre (12:20 - Módulo 4: Estadísticas - Inicio y Planificación)**:
+  - **Objetivo**: Implementar el Módulo 4 de la Etapa 2 (`Mejoras y Ampliaciones — App Web`), correspondiente al rediseño integral de Estadísticas (Avanzadas y Generales).
+  - **Alcance Planificado**:
+    1. División en dos pestañas: Estadísticas Avanzadas (vista principal interactiva) y Estadísticas Generales (renovada).
+    2. Criterio contable de señas: ingresan y se computan como ganancia el día de carga (`createdAt`), deduciéndose de las ganancias del día del turno para evitar duplicación.
+    3. Desglose de caja diaria: Entradas de turnos + Entradas de señas pagadas + Total.
+    4. Selector avanzado de 11 métricas con tabla interactiva de "DETALLES".
+    5. Botón de exclusión temporal `[X]` con recálculo dinámico en memoria de totales y ticket promedio.
+    6. Botones de acción bidireccional `[Turno]` (apertura en Agenda) y `[Ficha]` (modal de cliente).
+    7. Histogramas visuales para Canales de Adquisición y Ranking de Zonas más demandadas.
+  - Plan de implementación elaborado en `implementation_plan.md` y aprobado por el usuario ("Procede").
+  - **Ejecución y Desarrollo**:
+    1. Backend (`/api/admin/estadisticas`): Lógica de caja contable con separación estricta de señas por fecha de alta (`createdAt`) y saldos por fecha de sesión (`fecha`). Soporte para las 11 métricas avanzadas e histogramas.
+    2. Frontend (`/admin/estadisticas/page.js` y `estadisticas.module.css`): Implementadas dos pestañas (Avanzadas y Generales), banner de Caja del Día, selector de 11 métricas, tabla DETALLES con exclusión en vivo `[✕]`, navegación a agenda `[Turno ↗]` y modal embebido `[Ficha 👤]`, además de histogramas de Canales y Zonas.
+    3. Agenda (`/admin/agenda/page.js`): Soporte para `fromStats=true` permitiendo regresar directamente a Estadísticas al cerrar el modal de turno.
+  - **Despliegue y Validación en VPS Staging (`187.127.9.216:3008`)**:
+    - Compilación remota con Next.js 16 (Turbopack, código 0).
+    - PM2 `gonzalo-agenda-staging` reiniciado (PID 1247955).
+    - Prueba E2E automatizada con Puppeteer (Headless Chrome):
+      * Login y carga de 184 turnos de septiembre.
+      * Renderizado de caja: `$0` hoy, `$190.000` semana, `$6.563.500` período.
+      * Renderizado de Realizados: 92 turnos, `$6.081.000` facturación, `$66.098` ticket promedio.
+      * Exclusión interactiva con `[✕]`: redujo a 91 turnos y recalculó importes en vivo.
+      * Botón restablecer: restauró los 92 turnos.
+      * Modal de Ficha: abrió datos de Carlos Aquino y cerró limpiamente.
+      * Cero errores de consola.
+- **22 de Septiembre (12:48 - Actualización de Requerimientos de Luciano y Reordenamiento de Jerarquía)**:
+  - **Mensaje de WhatsApp de Luciano**: *"Dale, y ya después se puede arrancar con el módulo de autogestión que te lo arregle al archivo, si lo descargaste está desactualizado por las dudas"*.
+  - **Detección y Sincronización**: Se localizó el archivo recién descargado `C:\Users\Try Hard\Downloads\Mejoras AppWeb.docx` (actualizado a las 12:46 hs). Se copió y sincronizó con el repositorio.
+  - **Cambios Clave Detectados**:
+    1. **Jerarquía Oficial Actualizada**: Autogestión fue promovido a la posición **5** (inmediatamente después de Estadísticas).
+    2. **Autogestión con UI de "Alta de Turno"**: Calendario interactivo verde/gris y selección de horarios cada 10 min.
+    3. **Días Abiertos vs Cerrados**: Solo muestra días con turnos agendados previamente (priorizando Mar, Mié, Jue). Solo si el importe $\ge \$65.000$ se habilitan días no abiertos.
+    4. **Agrupamiento de Horarios Pegados (Proximidad 2x)**: Horarios restringidos a $2 \times \text{Duración}$ a cada lado de citas existentes (evitando baches).
+    5. **Diferimiento de Alta de Cliente**: No guardar clientes en base de datos hasta que el turno sea señado.
+    6. **Bypass Temporal de MercadoPago a WhatsApp**: Botón verde "Pagar Seña" que guarda la reserva y redirige a WhatsApp con mensaje estructurado.
+    7. **Regla 72hs**: Advertencia explícita de pérdida de seña al reagendar con menos de 72hs.
+    8. **Modificación Directa de Horario**: Saltear pantalla de zonas al modificar turno existente.
+    9. **Limpieza de Footer**: Links de redes solo en pantalla de login (email).
+    10. **Popups en Agenda Administrativa**: Notificaciones emergentes para avisar al operador sobre reservas/cancelaciones por autogestión.
+  - **Elaboración de Plan de Implementación (`implementation_plan.md`)**:
+    - Estructurado el plan detallado para el desarrollo integral del Módulo 5 en Staging (`http://187.127.9.216:3008`).
+    - Contempla el motor de disponibilidad con días abiertos/cerrados, el algoritmo de proximidad $2\times$, el diferimiento de alta de cliente en BD, el bypass a WhatsApp con botón verde "Pagar Seña", el salto directo al reagendar con regla de 72hs, la limpieza del footer y las notificaciones emergentes en la agenda administrativa.
+  - **Aprobación del Usuario y Desarrollo Completo (12:56 - 13:10 hs)**:
+    - El usuario aprueba el plan ("Si, procede, viste bien todo?").
+    - **Backend Desarrollado**:
+      1. `/api/admin/autogestion-alertas`: Endpoint para monitoreo de actividad de autogestión en tiempo real.
+      2. `/api/disponibilidad`: Soporte para modo mensual, regla de días abiertos vs cerrados (filtro $65.000), algoritmo de proximidad $2\times \text{Duración}$ y detección de días llenos (rojo).
+      3. `/api/reservas/crear`: Diferimiento estricto del alta de clientes en BD y generación del mensaje oficial de WhatsApp para seña.
+      4. `/api/reservas/reprogramar` y `/api/reservas/cancelar`: Verificación de 72hs y etiquetado para alertas.
+    - **Frontend Desarrollado**:
+      1. `src/app/page.js` y `page.module.css`: Flujo público de 4 pasos (Paso 1: Login/registro diferido con footer de redes; Paso 2: Selección de zonas con banner de $65k; Paso 3: Calendario mensual de Alta de Turno con días verdes/rojos/grises y slots pegados; Paso 4: Resumen y botón verde "Pagar Seña"). Footer oculto en pasos 2, 3 y 4.
+      2. `src/app/admin/agenda/page.js`: Componente popup flotante en la esquina inferior derecha con consulta periódica cada 20s, mostrando alertas en tiempo real de reservas, reprogramaciones y cancelaciones con botones "Ver Turno ↗" y "Entendido".
+    - **Compilación y Despliegue en VPS Staging (`http://187.127.9.216:3008`)**:
+      * Compilación remota con Next.js 16 (Turbopack, código 0).
+      * PM2 `gonzalo-agenda-staging` reiniciado (PID 1249118, puerto 3008).
+      * Producción (`main`, puerto 3006) 100% aislada e intacta.
+    - **Validación Automatizada E2E con Puppeteer (`scratch/test_puppeteer_autogestion.mjs`)**:
+      * Paso 1: Footer visible con enlaces de Instagram, Web y Maps.
+      * Registro diferido: Cliente nuevo completó datos sin guardarse en DB antes de señar.
+      * Paso 2: Footer oculto. Banner de días cerrados (<$65k) activo.
+      * Selección de Cuerpo Completo ($140.000 >= $65.000): Banner preferencial activado.
+      * Paso 3: Calendario mensual desplegó 3 días disponibles en verde y 4 días llenos en rojo. Al clickear día verde, desplegó slots agrupados por proximidad de 2x duración.
+      * Paso 4: Botón verde con gradiente y texto "Pagar Seña". Al clickear, generó la URL de WhatsApp con la plantilla oficial exacta de Luciano:
+        `Hola 👋 Quiero reservar este turno:\n\nNombre: Cliente Autogestión\nFecha: 26/09/2026\nHorario: 20:00\nZonas: Cuerpo Completo\nDuración: 90 min\nTotal: $150.000\n\nQuedo a la espera de los datos para realizar el pago de la seña y confirmar el turno.`
+      * Agenda Administrativa: Detectó la nueva reserva y desplegó el popup emergente:
+        `🔔 Nueva Reserva Online: Cliente Autogestión hizo una reserva online para el 2026-09-26 a las 20:00 hs. Zonas: Cuerpo Completo [Ver Turno ↗] [Entendido]`.
+      * Capturas guardadas en `scratch/agenda_autogestion_popup.png` y directorio de artefactos.
+      * Test finalizó con código de salida 0 y cero errores.
+- **22 de Septiembre (13:20 - Ajuste Visual de Cabecera de Autogestión a Pedido del Usuario)**:
+  - **Solicitud del Usuario**: *"Saca lo que esta hecho en texto y hace mas grande el logo"*.
+  - **Diagnóstico**:
+    1. En `src/app/page.js` se renderizaba un bloque HTML con `styles.logoTitle` ("Gonzalo") y `styles.logoSubtitle` ("Depilación Masculina") junto a un icono minúsculo de 48x48.
+    2. El archivo original `public/logo.png` contenía 288px de espacio transparente vacío arriba y 342px abajo (61% de la altura total), haciendo que al escalar en contenedores de altura limitada, la marca gráfica se redujera a apenas ~12px de altura visible.
+  - **Acciones Realizadas**:
+    1. Se eliminó por completo el bloque HTML de texto en `src/app/page.js`.
+    2. Se recortaron con exactitud los márgenes transparentes vacíos de `public/logo.png` mediante `sharp` (dimensiones limpias: 1283 x 394 px, relación 3.25:1).
+    3. Se implementó la clase `.logoImg` en `src/app/page.module.css` con altura de 58px en desktop y 46px en mobile, cursor interactivo hacia el Paso 1 y padding balanceado en el header (`1rem 1.25rem`).
+    4. Compilación local limpia (`npm run build`, 40/40 rutas estáticas y dinámicas).
+    5. Despliegue en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1249933).
+    6. Verificación visual mediante capturas Puppeteer (`scratch/staging_header_desktop.png` y `scratch/staging_header_mobile.png`): logo perfectamente legible, nítido y balanceado tanto en desktop como en dispositivos móviles.
+    7. Decisión registrada: `D-66` en `.synapse/decisions.md`. Producción (`main`, puerto 3006) 100% aislada.
+- **22 de Septiembre (14:15 - Despliegue Exclusivo de Módulo 2 en Producción Real y Verificación E2E)**:
+  - **Solicitud del Cliente (Gonzalo)**: *"Primero subí el 2 y que quede terminado ese módulo y luego continuar con autogestión por favor"*.
+  - **Solicitud del Usuario**: *"Si y verifica que en la vista de neocita se vea todo como se debe ver"*.
+  - **Acciones Ejecutadas**:
+    1. **Aislamiento Estricto de Módulo 2**:
+       * En Git, se avanzó la rama `main` de producción mediante fast-forward limpio exactamente hasta el commit `9a3d403` (la cima del Módulo 2 antes de la creación del Módulo 3, 4 y 5).
+       * Se blindó `prisma/schema.prisma` incorporando los modelos específicos de IA/WhatsApp (`ConversacionWsp`, `MensajeWsp`, etc.) que comparten la base de datos PostgreSQL `agenda_db`, garantizando sincronización segura y protegiendo todas las 14 tablas relacionales sin alertas de pérdida de datos.
+       * Compilación limpia local de `main` con Turbopack (`npm run build`, 39/39 rutas).
+       * Push exitoso a `origin/main`.
+    2. **Despliegue en VPS Producción (`http://187.127.9.216:3006`)**:
+       * Ejecutado `deploy_vps_workspace.js`: `git fetch`, `git reset --hard origin/main`, `prisma db push`, `npm run build` y reinicio de PM2 `gonzalo-agenda` (PID 1252288, puerto 3006).
+       * Base de datos productiva `agenda_db` sincronizada con modelo `Bloqueo`, columnas `subEstado` y `señaEstado`.
+    3. **Verificación Automatizada E2E con Puppeteer en Producción (`scratch/verify_prod_neocita.mjs`)**:
+       * Acceso por `/login` con credenciales de administrador (código 200 OK).
+       * Navegación a `/admin/agenda` y activación de Vista Diaria Neocita (`viewMode = 'day'`).
+       * Cabecera verificada: `📅 Martes, 22 De Septiembre De 2026`, `12 turnos agendados`, `Ingreso Estimado $606.000`.
+       * 12 tarjetas verticales renderizadas con horarios de inicio/fin, duraciones (`⏱️ 40 min`), clientes reales, zonas, importes y badges de descuento (`🏷️ 10% OFF`).
+       * 3 huecos libres interactivos detectados e intercalados: `🟢 Libre: 14:10 a 14:40`, `🟢 Libre: 17:30 a 18:10` y `🟢 Libre: 19:50 a 20:20`, con botón `+ Agendar`.
+       * Botones de acción operativos: `[Día] [Semana] [Mes]`, `📅 Hoy`, `👁️ Ver Cancelados`, `🖨️ Imprimir Día`, `🚫 Bloquear Horario` y `+ Nuevo Turno`.
+       * Captura de pantalla guardada en `scratch/prod_neocita_verified.png` y directorio de artefactos.
+    4. **Sincronización de Entornos**:
+       * Rama local retornada a `staging` y sincronizada con el schema blindado de `main`.
+       * Staging (`puerto 3008`) preserva los Módulos 3, 4 y 5 listos para cuando Gonzalo decida activarlos.
+    5. **Decisión registrada**: `D-67` en `.synapse/decisions.md`.
+- **23 de Septiembre (10:30 - 10:48 hs - Implementación y Despliegue de los 5 Ajustes de Feedback de Gonzalo)**:
+  - **Aprobación del Usuario**: *"Te doy el ok"*.
+  - **Diagnóstico y Modificaciones Realizadas en Código**:
+    1. **Modal Detalle del Turno (`src/app/admin/agenda/page.js`)**:
+       * Nombre del Cliente: ampliado a `fontSize: '1.35rem', fontWeight: 800` para lectura inmediata en celulares.
+       * Horario y Estado: unificados en la misma fila con `display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap'`, ubicando el badge de Estado (`SEÑADO`, `CONFIRMADO`, etc.) al lado del Horario y eliminando la fila independiente de Estado para acortar la altura vertical del modal.
+       * Zonas a Depilar: ampliado a `fontSize: '1.25rem', fontWeight: 800`.
+       * Sección Clínica: agrupados `📅 Fecha Primer Turno` y `🔢 Sesiones Realizadas` en una grilla de 2 columnas estrictas (`gridTemplateColumns: '1fr 1fr'`) en el mismo renglón (50%/50%), y reubicado el selector de `Frecuencia Estimada del Tratamiento (Semanas)` inmediatamente debajo.
+    2. **Ficha del Cliente (`src/app/admin/clientes/page.js`)**:
+       * Eliminadas las 2 tarjetas de resumen en el sidebar: `Última sesión` y `Próximo Turno`.
+       * Eliminado el banner amarillo superior `🛡️ Observaciones del Operador (Potencia / Clínica)` en la cabecera del Historial de Turnos, manteniendo las notas clínicas individualmente dentro de cada tarjeta de cita.
+    3. **Planilla Imprimible (`src/app/admin/agenda/imprimir/page.js`)**:
+       * Actualizado el encabezado de columna a `<th>Zonas a Realizar</th>`.
+       * Eliminados completamente los bloques de `Obs. Operador:` y `Comentario Turno:` en cada fila, dejando la tabla limpia para papel.
+  - **Compilación Local y Control de Versiones**:
+    * Compilación limpia local de Next.js Turbopack (`npm run build`, 40/40 rutas en staging y 39/39 en main).
+    * Commits en ambas ramas: `1e02f15` en `staging` y `aa99fba` en `main`.
+    * Pushes exitosos a `origin/staging` y `origin/main`.
+  - **Despliegue Integral en Servidor VPS (`http://187.127.9.216`)**:
+    * Ejecutado `scratch/deploy_both_vps.cjs` con adaptación dinámica de provider PostgreSQL para Prisma.
+    * Producción (`/srv/gonzalo-dep`, puerto 3006, PM2 `gonzalo-agenda`, PID 1274388): compilación de Next.js y reinicio exitoso (código 0).
+    * Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, PID 1274630): compilación de Next.js y reinicio exitoso (código 0).
+    * Ambos procesos online al 0% de CPU.
+  - **Validación Automatizada E2E con Puppeteer en Producción Real (`scratch/verify_feedback_adjustments.mjs`)**:
+    * Modal Detalle verificado: Cliente `21.6px` (800 weight), Horario unificado con badge (`SEÑADO`), Zonas `20px` (800 weight), Fecha Primer Turno y Sesiones en grilla de 2 columnas en la misma línea, Frecuencia debajo.
+    * Ficha de Cliente verificada: `hasUltimaSesion: false`, `hasProximoTurno: false`, `hasYellowBanner: false`.
+    * Planilla Imprimible verificada: `headers: ["HORARIO", "CLIENTE", "ZONAS A REALIZAR"]`, `hasObsOperador: false`, `hasComentarioTurno: false`.
+    * Capturas de pantalla guardadas y analizadas: `prod_modal_verified.png`, `prod_modal_clinical.png`, `prod_ficha_verified.png` y `prod_imprimir_verified.png`.
+  - **Decisión Registrada**: `D-68` en `.synapse/decisions.md`.
+- **23 de Septiembre (11:30 - 11:45 hs - Desacoplamiento Estricto e Inmutable de Observaciones del Operador por Turno)**:
+  - **Solicitud del Cliente (Gonzalo)**: *"Con el tema de los comentarios de operador, cuando cambio el comentario de un turno, se cambian los comentarios de operador de los turnos anteriores todavía. Eso no debe pasar sino perdemos todos los valores anteriores, solo se debe actualizar ese turno y los siguientes que se agenden pero nunca los anteriores"*.
+  - **Diagnóstico Integral y Root Cause**:
+    1. En PostgreSQL `agenda_db` (Producción), la columna `notasGonzalo` no existía a nivel de tabla `Turno`.
+    2. En `src/app/admin/clientes/page.js`, el historial renderizaba directamente `{selectedClient.notasGonzalo}` (o caía en fallback cuando `t.notasGonzalo` era null).
+    3. Al editar las notas en un turno de Luciano Gomez pasando de 113 a 114, se mutaba la columna global del cliente, provocando que turnos antiguos (ej: 16 de julio de 2026) mostraran 114 en lugar de su 113 original.
+  - **Acciones Ejecutadas**:
+    1. **Migración de Base de Datos en VPS**:
+       * En `agenda_db` y `agenda_db_staging`: ejecutado `ALTER TABLE "Turno" ADD COLUMN IF NOT EXISTS "notasGonzalo" text;`.
+       * Poblado masivo de turnos existentes con la nota clínica histórica del cliente (`UPDATE "Turno" SET "notasGonzalo" = c."notasGonzalo"...`).
+       * Restaurado el turno histórico de Luciano Gomez (16 de julio de 2026) con su valor original `113`, preservando `114` en el turno más reciente (26 de septiembre de 2026).
+    2. **Frontend Ficha del Cliente (`src/app/admin/clientes/page.js`)**:
+       * Modificado el historial para renderizar de forma exclusiva `{t.notasGonzalo}` eliminando cualquier fallback a `selectedClient.notasGonzalo`.
+    3. **Backend y Cascada Segura (`src/app/api/admin/turnos/[id]/route.js`)**:
+       * Filtrado estricto con `toUtcDateStr`: al cambiar la nota en un turno, se actualiza ese turno y los turnos cronológicamente posteriores (`>= fecha/hora`), actualizando `Cliente.notasGonzalo` para nuevas citas que se agenden en el futuro, pero excluyendo incondicionalmente todos los turnos anteriores.
+    4. **Congelamiento en Creación (`/api/admin/turnos` y `/api/reservas/crear`)**:
+       * Nuevos turnos heredan y congelan su propio `notasGonzalo` al momento de ser creados.
+  - **Decisión Registrada**: `D-69` en `.synapse/decisions.md`.
+
+
 
 
 

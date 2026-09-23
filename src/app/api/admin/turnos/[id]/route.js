@@ -237,8 +237,56 @@ export async function PUT(request, { params }) {
     if (body.clientObservaciones !== undefined && (body.clientObservaciones.trim() !== '' || body.forceClearObservaciones)) {
       clientUpdateData.observaciones = body.clientObservaciones;
     }
-    if (body.notasGonzalo !== undefined && (typeof body.notasGonzalo === 'string' && body.notasGonzalo.trim() !== '' || body.forceClearNotasGonzalo)) {
-      clientUpdateData.notasGonzalo = body.notasGonzalo;
+    // Handle Observaciones del Operador (notasGonzalo):
+    // Gonzalo's Rule: Changing operator notes on a turno updates THAT turno and all SUBSEQUENT turnos.
+    // It must NEVER change PREVIOUS turnos!
+    if (body.notasGonzalo !== undefined) {
+      const newNotas = typeof body.notasGonzalo === 'string' ? body.notasGonzalo.trim() : body.notasGonzalo;
+      updateData.notasGonzalo = newNotas;
+
+      if (oldTurn.clienteId) {
+        // Fetch all other turnos for this client
+        const allClientTurnos = await prisma.turno.findMany({
+          where: {
+            clienteId: oldTurn.clienteId,
+            id: { not: id }
+          },
+          select: { id: true, fecha: true, horaInicio: true }
+        });
+
+        // Robust UTC date extractor to prevent timezone shift issues
+        const toUtcDateStr = (d) => {
+          if (!d) return '';
+          if (typeof d === 'string' && d.includes('T')) return d.split('T')[0];
+          if (typeof d === 'string' && d.length === 10) return d;
+          const dt = new Date(d);
+          return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+        };
+
+        // Determine chronological boundary of oldTurn
+        const currentTurnDateIso = (checkFechaStr || toUtcDateStr(oldTurn.fecha));
+        const currentTurnStartMin = timeToMinutes(checkHoraInicio || oldTurn.horaInicio);
+
+        // Subsequent turnos: date is strictly after, or same date and time >= current
+        const subsequentIds = allClientTurnos.filter(t => {
+          const tDateIso = toUtcDateStr(t.fecha);
+          if (tDateIso > currentTurnDateIso) return true;
+          if (tDateIso === currentTurnDateIso) {
+            return timeToMinutes(t.horaInicio) >= currentTurnStartMin;
+          }
+          return false;
+        }).map(t => t.id);
+
+        if (subsequentIds.length > 0) {
+          await prisma.turno.updateMany({
+            where: { id: { in: subsequentIds } },
+            data: { notasGonzalo: newNotas }
+          });
+        }
+
+        // Also update client baseline so future new appointments start with this note
+        clientUpdateData.notasGonzalo = newNotas;
+      }
     }
     if (body.frecuencia !== undefined && !isNaN(Number(body.frecuencia))) {
       clientUpdateData.frecuencia = Number(body.frecuencia);

@@ -1245,7 +1245,8 @@ export default function AgendaPage() {
         if (tempClientObservaciones !== (selectedTurno.cliente.observaciones || '')) {
           updateBody.observaciones = tempClientObservaciones;
         }
-        if (tempClientNotasGonzalo !== (selectedTurno.cliente.notasGonzalo || '')) {
+        const currentTurnoNotas = selectedTurno.notasGonzalo !== null && selectedTurno.notasGonzalo !== undefined ? selectedTurno.notasGonzalo : (selectedTurno.cliente.notasGonzalo || '');
+        if (tempClientNotasGonzalo !== currentTurnoNotas) {
           updateBody.notasGonzalo = tempClientNotasGonzalo;
         }
         if (tempClientFrecuencia !== (selectedTurno.cliente.frecuencia || 4)) {
@@ -1459,9 +1460,10 @@ export default function AgendaPage() {
       if (calcsZ.duracionMinutos > 0) previousDuration = calcsZ.duracionMinutos;
     }
 
+    const currentTurnoNotas = turno.notasGonzalo !== null && turno.notasGonzalo !== undefined ? turno.notasGonzalo : (turno.cliente?.notasGonzalo || '');
     if (turno.cliente?.id && (
       tempClientObservaciones !== (turno.cliente?.observaciones || '') ||
-      tempClientNotasGonzalo !== (turno.cliente?.notasGonzalo || '') ||
+      tempClientNotasGonzalo !== currentTurnoNotas ||
       tempClientFrecuencia !== (turno.cliente?.frecuencia || 4)
     )) {
       handleSaveClientObservaciones(true);

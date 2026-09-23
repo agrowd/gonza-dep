@@ -58,6 +58,7 @@ model Turno {
   subEstado        String?  // "SIGUIENTE_TURNO", "VA_A_AVISAR", "MANTENIMIENTO", "FINALIZADO"
   enviarNotificaciones Boolean @default(true)
   observaciones    String?
+  notasGonzalo     String?
   createdAt        DateTime @default(now())
 }
 

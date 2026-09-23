@@ -817,7 +817,7 @@ function ClientesPageContent() {
                                   <span><strong>Seña:</strong> ${t.valorSeña.toLocaleString('es-ES')}</span>
                                   <span><strong>Saldo:</strong> ${t.saldoPendiente.toLocaleString('es-ES')}</span>
                                 </div>
-                                {selectedClient.notasGonzalo && (
+                                {Boolean(t.notasGonzalo && t.notasGonzalo.trim()) && (
                                   <div style={{
                                     marginTop: '0.6rem',
                                     backgroundColor: 'rgba(212, 165, 77, 0.08)',
@@ -829,13 +829,13 @@ function ClientesPageContent() {
                                       🛡️ Observaciones del Operador:
                                     </div>
                                     <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.35 }}>
-                                      {selectedClient.notasGonzalo}
+                                      {t.notasGonzalo}
                                     </div>
                                   </div>
                                 )}
                                 {t.observaciones && (
                                   <div style={{
-                                    marginTop: selectedClient.notasGonzalo ? '0.4rem' : '0.6rem',
+                                    marginTop: (t.notasGonzalo && t.notasGonzalo.trim()) ? '0.4rem' : '0.6rem',
                                     backgroundColor: 'rgba(255, 255, 255, 0.04)',
                                     border: '1px solid rgba(255, 255, 255, 0.1)',
                                     borderRadius: '4px',

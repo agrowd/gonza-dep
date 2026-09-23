@@ -64,7 +64,8 @@ export async function GET(request) {
       descuentoTipo: ultimoTurno.descuentoTipo,
       descuentoValor: ultimoTurno.descuentoValor,
       bonificacion: ultimoTurno.bonificacion,
-      observaciones: ultimoTurno.observaciones
+      observaciones: ultimoTurno.observaciones,
+      notasGonzalo: ultimoTurno.notasGonzalo
     });
   } catch (error) {
     console.error('Error fetching ultimo turno de cliente:', error);
