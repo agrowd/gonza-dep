@@ -427,6 +427,184 @@ function ClientesPageContent() {
     }
   };
 
+  const parseAndFillClientData = (rawText) => {
+    if (!rawText) return {};
+    const text = rawText.trim();
+    const updates = {};
+
+    // 1. Email
+    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    if (emailMatch) {
+      updates.email = emailMatch[0].trim();
+    }
+
+    // 2. Phone
+    const phoneRegex = /(?:\+?54\s*9?\s*)?(?:11|[23][0-9]{2,3})\s*(?:15)?\s*\d{3,4}[-\s]?\d{4}/;
+    const phoneMatch = text.match(phoneRegex);
+    if (phoneMatch) {
+      let digits = phoneMatch[0].replace(/\D/g, '');
+      if (digits.startsWith('549') && digits.length > 10) digits = digits.substring(3);
+      else if (digits.startsWith('54') && digits.length > 10) digits = digits.substring(2);
+      if (digits.startsWith('0') && digits.length > 10) digits = digits.substring(1);
+      if (digits.startsWith('15') && digits.length === 10) digits = '11' + digits.substring(2);
+      updates.whatsapp = digits;
+      updates.whatsappCountry = '54';
+    } else {
+      const numbers = text.match(/\b\d{8,12}\b/g) || [];
+      for (const num of numbers) {
+        if (!updates.dni && (num.length === 7 || num.length === 8)) {
+          // potential DNI
+        } else if (!updates.whatsapp && num.length >= 8) {
+          let digits = num;
+          if (digits.startsWith('549') && digits.length > 10) digits = digits.substring(3);
+          else if (digits.startsWith('54') && digits.length > 10) digits = digits.substring(2);
+          updates.whatsapp = digits;
+          updates.whatsappCountry = '54';
+          break;
+        }
+      }
+    }
+
+    // 3. DNI
+    const dniExplicit = text.match(/(?:DNI|Documento|Doc)[:\s]*([0-9.]+)/i);
+    if (dniExplicit) {
+      const cleanDni = dniExplicit[1].replace(/\D/g, '');
+      if (cleanDni.length >= 6 && cleanDni.length <= 9) {
+        updates.dni = cleanDni;
+      }
+    }
+    if (!updates.dni) {
+      const dniPattern = text.match(/\b\d{1,2}\.?\d{3}\.?\d{3}\b/);
+      if (dniPattern) {
+        const clean = dniPattern[0].replace(/\D/g, '');
+        if (clean !== updates.whatsapp) {
+          updates.dni = clean;
+        }
+      }
+    }
+
+    // 4. Name
+    const nameExplicit = text.match(/(?:Nombre(?:\s*y\s*Apellido)?|Cliente)[:\s]*([A-Za-zÁÉÍÓÚáéíóúñÑ\s]+)/i);
+    if (nameExplicit) {
+      const full = nameExplicit[1].trim();
+      const parts = full.split(/\s+/);
+      if (parts.length === 1) {
+        updates.nombre = parts[0];
+      } else if (parts.length >= 2) {
+        updates.nombre = parts.slice(0, parts.length - 1).join(' ');
+        updates.apellido = parts[parts.length - 1];
+      }
+    } else {
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (line.includes('@') || line.match(/https?:\/\//) || line.toLowerCase().includes('dni')) continue;
+        const letterRatio = (line.match(/[A-Za-zÁÉÍÓÚáéíóúñÑ]/g) || []).length / Math.max(1, line.length);
+        if (letterRatio > 0.6 && line.length >= 3 && line.length <= 40) {
+          const parts = line.split(/\s+/);
+          if (parts.length === 1) {
+            updates.nombre = parts[0];
+          } else if (parts.length >= 2) {
+            updates.nombre = parts.slice(0, parts.length - 1).join(' ');
+            updates.apellido = parts[parts.length - 1];
+          }
+          break;
+        }
+      }
+    }
+
+    setNewClient(prev => ({
+      ...prev,
+      ...updates
+    }));
+
+    return updates;
+  };
+
+  const handleSmartPasteClientData = async () => {
+    try {
+      let text = '';
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          text = await navigator.clipboard.readText();
+        } catch (e) {
+          console.log('Clipboard API access denied, falling back to prompt', e);
+        }
+      }
+      if (!text) {
+        text = window.prompt('Pegá acá el texto copiado con los datos del cliente (WhatsApp, nombre, etc.):');
+      }
+      if (!text || !text.trim()) return;
+      const parsed = parseAndFillClientData(text.trim());
+      const foundCount = Object.keys(parsed || {}).length;
+      if (foundCount > 0) {
+        showToast(`Se autocompletaron ${foundCount} datos del cliente.`);
+      } else {
+        showToast('No se detectaron campos reconocibles en el texto.', 'error');
+      }
+    } catch (err) {
+      console.error('Error in smart paste:', err);
+      showToast('Error al pegar datos del portapapeles.', 'error');
+    }
+  };
+
+  const handlePasteField = async (fieldName, target = 'new') => {
+    try {
+      let text = '';
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          text = await navigator.clipboard.readText();
+        } catch (e) {
+          console.log('Clipboard API denied, fallback to prompt', e);
+        }
+      }
+      if (!text) {
+        text = window.prompt(`Pegar texto para ${fieldName}:`);
+      }
+      if (!text) return;
+      text = text.trim();
+
+      const setter = target === 'new' ? setNewClient : setEditNotes;
+
+      if (fieldName === 'whatsapp') {
+        let clean = text.replace(/\D/g, '');
+        if (clean.startsWith('549') && clean.length > 10) clean = clean.substring(3);
+        else if (clean.startsWith('54') && clean.length > 10) clean = clean.substring(2);
+        if (clean.startsWith('0') && clean.length > 10) clean = clean.substring(1);
+        if (clean.startsWith('15') && clean.length === 10) clean = '11' + clean.substring(2);
+        setter(prev => ({ ...prev, whatsapp: clean }));
+        showToast('WhatsApp pegado.');
+      } else if (fieldName === 'dni') {
+        const clean = text.replace(/\D/g, '');
+        setter(prev => ({ ...prev, dni: clean }));
+        showToast('DNI pegado.');
+      } else if (fieldName === 'email') {
+        const match = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        const emailVal = match ? match[0] : text;
+        setter(prev => ({ ...prev, email: emailVal }));
+        showToast('Email pegado.');
+      } else if (fieldName === 'nombre') {
+        const parts = text.split(/\s+/);
+        if (parts.length > 1 && (target === 'new' ? !newClient.apellido : !editNotes.apellido)) {
+          setter(prev => ({
+            ...prev,
+            nombre: parts.slice(0, parts.length - 1).join(' '),
+            apellido: parts[parts.length - 1]
+          }));
+          showToast('Nombre y Apellido pegados.');
+        } else {
+          setter(prev => ({ ...prev, nombre: text }));
+          showToast('Nombre pegado.');
+        }
+      } else if (fieldName === 'apellido') {
+        setter(prev => ({ ...prev, apellido: text }));
+        showToast('Apellido pegado.');
+      }
+    } catch (err) {
+      console.error('Error pasting field:', err);
+      showToast('No se pudo pegar el texto.', 'error');
+    }
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchClients(search);
@@ -941,7 +1119,25 @@ function ClientesPageContent() {
                   <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr', marginBottom: '1.5rem' }}>
                     <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
                       <div className={styles.inputGroup} style={{ flex: 1 }}>
-                        <label className={styles.inputLabel}>Nombre *</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                          <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Nombre *</label>
+                          <button
+                            type="button"
+                            onClick={() => handlePasteField('nombre', 'edit')}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '4px',
+                              color: 'var(--color-gold)',
+                              fontSize: '0.72rem',
+                              padding: '0.15rem 0.45rem',
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            📋 Pegar
+                          </button>
+                        </div>
                         <input
                           type="text"
                           value={editNotes.nombre || ''}
@@ -951,7 +1147,25 @@ function ClientesPageContent() {
                       </div>
 
                       <div className={styles.inputGroup} style={{ flex: 1 }}>
-                        <label className={styles.inputLabel}>Apellido *</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                          <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Apellido *</label>
+                          <button
+                            type="button"
+                            onClick={() => handlePasteField('apellido', 'edit')}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '4px',
+                              color: 'var(--color-gold)',
+                              fontSize: '0.72rem',
+                              padding: '0.15rem 0.45rem',
+                              cursor: 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            📋 Pegar
+                          </button>
+                        </div>
                         <input
                           type="text"
                           value={editNotes.apellido || ''}
@@ -962,17 +1176,54 @@ function ClientesPageContent() {
                     </div>
 
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                      <label className={styles.inputLabel}>DNI (Opcional)</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        <label className={styles.inputLabel} style={{ marginBottom: 0 }}>DNI (Solo números)</label>
+                        <button
+                          type="button"
+                          onClick={() => handlePasteField('dni', 'edit')}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '4px',
+                            color: 'var(--color-gold)',
+                            fontSize: '0.72rem',
+                            padding: '0.15rem 0.45rem',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          📋 Pegar
+                        </button>
+                      </div>
                       <input
                         type="text"
-                        value={editNotes.dni}
-                        onChange={(e) => setEditNotes({ ...editNotes, dni: e.target.value })}
+                        inputMode="numeric"
+                        value={editNotes.dni || ''}
+                        onChange={(e) => setEditNotes({ ...editNotes, dni: e.target.value.replace(/\D/g, '') })}
                         placeholder="Ej. 12345678"
                       />
                     </div>
 
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                      <label className={styles.inputLabel}>WhatsApp *</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        <label className={styles.inputLabel} style={{ marginBottom: 0 }}>WhatsApp *</label>
+                        <button
+                          type="button"
+                          onClick={() => handlePasteField('whatsapp', 'edit')}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '4px',
+                            color: 'var(--color-gold)',
+                            fontSize: '0.72rem',
+                            padding: '0.15rem 0.45rem',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          📋 Pegar
+                        </button>
+                      </div>
                       <PhoneInput
                         countryCode={editNotes.whatsappCountry || '54'}
                         onCountryChange={(code) => setEditNotes({ ...editNotes, whatsappCountry: code })}
@@ -985,7 +1236,25 @@ function ClientesPageContent() {
                     </div>
 
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                      <label className={styles.inputLabel}>Email *</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Email *</label>
+                        <button
+                          type="button"
+                          onClick={() => handlePasteField('email', 'edit')}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '4px',
+                            color: 'var(--color-gold)',
+                            fontSize: '0.72rem',
+                            padding: '0.15rem 0.45rem',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          📋 Pegar
+                        </button>
+                      </div>
                       <input
                         type="email"
                         value={editNotes.email}
@@ -1106,11 +1375,67 @@ function ClientesPageContent() {
               <button onClick={() => setIsCreateOpen(false)} className={agendaStyles.closeBtn}>&times;</button>
             </div>
 
+            {/* Quick smart paste helper */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.6rem',
+              backgroundColor: 'rgba(212, 165, 77, 0.08)',
+              border: '1px dashed var(--color-gold)',
+              borderRadius: '8px',
+              padding: '0.65rem 0.85rem',
+              marginBottom: '1.25rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '1.15rem' }}>📋</span>
+                <span style={{ fontWeight: 600 }}>¿Tenés los datos copiados?</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSmartPasteClientData}
+                style={{
+                  fontSize: '0.8rem',
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-gold)',
+                  color: 'var(--color-gold)',
+                  backgroundColor: 'rgba(0,0,0,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                📋 Pegar y Autocompletar
+              </button>
+            </div>
+
             <form onSubmit={handleCreateClient}>
               <div className={agendaStyles.detailGrid} style={{ gridTemplateColumns: '1fr' }}>
                 <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
                   <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Nombre *</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Nombre *</label>
+                      <button
+                        type="button"
+                        onClick={() => handlePasteField('nombre')}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '4px',
+                          color: 'var(--color-gold)',
+                          fontSize: '0.72rem',
+                          padding: '0.15rem 0.45rem',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        📋 Pegar
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={newClient.nombre || ''}
@@ -1120,7 +1445,25 @@ function ClientesPageContent() {
                     />
                   </div>
                   <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Apellido *</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Apellido *</label>
+                      <button
+                        type="button"
+                        onClick={() => handlePasteField('apellido')}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '4px',
+                          color: 'var(--color-gold)',
+                          fontSize: '0.72rem',
+                          padding: '0.15rem 0.45rem',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        📋 Pegar
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={newClient.apellido || ''}
@@ -1132,17 +1475,54 @@ function ClientesPageContent() {
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                  <label className={styles.inputLabel}>DNI (Opcional)</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <label className={styles.inputLabel} style={{ marginBottom: 0 }}>DNI (Solo números)</label>
+                    <button
+                      type="button"
+                      onClick={() => handlePasteField('dni')}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '4px',
+                        color: 'var(--color-gold)',
+                        fontSize: '0.72rem',
+                        padding: '0.15rem 0.45rem',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      📋 Pegar
+                    </button>
+                  </div>
                   <input
                     type="text"
-                    value={newClient.dni}
-                    onChange={(e) => setNewClient({ ...newClient, dni: e.target.value })}
+                    inputMode="numeric"
+                    value={newClient.dni || ''}
+                    onChange={(e) => setNewClient({ ...newClient, dni: e.target.value.replace(/\D/g, '') })}
                     placeholder="Ej. 12345678"
                   />
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                  <label className={styles.inputLabel}>WhatsApp *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <label className={styles.inputLabel} style={{ marginBottom: 0 }}>WhatsApp *</label>
+                    <button
+                      type="button"
+                      onClick={() => handlePasteField('whatsapp')}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '4px',
+                        color: 'var(--color-gold)',
+                        fontSize: '0.72rem',
+                        padding: '0.15rem 0.45rem',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      📋 Pegar
+                    </button>
+                  </div>
                   <PhoneInput
                     countryCode={newClient.whatsappCountry || '54'}
                     onCountryChange={(code) => setNewClient({ ...newClient, whatsappCountry: code })}
@@ -1155,7 +1535,25 @@ function ClientesPageContent() {
                 </div>
 
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                  <label className={styles.inputLabel}>Email *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Email *</label>
+                    <button
+                      type="button"
+                      onClick={() => handlePasteField('email')}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '4px',
+                        color: 'var(--color-gold)',
+                        fontSize: '0.72rem',
+                        padding: '0.15rem 0.45rem',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      📋 Pegar
+                    </button>
+                  </div>
                   <input
                     type="email"
                     value={newClient.email}

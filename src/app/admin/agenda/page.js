@@ -323,6 +323,8 @@ export default function AgendaPage() {
   const [tempClientFechaPrimerTurno, setTempClientFechaPrimerTurno] = useState('');
   const [tempClientSesionesTotal, setTempClientSesionesTotal] = useState(0);
   const [tempClientSesionesPrevias, setTempClientSesionesPrevias] = useState(0);
+  const tempClientFechaPrimerTurnoRef = useRef('');
+  const tempClientSesionesPreviasRef = useRef(0);
   const [tempTurnoObservaciones, setTempTurnoObservaciones] = useState('');
   const [expandedObsGeneral, setExpandedObsGeneral] = useState(false);
   const [expandedNotasGonzalo, setExpandedNotasGonzalo] = useState(false);
@@ -597,13 +599,15 @@ export default function AgendaPage() {
         const completedInSystem = clientTurnos.filter(t => t.estado === 'REALIZADO').length;
         const previas = selectedTurno.cliente.sesionesPrevias || 0;
         setTempClientSesionesPrevias(previas);
+        tempClientSesionesPreviasRef.current = previas;
         setTempClientSesionesTotal(completedInSystem + previas);
 
+        let initialDate = '';
         if (selectedTurno.cliente.fechaPrimerTurno) {
           try {
-            setTempClientFechaPrimerTurno(new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0]);
+            initialDate = new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0];
           } catch {
-            setTempClientFechaPrimerTurno('');
+            initialDate = '';
           }
         } else {
           let earliestDate = null;
@@ -618,18 +622,22 @@ export default function AgendaPage() {
             earliestDate = selectedTurno.fecha;
           }
           try {
-            setTempClientFechaPrimerTurno(new Date(earliestDate).toISOString().split('T')[0]);
+            initialDate = new Date(earliestDate).toISOString().split('T')[0];
           } catch {
-            setTempClientFechaPrimerTurno('');
+            initialDate = '';
           }
         }
+        setTempClientFechaPrimerTurno(initialDate);
+        tempClientFechaPrimerTurnoRef.current = initialDate;
       } else {
         setTempClientObservaciones('');
         setTempClientFrecuencia(4);
         setTempClientNotasGonzalo('');
         setTempClientFechaPrimerTurno('');
+        tempClientFechaPrimerTurnoRef.current = '';
         setTempClientSesionesTotal(0);
         setTempClientSesionesPrevias(0);
+        tempClientSesionesPreviasRef.current = 0;
       }
     } else {
       setTempTurnoObservaciones('');
@@ -637,8 +645,10 @@ export default function AgendaPage() {
       setTempClientFrecuencia(4);
       setTempClientNotasGonzalo('');
       setTempClientFechaPrimerTurno('');
+      tempClientFechaPrimerTurnoRef.current = '';
       setTempClientSesionesTotal(0);
       setTempClientSesionesPrevias(0);
+      tempClientSesionesPreviasRef.current = 0;
       setExpandedObsGeneral(false);
       setExpandedNotasGonzalo(false);
       setExpandedTurnoObs(false);
@@ -651,18 +661,27 @@ export default function AgendaPage() {
     const clientTurnos = selectedTurno?.cliente?.turnos || [];
     const completedInSystem = clientTurnos.filter(t => t.estado === 'REALIZADO').length;
     const computedPrevias = Math.max(0, val - completedInSystem);
+    tempClientSesionesPreviasRef.current = computedPrevias;
     setTempClientSesionesPrevias(computedPrevias);
   };
 
   const handleSaveClientObservaciones = async (silent = false, overrides = {}) => {
     if (!selectedTurno || !selectedTurno.cliente) return;
     try {
+      const targetNotas = overrides.notasGonzalo !== undefined ? overrides.notasGonzalo : tempClientNotasGonzalo;
+      const targetFechaPrimer = overrides.fechaPrimerTurno !== undefined
+        ? overrides.fechaPrimerTurno
+        : (tempClientFechaPrimerTurnoRef.current || tempClientFechaPrimerTurno || null);
+      const targetSesionesPrevias = overrides.sesionesPrevias !== undefined
+        ? overrides.sesionesPrevias
+        : (tempClientSesionesPreviasRef.current !== undefined ? tempClientSesionesPreviasRef.current : tempClientSesionesPrevias);
+
       const payload = {
         observaciones: overrides.observaciones !== undefined ? overrides.observaciones : tempClientObservaciones,
         frecuencia: overrides.frecuencia !== undefined ? overrides.frecuencia : tempClientFrecuencia,
-        notasGonzalo: overrides.notasGonzalo !== undefined ? overrides.notasGonzalo : tempClientNotasGonzalo,
-        fechaPrimerTurno: overrides.fechaPrimerTurno !== undefined ? overrides.fechaPrimerTurno : (tempClientFechaPrimerTurno || null),
-        sesionesPrevias: overrides.sesionesPrevias !== undefined ? overrides.sesionesPrevias : tempClientSesionesPrevias
+        notasGonzalo: targetNotas,
+        fechaPrimerTurno: targetFechaPrimer,
+        sesionesPrevias: targetSesionesPrevias
       };
 
       const res = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
@@ -3399,8 +3418,11 @@ export default function AgendaPage() {
                           <input
                             type="date"
                             value={tempClientFechaPrimerTurno}
-                            onChange={(e) => setTempClientFechaPrimerTurno(e.target.value)}
-                            onBlur={() => handleSaveClientObservaciones(true, { fechaPrimerTurno: e.target.value })}
+                            onChange={(e) => {
+                              setTempClientFechaPrimerTurno(e.target.value);
+                              tempClientFechaPrimerTurnoRef.current = e.target.value;
+                            }}
+                            onBlur={() => handleSaveClientObservaciones(true, { fechaPrimerTurno: tempClientFechaPrimerTurnoRef.current })}
                             style={{
                               width: '100%',
                               padding: '0.55rem',
@@ -3408,7 +3430,7 @@ export default function AgendaPage() {
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '0.85rem',
+                              fontSize: '16px',
                               fontWeight: 600,
                               boxSizing: 'border-box'
                             }}
@@ -3428,7 +3450,7 @@ export default function AgendaPage() {
                             min="0"
                             value={tempClientSesionesTotal}
                             onChange={(e) => handleTotalSesionesChange(e.target.value)}
-                            onBlur={() => handleSaveClientObservaciones(true)}
+                            onBlur={() => handleSaveClientObservaciones(true, { sesionesPrevias: tempClientSesionesPreviasRef.current })}
                             style={{
                               width: '100%',
                               padding: '0.55rem',
@@ -3436,7 +3458,7 @@ export default function AgendaPage() {
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '0.9rem',
+                              fontSize: '16px',
                               fontWeight: 700,
                               boxSizing: 'border-box'
                             }}

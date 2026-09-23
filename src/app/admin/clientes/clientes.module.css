@@ -303,4 +303,11 @@
     flex-direction: column;
     gap: 0.75rem;
   }
+  .inputGroup input,
+  .inputGroup select,
+  .inputGroup textarea {
+    font-size: 16px !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
 }
