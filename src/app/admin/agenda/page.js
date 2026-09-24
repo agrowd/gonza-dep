@@ -735,48 +735,64 @@ export default function AgendaPage() {
       const targetSesionesPrevias = overrides.sesionesPrevias !== undefined
         ? overrides.sesionesPrevias
         : (tempClientSesionesPreviasRef.current !== undefined ? tempClientSesionesPreviasRef.current : tempClientSesionesPrevias);
+      const targetObs = overrides.observaciones !== undefined ? overrides.observaciones : tempClientObservaciones;
+      const targetFreq = overrides.frecuencia !== undefined ? overrides.frecuencia : tempClientFrecuencia;
 
       const payload = {
-        observaciones: overrides.observaciones !== undefined ? overrides.observaciones : tempClientObservaciones,
-        frecuencia: overrides.frecuencia !== undefined ? overrides.frecuencia : tempClientFrecuencia,
+        notasGonzalo: targetNotas,
+        clientObservaciones: targetObs,
+        forceClearObservaciones: targetObs === '',
+        frecuencia: targetFreq,
         fechaPrimerTurno: targetFechaPrimer,
         sesionesPrevias: targetSesionesPrevias
       };
 
-      // Save notasGonzalo to the current turno (cascading to subsequent turnos without altering previous turnos)
-      if (selectedTurno.id && targetNotas !== undefined) {
-        await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+      // 1. Sync to current turno (and cascades to subsequent turnos + client baseline)
+      let res;
+      if (selectedTurno.id) {
+        res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notasGonzalo: targetNotas })
-        }).catch(e => console.error('Error syncing notasGonzalo to turno:', e));
+          body: JSON.stringify(payload)
+        });
       }
 
-      const res = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+      // 2. Also ensure client record is updated directly via /api/admin/clientes/[id]
+      const clientRes = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          observaciones: targetObs,
+          frecuencia: targetFreq,
+          notasGonzalo: targetNotas,
+          fechaPrimerTurno: targetFechaPrimer,
+          sesionesPrevias: targetSesionesPrevias
+        })
       });
-      if (res.ok) {
+
+      const effectiveRes = res || clientRes;
+
+      if (effectiveRes && effectiveRes.ok) {
         if (!silent) showToast('Datos del cliente guardados.');
+        setTempClientNotasGonzalo(targetNotas);
         setSelectedTurno(prev => {
           if (!prev) return prev;
           return {
             ...prev,
             notasGonzalo: targetNotas,
             cliente: {
-              ...prev.cliente,
-              observaciones: payload.observaciones,
-              frecuencia: payload.frecuencia,
+              ...(prev.cliente || {}),
+              observaciones: targetObs,
+              frecuencia: targetFreq,
               notasGonzalo: targetNotas,
-              fechaPrimerTurno: payload.fechaPrimerTurno,
-              sesionesPrevias: payload.sesionesPrevias
+              fechaPrimerTurno: targetFechaPrimer,
+              sesionesPrevias: targetSesionesPrevias
             }
           };
         });
         fetchAppointments();
       } else {
-        const err = await res.json().catch(() => ({}));
+        const err = effectiveRes ? await effectiveRes.json().catch(() => ({})) : {};
         if (!silent) showToast(err.error || 'Error al guardar datos del cliente.', 'error');
       }
     } catch (e) {
@@ -1355,7 +1371,10 @@ export default function AgendaPage() {
       // Only send client observations/notes if they were explicitly modified by the user
       if (selectedTurno?.cliente) {
         if (tempClientObservaciones !== (selectedTurno.cliente.observaciones || '')) {
-          updateBody.observaciones = tempClientObservaciones;
+          updateBody.clientObservaciones = tempClientObservaciones;
+        }
+        if (tempTurnoObservaciones !== (selectedTurno.observaciones || '')) {
+          updateBody.observaciones = tempTurnoObservaciones;
         }
         const currentTurnoNotas = selectedTurno.notasGonzalo || '';
         if (tempClientNotasGonzalo !== currentTurnoNotas) {
@@ -1691,6 +1710,7 @@ export default function AgendaPage() {
           ...prev,
           notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
           observaciones: editTurno.turnoObservaciones !== undefined ? editTurno.turnoObservaciones : prev.observaciones,
+          notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
           cliente: prev.cliente ? {
             ...prev.cliente,
             observaciones: editTurno.observaciones !== undefined ? editTurno.observaciones : prev.cliente.observaciones,

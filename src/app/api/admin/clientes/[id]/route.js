@@ -118,13 +118,15 @@ export async function PUT(request, { params }) {
     if (observaciones !== undefined) updateData.observaciones = observaciones;
     if (notasGonzalo !== undefined) {
       updateData.notasGonzalo = notasGonzalo;
-      // Also update upcoming turnos (today or future) for this client so active appointments reflect the change
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Also update upcoming turnos (today in Argentina UTC-3 or future) for this client so active appointments reflect the change
+      const now = new Date();
+      const argDate = new Date(now.getTime() - (3 * 3600000));
+      const todayArgStr = argDate.toISOString().split('T')[0];
+      const todayArg = new Date(todayArgStr + 'T00:00:00.000Z');
       await prisma.turno.updateMany({
         where: {
           clienteId: id,
-          fecha: { gte: today }
+          fecha: { gte: todayArg }
         },
         data: { notasGonzalo }
       });
