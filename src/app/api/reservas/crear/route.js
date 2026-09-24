@@ -198,41 +198,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'El horario seleccionado ya no se encuentra disponible. Por favor, elige otro horario o día.' }, { status: 400 });
     }
 
-    // 5. Create Turno with state PENDIENTE_PAGO and [AUTOGESTION] tag
-    const zonasPayload = dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precioBase, duracion: z.duracionMinutos }));
+    // 5. Zone summary
     const zonasNombres = dbZones.map(z => z.nombre).join(', ');
 
-    const obsText = observaciones ? `[AUTOGESTION] ${observaciones}` : '[AUTOGESTION] Reserva creada por autogestión';
-
-    const lastClientTurno = await prisma.turno.findFirst({
-      where: { clienteId: client.id, fecha: { lte: targetDate } },
-      orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
-      select: { notasGonzalo: true }
-    });
-    const inheritedNotas = lastClientTurno?.notasGonzalo || client.notasGonzalo || null;
-
-    const turno = await prisma.turno.create({
-      data: {
-        clienteId: client.id,
-        fecha: targetDate,
-        horaInicio,
-        horaFin,
-        duracionMinutos,
-        zonas: JSON.stringify(zonasPayload),
-        valorTotal,
-        valorSeña,
-        saldoPendiente: valorTotal - valorSeña,
-        estado: 'PENDIENTE_PAGO',
-        observaciones: obsText,
-        notasGonzalo: inheritedNotas
-      }
-    });
-
-    // 6. WhatsApp bypass ("Pagar Seña")
-    // Retrieve business phone number
+    // 6. WhatsApp redirection ("Pagar Seña")
+    // Retrieve business phone number (Gonzalo: +54 9 11 3251-9008)
     const businessPhoneConfig = await prisma.configuracion.findUnique({ where: { key: 'business_whatsapp' } });
-    const businessPhone = businessPhoneConfig?.value || process.env.BUSINESS_WHATSAPP || process.env.ADMIN_WHATSAPP || '5492984696364';
-    const cleanPhone = businessPhone.replace(/\D/g, '');
+    const businessPhone = businessPhoneConfig?.value || process.env.BUSINESS_WHATSAPP || process.env.ADMIN_WHATSAPP || '5491132519008';
+    const cleanPhone = businessPhone.replace(/\D/g, '') || '5491132519008';
 
     // Format readable date (e.g., 25/10/2026)
     const [y, m, d] = fechaStr.split('-');
@@ -243,23 +216,26 @@ export async function POST(request) {
 
 Nombre: ${client.nombreCompleto}
 Fecha: ${fechaLegible}
-Horario: ${horaInicio}
+Horario: ${horaInicio} hs
 Zonas: ${zonasNombres}
 Duración: ${duracionMinutos} min
 Total: $${Math.round(valorTotal).toLocaleString('es-AR')}
+Seña a abonar: $${Math.round(valorSeña).toLocaleString('es-AR')}
 
 Quedo a la espera de los datos para realizar el pago de la seña y confirmar el turno.`;
 
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMessage)}`;
 
+    // Note: Conforme a la indicación de Luciano, NO se crea el Turno en base de datos
+    // para no bloquear el slot en la agenda hasta que el cliente abone efectivamente la seña por WhatsApp.
     return NextResponse.json({
       success: true,
-      turnoId: turno.id,
       clienteId: client.id,
       whatsappUrl,
-      turno: {
-        id: turno.id,
+      solicitud: {
+        nombre: client.nombreCompleto,
         fecha: fechaStr,
+        fechaLegible,
         horaInicio,
         horaFin,
         duracionMinutos,

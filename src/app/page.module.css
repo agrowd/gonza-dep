@@ -72,6 +72,12 @@
   padding: 3rem 1.5rem;
 }
 
+@media (max-width: 600px) {
+  .main {
+    padding: 1.5rem 0.75rem;
+  }
+}
+
 .footer {
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-secondary);
@@ -613,6 +619,15 @@
   cursor: not-allowed;
 }
 
+.navBtnIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.navBtnText {
+  display: inline;
+}
+
 .monthLabel {
   font-size: 1.25rem;
   font-weight: 800;
@@ -835,5 +850,94 @@
   width: 24px;
   height: 24px;
   fill: currentColor;
+}
+
+@media (max-width: 600px) {
+  .calendarContainer {
+    padding: 14px 6px;
+    border-radius: 12px;
+  }
+
+  .calendarNav {
+    margin-bottom: 14px;
+    gap: 8px;
+  }
+
+  .navBtn {
+    padding: 6px 12px;
+    min-width: 38px;
+    justify-content: center;
+  }
+
+  .navBtnText {
+    display: none;
+  }
+
+  .navBtnIcon {
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .monthLabel {
+    font-size: 1.05rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .calendarWeekdays {
+    gap: 3px;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    margin-bottom: 6px;
+  }
+
+  .calendarGrid {
+    gap: 3px;
+  }
+
+  .dayCell {
+    font-size: 0.86rem;
+    border-radius: 6px;
+    padding: 2px;
+  }
+
+  .daySlotCount {
+    font-size: 0.58rem;
+    margin-top: 1px;
+    padding: 1px 2px;
+    max-width: 95%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .calendarLegend {
+    gap: 8px 12px;
+    font-size: 0.74rem;
+    justify-content: center;
+    padding-top: 10px;
+    margin-top: 14px;
+  }
+
+  .slotsContainer {
+    padding: 16px 10px;
+    border-radius: 12px;
+    margin-top: 16px;
+  }
+
+  .slotsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    gap: 6px;
+  }
+
+  .slotBtn {
+    padding: 8px 4px;
+    font-size: 0.88rem;
+  }
+
+  .btnPagarSena {
+    font-size: 1.05rem;
+    padding: 14px 20px;
+  }
 }
 

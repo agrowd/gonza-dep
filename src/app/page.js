@@ -381,7 +381,7 @@ Nueva Fecha: ${fechaLegible}
 Nuevo Horario: ${selectedSlot.horaInicio} hs
 Duración: ${duracionMinutos} min`;
 
-        const waUrl = `https://wa.me/5492984696364?text=${encodeURIComponent(msg)}`;
+        const waUrl = `https://wa.me/5491132519008?text=${encodeURIComponent(msg)}`;
         setBookingSuccess({
           isReschedule: true,
           whatsappUrl: waUrl,
@@ -390,7 +390,7 @@ Duración: ${duracionMinutos} min`;
         });
         window.location.href = waUrl;
       } else {
-        // New Reservation endpoint (Deferred client created here)
+        // New Reservation endpoint (Deferred client created here, Turno not booked until deposit paid)
         const res = await fetch('/api/reservas/crear', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -407,13 +407,13 @@ Duración: ${duracionMinutos} min`;
         });
         const data = await res.json();
         if (!res.ok) {
-          throw new Error(data.error || 'Error al agendar reserva');
+          throw new Error(data.error || 'Error al procesar reserva');
         }
 
         setBookingSuccess({
           isReschedule: false,
           whatsappUrl: data.whatsappUrl,
-          turno: data.turno
+          solicitud: data.solicitud
         });
 
         // Automatically redirect to WhatsApp with the structured message
@@ -473,10 +473,10 @@ Duración: ${duracionMinutos} min`;
               ✓
             </div>
             <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
-              ¡Tu turno ha sido guardado!
+              ¡Solicitud lista para enviar!
             </h2>
             <p style={{ color: '#475569', fontSize: '1.05rem', maxWidth: '520px', margin: '0 auto 24px', lineHeight: 1.5 }}>
-              Para confirmar tu lugar, estamos abriendo WhatsApp para que nos envíes los datos y te enviemos la información para abonar la seña.
+              Para coordinar el pago de la seña y confirmar tu turno, envíanos la solicitud por WhatsApp. El turno quedará agendado en la agenda una vez recibida la seña.
             </p>
 
             <a
@@ -831,8 +831,10 @@ Duración: ${duracionMinutos} min`;
                       type="button"
                       onClick={handlePrevMonth}
                       className={styles.navBtn}
+                      aria-label="Mes anterior"
                     >
-                      ← Anterior
+                      <span className={styles.navBtnIcon}>←</span>
+                      <span className={styles.navBtnText}> Anterior</span>
                     </button>
                     <span className={styles.monthLabel}>
                       {MONTH_NAMES[calendarMonth - 1]} {calendarYear}
@@ -841,8 +843,10 @@ Duración: ${duracionMinutos} min`;
                       type="button"
                       onClick={handleNextMonth}
                       className={styles.navBtn}
+                      aria-label="Mes siguiente"
                     >
-                      Siguiente →
+                      <span className={styles.navBtnText}>Siguiente </span>
+                      <span className={styles.navBtnIcon}>→</span>
                     </button>
                   </div>
 

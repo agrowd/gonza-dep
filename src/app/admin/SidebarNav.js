@@ -55,9 +55,10 @@ export default function SidebarNav({ user }) {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
+      window.location.href = '/login';
     } catch (e) {
       console.error('Logout error:', e);
+      window.location.href = '/login';
     }
   };
 
@@ -201,6 +202,32 @@ const FlashIcon = () => (
             <span className={styles.userName}>{user?.nombre || 'Administrador'}</span>
             <span className={styles.userRole}>{user?.rol === 'ADMIN' ? 'Administrador' : 'Solo Lectura'}</span>
           </div>
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem',
+              width: '100%',
+              padding: '0.45rem 0.6rem',
+              marginBottom: '0.5rem',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(212, 165, 77, 0.12)',
+              border: '1px solid rgba(212, 165, 77, 0.35)',
+              color: 'var(--color-gold)',
+              fontSize: '0.8rem',
+              fontWeight: '700',
+              textDecoration: 'none',
+              boxSizing: 'border-box',
+              cursor: 'pointer'
+            }}
+          >
+            <span>🌐</span>
+            <span>Ver Reserva Online</span>
+          </a>
           <button onClick={handleLogout} className={styles.logoutBtn}>
             <LogOutIcon />
             <span>Cerrar Sesión</span>
