@@ -3533,69 +3533,86 @@ export default function AgendaPage() {
                   </div>
 
                   {selectedTurno.clienteId && (
-                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginTop: '0.25rem' }}>
-                        <div>
-                          <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.35rem', color: 'var(--text-secondary)' }}>
-                            📅 Fecha Primer Turno
-                          </span>
-                          <input
-                            type="date"
-                            value={tempClientFechaPrimerTurno}
-                            onChange={(e) => {
-                              setTempClientFechaPrimerTurno(e.target.value);
-                              tempClientFechaPrimerTurnoRef.current = e.target.value;
-                            }}
-                            onBlur={() => handleSaveClientObservaciones(true, { fechaPrimerTurno: tempClientFechaPrimerTurnoRef.current })}
-                            style={{
-                              width: '100%',
-                              padding: '0.55rem',
-                              borderRadius: '8px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: 'var(--bg-secondary)',
-                              color: 'var(--text-primary)',
-                              fontSize: '16px',
-                              fontWeight: 600,
-                              boxSizing: 'border-box'
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.25rem' }}>
-                            <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)' }}>
-                              🔢 Sesiones Realizadas
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
-                              ({(selectedTurno.cliente?.turnos || []).filter(t => t.estado === 'REALIZADO').length} sis + {tempClientSesionesPrevias} prev)
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            min="0"
-                            value={tempClientSesionesTotal}
-                            onChange={(e) => handleTotalSesionesChange(e.target.value)}
-                            onBlur={() => handleSaveClientObservaciones(true, { sesionesPrevias: tempClientSesionesPreviasRef.current })}
-                            style={{
-                              width: '100%',
-                              padding: '0.55rem',
-                              borderRadius: '8px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: 'var(--bg-secondary)',
-                              color: 'var(--text-primary)',
-                              fontSize: '16px',
-                              fontWeight: 700,
-                              boxSizing: 'border-box'
-                            }}
-                          />
-                        </div>
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.25rem', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      {/* Fila 1: Fecha Primer Turno (Título a la izquierda, input fecha a la derecha) */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.45rem', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.85rem' }}>
+                          📅 Fecha Primer Turno
+                        </span>
+                        <input
+                          type="date"
+                          value={tempClientFechaPrimerTurno}
+                          onChange={(e) => {
+                            setTempClientFechaPrimerTurno(e.target.value);
+                            tempClientFechaPrimerTurnoRef.current = e.target.value;
+                          }}
+                          onBlur={() => handleSaveClientObservaciones(true, { fechaPrimerTurno: tempClientFechaPrimerTurnoRef.current })}
+                          style={{
+                            maxWidth: '180px',
+                            padding: '0.45rem 0.6rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '16px',
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            boxSizing: 'border-box'
+                          }}
+                        />
                       </div>
+
+                      {/* Fila 2: Sesiones Realizadas (Título a la izquierda, input número a la derecha) */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', paddingTop: '0.25rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.85rem' }}>
+                            🔢 Sesiones Realizadas
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                            ({(selectedTurno.cliente?.turnos || []).filter(t => t.estado === 'REALIZADO').length} sis + {tempClientSesionesPrevias} prev)
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={tempClientSesionesTotal}
+                          onChange={(e) => handleTotalSesionesChange(e.target.value)}
+                          onBlur={() => handleSaveClientObservaciones(true, { sesionesPrevias: tempClientSesionesPreviasRef.current })}
+                          style={{
+                            maxWidth: '100px',
+                            width: '100px',
+                            padding: '0.45rem 0.6rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '16px',
+                            fontWeight: 700,
+                            textAlign: 'center',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
                       {(tempClientFechaPrimerTurno !== (selectedTurno.cliente?.fechaPrimerTurno ? new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0] : '') ||
                         tempClientSesionesPrevias !== (selectedTurno.cliente?.sesionesPrevias || 0)) && (
                         <button
                           type="button"
                           onClick={() => handleSaveClientObservaciones(false)}
                           className="btn btn-primary"
-                          style={{ alignSelf: 'flex-end', marginTop: '0.5rem', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                          style={{
+                            alignSelf: 'flex-end',
+                            marginTop: '0.4rem',
+                            fontSize: '0.8rem',
+                            padding: '0.4rem 0.9rem',
+                            backgroundColor: '#2e7d32',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }}
                         >
                           💾 Guardar Fecha y Sesiones
                         </button>
