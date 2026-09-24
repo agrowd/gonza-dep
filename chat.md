@@ -1536,3 +1536,35 @@
   2. En `src/app/api/admin/clientes/[id]`: la edición en la pestaña de Notas actualiza la línea de base y los turnos vigentes (`fecha >= today`), protegiendo el historial pasado.
   3. En `agenda_db` y `agenda_db_staging`: sincronizado el turno de Luciano Gomez del 26/09 en `118` y preservados los turnos históricos de julio en `113`.
 
+## Mensaje del Usuario (2026-09-24 10:44-03:00)
+> [Mensajes de WhatsApp de Luciano y captura con instrucciones]:
+> 1. "Hola Fede avisame si está para revisar el módulo 3 en la web de prueba"
+> 2. "Porque desde la web de prueba no me deja salir de la sesión para ver lo de autogestión, me devuelve a la agenda"
+> 3. "Después acá cuando alguien elige zonas y horario para agendar un turno y le da el botón para pagar la seña por wpp, no deje agendarse el turno en el espacio de la agenda ya que todavía no la paga"
+> 4. "Lo de que se agende un turno automáticamente lo dejaremos cuando volvamos a implementar lo de mercado pago. Por ahora que solo mande a wpp la info de que quiere agendar un turno para esa fecha, y nosotros lo agendamos en la agenda después de que haya pagado la seña"
+> 5. "El numero de gonzalo es +54 9 11 3251-9008"
+> 6. [Capturas de pantalla del celular mostrando el calendario de Paso 3 con el encabezado de mes solapado y la columna DOM desbordada a la derecha].
+
+## Respuesta del Asistente (D-74):
+- **1. Desacoplamiento de Reserva Previa a la Seña (`/api/reservas/crear`)**:
+  - Removido `prisma.turno.create`: la solicitud no crea ningún registro en la base de datos `Turno`. El horario queda 100% libre en la agenda administrativa hasta que el paciente abone la seña por WhatsApp y el operador lo agende manualmente.
+  - La API retorna el objeto `solicitud` y genera el enlace oficial a WhatsApp con la plantilla estructurada completa (Nombre, Fecha, Horario, Zonas, Duración, Total y Seña requerida).
+  - La pantalla de confirmación se actualizó a *"¡Solicitud lista para enviar!"* con la aclaración explícita de que el turno se reservará una vez recibida la seña.
+- **2. Corrección de Cierre de Sesión en Staging (`/api/auth/logout` y `SidebarNav.js`)**:
+  - Causa raíz: `secure: process.env.NODE_ENV === 'production'`. Como Staging corre bajo HTTP en el puerto 3008, el navegador rechazaba borrar la cookie con directiva `Secure: true`. Se configuró dinámico según protocolo (`isHttps`).
+  - `handleLogout` redirige mediante recarga forzada (`window.location.href = '/login'`).
+  - Añadido enlace directo `🌐 Ver Reserva Online` (`target="_blank"`) en el pie del sidebar para abrir la reserva online sin desloguearse.
+- **3. Corrección del Calendario en Dispositivos Móviles (`page.js` y `page.module.css`)**:
+  - Encabezado de mes: Se envolvieron los textos de los botones en `<span className={styles.navBtnText}>` y los iconos en `<span className={styles.navBtnIcon}>`. En móviles (`max-width: 600px`), se oculta el texto, dejando botones compactos de flechas (`←` y `→`) para que el mes ("Septiembre 2026") no se solape.
+  - Ancho de grilla y contenedores: Se redujo el padding de `.calendarContainer` a `14px 6px` y los gaps a `3px`. Las 7 columnas (`LUN` a `DOM`) entran con holgura en viewports de 360-390px sin recortar la columna de domingo.
+- **4. Actualización del Número Oficial de WhatsApp**:
+  - Configurado `5491132519008` (+54 9 11 3251-9008 de Gonzalo) en la tabla `Configuracion` (`business_whatsapp`) de `agenda_db` y `agenda_db_staging`, variables de entorno y fallbacks.
+- **5. Despliegue y Validación E2E en Staging (`http://187.127.9.216:3008`)**:
+  - Desplegado en el VPS Staging bajo PM2 `gonzalo-agenda-staging` (PID 1305946) con código 0.
+  - Suite de Puppeteer ejecutada:
+    * Logout verificado: cookie eliminada y redirección inmediata a `/login`.
+    * Calendario verificado en viewport móvil (390x844): `gridOverflow: false`, `weekdaysOverflow: false`, las 7 columnas y el mes caben limpiamente.
+    * Verificación en base de datos: cantidad de turnos inalterada (`565 -> 565`). Cero turnos creados.
+    * Enlace a WhatsApp verificado hacia `5491132519008` con mensaje estructurado completo.
+
+

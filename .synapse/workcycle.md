@@ -1154,4 +1154,39 @@
          - 03/07, 11/07, 16/07: `113`
          - 26/09: `118`
          - `Cliente.notasGonzalo`: `118`.
-
+- **24 de Septiembre (11:00 - 11:55 hs - Ajustes Módulo 5 Autogestión, Desacoplamiento de Turno previo a Seña, Logout Staging y Layout Móvil)**:
+  - **Solicitud del Usuario y Cliente (Luciano + Gonzalo)**:
+    1. *"Cuando alguien elige zonas y horario para agendar un turno y le da el botón para pagar la seña por wpp, no deje agendarse el turno en el espacio de la agenda ya que todavía no la paga... por ahora que solo mande a wpp la info... y nosotros lo agendamos después de que haya pagado la seña"*.
+    2. *"Desde la web de prueba no me deja salir de la sesión para ver lo de autogestión, me devuelve a la agenda"*.
+    3. En mobile (fotos de celular enviadas por Luciano): el encabezado de mes ("Septiembre 2026") se solapa con los botones anterior/siguiente, y la columna 7 (`DOM`) se corta en el borde derecho de la pantalla por desborde horizontal.
+    4. El número de WhatsApp oficial de Gonzalo es `+54 9 11 3251-9008` (reemplazando el de prueba `5492984696364`).
+  - **Acciones y Soluciones Implementadas**:
+    1. **Desacoplamiento de Creación de Turno (`src/app/api/reservas/crear/route.js`)**:
+       * Se removió la invocación a `prisma.turno.create`: **no se crea el turno en la tabla `Turno` de PostgreSQL**, evitando bloquear el horario en la agenda administrativa.
+       * Se retorna objeto `solicitud` con los datos del turno y la URL directa a WhatsApp con el mensaje estructurado completo (Nombre, Fecha, Horario, Zonas, Duración, Total y Seña requerida).
+    2. **Pantalla de Éxito en Autogestión (`src/app/page.js`)**:
+       * Encabezado actualizado a: *"¡Solicitud lista para enviar!"*.
+       * Texto descriptivo: *"Para coordinar el pago de la seña y confirmar tu turno, envíanos la solicitud por WhatsApp. El turno quedará agendado en la agenda una vez recibida la seña."*.
+       * Botón verde para abrir WhatsApp y link directo para volver al inicio.
+    3. **Corrección de Logout en Staging (`src/app/api/auth/logout/route.js` y `SidebarNav.js`)**:
+       * Se detectó la causa raíz: la cookie se seteaba con `secure: process.env.NODE_ENV === 'production'`. Al correr Staging en HTTP plano (puerto 3008), los navegadores modernos rechazan eliminar cookies con flag `Secure: true` sobre HTTP. Se volvió dinámico: `secure: isHttps`.
+       * En `SidebarNav.js`, `handleLogout` ejecuta `window.location.href = '/login'` para refresco total.
+       * Se agregó botón `🌐 Ver Reserva Online` (`href="/" target="_blank"`) en el footer del menú lateral para que el administrador pueda abrir autogestión en pestaña nueva sin tener que cerrar sesión.
+    4. **Layout Móvil Responsivo del Calendario (`src/app/page.js` y `src/app/page.module.css`)**:
+       * Botones de navegación de mes: texto envuelto en `<span className={styles.navBtnText}>` e iconos en `<span className={styles.navBtnIcon}>`. En `@media (max-width: 600px)` se oculta el texto, dejando botones compactos de solo flechas (`←` y `→`).
+       * Encabezado de mes centrado con `font-size: 1.05rem` sin solapamiento.
+       * Reducción de padding en `.calendarContainer` (14px 6px en mobile) y `.main` (1.5rem 0.75rem), más espaciado `gap: 3px` en `.calendarWeekdays` y `.calendarGrid`. Las 7 columnas (`LUN` a `DOM`) entran con holgura en viewports de 360-390px con cero desborde ni recorte.
+    5. **Número Oficial de WhatsApp**:
+       * Actualizado el registro de base de datos `business_whatsapp` a `5491132519008` tanto en `agenda_db` (Producción) como en `agenda_db_staging` (Staging).
+       * Actualizados todos los templates y fallbacks de `src/app/api/reservas/crear/route.js` y `src/app/page.js`.
+  - **Verificación Automatizada E2E en Staging (Puppeteer & PostgreSQL)**:
+    * Se ejecutó el script `scratch/verify_staging_m5.mjs` y `scratch/verify_success_modal.mjs` sobre el servidor en vivo (`http://187.127.9.216:3008`):
+      - **Logout**: Login como admin, clic en "Cerrar Sesión", redirección inmediata a `/login` y cookie `session` eliminada al 100%.
+      - **Móvil 390px**: Calendario cargado en Step 3 con ancho de contenedor 366px y grilla 352px. `gridOverflow: false`, `weekdaysOverflow: false`.
+      - **Capturas Generadas**:
+        * `staging_mobile_calendar_verified.png`: mes despejado y 7 columnas completas.
+        * `staging_mobile_step4_verified.png`: desglose financiero y datos de reserva.
+        * `staging_success_screen_mobile.png`: pantalla de éxito con texto "¡Solicitud lista para enviar!".
+      - **Verificación en Base de Datos**: Consulta directa en `agenda_db_staging` antes y después de pulsar "Pagar Seña": cantidad de turnos inalterada (`565 -> 565`). Cero turnos creados.
+      - **URL WhatsApp**: `https://wa.me/5491132519008` con mensaje con nombre, fecha, hora, zonas, total y seña.
+  - **Decisión Registrada**: `D-74` en `.synapse/decisions.md`.
