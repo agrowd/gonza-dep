@@ -1564,4 +1564,22 @@
      * Modal "+ Crear Nuevo Cliente" verificado: `hasSmartPaste: true`, 6 botones de pegado disponibles, inputs con tamaño de fuente `16px`.
 - **Decisión Registrada**: `D-71` en `.synapse/decisions.md`.
 
+## Mensaje del Usuario (2026-09-23 22:30:00-03:00)
+> Osea cuando hago un comentario y lo guardo se borra
+> Cargue un comentario de operador para el turno del 23 de septiembre, y se copió en el siguiente perfecto y no modificó los anteriores, el tema es que no aparece en el turno que lo puse (adjuntando capturas de Lucas Divito).
 
+## Respuesta del Asistente
+- **Diagnóstico Integral de las 3 Causas**:
+  1. *Endpoint incorrecto*: El modal de la agenda solo llamaba a `PUT /api/admin/clientes/[id]` para guardar notas del operador, en lugar de llamar a `PUT /api/admin/turnos/[id]`.
+  2. *Vaciado por ciclo de renderizado*: `setSelectedTurno` no actualizaba `selectedTurno.notasGonzalo`, por lo que `useEffect([selectedTurno])` re-inicializaba el textarea a vacío al detectar `selectedTurno.notasGonzalo || ''`.
+  3. *Desfase UTC en backend*: `today.setHours(0,0,0,0)` en el servidor evaluaba en UTC. Pasadas las 21:00 hs de Argentina (00:00 UTC), `today` pasaba al 24 de septiembre, excluyendo la cita del 23 en la cascada.
+- **Correcciones Implementadas**:
+  1. `src/app/admin/agenda/page.js`: `handleSaveClientObservaciones` ahora invoca `PUT /api/admin/turnos/${selectedTurno.id}`, actualiza sincrónicamente `setTempClientNotasGonzalo(targetNotas)` y fija `selectedTurno.notasGonzalo = targetNotas`. Se protegió también en `handleUpdateStatus` y edición de turno.
+  2. `src/app/api/admin/clientes/[id]/route.js`: Ajustado `todayArg` a la zona horaria argentina (UTC-3) para nunca omitir turnos nocturnos.
+  3. PostgreSQL (`agenda_db` y `agenda_db_staging`): Asignado `notasGonzalo = '116/14/4 en tiraa'` al turno del 23/09/2026 de Lucas Divito.
+- **Despliegue y Verificación E2E**:
+  - Compilación limpia local (`npm run build`).
+  - Commits en `main` (`5cdf584`) y `staging` (`155e20b`).
+  - Desplegado en VPS (puertos 3006 y 3008, PM2 online).
+  - Verificado en vivo con Puppeteer: al escribir y guardar notas, el textarea se conserva intacto y muestra el toast verde; y el historial de Lucas Divito refleja la nota en ambos turnos sin alterar el pasado.
+  - Documentado en `D-72` y `ERR-25`.

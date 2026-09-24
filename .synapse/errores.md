@@ -191,3 +191,16 @@
 2. Se transmitió `prevTurnoId` en el flujo de `Siguiente Turno` (`agenda` -> `alta-turno` -> `agenda` -> `POST /api/admin/turnos`), actualizando automáticamente en la base de datos la cita anterior a `estado: 'REALIZADO'` y `subEstado: 'SIGUIENTE_TURNO'`.
 3. Se eliminaron los botones duplicados del pie del modal y se añadió el badge de `subEstado` visible en la cabecera de detalles.
 **Estado:** ✅ FIXED
+
+## ERR-25: Vaciado del campo Observaciones del Operador al guardar y omisión de fecha por UTC (2026-09-23)
+**Síntoma:** Gonzalo reporta: *"Osea cuando hago un comentario y lo guardo se borra"* y *"Cargue un comentario de operador para el turno del 23 de septiembre, y se copió en el siguiente perfecto y no modificó los anteriores, el tema es que no aparece en el turno que lo puse"*. Al escribir en "🛡️ Observaciones del Operador" y presionar "💾 Guardar Notas Operador", el textarea se borraba de inmediato y quedaba en blanco. En la ficha de Lucas Divito, el turno del 23 de septiembre no mostraba notas de operador, mientras que el del 20 de octubre sí las tenía.
+**Root Cause:**
+1. En `src/app/admin/agenda/page.js`, `handleSaveClientObservaciones` invocaba `PUT /api/admin/clientes/${selectedTurno.cliente.id}` y no llamaba a `PUT /api/admin/turnos/${selectedTurno.id}`. Al completarse la petición, `setSelectedTurno` actualizaba `prev.cliente` pero dejaba `prev.notasGonzalo` sin actualizar.
+2. El cambio en la referencia de `selectedTurno` disparaba `useEffect([selectedTurno])`, el cual ejecutaba `setTempClientNotasGonzalo(selectedTurno.notasGonzalo || '')`. Al ser `selectedTurno.notasGonzalo` nulo, borraba inmediatamente el texto del textarea.
+3. En el backend `src/app/api/admin/clientes/[id]/route.js`, `today` se calculaba con `const today = new Date(); today.setHours(0,0,0,0);` en hora UTC del servidor. A las 21:30 hs en Argentina (UTC-3), en el servidor ya era 24 de septiembre 00:30 UTC. La consulta `fecha: { gte: today }` excluía el turno del 23 de septiembre y solo actualizaba el del 20 de octubre.
+**Solución:**
+1. En `src/app/admin/agenda/page.js`, `handleSaveClientObservaciones` ahora envía la petición a `PUT /api/admin/turnos/${selectedTurno.id}` (que actualiza `Turno.notasGonzalo`, hace cascada hacia turnos futuros y preserva los pasados).
+2. Se actualizan sincrónicamente `setTempClientNotasGonzalo(targetNotas)` y `setSelectedTurno(prev => ({ ...prev, notasGonzalo: targetNotas, cliente: { ...prev.cliente, notasGonzalo: targetNotas } }))`, impidiendo que `useEffect` vacíe el textarea.
+3. En `src/app/api/admin/clientes/[id]/route.js`, se ajustó el cálculo de `todayArg` a la zona horaria argentina (`UTC-3`) para que las actualizaciones en cascada nunca omitan turnos nocturnos del mismo día.
+4. En PostgreSQL (`agenda_db` y `agenda_db_staging`), se sincronizó el turno del 23 de septiembre de Lucas Divito (`c0fad69e-8436-4d92-8fba-24aa491a2344`) con `116/14/4 en tiraa`.
+**Estado:** ✅ FIXED

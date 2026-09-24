@@ -1188,3 +1188,31 @@
        * Capturas guardadas: `live_prod_fernando_history_verified.png` y `live_prod_mobile_create_modal_verified.png`.
     6. **Decisión registrada**: `D-71` en `.synapse/decisions.md`.
 
+- **23 de Septiembre (22:30 - 23:05 hs - Corrección de Vaciado de Observaciones del Operador y Desfase Horario UTC)**:
+  - **Solicitud del Cliente (Gonzalo)**:
+    1. *"Osea cuando hago un comentario y lo guardo se borra"*
+    2. *"Cargue un comentario de operador para el turno del 23 de septiembre, y se copió en el siguiente perfecto y no modificó los anteriores, el tema es que no aparece en el turno que lo puse"* (adjuntando capturas de Lucas Divito).
+  - **Diagnóstico y Root Cause**:
+    1. **Endpoint Incorrecto en Modal**: handleSaveClientObservaciones en src/app/admin/agenda/page.js solo invocaba PUT /api/admin/clientes/[id], sin llamar a PUT /api/admin/turnos/[id].
+    2. **Vaciado por Re-render (useEffect)**: Tras guardar, setSelectedTurno actualizaba prev.cliente.notasGonzalo, pero dejaba prev.notasGonzalo vacío. El hook useEffect([selectedTurno]) ejecutaba setTempClientNotasGonzalo(selectedTurno.notasGonzalo || ''), borrando instantáneamente el textarea frente al operador.
+    3. **Desfase UTC del Servidor**: En src/app/api/admin/clientes/[id]/route.js, today.setHours(0,0,0,0) utilizaba la hora del servidor (UTC). A las 21:30 hs de Argentina (UTC-3), el servidor ya estaba a las 00:30 hs del 24 de septiembre, por lo que la condición fecha >= today omitía los turnos de la noche del 23 y solo actualizaba los del 20 de octubre en adelante.
+  - **Acciones Ejecutadas**:
+    1. **Frontend (src/app/admin/agenda/page.js)**:
+       * En handleSaveClientObservaciones: invoca PUT /api/admin/turnos/${selectedTurno.id} con notasGonzalo, actualiza sincrónicamente setTempClientNotasGonzalo(targetNotas) y establece selectedTurno.notasGonzalo = targetNotas, impidiendo el borrado.
+       * En handleUpdateStatus y handleSaveEditTurno: preserva notasGonzalo y discrimina clientObservaciones de observaciones de turno.
+    2. **Backend (src/app/api/admin/clientes/[id]/route.js)**:
+       * Corregido el cálculo de todayArg para la zona horaria de Argentina (UTC-3), garantizando que la cascada incluya todos los turnos del día en curso.
+    3. **Base de Datos PostgreSQL (agenda_db y agenda_db_staging)**:
+       * Sincronizado el turno del 23/09/2026 de Lucas Divito (c0fad69e-8436-4d92-8fba-24aa491a2344) con notasGonzalo = '116/14/4 en tiraa'.
+    4. **Compilación y Control de Versiones**:
+       * npm run build limpio en local (código 0).
+       * Commits: 5cdf584 en main y 155e20b en staging, ambos empujados a GitHub.
+    5. **Despliegue VPS (http://187.127.9.216)**:
+       * Producción (puerto 3006, PM2 gonzalo-agenda, PID 1296609).
+       * Staging (puerto 3008, PM2 gonzalo-agenda-staging, PID 1296937).
+       * Ambos procesos online y funcionando con 0% CPU.
+    6. **Validación E2E con Puppeteer en Producción Real**:
+       * Turno de Lucas Divito en Agenda: modal abre con 116/14/4 en tiraa.
+       * Prueba de escritura y guardado: botón "💾 Guardar Notas Operador" visible, guardado exitoso y textarea NO se borra (live_prod_operator_notes_saved_not_blank.png).
+       * Historial en Ficha de Cliente: turnos del 23 de septiembre y 20 de octubre muestran ambos 116/14/4 en tiraa, y turnos anteriores permanecen inalterados (live_prod_lucas_history_verified.png).
+    7. **Registros Ariadne**: D-72 en decisions.md y ERR-25 en errores.md.
