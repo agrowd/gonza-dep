@@ -1216,3 +1216,29 @@
        * Prueba de escritura y guardado: botón "💾 Guardar Notas Operador" visible, guardado exitoso y textarea NO se borra (live_prod_operator_notes_saved_not_blank.png).
        * Historial en Ficha de Cliente: turnos del 23 de septiembre y 20 de octubre muestran ambos 116/14/4 en tiraa, y turnos anteriores permanecen inalterados (live_prod_lucas_history_verified.png).
     7. **Registros Ariadne**: D-72 en decisions.md y ERR-25 en errores.md.
+
+- **23 de Septiembre (23:10 - 23:25 hs - Distribución en Renglones Separados de Fecha Primer Turno y Sesiones en Móvil)**:
+  - **Solicitud del Cliente (Gonzalo)**:
+    *"A Gonza le aparece encimado esto así que pone el espacio de fecha a la derecha del título de 'Fecha de primer turno' Y abajo de ese lo mismo, el título de 'Sesiones realizadas' y a la derecha el cuadro de texto para poner el numero así no se enciman"* (`media_1790215718678.png`).
+  - **Diagnóstico y Root Cause**:
+    En pantallas estrechas de móviles (ancho ~390px, ej. iPhone), la grilla de 2 columnas (`gridTemplateColumns: 1fr 1fr`) asignaba solo ~170px a cada columna. Esto provocaba que el texto largo de la etiqueta `"🔢 SESIONES REALIZADAS (X sis + Y prev)"` se envolviera y colisionara visualmente con el input numérico.
+  - **Acciones Ejecutadas**:
+    1. **Frontend (`src/app/admin/agenda/page.js`)**:
+       * Se desmanteló la grilla de dos columnas en el bloque de datos clínicos del modal de detalles.
+       * Se implementaron 2 filas completas e independientes (`display: flex, justify-content: space-between, align-items: center`):
+         - **Fila 1**: Izquierda `📅 FECHA PRIMER TURNO`, Derecha `<input type="date">` (`maxWidth: 180px`).
+         - **Fila 2**: Izquierda `🔢 SESIONES REALIZADAS (X sis + Y prev)`, Derecha `<input type="number">` (`width: 100px`).
+       * Botón `💾 Guardar Fecha y Sesiones` alineado limpiamente debajo cuando hay cambios pendientes.
+    2. **Compilación y Control de Versiones**:
+       * Next.js build limpio (`npm run build`, código 0, 39/39 rutas).
+       * Commits: `91ee734` en `main` y `f1f1835` en `staging`, ambos empujados a GitHub.
+    3. **Despliegue VPS (`http://187.127.9.216`)**:
+       * Producción (`3006`, PM2 `gonzalo-agenda`, PID 1297649) y Staging (`3008`, PM2 `gonzalo-agenda-staging`, PID 1297954) ambos online y con 0% de CPU.
+    4. **Validación E2E Móvil con Puppeteer en Producción Real**:
+       * Emulación de iPhone 14 (390 x 844 viewport).
+       * Modal de turno de Daniel Laclau abierto y scrolleado en `http://187.127.9.216:3006`:
+         - Renglón 1: Título a la izquierda, fecha a la derecha.
+         - Renglón 2: Título a la izquierda, número de sesiones a la derecha.
+         - Cero superposición, diseño espacioso y pulcro.
+       * Captura verificada: `live_prod_mobile_fecha_sesiones_verified.png`.
+    5. **Registros Ariadne**: `D-73` en `decisions.md`.

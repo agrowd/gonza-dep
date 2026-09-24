@@ -1583,3 +1583,20 @@
   - Desplegado en VPS (puertos 3006 y 3008, PM2 online).
   - Verificado en vivo con Puppeteer: al escribir y guardar notas, el textarea se conserva intacto y muestra el toast verde; y el historial de Lucas Divito refleja la nota en ambos turnos sin alterar el pasado.
   - Documentado en `D-72` y `ERR-25`.
+
+## Mensaje del Usuario (2026-09-23 23:10:00-03:00)
+> A Gonza le aparece encimado esto así que pone el espacio de fecha a la derecha del título de 'Fecha de primer turno' Y abajo de ese lo mismo, el título de 'Sesiones realizadas' y a la derecha el cuadro de texto para poner el numero así no se enciman (adjuntando captura móvil `media_1790215718678.png`).
+
+## Respuesta del Asistente (D-73)
+- **Diagnóstico**:
+  - En pantallas móviles estrechas (iPhone, ~390px), la disposición en dos columnas (`gridTemplateColumns: 1fr 1fr`) comprimía cada bloque a solo 170px de ancho, provocando que la etiqueta `🔢 SESIONES REALIZADAS (X sis + Y prev)` colisionara y se montara sobre el input numérico.
+- **Implementación**:
+  - En `src/app/admin/agenda/page.js`: se reemplazó la grilla por dos renglones separados y apilados:
+    - **Fila 1**: `📅 FECHA PRIMER TURNO` a la izquierda y selector de fecha a la derecha.
+    - **Fila 2**: `🔢 SESIONES REALIZADAS (X sis + Y prev)` a la izquierda y campo numérico de sesiones a la derecha.
+  - El botón `💾 Guardar Fecha y Sesiones` se presenta alineado debajo cuando existen cambios.
+- **Compilación, Despliegue y Verificación**:
+  - Build local limpio (`npm run build`, exit code 0).
+  - Commits `91ee734` (`main`) y `f1f1835` (`staging`) empujados a GitHub y desplegados en VPS (`3006` y `3008`).
+  - Verificado con Puppeteer en iPhone 14 real (`live_prod_mobile_fecha_sesiones_verified.png`): alineación horizontal impecable y sin ningún solapamiento.
+  - Documentado en `D-73`.
