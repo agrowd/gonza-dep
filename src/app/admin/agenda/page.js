@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import PhoneInput from '@/components/PhoneInput.js';
@@ -182,11 +183,14 @@ function computeOverlaps(apps) {
 }
 
 export default function AgendaPage() {
+  const router = useRouter();
   const calendarRef = useRef(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
   const [viewMode, setViewMode] = useState('week'); // 'week', 'day', 'month'
   const [selectedDate, setSelectedDate] = useState(null);
+  const [fromClientId, setFromClientId] = useState(null);
+  const [fromStats, setFromStats] = useState(false);
   const [isNextScheduling, setIsNextScheduling] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [zones, setZones] = useState([]);
@@ -344,6 +348,62 @@ export default function AgendaPage() {
   const [resendWppType, setResendWppType] = useState('RECORDATORIO_48H');
   const [sendingWppNotice, setSendingWppNotice] = useState(false);
   const [wppConnectionStatus, setWppConnectionStatus] = useState('UNKNOWN');
+
+  // Autogestión Real-time Notifications Popup State
+  const [autogestionAlert, setAutogestionAlert] = useState(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
+
+  // Poll for autogestión bookings, reschedules, and cancellations
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAutogestionAlerts = async () => {
+      try {
+        const res = await fetch('/api/admin/autogestion-alertas?limit=10&sinceHours=24');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.alertas && data.alertas.length > 0 && isMounted) {
+          const unread = data.alertas.find(a => !dismissedAlerts.has(a.id));
+          if (unread) {
+            setAutogestionAlert(unread);
+          }
+        }
+      } catch (e) {
+        // silent catch
+      }
+    };
+
+    fetchAutogestionAlerts();
+    const interval = setInterval(fetchAutogestionAlerts, 20000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [dismissedAlerts]);
+
+  const handleVerTurnoAutogestion = async (alert) => {
+    setDismissedAlerts(prev => new Set([...prev, alert.id]));
+    setAutogestionAlert(null);
+    if (alert.fecha) {
+      const targetDate = parseYYYYMMDD(alert.fecha);
+      setSelectedDate(targetDate);
+      setViewMode('day');
+    }
+    try {
+      const res = await fetch(`/api/admin/turnos/${alert.turnoId}`);
+      if (res.ok) {
+        const app = await res.json();
+        setSelectedTurno(app);
+        setIsDetailsOpen(true);
+      }
+    } catch (e) {
+      console.error('Error fetching autogestion turno details:', e);
+    }
+  };
+
+  const handleDismissAutogestion = (alert) => {
+    setDismissedAlerts(prev => new Set([...prev, alert.id]));
+    setAutogestionAlert(null);
+  };
 
   const savedScrollRef = useRef(0);
   const gridBodyRef = useRef(null);
@@ -715,6 +775,12 @@ export default function AgendaPage() {
       if (effectiveRes && effectiveRes.ok) {
         if (!silent) showToast('Datos del cliente guardados.');
         setTempClientNotasGonzalo(targetNotas);
+        if (targetFechaPrimer) {
+          setTempClientFechaPrimerTurno(targetFechaPrimer);
+          tempClientFechaPrimerTurnoRef.current = targetFechaPrimer;
+        }
+        setTempClientSesionesPrevias(targetSesionesPrevias);
+        tempClientSesionesPreviasRef.current = targetSesionesPrevias;
         setSelectedTurno(prev => {
           if (!prev) return prev;
           return {
@@ -802,6 +868,16 @@ export default function AgendaPage() {
       const searchParams = new URLSearchParams(window.location.search);
       const dateParam = searchParams.get('date');
       const viewParam = searchParams.get('view');
+      const fromClientParam = searchParams.get('fromClient');
+      const fromStatsParam = searchParams.get('fromStats') === 'true';
+      const turnoIdParam = searchParams.get('turnoId');
+      
+      if (fromClientParam) {
+        setFromClientId(fromClientParam);
+      }
+      if (fromStatsParam) {
+        setFromStats(true);
+      }
       
       if (dateParam) {
         const parsedDate = parseYYYYMMDD(dateParam);
@@ -907,7 +983,7 @@ export default function AgendaPage() {
               const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(turno.zonas, zones);
               const dynPrices = getUpdatedTurnoPrices(turno);
               const initialObs = (turno.cliente?.observaciones || '').trim();
-              const initialNotas = (turno.cliente?.notasGonzalo || '').trim();
+              const initialNotas = (turno.notasGonzalo !== null && turno.notasGonzalo !== undefined ? turno.notasGonzalo : (turno.cliente?.notasGonzalo || '')).trim();
               const initialTurnoObs = (turno.observaciones || '').trim();
               const initialFreq = turno.cliente?.frecuencia || 4;
 
@@ -970,13 +1046,32 @@ export default function AgendaPage() {
           });
       }
 
+      if (turnoIdParam && !reprogramarTurnoId && !isNewTurnoReq) {
+        fetch(`/api/admin/turnos/${turnoIdParam}`)
+          .then(res => res.json())
+          .then(turno => {
+            if (turno && !turno.error) {
+              setSelectedTurno(turno);
+              setIsDetailsOpen(true);
+              if (turno.fecha) {
+                const pDate = parseYYYYMMDD(turno.fecha);
+                setSelectedDate(pDate);
+                setCurrentWeekStart(getStartOfWeek(pDate));
+              }
+            } else {
+              console.error('Error fetching turno from URL param:', turno);
+            }
+          })
+          .catch(err => console.error('Error loading turno:', err));
+      }
+
       if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
         initialView = viewParam;
       } else if (window.innerWidth < 768) {
         initialView = 'day';
       }
 
-      if (dateParam && !isNewTurnoReq && !reprogramarTurnoId) {
+      if (dateParam && !isNewTurnoReq && !reprogramarTurnoId && !turnoIdParam) {
         try {
           window.history.replaceState({}, '', window.location.pathname);
         } catch (e) {}
@@ -1504,6 +1599,7 @@ export default function AgendaPage() {
 
     const currentTurnoNotas = turno.notasGonzalo || '';
     if (turno.cliente?.id && (
+      checkHasUnsavedChanges() ||
       tempClientObservaciones !== (turno.cliente?.observaciones || '') ||
       (tempClientNotasGonzalo || '').trim() !== currentTurnoNotas.trim() ||
       tempClientFrecuencia !== (turno.cliente?.frecuencia || 4)
@@ -1619,6 +1715,7 @@ export default function AgendaPage() {
         showToast('Turno guardado con éxito.');
         setSelectedTurno(prev => prev ? {
           ...prev,
+          notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
           observaciones: editTurno.turnoObservaciones !== undefined ? editTurno.turnoObservaciones : prev.observaciones,
           notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
           cliente: prev.cliente ? {
@@ -2070,14 +2167,24 @@ export default function AgendaPage() {
       const isTurnoObsChanged = (tempTurnoObservaciones || '').trim() !== (selectedTurno.observaciones || '').trim();
       const isFreqChanged = tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4);
 
-      return isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged;
+      const currentDbFechaPrimer = selectedTurno.cliente?.fechaPrimerTurno
+        ? new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0]
+        : '';
+      const isFechaPrimerChanged = (tempClientFechaPrimerTurno || '') !== currentDbFechaPrimer;
+
+      const currentDbSesionesPrevias = Number(selectedTurno.cliente?.sesionesPrevias || 0);
+      const isSesionesPreviasChanged = Number(tempClientSesionesPrevias || 0) !== currentDbSesionesPrevias;
+
+      return isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged || isFechaPrimerChanged || isSesionesPreviasChanged;
     }
   };
 
-  const handleCloseDetailsModal = () => {
+  const handleCloseDetailsModal = async () => {
     if (checkHasUnsavedChanges()) {
-      const confirmClose = window.confirm('Tenés cambios sin guardar. ¿Estás seguro de cerrar sin guardar los cambios?');
-      if (!confirmClose) return;
+      await handleSaveClientObservaciones(true);
+      if ((tempTurnoObservaciones || '').trim() !== (selectedTurno?.observaciones || '').trim()) {
+        await handleSaveTurnoObservaciones(true);
+      }
     }
     setIsDetailsOpen(false);
     setIsEditing(false);
@@ -2085,6 +2192,11 @@ export default function AgendaPage() {
     setTempClientNotasGonzalo('');
     setTempClientObservaciones('');
     setTempTurnoObservaciones('');
+    if (fromStats) {
+      router.push('/admin/estadisticas');
+    } else if (fromClientId) {
+      router.push(`/admin/clientes?id=${fromClientId}`);
+    }
   };
 
   const checkHasUnsavedNewTurnoChanges = () => {
@@ -2733,7 +2845,7 @@ export default function AgendaPage() {
                           return (
                             <div
                               key={`t-${app.id}`}
-                              className={styles.neocitaCard}
+                              className={`${styles.neocitaCard} ${getStatusBlockClass(app.estado)}`}
                               onClick={() => {
                                 setSelectedTurno(app);
                                 setIsDetailsOpen(true);
@@ -3751,7 +3863,7 @@ export default function AgendaPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                            if (checkHasUnsavedChanges()) {
+                            if (checkHasUnsavedChanges() || tempClientFechaPrimerTurno || tempClientSesionesPrevias !== undefined) {
                               await handleSaveClientObservaciones(true);
                             }
                             if (typeof window !== 'undefined' && gridBodyRef.current) {
@@ -3895,6 +4007,14 @@ export default function AgendaPage() {
                         ⭐ Mandar Reseña
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => window.open(`/admin/recibos/${selectedTurno.id}`, '_blank')}
+                      className="btn"
+                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                    >
+                      📄 Ver Recibo Oficial
+                    </button>
                     {selectedTurno.cliente?.email && (
                       <button
                         onClick={() => handleSendReceipt(selectedTurno.id)}
@@ -4890,6 +5010,83 @@ export default function AgendaPage() {
           >
             &times;
           </button>
+        </div>
+      )}
+      {/* Autogestión Notification Popup Modal */}
+      {autogestionAlert && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          maxWidth: '420px',
+          width: 'calc(100% - 48px)',
+          backgroundColor: '#ffffff',
+          border: '2px solid #7a1e1e',
+          borderRadius: '16px',
+          padding: '18px 20px',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+          zIndex: 9999,
+          animation: 'slideIn 0.25s ease forwards'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.25rem' }}>🔔</span>
+              <strong style={{ color: '#7a1e1e', fontSize: '0.98rem' }}>
+                {autogestionAlert.tipo === 'RESERVA' ? 'Nueva Reserva Online' : (autogestionAlert.tipo === 'REPROGRAMACION' ? 'Turno Reprogramado' : 'Turno Cancelado')}
+              </strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleDismissAutogestion(autogestionAlert)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#64748b', lineHeight: 1 }}
+              title="Cerrar notificación"
+            >
+              &times;
+            </button>
+          </div>
+          <div style={{ fontSize: '0.92rem', color: '#1e293b', marginBottom: '14px', lineHeight: 1.45 }}>
+            <strong>{autogestionAlert.clienteNombre}</strong> {autogestionAlert.tipo === 'RESERVA' ? 'hizo una reserva online' : (autogestionAlert.tipo === 'REPROGRAMACION' ? 'reprogramó su turno' : 'canceló su turno')} para el <strong>{autogestionAlert.fecha}</strong> a las <strong>{autogestionAlert.horaInicio} hs</strong>.
+            {autogestionAlert.zonasTexto && (
+              <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
+                Zonas: {autogestionAlert.zonasTexto}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => handleVerTurnoAutogestion(autogestionAlert)}
+              style={{
+                flex: 1,
+                background: '#7a1e1e',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '9px 14px',
+                fontWeight: '700',
+                fontSize: '0.88rem',
+                cursor: 'pointer'
+              }}
+            >
+              Ver Turno ↗
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDismissAutogestion(autogestionAlert)}
+              style={{
+                background: '#f1f5f9',
+                color: '#475569',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '9px 14px',
+                fontWeight: '600',
+                fontSize: '0.88rem',
+                cursor: 'pointer'
+              }}
+            >
+              Entendido
+            </button>
+          </div>
         </div>
       )}
     </div>

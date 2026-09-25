@@ -88,18 +88,19 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { nombreCompleto, whatsapp, email, dni, canalAdquisicion, observaciones, notasGonzalo, frecuencia, enviarNotificaciones } = body;
+    const { nombreCompleto, whatsapp, email, dni, canalAdquisicion, observaciones, notasGonzalo, frecuencia, enviarNotificaciones, fechaNacimiento, fechaPrimerTurno, sesionesPrevias } = body;
 
     if (!nombreCompleto || !whatsapp || !email) {
       return NextResponse.json({ error: 'Campos requeridos incompletos' }, { status: 400 });
     }
 
     const finalWhatsapp = normalizeWhatsApp(whatsapp);
+    const cleanDni = dni ? String(dni).replace(/\D/g, '').trim() : null;
 
     // 1. DNI Uniqueness check (only if non-empty)
-    if (dni) {
+    if (cleanDni) {
       const existingDni = await prisma.cliente.findFirst({
-        where: { dni }
+        where: { dni: cleanDni }
       });
       if (existingDni) {
         return NextResponse.json({ error: 'Ya existe un cliente registrado con el DNI ingresado.' }, { status: 400 });
@@ -131,13 +132,16 @@ export async function POST(request) {
         nombreCompleto,
         whatsapp: finalWhatsapp,
         email,
-        dni: dni || null,
+        dni: cleanDni,
         canalAdquisicion: canalAdquisicion || 'ORGANICO',
         estado: 'ACTIVO',
         observaciones,
         notasGonzalo,
         frecuencia: frecuencia ? Number(frecuencia) : 4,
-        enviarNotificaciones: enviarNotificaciones !== false
+        enviarNotificaciones: enviarNotificaciones !== false,
+        fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
+        fechaPrimerTurno: fechaPrimerTurno ? new Date(fechaPrimerTurno) : null,
+        sesionesPrevias: sesionesPrevias ? Number(sesionesPrevias) : 0
       }
     });
 

@@ -23,7 +23,7 @@
 
 .header {
   border-bottom: 1px solid var(--border-color);
-  padding: 1.5rem 1rem;
+  padding: 1rem 1.25rem;
   background-color: #ffffff;
 }
 
@@ -41,17 +41,27 @@
   gap: 1rem;
 }
 
-.logoTitle {
-  font-size: 1.3rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.logoImg {
+  height: 58px;
+  width: auto;
+  max-width: 230px;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.2s ease;
 }
 
-.logoSubtitle {
-  color: var(--color-gold);
-  font-size: 0.8rem;
-  font-weight: 500;
-  display: block;
+.logoContainer:hover .logoImg {
+  transform: scale(1.02);
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 0.85rem 1rem;
+  }
+  .logoImg {
+    height: 46px;
+    max-width: 180px;
+  }
 }
 
 .main {
@@ -60,6 +70,12 @@
   width: 100%;
   margin: 0 auto;
   padding: 3rem 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .main {
+    padding: 1.5rem 0.75rem;
+  }
 }
 
 .footer {
@@ -506,3 +522,422 @@
     gap: 0;
   }
 }
+
+/* =========================================================
+   MÓDULO 5: AUTOGESTIÓN - MODELO ALTA DE TURNO Y CALENDARIO
+   ========================================================= */
+
+.thresholdBanner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.92rem;
+  color: #166534;
+  font-weight: 600;
+}
+
+.thresholdBannerLocked {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.thresholdIcon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+/* 72hs Policy Alert */
+.alert72hs {
+  background: #fff1f2;
+  border: 1.5px solid #fecdd3;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  color: #9f1239;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.alert72hsTitle {
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+/* Calendar Card */
+.calendarContainer {
+  background: #ffffff;
+  border: 1.5px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+}
+
+.calendarNav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.navBtn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.navBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.navBtnIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.navBtnText {
+  display: inline;
+}
+
+.monthLabel {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.calendarWeekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.dayCell {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  user-select: none;
+  border: 1.5px solid transparent;
+}
+
+.dayCellAvailable {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.dayCellAvailable:hover {
+  background: #d1fae5;
+  border-color: #34d399;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
+
+.dayCellSelected {
+  box-shadow: 0 0 0 3px #7a1f1e, 0 6px 14px rgba(122, 31, 30, 0.25) !important;
+  border-color: #7a1f1e !important;
+  background: #fef2f2 !important;
+  color: #7a1f1e !important;
+  transform: scale(1.04);
+  z-index: 2;
+}
+
+.dayCellDisabled {
+  background: #f8fafc;
+  color: #cbd5e1;
+  border-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+/* Day Full: Fondo rojo indicado expresamente por Luciano */
+.dayCellFull {
+  background: #fff1f2 !important;
+  color: #be123c !important;
+  border-color: #fecdd3 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}
+
+.dayCellClosed {
+  background: #f8fafc;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.daySlotCount {
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-top: 3px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.calendarLegend {
+  display: flex;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* Slots Grid Area */
+.slotsContainer {
+  margin-top: 24px;
+  background: #ffffff;
+  border: 1.5px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.slotsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.slotsTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.slotBtn {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s ease;
+}
+
+.slotBtn:hover {
+  border-color: var(--color-gold);
+  background: #faf9f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.slotBtnActive {
+  background: #7a1f1e !important;
+  color: #ffffff !important;
+  border-color: #7a1f1e !important;
+  box-shadow: 0 4px 12px rgba(122, 31, 30, 0.3) !important;
+}
+
+.slotEndText {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* Botón Verde Pagar Seña (Bypass WhatsApp) */
+.btnPagarSena {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 28px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  text-decoration: none;
+}
+
+.btnPagarSena:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.45);
+}
+
+.btnPagarSena:active {
+  transform: translateY(1px);
+}
+
+.whatsappIconSvg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+@media (max-width: 600px) {
+  .calendarContainer {
+    padding: 14px 6px;
+    border-radius: 12px;
+  }
+
+  .calendarNav {
+    margin-bottom: 14px;
+    gap: 8px;
+  }
+
+  .navBtn {
+    padding: 6px 12px;
+    min-width: 38px;
+    justify-content: center;
+  }
+
+  .navBtnText {
+    display: none;
+  }
+
+  .navBtnIcon {
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .monthLabel {
+    font-size: 1.05rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .calendarWeekdays {
+    gap: 3px;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    margin-bottom: 6px;
+  }
+
+  .calendarGrid {
+    gap: 3px;
+  }
+
+  .dayCell {
+    font-size: 0.86rem;
+    border-radius: 6px;
+    padding: 2px;
+  }
+
+  .daySlotCount {
+    font-size: 0.58rem;
+    margin-top: 1px;
+    padding: 1px 2px;
+    max-width: 95%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .calendarLegend {
+    gap: 8px 12px;
+    font-size: 0.74rem;
+    justify-content: center;
+    padding-top: 10px;
+    margin-top: 14px;
+  }
+
+  .slotsContainer {
+    padding: 16px 10px;
+    border-radius: 12px;
+    margin-top: 16px;
+  }
+
+  .slotsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    gap: 6px;
+  }
+
+  .slotBtn {
+    padding: 8px 4px;
+    font-size: 0.88rem;
+  }
+
+  .btnPagarSena {
+    font-size: 1.05rem;
+    padding: 14px 20px;
+  }
+}
+

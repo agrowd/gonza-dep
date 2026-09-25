@@ -1,48 +1,39 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
-import { mpPreference } from '@/lib/mercadopago.js';
 import { normalizeWhatsApp } from '@/lib/whatsapp.js';
 import { cleanupExpiredPendingPayments } from '@/lib/cleanup.js';
 
-// Convert minutes from midnight to HH:MM string helper
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + (minutes || 0);
+}
+
 function minutesToTime(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
-// Convert HH:MM to minutes
-function timeToMinutes(timeStr) {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
-function isPastDateTime(fechaStr, horaInicio) {
-  const now = new Date();
-  const offsetBuenosAires = -3;
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
-  const todayStr = nowLocal.toISOString().split('T')[0];
-  
-  if (fechaStr < todayStr) return true;
-  if (fechaStr === todayStr) {
-    const [hours, minutes] = horaInicio.split(':').map(Number);
-    const nowHours = nowLocal.getHours();
-    const nowMinutes = nowLocal.getMinutes();
-    if (hours < nowHours || (hours === nowHours && minutes < nowMinutes)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null) {
   const targetDate = new Date(fechaStr + 'T00:00:00');
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(targetDate.getDate() + 1);
+
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
   const dayTurnos = await prisma.turno.findMany({
     where: {
-      fecha: targetDate,
-      estado: { not: 'CANCELADO' },
+      fecha: {
+        gte: targetDate,
+        lt: nextDate
+      },
+      estado: { notIn: ['CANCELADO', 'NO_ASISTIO'] },
+      NOT: {
+        estado: 'PENDIENTE_PAGO',
+        createdAt: { lt: fiveMinutesAgo }
+      },
       id: excludeTurnoId ? { not: excludeTurnoId } : undefined
     }
   });
@@ -57,6 +48,26 @@ async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId
       return t;
     }
   }
+
+  // Check administrative blocks
+  const dayBloqueos = await prisma.bloqueo.findMany({
+    where: {
+      fecha: {
+        gte: targetDate,
+        lt: nextDate
+      }
+    }
+  });
+
+  for (const b of dayBloqueos) {
+    if (b.esDiaCompleto) return b;
+    const bStart = timeToMinutes(b.horaInicio);
+    const bEnd = timeToMinutes(b.horaFin);
+    if (bStart < newEndMin && bEnd > newStartMin) {
+      return b;
+    }
+  }
+
   return null;
 }
 
@@ -73,21 +84,21 @@ export async function POST(request) {
       );
     }
 
-    // Enforce no same-day booking
+    // Argentina timezone checks
     const now = new Date();
-    const offsetBuenosAires = -3;
+    const offsetBA = -3;
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+    const nowLocal = new Date(utc + (3600000 * offsetBA));
     const todayStr = nowLocal.toISOString().split('T')[0];
+
     if (fechaStr <= todayStr) {
-      return NextResponse.json({ error: 'No es posible agendar turnos para el mismo día.' }, { status: 400 });
+      return NextResponse.json({ error: 'No es posible agendar turnos para el mismo día o fechas pasadas.' }, { status: 400 });
     }
 
-    // Enforce no Saturdays or Sundays
     const targetDate = new Date(fechaStr + 'T00:00:00');
-    const targetDay = targetDate.getDay(); // 0 = Sunday, 6 = Saturday
-    if (targetDay === 0 || targetDay === 6) {
-      return NextResponse.json({ error: 'No es posible agendar turnos los fines de semana (sábados ni domingos).' }, { status: 400 });
+    const targetDay = targetDate.getDay(); // 0 = Sunday
+    if (targetDay === 0) {
+      return NextResponse.json({ error: 'No es posible agendar turnos los domingos.' }, { status: 400 });
     }
 
     // 1. Fetch zones details from DB
@@ -103,7 +114,7 @@ export async function POST(request) {
 
     const finalWhatsapp = normalizeWhatsApp(whatsapp);
 
-    // 2. Resolve client by Email
+    // 2. Client deferred creation/update: ONLY created upon reservation confirmation
     let client = await prisma.cliente.findFirst({
       where: {
         email: {
@@ -114,27 +125,16 @@ export async function POST(request) {
 
     if (!client && dni) {
       client = await prisma.cliente.findUnique({
-        where: { dni }
+        where: { dni: dni.trim() }
       });
     }
 
-    let isNewClient = false;
-
     if (client) {
-      // Update client DNI if empty, and merge details if changed
       const updateData = {};
-      if (!client.dni && dni) {
-        updateData.dni = dni;
-      }
-      if (client.nombreCompleto !== nombreCompleto) {
-        updateData.nombreCompleto = nombreCompleto;
-      }
-      if (client.whatsapp !== finalWhatsapp) {
-        updateData.whatsapp = finalWhatsapp;
-      }
-      if (client.email.toLowerCase() !== email.trim().toLowerCase()) {
-        updateData.email = email.trim().toLowerCase();
-      }
+      if (!client.dni && dni) updateData.dni = dni.trim();
+      if (client.nombreCompleto !== nombreCompleto.trim()) updateData.nombreCompleto = nombreCompleto.trim();
+      if (client.whatsapp !== finalWhatsapp) updateData.whatsapp = finalWhatsapp;
+      if (client.email.toLowerCase() !== email.trim().toLowerCase()) updateData.email = email.trim().toLowerCase();
 
       if (Object.keys(updateData).length > 0) {
         client = await prisma.cliente.update({
@@ -143,12 +143,10 @@ export async function POST(request) {
         });
       }
     } else {
-      // Create new client
-      isNewClient = true;
       client = await prisma.cliente.create({
         data: {
-          dni: dni || null,
-          nombreCompleto,
+          dni: dni ? dni.trim() : null,
+          nombreCompleto: nombreCompleto.trim(),
           whatsapp: finalWhatsapp,
           email: email.trim().toLowerCase(),
           canalAdquisicion: 'ORGANICO',
@@ -158,9 +156,7 @@ export async function POST(request) {
     }
 
     // 3. Enforce maximum 1 active appointment rule
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-
+    const todayZero = new Date(todayStr + 'T00:00:00');
     const activeTurno = await prisma.turno.findFirst({
       where: {
         clienteId: client.id,
@@ -168,104 +164,85 @@ export async function POST(request) {
           in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
         },
         fecha: {
-          gte: today
+          gte: todayZero
         }
       }
     });
 
     if (activeTurno) {
       return NextResponse.json({
-        error: 'Ya tenés un turno activo registrado. Por razones de seguridad y organización, no es posible agendar 2 o más turnos en paralelo de forma online. Por favor, comunícate con nosotros para reprogramarlo.'
+        error: 'Ya tenés un turno activo registrado. Por razones de organización, no es posible agendar turnos paralelos. Podés consultar tu turno para reprogramarlo.'
       }, { status: 400 });
     }
 
-    // 3. Calculate appointment details (duration, pricing, seña)
-    // Always use isNewClient=false for duration to match the availability API
-    // The new client bonus is an internal operational buffer, not shown to the client
+    // 4. Calculate appointment duration & values
     const { valorTotal, valorSeña, duracionMinutos } = calculateTurnDetails(dbZones, false);
 
-    // Calculate horaFin
     const startMinutes = timeToMinutes(horaInicio);
     const endMinutes = startMinutes + duracionMinutos;
     const horaFin = minutesToTime(endMinutes);
 
-    // Fetch work hours configuration
+    // Verify operating hours
     const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
     const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
-    const workStartStr = startConfig?.value || '10:00';
-    const workEndStr = endConfig?.value || '20:00';
-    
-    const workStartMinutes = timeToMinutes(workStartStr);
-    const workEndMinutes = timeToMinutes(workEndStr);
+    const workStartStr = startConfig?.value || '12:30';
+    const workEndStr = endConfig?.value || '22:00';
 
-    if (startMinutes < workStartMinutes || endMinutes > workEndMinutes) {
-      return NextResponse.json({ error: `El horario seleccionado está fuera del horario de atención permitido (${workStartStr} hs a ${workEndStr} hs).` }, { status: 400 });
+    if (startMinutes < timeToMinutes(workStartStr) || endMinutes > timeToMinutes(workEndStr)) {
+      return NextResponse.json({ error: `El horario seleccionado está fuera de atención (${workStartStr} a ${workEndStr} hs).` }, { status: 400 });
     }
 
-    // Overlap Check
+    // Overlap check
     const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin);
     if (checkOverlap) {
       return NextResponse.json({ error: 'El horario seleccionado ya no se encuentra disponible. Por favor, elige otro horario o día.' }, { status: 400 });
     }
 
-    // 4. Create Turno in database in PENDIENTE_PAGO state
-    const lastClientTurno = await prisma.turno.findFirst({
-      where: { clienteId: client.id, fecha: { lte: targetDate } },
-      orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
-      select: { notasGonzalo: true }
-    });
-    const inheritedNotas = lastClientTurno?.notasGonzalo || client.notasGonzalo || null;
+    // 5. Zone summary
+    const zonasNombres = dbZones.map(z => z.nombre).join(', ');
 
-    const turno = await prisma.turno.create({
-      data: {
-        clienteId: client.id,
-        fecha: targetDate,
+    // 6. WhatsApp redirection ("Pagar Seña")
+    // Retrieve business phone number (Gonzalo: +54 9 11 3251-9008)
+    const businessPhoneConfig = await prisma.configuracion.findUnique({ where: { key: 'business_whatsapp' } });
+    const businessPhone = businessPhoneConfig?.value || process.env.BUSINESS_WHATSAPP || process.env.ADMIN_WHATSAPP || '5491132519008';
+    const cleanPhone = businessPhone.replace(/\D/g, '') || '5491132519008';
+
+    // Format readable date (e.g., 25/10/2026)
+    const [y, m, d] = fechaStr.split('-');
+    const fechaLegible = `${d}/${m}/${y}`;
+
+    // Exact message template required by Luciano
+    const whatsappMessage = `Hola 👋 Quiero reservar este turno:
+
+Nombre: ${client.nombreCompleto}
+Fecha: ${fechaLegible}
+Horario: ${horaInicio} hs
+Zonas: ${zonasNombres}
+Duración: ${duracionMinutos} min
+Total: $${Math.round(valorTotal).toLocaleString('es-AR')}
+Seña a abonar: $${Math.round(valorSeña).toLocaleString('es-AR')}
+
+Quedo a la espera de los datos para realizar el pago de la seña y confirmar el turno.`;
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+
+    // Note: Conforme a la indicación de Luciano, NO se crea el Turno en base de datos
+    // para no bloquear el slot en la agenda hasta que el cliente abone efectivamente la seña por WhatsApp.
+    return NextResponse.json({
+      success: true,
+      clienteId: client.id,
+      whatsappUrl,
+      solicitud: {
+        nombre: client.nombreCompleto,
+        fecha: fechaStr,
+        fechaLegible,
         horaInicio,
         horaFin,
         duracionMinutos,
-        zonas: JSON.stringify(dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precioBase, duracion: z.duracionMinutos }))),
+        zonas: zonasNombres,
         valorTotal,
-        valorSeña,
-        saldoPendiente: valorTotal - valorSeña,
-        estado: 'PENDIENTE_PAGO',
-        observaciones: observaciones ? `[ONLINE] ${observaciones}` : '[ONLINE]',
-        notasGonzalo: inheritedNotas
+        valorSeña
       }
-    });
-
-    // 5. Create MercadoPago preference for the seña
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    
-    // In MercadoPago v2 SDK, preference.create takes a body object
-    const preference = await mpPreference.create({
-      body: {
-        items: [
-          {
-            id: turno.id,
-            title: `Seña Turno Depilación Láser - ${nombreCompleto}`,
-            quantity: 1,
-            unit_price: valorSeña,
-            currency_id: 'ARS'
-          }
-        ],
-        metadata: {
-          turno_id: turno.id
-        },
-        back_urls: {
-          success: `${appUrl}/booking/success?turnoId=${turno.id}`,
-          failure: `${appUrl}/booking/failure?turnoId=${turno.id}`,
-          pending: `${appUrl}/booking/success?turnoId=${turno.id}` // handle pending as success for UX
-        },
-        auto_return: 'approved',
-        notification_url: `${appUrl}/api/webhooks/mercadopago`
-      }
-    });
-
-    return NextResponse.json({
-      success: true,
-      initPoint: preference.init_point,
-      preferenceId: preference.id,
-      turnoId: turno.id
     });
   } catch (error) {
     console.error('Error in create reservation API:', error);

@@ -34,8 +34,8 @@ gonzalo-dep/
 ```
 
 ## 🚀 Estado Actual
-- **Producción**: Totalmente operativo bajo dominio HTTPS seguro en `https://agenda.depilacionparahombres.com` (Módulo 1: Alta de Turno activo en VPS).
-- **Staging / Entorno de Pruebas (`http://187.127.9.216:3008`)**: **Módulo 2 (Mejoras en la Agenda)** totalmente desplegado y activo para pruebas del cliente. Incluye Vista Diaria Neocita, Bloqueos de Horario nativos (`model Bloqueo`), Señas guardadas vs perdidas, Cierre con Sub-estados (`subEstado`), notificaciones inteligentes y plantilla PDF imprimible. Base de datos `agenda_db_staging` poblada con 489 clientes y 555 turnos históricos para evaluación completa.
+- **Producción (`https://agenda.depilacionparahombres.com`, puerto 3006)**: **Módulo 1 (Alta de Turno) y Módulo 2 (Mejoras en la Agenda)** totalmente operativos en producción real (PM2 `gonzalo-agenda`). Incluye la nueva Vista Diaria Neocita con huecos libres interactivos, Bloqueos de Horario nativos (`model Bloqueo`), Señas guardadas vs perdidas, Sub-estados de cierre (`subEstado`) y Planilla Imprimible PDF.
+- **Staging / Entorno de Pruebas (`http://187.127.9.216:3008`)**: Laboratorio de pruebas activas con **Módulos 1, 2, 3 (Ficha), 4 (Estadísticas) y 5 (Autogestión de Turnos Online)** listos para revisión y promoción controlada conforme al ritmo del cliente.
 - **Automatizaciones**: El servicio de WhatsApp se reconecta y restablece su sesión de Puppeteer mediante persistencia de `.wwebjs_auth`. Los correos SMTP transaccionales de Hostinger están verificados y funcionando de forma segura.
 
 

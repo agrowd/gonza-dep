@@ -686,173 +686,186 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
     zonesText = zonas || 'Sesión de depilación';
   }
 
+  let parsedZones = [];
+  try {
+    const zonesArray = typeof zonas === 'string' ? JSON.parse(zonas) : zonas;
+    parsedZones = Array.isArray(zonesArray) ? zonesArray : [{ nombre: zonesText, precio: valorTotal }];
+  } catch (e) {
+    parsedZones = [{ nombre: zonesText, precio: valorTotal }];
+  }
+
+  const receiptDate = dateObj.toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
+
+  const receiptNum = `000000${(turnDetails.id ? String(turnDetails.id).replace(/\D/g, '').slice(-3) : '') || '01'}`.slice(-8);
+
+  const tableRows = parsedZones.map(z => {
+    const itemPrice = z.precio || (valorTotal / (parsedZones.length || 1));
+    return `
+      <tr style="border-bottom: 1px solid #e0e0e0;">
+        <td style="padding: 10px 12px; font-size: 14px; color: #111111;">${z.nombre || 'Sesión de Depilación'}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right;">$${Number(itemPrice).toFixed(2)}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: center;">1</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right; font-weight: bold;">$${Number(itemPrice).toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Comprobante de Pago / Seña</title>
+      <title>Recibo Comercial - Gonzalo Depilación</title>
       <style>
         body {
-          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #121212;
-          color: #f0ede6;
+          font-family: Arial, sans-serif;
+          background-color: #f4f4f4;
+          color: #111111;
           margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        a, a:link, a:visited, a:hover, a:active {
-          color: #ffffff !important;
-          text-decoration: none !important;
-        }
-        x-apple-data-detectors,
-        x-apple-data-detectors a,
-        .x-apple-data-detectors a,
-        a[x-apple-data-detectors],
-        a[href^="x-apple-data-detectors"] {
-          color: #ffffff !important;
-          text-decoration: none !important;
-          font-size: inherit !important;
-          font-family: inherit !important;
-          font-weight: inherit !important;
-          line-height: inherit !important;
-        }
-        .container {
-          max-width: 600px;
-          margin: 20px auto;
-          background-color: #1d1d1d;
-          border: 1px solid #d4a54d;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .header {
-          background-color: #282a2b;
-          border-bottom: 2px solid #d4a54d;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          color: #d4a54d;
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
-        }
-        .greeting {
-          font-size: 18px;
-          font-weight: bold;
-          color: #ffffff;
-          margin-bottom: 20px;
-          text-align: center;
-        }
-        .receipt-badge {
-          background-color: rgba(212, 165, 77, 0.1);
-          border: 1px dashed #d4a54d;
-          color: #d4a54d;
-          padding: 15px;
-          text-align: center;
-          font-weight: bold;
-          font-size: 18px;
-          border-radius: 6px;
-          margin-bottom: 25px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        .highlight-box {
-          background-color: #282a2b;
-          border-left: 4px solid #d4a54d;
           padding: 20px;
-          margin: 25px 0;
-          border-radius: 4px;
         }
-        .highlight-title {
-          font-weight: bold;
-          color: #d4a54d;
-          margin-bottom: 10px;
-          font-size: 15px;
-          text-transform: uppercase;
+        .receipt-container {
+          max-width: 620px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border: 2px solid #333333;
+          padding: 20px;
+          box-sizing: border-box;
         }
-        .details-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        .details-list li {
-          margin-bottom: 10px;
+        .header-box {
+          border: 1px solid #777777;
+          padding: 12px;
           display: flex;
           justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
         }
-        .details-label {
-          color: #b0adab;
-        }
-        .details-value {
-          font-weight: bold;
-          color: #ffffff;
-        }
-        .footer {
-          background-color: #121212;
-          padding: 20px 30px;
-          text-align: center;
+        .header-left {
+          width: 42%;
           font-size: 12px;
-          color: #777777;
-          border-top: 1px solid #282a2b;
+          line-height: 1.4;
+        }
+        .header-left h2 {
+          font-size: 16px;
+          margin: 0 0 4px 0;
+          color: #000000;
+        }
+        .header-center {
+          width: 16%;
+          text-align: center;
+          border-left: 1px solid #cccccc;
+          border-right: 1px solid #cccccc;
+          padding: 0 5px;
+        }
+        .letter-x {
+          font-size: 24px;
+          font-weight: 900;
+          margin: 0;
+          line-height: 1;
+        }
+        .header-center span {
+          font-size: 8px;
+          display: block;
+          color: #555555;
+          margin-top: 2px;
+        }
+        .header-right {
+          width: 38%;
+          text-align: right;
+          font-size: 12px;
+          line-height: 1.4;
+        }
+        .header-right h3 {
+          font-size: 16px;
+          margin: 0 0 2px 0;
+          letter-spacing: 1px;
+        }
+        .client-box {
+          border: 1px solid #cccccc;
+          padding: 10px 12px;
+          font-size: 13px;
+          margin-bottom: 15px;
+          background-color: #fafafa;
+        }
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          border: 1px solid #cccccc;
+        }
+        .items-table th {
+          background-color: #eeeeee;
+          padding: 8px 12px;
+          font-size: 13px;
+          border-bottom: 1px solid #cccccc;
+        }
+        .total-box {
+          text-align: right;
+          font-size: 16px;
+          font-weight: bold;
+          padding: 10px 0;
+          border-top: 2px solid #333333;
+          margin-top: 15px;
+        }
+        .footer-legend {
+          text-align: center;
+          font-size: 11px;
+          color: #666666;
+          margin-top: 20px;
+          border-top: 1px solid #eeeeee;
+          padding-top: 10px;
         }
       </style>
     </head>
     <body>
-      <div class="container">
-        <div class="header">
-          <h1>GONZALO DEPILACIÓN LÁSER</h1>
-        </div>
-        <div class="content">
-          <div class="greeting">Comprobante de Turno y Pago</div>
-          <div class="receipt-badge">Recibo Digital Emitido</div>
-          
-          <p style="color: #f0ede6;">Hola <strong style="color: #ffffff;">${clientName}</strong>, te adjuntamos el comprobante detallado de tu reserva y los importes facturados:</p>
-          
-          <div class="highlight-box">
-            <div class="highlight-title">Detalle de Facturación</div>
-            <ul class="details-list">
-              <li>
-                <span class="details-label">Fecha del Turno:</span>
-                <span class="details-value"><a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong></a></span>
-              </li>
-              <li>
-                <span class="details-label">Horario:</span>
-                <span class="details-value"><a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">${horaInicio} hs</strong></a></span>
-              </li>
-              <li>
-                <span class="details-label">Zonas Contratadas:</span>
-                <span class="details-value" style="color: #ffffff !important;">${zonesText}</span>
-              </li>
-              <li style="border-top: 1px solid #3d3d3d; padding-top: 10px; margin-top: 10px;">
-                <span class="details-label">Valor Total del Servicio:</span>
-                <span class="details-value" style="color: #ffffff !important;">$${valorTotal.toLocaleString()}</span>
-              </li>
-              <li>
-                <span class="details-label">Monto de Seña Abonado:</span>
-                <span class="details-value" style="color: #a5d6a7 !important;">$${valorSeña.toLocaleString()}</span>
-              </li>
-              <li>
-                <span class="details-label">Saldo Pendiente de Pago:</span>
-                <span class="details-value" style="color: #ffb74d !important;">$${(valorTotal - valorSeña).toLocaleString()}</span>
-              </li>
-            </ul>
+      <div class="receipt-container">
+        <div class="header-box">
+          <div class="header-left">
+            <h2>Gonzalo Depilacion Laser</h2>
+            <div>Domicilio comercial : Parana 597 piso 8 depto 48 - CABA</div>
           </div>
-          
-          <p style="font-size: 14px; color: #b0adab; text-align: center; margin-top: 25px;">
-            Este documento sirve como comprobante de reserva y del pago de la seña indicada.
-          </p>
+          <div class="header-center">
+            <div class="letter-x">X</div>
+            <span>Documento no válido como factura</span>
+          </div>
+          <div class="header-right">
+            <h3>RECIBO</h3>
+            <div><strong>Nº ${receiptNum}</strong></div>
+            <div>Fecha emisión : ${receiptDate}</div>
+          </div>
         </div>
-        <div class="footer">
-          &copy; \${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
+
+        <div class="client-box">
+          <strong>Nombre / Razón social:</strong> ${clientName}
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="text-align: left;">Servicio</th>
+              <th style="text-align: right;">Precio Unit.</th>
+              <th style="text-align: center;">Cantidad</th>
+              <th style="text-align: right;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+
+        <div class="total-box">
+          <span>Total: </span>
+          <span style="font-size: 18px; color: #000000;">$${Number(valorTotal).toLocaleString('es-AR')}</span>
+        </div>
+
+        <div class="footer-legend">
+          <div>Documento no válido como factura</div>
+          <div style="margin-top: 4px;">Página 1 de 1</div>
         </div>
       </div>
     </body>
@@ -863,7 +876,7 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
     from,
     to: clientEmail,
     bcc,
-    subject: `Comprobante de Turno - Gonzalo Depilación`,
+    subject: `Recibo de Pago Nº ${receiptNum} - Gonzalo Depilación`,
     html: htmlContent
   });
 }

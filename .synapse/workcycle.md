@@ -1154,91 +1154,128 @@
          - 03/07, 11/07, 16/07: `113`
          - 26/09: `118`
          - `Cliente.notasGonzalo`: `118`.
+- **24 de Septiembre (11:00 - 11:55 hs - Ajustes Módulo 5 Autogestión, Desacoplamiento de Turno previo a Seña, Logout Staging y Layout Móvil)**:
+  - **Solicitud del Usuario y Cliente (Luciano + Gonzalo)**:
+    1. *"Cuando alguien elige zonas y horario para agendar un turno y le da el botón para pagar la seña por wpp, no deje agendarse el turno en el espacio de la agenda ya que todavía no la paga... por ahora que solo mandé a wpp la info... y nosotros lo agendamos después de que haya pagado la seña"*.
+    2. *"Desde la web de prueba no me deja salir de la sesión para ver lo de autogestión, me devuelve a la agenda"*.
+    3. En mobile (fotos de celular enviadas por Luciano): el encabezado de mes ("Septiembre 2026") se solapa con los botones anterior/siguiente, y la columna 7 (`DOM`) se corta en el borde derecho de la pantalla por desborde horizontal.
+    4. El número de WhatsApp oficial de Gonzalo es `+54 9 11 3251-9008` (reemplazando el de prueba `5492984696364`).
+  - **Acciones y Soluciones Implementadas**:
+    1. **Desacoplamiento de Creación de Turno (`src/app/api/reservas/crear/route.js`)**:
+       * Se removió la invocación a `prisma.turno.create`: **no se crea el turno en la tabla `Turno` de PostgreSQL**, evitando bloquear el horario en la agenda administrativa.
+       * Se retorna objeto `solicitud` con los datos del turno y la URL directa a WhatsApp con el mensaje estructurado completo (Nombre, Fecha, Horario, Zonas, Duración, Total y Seña requerida).
+    2. **Pantalla de Éxito en Autogestión (`src/app/page.js`)**:
+       * Encabezado actualizado a: *"¡Solicitud lista para enviar!"*.
+       * Texto descriptivo: *"Para coordinar el pago de la seña y confirmar tu turno, envíanos la solicitud por WhatsApp. El turno quedará agendado en la agenda una vez recibida la seña."*.
+       * Botón verde para abrir WhatsApp y link directo para volver al inicio.
+    3. **Corrección de Logout en Staging (`src/app/api/auth/logout/route.js` y `SidebarNav.js`)**:
+       * Se detectó la causa raíz: la cookie se seteaba con `secure: process.env.NODE_ENV === 'production'`. Al correr Staging en HTTP plano (puerto 3008), los navegadores modernos rechazan eliminar cookies con flag `Secure: true` sobre HTTP. Se volvió dinámico: `secure: isHttps`.
+       * En `SidebarNav.js`, `handleLogout` ejecuta `window.location.href = '/login'` para refresco total.
+       * Se agregó botón `🌐 Ver Reserva Online` (`href="/" target="_blank"`) en el footer del menú lateral para que el administrador pueda abrir autogestión en pestaña nueva sin tener que cerrar sesión.
+    4. **Layout Móvil Responsivo del Calendario (`src/app/page.js` y `src/app/page.module.css`)**:
+       * Botones de navegación de mes: texto envuelto en `<span className={styles.navBtnText}>` e iconos en `<span className={styles.navBtnIcon}>`. En `@media (max-width: 600px)` se oculta el texto, dejando botones compactos de solo flechas (`←` y `→`).
+       * Encabezado de mes centrado con `font-size: 1.05rem` sin solapamiento.
+       * Reducción de padding en `.calendarContainer` (14px 6px en mobile) y `.main` (1.5rem 0.75rem), más espaciado `gap: 3px` en `.calendarWeekdays` y `.calendarGrid`. Las 7 columnas (`LUN` a `DOM`) entran con holgura en viewports de 360-390px con cero desborde ni recorte.
+    5. **Número Oficial de WhatsApp**:
+       * Actualizado el registro de base de datos `business_whatsapp` a `5491132519008` tanto en `agenda_db` (Producción) como en `agenda_db_staging` (Staging).
+       * Actualizados todos los templates y fallbacks de `src/app/api/reservas/crear/route.js` y `src/app/page.js`.
+  - **Verificación Automatizada E2E en Staging (Puppeteer & PostgreSQL)**:
+    * Se ejecutó el script `scratch/verify_staging_m5.mjs` y `scratch/verify_success_modal.mjs` sobre el servidor en vivo (`http://187.127.9.216:3008`):
+      - **Logout**: Login como admin, clic en "Cerrar Sesión", redirección inmediata a `/login` y cookie `session` eliminada al 100%.
+      - **Móvil 390px**: Calendario cargado en Step 3 con ancho de contenedor 366px y grilla 352px. `gridOverflow: false`, `weekdaysOverflow: false`.
+      - **Capturas Generadas**:
+        * `staging_mobile_calendar_verified.png`: mes despejado y 7 columnas completas.
+        * `staging_mobile_step4_verified.png`: desglose financiero y datos de reserva.
+        * `staging_success_screen_mobile.png`: pantalla de éxito con texto "¡Solicitud lista para enviar!".
+      - **Verificación en Base de Datos**: Consulta directa en `agenda_db_staging` antes y después de pulsar "Pagar Seña": cantidad de turnos inalterada (`565 -> 565`). Cero turnos creados.
+      - **URL WhatsApp**: `https://wa.me/5491132519008` con mensaje con nombre, fecha, hora, zonas, total y seña.
+  - **Decisión Registrada**: `D-74` en `.synapse/decisions.md`.
 
-- **23 de Septiembre (18:50 - 19:15 hs - Asistente de Pegado Móvil, Prevención de Zoom iOS 16px y Sincronización de Fernando Kocsis)**:
-  - **Solicitud del Cliente (Gonzalo)**:
-    1. *"Quiero copiar y pegar datos para dar de alta a un cliente y no me funciona la opción de pegar y me marca el botón arriba de la pantalla"* (`media_1790195025573.png`).
-    2. *"Esto no se deberia de ver asi. Fecha de primer turno: 11/11/26. Cant de sesiones: 8"* (`media_1790195043486.png`).
-  - **Diagnóstico Integral y Root Causes**:
-    1. **Fallo de Pegado Móvil**:
-       * Los inputs tenían `font-size: 0.9rem` (14.4px). iOS Safari fuerza zoom automático sobre cualquier input con tamaño < 16px.
-       * El zoom sumado al contenedor scrollable desplazaba la posición del menú contextual nativo ("Pegar | Autorrelleno") montándolo directamente sobre el botón de cierre [✕] de la barra de la app/navegador, cerrando la ventana en lugar de pegar.
-    2. **Ficha de Fernando Kocsis**:
-       * En base de datos registraba 3 turnos en sistema y 0 previas. Se requerían 8 sesiones totales (5 previas + 3 en sistema) y fecha de primer turno en 11/11/2026.
-  - **Acciones Ejecutadas**:
-    1. **Frontend Móvil y Asistente de Pegado**:
-       * `src/components/PhoneInput.js`: Implementado `onPaste` inteligente que remueve caracteres no numéricos y limpia prefijos `+54`, `9`, `0` y convierte `15` en `11`. Forzado `fontSize: 16px` y `userSelect: text`.
-       * `src/app/admin/agenda/agenda.module.css` y `clientes.module.css`: Forzado `font-size: 16px !important` en todos los inputs, selects y textareas para erradicar el auto-zoom de iOS Safari.
-       * `src/app/admin/clientes/page.js`:
-         - Añadido bloque superior "📋 ¿Tenés los datos copiados? [📋 Pegar y Autocompletar]" para parsear en 1 tap bloques de texto (WhatsApp, Nombre, Apellido, DNI, Email).
-         - Añadidos botones individuales "📋 Pegar" en Nombre, Apellido, DNI, WhatsApp y Email en modales de creación y edición.
-    2. **Sincronización Clínica de Fernando Kocsis**:
-       * En `agenda_db` (Producción) y `agenda_db_staging`: actualizados `fechaPrimerTurno = '2026-11-11 00:00:00'` y `sesionesPrevias = 5`.
-       * En `src/app/admin/agenda/page.js`: Vinculados `tempClientFechaPrimerTurnoRef` y `tempClientSesionesPreviasRef` para evitar cierres de estado obsoletos (stale state closures) al disparar `onBlur` o guardar.
-    3. **Compilación y Control de Versiones**:
-       * Next.js build limpio en local (`npm run build`, 39/39 rutas en `main` y 40/40 en `staging`).
-       * Commits: `8e1c984` en `staging` y `89bf385` en `main`. Ambos ramas empujadas a GitHub.
-    4. **Despliegue VPS (`http://187.127.9.216`)**:
-       * Producción (`/srv/gonzalo-dep`, puerto 3006, PM2 `gonzalo-agenda`, PID 1291183).
-       * Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, PID 1291481).
-       * Ambos procesos online al 0% de CPU.
-    5. **Validación E2E con Puppeteer en Producción Real**:
-       * Ficha de Fernando Kocsis verificada: `SESIONES REALIZADAS: 8 (3 en sistema + 5 previas)` y `Fecha Primer Turno: 11 nov 2026`.
-       * Modal "+ Crear Nuevo Cliente" verificado: `hasSmartPaste: true`, 6 botones de pegado disponibles, todos los inputs a `16px`.
-       * Capturas guardadas: `live_prod_fernando_history_verified.png` y `live_prod_mobile_create_modal_verified.png`.
-    6. **Decisión registrada**: `D-71` en `.synapse/decisions.md`.
+## 📅 Sesión: 25 de Septiembre de 2026
 
-- **23 de Septiembre (22:30 - 23:05 hs - Corrección de Vaciado de Observaciones del Operador y Desfase Horario UTC)**:
-  - **Solicitud del Cliente (Gonzalo)**:
-    1. *"Osea cuando hago un comentario y lo guardo se borra"*
-    2. *"Cargue un comentario de operador para el turno del 23 de septiembre, y se copió en el siguiente perfecto y no modificó los anteriores, el tema es que no aparece en el turno que lo puse"* (adjuntando capturas de Lucas Divito).
-  - **Diagnóstico y Root Cause**:
-    1. **Endpoint Incorrecto en Modal**: handleSaveClientObservaciones en src/app/admin/agenda/page.js solo invocaba PUT /api/admin/clientes/[id], sin llamar a PUT /api/admin/turnos/[id].
-    2. **Vaciado por Re-render (useEffect)**: Tras guardar, setSelectedTurno actualizaba prev.cliente.notasGonzalo, pero dejaba prev.notasGonzalo vacío. El hook useEffect([selectedTurno]) ejecutaba setTempClientNotasGonzalo(selectedTurno.notasGonzalo || ''), borrando instantáneamente el textarea frente al operador.
-    3. **Desfase UTC del Servidor**: En src/app/api/admin/clientes/[id]/route.js, today.setHours(0,0,0,0) utilizaba la hora del servidor (UTC). A las 21:30 hs de Argentina (UTC-3), el servidor ya estaba a las 00:30 hs del 24 de septiembre, por lo que la condición fecha >= today omitía los turnos de la noche del 23 y solo actualizaba los del 20 de octubre en adelante.
-  - **Acciones Ejecutadas**:
-    1. **Frontend (src/app/admin/agenda/page.js)**:
-       * En handleSaveClientObservaciones: invoca PUT /api/admin/turnos/${selectedTurno.id} con notasGonzalo, actualiza sincrónicamente setTempClientNotasGonzalo(targetNotas) y establece selectedTurno.notasGonzalo = targetNotas, impidiendo el borrado.
-       * En handleUpdateStatus y handleSaveEditTurno: preserva notasGonzalo y discrimina clientObservaciones de observaciones de turno.
-    2. **Backend (src/app/api/admin/clientes/[id]/route.js)**:
-       * Corregido el cálculo de todayArg para la zona horaria de Argentina (UTC-3), garantizando que la cascada incluya todos los turnos del día en curso.
-    3. **Base de Datos PostgreSQL (agenda_db y agenda_db_staging)**:
-       * Sincronizado el turno del 23/09/2026 de Lucas Divito (c0fad69e-8436-4d92-8fba-24aa491a2344) con notasGonzalo = '116/14/4 en tiraa'.
-    4. **Compilación y Control de Versiones**:
-       * npm run build limpio en local (código 0).
-       * Commits: 5cdf584 en main y 155e20b en staging, ambos empujados a GitHub.
-    5. **Despliegue VPS (http://187.127.9.216)**:
-       * Producción (puerto 3006, PM2 gonzalo-agenda, PID 1296609).
-       * Staging (puerto 3008, PM2 gonzalo-agenda-staging, PID 1296937).
-       * Ambos procesos online y funcionando con 0% CPU.
-    6. **Validación E2E con Puppeteer en Producción Real**:
-       * Turno de Lucas Divito en Agenda: modal abre con 116/14/4 en tiraa.
-       * Prueba de escritura y guardado: botón "💾 Guardar Notas Operador" visible, guardado exitoso y textarea NO se borra (live_prod_operator_notes_saved_not_blank.png).
-       * Historial en Ficha de Cliente: turnos del 23 de septiembre y 20 de octubre muestran ambos 116/14/4 en tiraa, y turnos anteriores permanecen inalterados (live_prod_lucas_history_verified.png).
-    7. **Registros Ariadne**: D-72 en decisions.md y ERR-25 en errores.md.
+### 🎯 Tareas en curso / Objetivos
+- [x] Optimizar la pestaña Ficha Histórica en la ficha del paciente eliminando las tarjetas superiores (`Sesiones Realizadas` y `Fecha Primer Turno`).
+- [x] Reubicar los botones de acción rápida (`💬 WhatsApp del Cliente`, `🏁 Finalizar Tratamiento`, `🗑️ Eliminar Cliente`) en la pestaña `Notas y Configuración`.
+- [x] Eliminar la restricción de altura fija y doble scroll (`max-height: 400px; overflow-y: auto;`) en `.paperList` de `clientes.module.css`.
+- [x] Aplicar tintes de fondo suaves (`stateSenado`, `stateRealizado`, `stateCancelado`, `stateReprogramado`, etc.) a las tarjetas de turnos (`.neocitaCard`) en la vista diaria Neocita (`/admin/agenda`, `viewMode === 'day'`) acordes a la vista semanal.
+- [x] Desplegar en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+- [x] Verificar con Puppeteer en Staging capturando evidencias visuales del DOM y CSS.
 
-- **23 de Septiembre (23:10 - 23:25 hs - Distribución en Renglones Separados de Fecha Primer Turno y Sesiones en Móvil)**:
-  - **Solicitud del Cliente (Gonzalo)**:
-    *"A Gonza le aparece encimado esto así que pone el espacio de fecha a la derecha del título de 'Fecha de primer turno' Y abajo de ese lo mismo, el título de 'Sesiones realizadas' y a la derecha el cuadro de texto para poner el numero así no se enciman"* (`media_1790215718678.png`).
-  - **Diagnóstico y Root Cause**:
-    En pantallas estrechas de móviles (ancho ~390px, ej. iPhone), la grilla de 2 columnas (`gridTemplateColumns: 1fr 1fr`) asignaba solo ~170px a cada columna. Esto provocaba que el texto largo de la etiqueta `"🔢 SESIONES REALIZADAS (X sis + Y prev)"` se envolviera y colisionara visualmente con el input numérico.
-  - **Acciones Ejecutadas**:
-    1. **Frontend (`src/app/admin/agenda/page.js`)**:
-       * Se desmanteló la grilla de dos columnas en el bloque de datos clínicos del modal de detalles.
-       * Se implementaron 2 filas completas e independientes (`display: flex, justify-content: space-between, align-items: center`):
-         - **Fila 1**: Izquierda `📅 FECHA PRIMER TURNO`, Derecha `<input type="date">` (`maxWidth: 180px`).
-         - **Fila 2**: Izquierda `🔢 SESIONES REALIZADAS (X sis + Y prev)`, Derecha `<input type="number">` (`width: 100px`).
-       * Botón `💾 Guardar Fecha y Sesiones` alineado limpiamente debajo cuando hay cambios pendientes.
-    2. **Compilación y Control de Versiones**:
-       * Next.js build limpio (`npm run build`, código 0, 39/39 rutas).
-       * Commits: `91ee734` en `main` y `f1f1835` en `staging`, ambos empujados a GitHub.
-    3. **Despliegue VPS (`http://187.127.9.216`)**:
-       * Producción (`3006`, PM2 `gonzalo-agenda`, PID 1297649) y Staging (`3008`, PM2 `gonzalo-agenda-staging`, PID 1297954) ambos online y con 0% de CPU.
-    4. **Validación E2E Móvil con Puppeteer en Producción Real**:
-       * Emulación de iPhone 14 (390 x 844 viewport).
-       * Modal de turno de Daniel Laclau abierto y scrolleado en `http://187.127.9.216:3006`:
-         - Renglón 1: Título a la izquierda, fecha a la derecha.
-         - Renglón 2: Título a la izquierda, número de sesiones a la derecha.
-         - Cero superposición, diseño espacioso y pulcro.
-       * Captura verificada: `live_prod_mobile_fecha_sesiones_verified.png`.
-    5. **Registros Ariadne**: `D-73` en `decisions.md`.
+### 📝 Notas / Bitácora
+- **25 de Septiembre (09:40 - 10:00 hs - Refinamiento de Ficha Histórica y Colores Neocita s/ Feedback de Luciano Gomez)**:
+  - **Solicitud del Cliente (Luciano)**:
+    1. En `Ficha Histórica`, retirar las tarjetas de `Sesiones Realizadas` y `Fecha Primer Turno` y los botones de acción para que el historial aparezca arriba de todo en pantallas móviles.
+    2. Quitar el recuadro con scroll interno (`.paperList`) en el historial para evitar el incómodo "doble scroll".
+    3. Reubicar las acciones del cliente (`WhatsApp`, `Finalizar Tratamiento`, `Eliminar Cliente`) en `Notas y Configuración`.
+    4. En la agenda diaria (Neocita), aplicar los mismos fondos suaves por estado que en la agenda semanal (verde para SEÑADO, azul para REALIZADO, rojo para CANCELADO, etc.).
+  - **Implementación**:
+    1. `src/app/admin/clientes/page.js`: Removida la columna izquierda de la pestaña `history`; `Historial de Turnos` ahora ocupa el ancho completo desde el tope. Agregado bloque de `Acciones Rápidas` al inicio de `settings`.
+    2. `src/app/admin/clientes/clientes.module.css`: Removido `max-height: 400px; overflow-y: auto;` de `.paperList`.
+    3. `src/app/admin/agenda/page.js` y `agenda.module.css`: Inyectada clase `${getStatusBlockClass(app.estado)}` en `.neocitaCard` con fondos `#e8f5e9`, `#e3f2fd`, `#ffebee` y bordes laterales correspondientes.
+  - **Despliegue y Verificación en Staging**:
+    * Compilación local limpia (`npm run build`, 40/40 rutas).
+    * Desplegado en Staging (`187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1329185).
+    * Verificación automatizada con Puppeteer (`scratch/verify_staging_feedback.mjs`):
+      - `hasHistorialDeTurnos: true`, `hasSesionesRealizadasInHistory: false`, `paperListMaxHeight: null`.
+      - `hasAccionesRapidas: true`, `hasWhatsApp: true`, `hasFinalizar: true`, `hasEliminar: true`.
+      - `.neocitaCard.stateSenado` con `backgroundColor: rgb(232, 245, 233)` y `borderLeftColor: rgb(46, 125, 50)`.
+    * Capturas de evidencia:
+      - `scratch/staging_ficha_bertotti_history.png`: Historial a tope, sin doble scroll, con tarjetas limpias y botón `↗ Ver en Agenda`.
+      - `scratch/staging_ficha_settings_verified.png`: Acciones Rápidas en Configuración.
+      - `scratch/staging_neocita_colors_verified.png`: Tarjetas diarias con fondos suaves verdes y contraste legible.
+  - **Decisión Registrada**: `D-75` en `.synapse/decisions.md`.
+- **25 de Septiembre (10:15 - 10:50 hs - Implementación y Verificación de las 6 Mejoras de Autogestión s/ Feedback de Luciano Gomez)**:
+  - **Solicitud del Cliente (Luciano)**:
+    1. Multi-turnos activos en Autogestión: al consultar email con 2 o más turnos activos, mostrarlos todos en tarjetas independientes con sus propios botones de cambiar/cancelar, restringiendo nuevo turno si ya tiene agendado.
+    2. Política < 72hs al reagendar: si faltan menos de 72hs, el botón debe decir "➕ Nuevo turno", advirtiendo pérdida de seña, cancelando el turno anterior y pasando a Paso 2.
+    3. Confirmación de Reprogramación: en Paso 4 al reagendar (> 72hs), título "Confirmá el cambio de tu turno", supresión de desglose de seña/saldo (seña conservada), y botón "Confirmar reprogramación" que actualiza en DB y muestra pantalla de éxito con "Volver al Inicio".
+    4. Input de email y botón Consultar: botón debajo del input y campo al 100% de ancho para que no se corte el email.
+    5. Auto-scroll a horarios: en Paso 3, al tocar un día en el calendario, bajar automáticamente con scroll suave a la sección de horarios.
+    6. Exclusión de fines de semana en disponibilidad online: evitar que el calendario ofrezca turnos los sábados o domingos.
+  - **Implementación**:
+    1. `src/app/page.js`:
+       - Layout vertical de email en Paso 1 (`width: 100%` y botón abajo).
+       - Mapeo de `activeTurnos.map(...)` para tarjetas individuales independientes con cálculo dinámico de `diffHours` por turno.
+       - Reemplazo condicional del botón: si `diffHours < 72` -> `➕ Nuevo turno` con handler `handleNuevoTurnoPor72hs` (cancela vía `/api/reservas/cancelar` y salta a Paso 2); si `diffHours >= 72` -> `🗓️ Reagendar Turno` con handler `handleInitiateReschedule`.
+       - En Paso 3: `setTimeout` con `scrollIntoView` suave al elemento `#slots-section`.
+       - En Paso 4: Título condicional `"Confirmá el cambio de tu turno"`, supresión de seña y saldo a pagar (badge `"Seña conservada"`), y botón azul `"Confirmar reprogramación"` conectado a `handleConfirmReschedule` (`POST /api/reservas/reprogramar`).
+       - Modal de éxito: vista dedicada de reprogramación con `"¡Turno reprogramado con éxito!"` y botón `"Volver al Inicio"`.
+    2. `src/app/api/disponibilidad/route.js`:
+       - Regla de exclusión estricta de fines de semana (sábados y domingos) para que el calendario de reserva online nunca ofrezca días no laborables.
+  - **Despliegue y Verificación en Staging**:
+    - Compilación local probada y limpia (`npm run build`, 40/40 rutas).
+    - Commit `6e42ba5` y `def66e9` empujados a `origin/staging`.
+    - Desplegado en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1330730).
+    - Base de datos `agenda_db_staging`: configurados turnos de Luciano Gomez (Turno 1: 26/09 18:00hs < 72hs; Turno 2: 30/09 19:30hs >= 72hs).
+    - Verificación automatizada E2E con Puppeteer (`scratch/verify_staging_autogestion_feedback.mjs` y `scratch/verify_nuevo_turno_72hs.mjs`):
+      1. Layout de email: `inputWidth: 316, btnWidth: 316, isButtonBelow: true`.
+      2. Multi-turnos: `activeCardsCount: 2`, `hasAviso72hs: true`, `hasNuevoTurnoBtn: true`, `hasReagendarBtn: true`, `hasCancelarBtn: true`.
+      3. Botón `➕ Nuevo turno`: diálogo nativo aceptado, turno cancelado y salto directo a Paso 2 ("Seleccioná las Zonas a Tratar").
+      4. Reagendado >= 72hs: día 28 seleccionado con auto-scroll a horarios, slot 16:30 hs elegido, Paso 4 con título "Confirmá el cambio de tu turno", seña/saldo ocultados, clic en "Confirmar reprogramación" respondió HTTP 200 `{"success":true,"message":"Turno reprogramado con éxito."}`.
+      5. Pantalla de éxito verificada: "¡Turno reprogramado con éxito! Tu turno ha sido reprogramado para el 28/09/2026 a las 16:30 hs" y botón "Volver al Inicio".
+    - Capturas generadas: `staging_autogestion_email_step1.png`, `staging_autogestion_active_turnos.png`, `staging_autogestion_step3_calendar.png`, `staging_autogestion_step4_reprogramar.png`, `staging_autogestion_reprogramar_success.png`, `staging_autogestion_nuevo_turno_step2.png`.
+  - **Decisión Registrada**: `D-76` en `.synapse/decisions.md`.
+- **25 de Septiembre (12:25 - 12:55 hs - Persistencia y Sincronización de Fecha Primer Turno y Sesiones s/ Reporte de Luciano Gomez)**:
+  - **Solicitud del Cliente (Luciano)**:
+    *"La fecha del primer turno y las sesiones que puse en la info del turno no se guardaron en la configuración de la ficha"* (Capturas de Ricardo Palavecino con Fecha Primer Turno `29/07/2026` y Sesiones `2` en Agenda que figuraban vacías en `/admin/clientes`).
+  - **Diagnóstico y Causas Raíz**:
+    1. En `src/app/admin/agenda/page.js`, `checkHasUnsavedChanges()` no comparaba `fechaPrimerTurno` ni `sesionesPrevias`. Al hacer clic en `📁 Ficha Cliente`, navegaba de inmediato a `/admin/clientes` sin invocar el auto-guardado en base de datos.
+    2. En `src/app/admin/clientes/page.js`, `loadClientData()` no calculaba fallback hacia el turno más antiguo si `data.fechaPrimerTurno` era null, mostrando `dd/mm/aaaa` en lugar de la fecha de inicio del cliente.
+    3. En `Notas y Configuración`, solo existía el input `Sesiones Previas (Externas)`, causando confusión con las `Sesiones Realizadas (Total)` vistas en la Agenda.
+  - **Implementación**:
+    1. `src/app/admin/agenda/page.js`: Añadidas comprobaciones `isFechaPrimerChanged` e `isSesionesPreviasChanged` a `checkHasUnsavedChanges()`. En `📁 Ficha Cliente`, `handleCloseDetailsModal()` y `handleScheduleNextTurn()` se aguarda asíncronamente (`await handleSaveClientObservaciones(true)`) antes de redirigir o cerrar. Se actualizan refs y estados locales de forma consistente.
+    2. `src/app/admin/clientes/page.js`: Fallback automático en `loadClientData()` hacia la fecha más antigua de turnos o fecha de alta. En `Notas y Configuración`, se incorporó `🔢 Sesiones Realizadas (Total)` con desglose reactivo `({sis} sis + {prev} prev)` sincronizado bidireccionalmente con `Sesiones Previas (Externas)`.
+  - **Despliegue y Verificación en Staging**:
+    - Compilación local probada y limpia (`npm run build`, 40/40 rutas).
+    - Commit `182cdb5` empujado a `origin/staging`.
+    - Desplegado en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1332783).
+    - Verificación automatizada con Puppeteer (`scratch/verify_fecha_sesiones.mjs`):
+      * Reset inicial en DB: `fechaPrimerTurno = NULL, sesionesPrevias = 0`.
+      * Apertura de turno de Ricardo Palavecino (29/07/2026): detectó fecha `2026-07-29` y total `2`.
+      * Clic en `📁 Ficha Cliente`: ejecutó auto-guardado asíncrono y redirigió a `/admin/clientes`.
+      * Pestaña `Notas y Configuración`: `fechaPrimerTurno: '2026-07-29'`, `sesionesTotal: '2'`, `sesionesPrevias: '0'`, texto `2 sis + 0 prev`.
+      * PostgreSQL staging: persistió `2026-07-29 00:00:00 | 0`.
+    - Capturas generadas: `staging_agenda_modal_verified.png` y `staging_ficha_settings_verified_new.png`.
+  - **Decisión Registrada**: `D-77` en `.synapse/decisions.md`.
+
+

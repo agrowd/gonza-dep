@@ -192,15 +192,86 @@
 3. Se eliminaron los botones duplicados del pie del modal y se añadió el badge de `subEstado` visible en la cabecera de detalles.
 **Estado:** ✅ FIXED
 
-## ERR-25: Vaciado del campo Observaciones del Operador al guardar y omisión de fecha por UTC (2026-09-23)
-**Síntoma:** Gonzalo reporta: *"Osea cuando hago un comentario y lo guardo se borra"* y *"Cargue un comentario de operador para el turno del 23 de septiembre, y se copió en el siguiente perfecto y no modificó los anteriores, el tema es que no aparece en el turno que lo puse"*. Al escribir en "🛡️ Observaciones del Operador" y presionar "💾 Guardar Notas Operador", el textarea se borraba de inmediato y quedaba en blanco. En la ficha de Lucas Divito, el turno del 23 de septiembre no mostraba notas de operador, mientras que el del 20 de octubre sí las tenía.
+## ERR-25: Desconexión de WhatsApp por colisión de procesos Chromium en reinicio de watchdog (2026-09-21)
+**Síntoma:** La Agenda Web (`agenda.depilacionparahombres.com`) muestra el indicador de WhatsApp en estado Desconectado / rojo.
 **Root Cause:**
-1. En `src/app/admin/agenda/page.js`, `handleSaveClientObservaciones` invocaba `PUT /api/admin/clientes/${selectedTurno.cliente.id}` y no llamaba a `PUT /api/admin/turnos/${selectedTurno.id}`. Al completarse la petición, `setSelectedTurno` actualizaba `prev.cliente` pero dejaba `prev.notasGonzalo` sin actualizar.
-2. El cambio en la referencia de `selectedTurno` disparaba `useEffect([selectedTurno])`, el cual ejecutaba `setTempClientNotasGonzalo(selectedTurno.notasGonzalo || '')`. Al ser `selectedTurno.notasGonzalo` nulo, borraba inmediatamente el texto del textarea.
-3. En el backend `src/app/api/admin/clientes/[id]/route.js`, `today` se calculaba con `const today = new Date(); today.setHours(0,0,0,0);` en hora UTC del servidor. A las 21:30 hs en Argentina (UTC-3), en el servidor ya era 24 de septiembre 00:30 UTC. La consulta `fecha: { gte: today }` excluía el turno del 23 de septiembre y solo actualizaba el del 20 de octubre.
+1. En el VPS, la Agenda (`gonzalo-agenda`, puerto 3006) utiliza como relay el bot de WhatsApp en `ia-gonzadep` (puerto 3007) para evitar sesiones dobles de WhatsApp Web concurrentes.
+2. El domingo 20 de septiembre a las 22:21 hs (Arg), el watchdog de `ia-gonzadep` registró 3 timeouts de verificación de socket y forzó el reinicio de la instancia (`initWhatsAppClient(true)`).
+3. `destroy()` no fue esperado de forma asíncrona ni se cerró forzosamente el navegador anterior. El proceso viejo de Chromium (`PID 1156480`, activo desde el 17 de septiembre con 1.6 GB de RAM) quedó zombi reteniendo los bloqueos de perfil (`SingletonLock`).
+4. Una nueva instancia de Chromium (`PID 1206509`) intentó montar la misma carpeta bloqueada, generando colisiones (`Protocol error: Execution context was destroyed` y `Failed to add page binding with name onQRChangedEvent`), consumiendo 23% de CPU y forzando a los servidores de WhatsApp Web a desvincular la sesión.
+5. Al quedar `ia-gonzadep` en estado `QR_RECEIVED`, el relay reportó inmediatamente desconexión a la Agenda Web.
 **Solución:**
-1. En `src/app/admin/agenda/page.js`, `handleSaveClientObservaciones` ahora envía la petición a `PUT /api/admin/turnos/${selectedTurno.id}` (que actualiza `Turno.notasGonzalo`, hace cascada hacia turnos futuros y preserva los pasados).
-2. Se actualizan sincrónicamente `setTempClientNotasGonzalo(targetNotas)` y `setSelectedTurno(prev => ({ ...prev, notasGonzalo: targetNotas, cliente: { ...prev.cliente, notasGonzalo: targetNotas } }))`, impidiendo que `useEffect` vacíe el textarea.
-3. En `src/app/api/admin/clientes/[id]/route.js`, se ajustó el cálculo de `todayArg` a la zona horaria argentina (`UTC-3`) para que las actualizaciones en cascada nunca omitan turnos nocturnos del mismo día.
-4. En PostgreSQL (`agenda_db` y `agenda_db_staging`), se sincronizó el turno del 23 de septiembre de Lucas Divito (`c0fad69e-8436-4d92-8fba-24aa491a2344`) con `116/14/4 en tiraa`.
+1. Se terminaron los procesos zombi huérfanos de Chromium (`PID 1156480` y `1206509`), se eliminaron los bloqueos residuales (`Singleton*`) y se reinició `ia-gonzadep` limpiamente (consumo normal: 0% CPU, 18 MB RAM).
+2. Se verificó que los recordatorios de 48hs del domingo salieron todos correctamente y que el lunes 21 estuvo marcado como bloqueado (no se perdieron turnos).
+## ERR-26: Deformación de cabecera en modal de Ficha en móviles y visualización no deseada de datos financieros/teléfonos en planilla de impresión (2026-09-21)
+**Síntoma:** Gonzalo envía 2 capturas de pantalla de WhatsApp con feedback:
+1. En celulares, al abrir la ficha del cliente en `/admin/clientes`, el nombre y datos se comprimían verticalmente en una columna de 1 letra de ancho ("N \n i \n 3 \n r \n e \n g \n i...").
+2. En la planilla imprimible (`/admin/agenda/imprimir`), aparecían el teléfono del cliente, la seña y el saldo (que no deben verse en la hoja física de la clínica), y no se distinguían los espacios libres/vacíos entre turnos.
+**Root Cause:**
+1. En `src/app/admin/clientes/page.js`, `agendaStyles.modalHeader` utilizaba flexbox con `justify-content: space-between` conteniendo en la misma fila el nombre del cliente y el botón con texto rígido `📄 Descargar PDF / Imprimir`. En pantallas de menos de 400px, el botón empujaba al contenedor del título a encogerse hasta ~20px de ancho forzando quiebre carácter por carácter.
+2. En `/admin/agenda/imprimir`, la plantilla mostraba teléfono, seña y saldo tanto en las filas como en el pie de tabla (`<tfoot>`), y solo iteraba turnos sin calcular huecos vacíos ni consultar bloqueos.
+**Solución:**
+1. En `src/app/admin/clientes/page.js`, se reestructuró la cabecera del modal en capas responsivas: Fila 1 con título del cliente (`wordBreak: 'break-word'`) y botón de cerrar (`&times;`), Fila 2 con metadatos (DNI, Alta, Edad, Canal), y Fila 3 con el botón de Descargar PDF en su propia línea completa. Se agregaron reglas `@media (max-width: 640px)` en `clientes.module.css` y scroll horizontal suave en las pestañas (`.tabs`).
+2. En `src/app/api/admin/turnos/imprimir/route.js`, se incorporó la consulta de `bloqueos` de la fecha y se retorna `{ turnos, bloqueos }`.
+3. En `src/app/admin/agenda/imprimir/page.js`, se eliminaron el teléfono, la seña y el saldo de las filas de turnos y del `<tfoot>` (dejando solo `Total Estimado`). En la columna de Zonas se muestran exclusivamente las notas clínicas (`Obs. Operador`) y comentarios de la sesión (`Comentario Turno`). Se implementó el cálculo de huecos de tiempo entre eventos (turnos y bloqueos), renderizando filas con fondo gris claro (`#f1f3f5`) con etiqueta `🟢 Libre (X min)` y "Espacio Disponible".
 **Estado:** ✅ FIXED
+
+## ERR-27: Sobrescritura no deseada de observaciones del operador históricas al editar turnos recientes (2026-09-21)
+**Síntoma:** Gonzalo envía captura de WhatsApp de la ficha de Luciano Gomez: al cambiar las Observaciones del Operador (potencia de láser `124/22`) en un turno reciente (arriba en el historial), el turno antiguo previo (abajo, `16 de julio`) también cambió a `124/22`. Gonzalo señaló: *"En observaciones del operador, cuando cambio el valor, solo quiero que se cambie para ese turno y todos los siguientes, no los anteriores... Tuvo que haberse quedado el anterior valor sin cambiar"*.
+**Root Cause:**
+1. En `prisma/schema.prisma`, `notasGonzalo` existía exclusivamente a nivel de `Cliente`. `Turno` no almacenaba sus propias notas clínicas de operador.
+2. En `src/app/admin/clientes/page.js`, cada tarjeta del historial de turnos renderizaba indiscriminadamente `{selectedClient.notasGonzalo}`, mostrando la misma nota clínica para todas las sesiones sin importar la fecha.
+3. Al editar un turno en la agenda (`PUT /api/admin/turnos/[id]`), solo se actualizaba `Cliente.notasGonzalo`, distorsionando el registro histórico de potencias de sesiones pasadas.
+**Solución:**
+1. Se agregó `notasGonzalo String?` a `model Turno` en `prisma/schema.prisma` y se ejecutó `npx prisma db push`.
+2. En `PUT /api/admin/turnos/[id]`, cuando se actualiza `notasGonzalo` para el turno $T$:
+   - Se actualiza $T$: `notasGonzalo = newNotas`.
+   - Se identifican y actualizan en masa todos los turnos cronológicamente POSTERIORES (`fecha > T.fecha` o (`fecha == T.fecha` y `horaInicio >= T.horaInicio`)).
+   - Los turnos ANTERIORES (`fecha < T.fecha` o hora previa) permanecen 100% INTACTOS con sus valores originales.
+   - Se sincroniza `Cliente.notasGonzalo` para que nuevos turnos futuros hereden este último valor.
+3. En `POST /api/admin/turnos`, los nuevos turnos heredan la nota del turno anterior o del baseline del cliente.
+4. En `src/app/admin/clientes/page.js`, cada tarjeta de sesión renderiza su nota específica `{t.notasGonzalo || selectedClient.notasGonzalo}`.
+5. En `agenda_db_staging`, se sincronizaron las notas a los turnos y se mantuvieron limpias/inmodificadas las sesiones de julio de Luciano Gomez.
+**Estado:** ✅ FIXED
+
+## ERR-28: Sobreescritura masiva de notas al editar cliente y colapso de tarjeta de turno en móviles (2026-09-21)
+**Síntoma:** 
+1. Al editar las notas de operador de un turno (14/16 de noviembre a 127/22), turnos anteriores (20 de octubre y 26 de septiembre) también se modificaron a 127/22 en lugar de retener 126/22.
+2. En teléfonos móviles, la tarjeta de turno en el modal de ficha del cliente se colapsaba: la píldora `SEÑADO` se estiraba verticalmente letra por letra (`S\nE\nÑ\nA\nD\nO`), `↗ Ver en Agenda` se partía en 4 renglones, y se generaba una trampa de doble scrollbar (`max-height: 400px; overflow-y: auto;`).
+**Root Cause:**
+1. En `src/app/api/admin/clientes/[id]/route.js`, el bloque de actualización contenía `prisma.turno.updateMany({ where: { clienteId: id, fecha: { gte: todayIso } }, data: { notasGonzalo } })`. Como la fecha actual es 21 de septiembre, tanto el turno del 26 de septiembre como el del 20 de octubre y el de noviembre cumplían `fecha >= todayIso`, sobreescribiendo indiscriminadamente todos los turnos futuros a la fecha de hoy. Además, en `src/app/admin/agenda/page.js` (`handleSaveClientObservaciones`), se enviaba redundadamente `notasGonzalo` a la API de clientes tras haberlo enviado a la de turnos.
+2. En `src/app/admin/clientes/page.js`, `.paperItemHeader` agrupaba la fecha, `↗ Ver en Agenda` y la píldora en una sola fila flex. En viewports móviles (< 400px), el padding excesivo (>120px) dejaba apenas 240px útiles, aplastando los textos sin `white-space: nowrap`. Además, `.paperList` tenía `max-height: 400px; overflow-y: auto;`, creando un scroll anidado dentro del modal.
+**Solución:**
+1. Se eliminó el `updateMany` masivo en `src/app/api/admin/clientes/[id]/route.js` (la nota del cliente es estrictamente el baseline para nuevas citas). En `src/app/admin/agenda/page.js`, se removió `notasGonzalo` del payload a la API de clientes, delegando el guardado exclusivamente a `PUT /api/admin/turnos/[id]` con su lógica estricta de avance cronológico hacia adelante.
+2. En `agenda.module.css`, se agregó `white-space: nowrap !important; flex-shrink: 0 !important;` a `.statusPill`.
+3. En `clientes.module.css`, se añadió `.modalBody` con padding responsivo, `.clientMetaList` y `.clientMetaItem` con pseudo-elemento `::after` (evitando viñetas huérfanas), y en `@media (max-width: 768px)` se eliminó el scroll interno de `.paperList` (`max-height: none; overflow-y: visible;`).
+4. En `src/app/admin/clientes/page.js`, se reestructuró la tarjeta de turno: Fila 1 con Fecha + Píldora de estado, y Fila 2 con `↗ Ver en Agenda`.
+5. Se corrigieron los datos en `agenda_db_staging` para Luciano Gomez (20 oct y 26 sep a `126/22`, nov a `127/22`).
+**Estado:** ✅ FIXED
+
+## ERR-29: Solapamiento visual de nombres, horarios y valores en la planilla de impresión en móviles (2026-09-21)
+**Síntoma:** Gonzalo envía captura de pantalla de su celular al abrir la planilla diaria `/admin/agenda/imprimir`: el nombre del cliente ("Carlos Mariano Gilardi") aparece encimado y superpuesto arriba del horario ("12:30 - 13:20") y del valor ("Valor: $77.000"). Asimismo, en los huecos libres, "Espacio Disponible" se monta sobre "13:20 - 14:00".
+**Root Cause:** 
+1. En `src/app/admin/agenda/imprimir/page.js`, `<colgroup>` fijaba inline un ancho de apenas `24%` para la columna de Horarios, `36%` para Clientes y `40%` para Zonas.
+2. En `imprimir.module.css`, `.printTable` tiene `table-layout: fixed;` y `.timeCol` tenía `white-space: nowrap;`. En pantallas de smartphones de ~360px de ancho, el 24% equivale a escasos 84px.
+3. El texto `12:30 - 13:20` mide 95px, y `Valor: $77.000` con `fontSize: 0.9rem` inline mide 110px. Sumado a paddings inline rígidos (`padding: '6px 10px'`), el contenido del Horario no cabía en 84px y se desbordaba hacia la derecha, superponiéndose directamente sobre la celda de Cliente que comenzaba en ese mismo punto.
+**Solución:**
+1. En `imprimir.module.css`, se crearon las clases `.colTime`, `.colClient` y `.colZones`. En pantallas móviles (< 650px), Horario recibe el 35% del ancho (~120px), Cliente el 28% y Zonas el 37%.
+2. Se eliminó `white-space: nowrap;` global de `.timeCol`. Se encapsuló la franja horaria en `.timeRange` y el valor en `.timeValor` con tamaño de fuente escalable y proporcional (`0.74rem` en móviles = 86px, cabiendo perfectamente dentro de los 120px con más de 25px de margen).
+3. Se eliminaron los paddings inline fijos (`6px 10px`, `8px 10px`, `10px 12px`).
+4. Se incorporó `.tableWrapper` con `overflow-x: auto` para garantizar una lectura fluida sin desbordamientos en cualquier resolución móvil.
+**Estado:** ✅ FIXED
+
+## ERR-30: Detección fallida de clientes agendados y nombres ruidosos de contactos en IA WhatsApp (2026-09-21)
+**Síntoma:** Clientes registrados en la agenda (ej: Alberto Kliphart, `+54 9 29 8469-6364`) aparecían en el panel de chats de la IA con nombres ruidosos de Google Contacts (`Laser Alberto Kliphart 17-9-26 Comp 150k`), y 82 conversaciones de clientes agendados figuraban con `clienteId: null`. La IA respondía con nombres extensos o sin presentarse adecuadamente como asistente virtual.
+**Root Cause:** 
+1. `contextBuilder.js` y `whatsapp.js` priorizaban `contactName` / `addressBookName` por sobre `Cliente.nombreCompleto`.
+2. `autoMergeDuplicateConversations()` limitaba la vinculación a `take: 50`, dejando 82 conversaciones con clientes existentes sin `clienteId`.
+3. `outputCleaner.js` eliminaba la presentación del asistente virtual ("Soy el asistente virtual de Gonzalo...") cuando la conversación ya tenía mensajes previos (`!isFirstMessage`), contradiciendo la exigencia de Gonzalo de presentarse siempre ante clientes en tratamiento.
+**Solución:**
+1. Se creó `src/lib/clienteResolver.js` con `findClientByPhone` (evaluando todas las variantes de dígitos con y sin prefijos internacionales) y `syncAllUnlinkedConversations()` para vincular el 100% de las conversaciones huérfanas con la tabla `Cliente`.
+2. Regla de oro de Gonzalo: si el teléfono coincide con `Cliente` (activo, mantenimiento, etc.), se clasifica incondicionalmente como `CLIENTE_PACIENTE`, usando prioritariamente `Cliente.nombreCompleto` y su primer nombre para el saludo.
+3. En `outputCleaner.js`, se añadió `isPatient = false` a `cleanOngoingGreetings`, preservando la presentación de asistente virtual ante pacientes.
+4. En `/chats`, `getBestDisplayName` y las filas de chat priorizan el nombre oficial del cliente, con iniciales limpias ("AK"), badge `⚡ Cliente`, y panel de ficha con observaciones, notas del operador y link a la agenda.
+**Estado:** ✅ FIXED
+

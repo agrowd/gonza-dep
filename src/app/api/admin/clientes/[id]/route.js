@@ -59,15 +59,18 @@ export async function PUT(request, { params }) {
       observaciones,
       notasGonzalo,
       fechaPrimerTurno,
+      fechaNacimiento,
       sesionesPrevias,
       enviarNotificaciones
     } = body;
 
+    const cleanDni = dni !== undefined ? (dni ? String(dni).replace(/\D/g, '').trim() : null) : undefined;
+
     // 1. DNI Uniqueness check (only if non-empty and changed)
-    if (dni) {
+    if (cleanDni) {
       const existingDni = await prisma.cliente.findFirst({
         where: {
-          dni,
+          dni: cleanDni,
           id: { not: id }
         }
       });
@@ -108,7 +111,7 @@ export async function PUT(request, { params }) {
     if (nombreCompleto) updateData.nombreCompleto = nombreCompleto;
     if (finalWhatsapp !== undefined) updateData.whatsapp = finalWhatsapp;
     if (email) updateData.email = email;
-    if (dni !== undefined) updateData.dni = dni || null;
+    if (cleanDni !== undefined) updateData.dni = cleanDni;
     if (canalAdquisicion) updateData.canalAdquisicion = canalAdquisicion;
     if (estado) updateData.estado = estado;
     if (frecuencia !== undefined) updateData.frecuencia = Number(frecuencia);
@@ -129,6 +132,7 @@ export async function PUT(request, { params }) {
       });
     }
     if (fechaPrimerTurno !== undefined) updateData.fechaPrimerTurno = fechaPrimerTurno ? new Date(fechaPrimerTurno) : null;
+    if (fechaNacimiento !== undefined) updateData.fechaNacimiento = fechaNacimiento ? new Date(fechaNacimiento) : null;
     if (sesionesPrevias !== undefined && !isNaN(Number(sesionesPrevias))) updateData.sesionesPrevias = Number(sesionesPrevias);
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = enviarNotificaciones;
 

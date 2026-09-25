@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import styles from './page.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import PhoneInput from '@/components/PhoneInput.js';
-import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
+import { buildFullPhone } from '@/lib/countryCodes.js';
 
-// Custom icons using standard SVG tags for simplicity and reliability
+// SVG Icons
 const CalendarIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
 );
@@ -20,45 +20,66 @@ const DollarIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
 );
 
+const WhatsAppIcon = () => (
+  <svg className={styles.whatsappIconSvg} viewBox="0 0 24 24">
+    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.42a8.19 8.19 0 0 1 2.41 5.82c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.21 8.21 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.66c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.53.07-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.23.25-.86.84-.86 2.06 0 1.21.89 2.39 1.01 2.55.12.17 1.75 2.67 4.23 3.74.59.25 1.05.41 1.41.52.59.19 1.13.16 1.56.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.12-.22-.19-.47-.31z" />
+  </svg>
+);
+
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
 export default function Home() {
+  // Step Management: 1=Identificación, 2=Zonas, 3=Calendario & Horarios, 4=Confirmación
   const [step, setStep] = useState(1);
   const [zones, setZones] = useState([]);
   
-  // Form State
+  // Step 1: Client & Identification State
+  const [emailInput, setEmailInput] = useState('');
+  const [clientChecked, setClientChecked] = useState(false);
+  const [searchingClient, setSearchingClient] = useState(false);
+  const [existingClient, setExistingClient] = useState(null);
+  const [activeTurno, setActiveTurno] = useState(null);
+  const [activeTurnos, setActiveTurnos] = useState([]);
+
+  // Form data for deferred registration (kept in memory, NOT in DB until booking)
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
-    nombreCompleto: '',
     whatsapp: '',
     whatsappCountry: '54',
     whatsappCustomCode: '',
-    email: '',
     dni: '',
-    observaciones: '',
-    otroZona: ''
+    observaciones: ''
   });
 
-  const [dniChecked, setDniChecked] = useState(false);
-  const [searchingDni, setSearchingDni] = useState(false);
-  
-  const [selectedZones, setSelectedZones] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(null); // string YYYY-MM-DD
-  const [selectedSlot, setSelectedSlot] = useState(null); // { horaInicio, horaFin }
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [loadingCheckout, setLoadingCheckout] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Reschedule & 72hs policy state
+  const [rescheduleMode, setRescheduleMode] = useState(false);
+  const [show72hsAlert, setShow72hsAlert] = useState(false);
+  const [alert72hsMessage, setAlert72hsMessage] = useState('');
+
+  // Step 2: Selected Zones State
+  const [selectedZoneIds, setSelectedZoneIds] = useState([]);
+
+  // Step 3: Calendar & Availability State (Alta de Turno model)
+  const now = new Date();
+  const [calendarYear, setCalendarYear] = useState(now.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(now.getMonth() + 1); // 1-12
+  const [monthData, setMonthData] = useState(null);
+  const [loadingMonth, setLoadingMonth] = useState(false);
+  const [selectedDateStr, setSelectedDateStr] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+
+  // Step 4: Submission & WhatsApp Bypass
+  const [submitting, setSubmitting] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const [activeTurno, setActiveTurno] = useState(null);
-  const [activeTurnos, setActiveTurnos] = useState([]);
-  const [isSelfManagement, setIsSelfManagement] = useState(false);
-  const [rescheduleMode, setRescheduleMode] = useState(false);
-  const [submittingReschedule, setSubmittingReschedule] = useState(false);
-  const [submittingCancel, setSubmittingCancel] = useState(false);
-  const [selfMgmtSuccess, setSelfMgmtSuccess] = useState(null);
-
-  // 1. Fetch default zones on mount
+  // 1. Fetch Zones catalog on mount
   useEffect(() => {
     fetch('/api/zonas')
       .then(res => res.json())
@@ -70,712 +91,864 @@ export default function Home() {
       .catch(err => console.error('Error fetching zones:', err));
   }, []);
 
-  // 2. Generate scrollable list of next 30 business days (excluding Saturday & Sunday)
-  const [dateList, setDateList] = useState([]);
-  useEffect(() => {
-    const dates = [];
-    let current = new Date();
-    // Always start from tomorrow (do not allow today's booking)
-    current.setDate(current.getDate() + 1);
-    
-    let count = 0;
-    while (count < 30) {
-      const day = current.getDay();
-      // 0 = Sunday, 6 = Saturday
-      if (day !== 0 && day !== 6) {
-        dates.push(new Date(current));
-        count++;
-      }
-      current.setDate(current.getDate() + 1);
-    }
-    setDateList(dates);
-  }, []);
+  // 2. Compute calculated duration, total price, and seña
+  const activeZoneObjs = useMemo(() => {
+    return zones.filter(z => selectedZoneIds.includes(z.id));
+  }, [zones, selectedZoneIds]);
 
-  // 3. Trigger availability query when selectedDate or selectedZones changes
-  useEffect(() => {
-    if (!selectedDate || selectedZones.length === 0) return;
-    
-    setLoadingSlots(true);
-    setSelectedSlot(null);
+  const calculations = useMemo(() => {
+    return calculateTurnDetails(activeZoneObjs, false);
+  }, [activeZoneObjs]);
+
+  const valorTotal = (rescheduleMode && activeTurno?.valorTotal)
+    ? Number(activeTurno.valorTotal)
+    : calculations.valorTotal;
+  const valorSeña = calculations.valorSeña;
+  const duracionMinutos = (rescheduleMode && activeTurno?.duracionMinutos)
+    ? Number(activeTurno.duracionMinutos)
+    : (calculations.duracionMinutos > 0 ? calculations.duracionMinutos : 30);
+  const isThresholdMet = valorTotal >= 65000;
+
+  // Helper: calculate remaining hours until appointment
+  const getHoursUntilTurno = (t) => {
+    if (!t || !t.fecha) return 999;
+    const nowLocal = new Date();
+    const [h, m] = (t.horaInicio || '12:00').split(':').map(Number);
+    const dObj = new Date(t.fecha);
+    const y = dObj.getUTCFullYear();
+    const mon = dObj.getUTCMonth();
+    const d = dObj.getUTCDate();
+    const turnDate = new Date(y, mon, d, h, m, 0, 0);
+    return (turnDate.getTime() - nowLocal.getTime()) / (1000 * 60 * 60);
+  };
+
+  // 3. Client Lookup by Email (Step 1)
+  const handleLookupEmail = async (e) => {
+    if (e) e.preventDefault();
+    if (!emailInput || !emailInput.includes('@')) {
+      setErrorMessage('Por favor, ingresá un correo electrónico válido.');
+      return;
+    }
+
+    setSearchingClient(true);
     setErrorMessage('');
-    
-    const details = calculateTurnDetails(selectedZones, false); // assume normal for slots duration
-    
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    
-    fetch(`/api/disponibilidad?fecha=${dateStr}&duracion=${details.duracionMinutos}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.slots) {
-          setAvailableSlots(data.slots);
-        } else if (data.error) {
-          setErrorMessage(data.error);
-        }
-      })
-      .catch(err => {
-        console.error('Error fetching slots:', err);
-        setErrorMessage('Error al cargar horarios disponibles.');
-      })
-      .finally(() => {
-        setLoadingSlots(false);
-      });
-  }, [selectedDate, selectedZones]);
-
-  // Handle Email validation and check
-  const handleDniCheck = async (e) => {
-    e.preventDefault();
-    if (!formData.email) {
-      setErrorMessage('Por favor, ingresa tu Email.');
-      return;
-    }
-    
-    setSearchingDni(true);
-    setErrorMessage('');
-
-    let data = null;
-    try {
-      const res = await fetch(`/api/clientes/consultar?email=${encodeURIComponent(formData.email.trim())}`);
-      data = await res.json();
-    } catch (err) {
-      console.error('Error fetching email consultation API:', err);
-      setErrorMessage('Error de conexión al verificar el Email. Por favor intenta nuevamente.');
-      setSearchingDni(false);
-      return;
-    }
-
-    if (!data) {
-      setErrorMessage('No se recibió respuesta del servidor. Intenta nuevamente.');
-      setSearchingDni(false);
-      return;
-    }
-
-    if (data.error) {
-      setErrorMessage(data.error);
-      setSearchingDni(false);
-      return;
-    }
+    setShow72hsAlert(false);
 
     try {
-      if (data.exists) {
-        const fullName = data.client?.nombreCompleto || '';
-        const spaceIndex = fullName.indexOf(' ');
-        const nombre = spaceIndex !== -1 ? fullName.substring(0, spaceIndex) : fullName;
-        const apellido = spaceIndex !== -1 ? fullName.substring(spaceIndex + 1) : '';
-        const { countryCode, number, customCode } = parsePhoneCountryAndNumber(data.client?.whatsapp || '');
+      const res = await fetch(`/api/clientes/consultar?email=${encodeURIComponent(emailInput.trim())}`);
+      const data = await res.json();
 
+      setClientChecked(true);
+
+      if (data.exists && data.client) {
+        setExistingClient(data.client);
+        // Split name if possible
+        const parts = (data.client.nombreCompleto || '').split(' ');
+        const nom = parts[0] || '';
+        const ape = parts.slice(1).join(' ') || '';
         setFormData(prev => ({
           ...prev,
-          nombre,
-          apellido,
-          nombreCompleto: fullName,
-          whatsapp: number,
-          whatsappCountry: countryCode,
-          whatsappCustomCode: customCode,
-          email: data.client?.email || '',
-          dni: data.client?.dni || ''
+          nombre: nom,
+          apellido: ape,
+          whatsapp: data.client.whatsapp || '',
+          dni: data.client.dni || ''
         }));
 
-        if (data.hasActiveTurno) {
-          const list = data.activeTurnos && data.activeTurnos.length > 0 ? data.activeTurnos : (data.activeTurno ? [data.activeTurno] : []);
-          setActiveTurnos(list);
-          setActiveTurno(list[0] || null);
-          setIsSelfManagement(true);
+        if (data.hasActiveTurno && data.activeTurno) {
+          setActiveTurno(data.activeTurno);
+          setActiveTurnos(data.activeTurnos || [data.activeTurno]);
         } else {
-          setErrorMessage('Tu email fue encontrado en el sistema, pero no tenés turnos activos futuros. Podés reservar tu próximo turno a continuación.');
-          setDniChecked(true);
-          setStep(2);
+          setActiveTurno(null);
+          setActiveTurnos([]);
         }
       } else {
-        setDniChecked(true);
-        setStep(2);
+        // Deferred client: does not exist yet
+        setExistingClient(null);
+        setActiveTurno(null);
+        setActiveTurnos([]);
       }
-    } catch (procErr) {
-      console.error('Error processing client data in handleDniCheck:', procErr);
-      setErrorMessage('Ocurrió un error al cargar la información. Por favor intenta nuevamente.');
+    } catch (err) {
+      console.error('Error querying client:', err);
+      setErrorMessage('No se pudo verificar el correo. Por favor, intentá nuevamente.');
     } finally {
-      setSearchingDni(false);
+      setSearchingClient(false);
     }
   };
 
-  const handleCancelActiveTurno = async (targetTurno = activeTurno) => {
-    if (!targetTurno) return;
-    
-    const now = new Date();
-    const turnTime = new Date(targetTurno.fecha);
-    const [h, m] = targetTurno.horaInicio.split(':').map(Number);
-    turnTime.setUTCHours(h, m, 0, 0);
-    const diffMs = turnTime.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    
-    const confirmMsg = '⚠️ Tu turno será cancelado y el horario se liberará. Tené en cuenta que al cancelar por autogestión perderás la seña abonada, sin importar la anticipación con la que lo hagas (no hay devolución ni transferencia de seña). ¿Deseas confirmar la cancelación?';
-    
-    if (!window.confirm(confirmMsg)) return;
-    
-    setSubmittingCancel(true);
+  // 4. Handle "Reagendar Turno" with 72hs policy check
+  const handleInitiateReschedule = (turno) => {
     setErrorMessage('');
+    const targetTurno = turno || activeTurno;
+    if (!targetTurno) return;
+
+    // Check 72 hours rule
+    const diffHours = getHoursUntilTurno(targetTurno);
+    if (diffHours < 72) {
+      setShow72hsAlert(true);
+      setAlert72hsMessage(
+        'Faltan menos de 72 horas para tu turno. Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs de anticipación. Se deberá agendar un nuevo turno.'
+      );
+      return;
+    }
+
+    // Direct Horario modification (Salteo de pantalla de zonas como indicó Luciano)
+    setRescheduleMode(true);
+    setActiveTurno(targetTurno);
+
+    // Extract zone IDs from active turno
+    try {
+      const parsed = JSON.parse(targetTurno.zonas);
+      if (Array.isArray(parsed)) {
+        const ids = parsed.map(p => p.id).filter(Boolean);
+        if (ids.length > 0) {
+          setSelectedZoneIds(ids);
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing active turno zones:', e);
+    }
+
+    // Jump directly to step 3 (Calendario)
+    setStep(3);
+  };
+
+  // 4.1 Handle "Nuevo turno" when within 72hs (cancels old turn and books fresh)
+  const handleNuevoTurnoPor72hs = async (turno) => {
+    const targetTurno = turno || activeTurno;
+    if (!targetTurno) return;
+
+    const confirmCancel = window.confirm(
+      'Al faltar menos de 72hs, la seña anterior no se conserva según la política de la empresa. Al presionar aceptar se cancelará tu turno anterior y podrás elegir zonas y horario para tu nuevo turno. ¿Deseás continuar?'
+    );
+    if (!confirmCancel) return;
+
+    setSearchingClient(true);
     try {
       const res = await fetch('/api/reservas/cancelar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ turnoId: targetTurno.id, email: formData.email })
+        body: JSON.stringify({
+          turnoId: targetTurno.id,
+          email: emailInput.trim(),
+          dni: formData.dni || existingClient?.dni || undefined
+        })
       });
       const data = await res.json();
-      if (data.error) {
-        setErrorMessage(data.error);
+      if (res.ok && data.success) {
+        const remaining = activeTurnos.filter(t => t.id !== targetTurno.id);
+        setActiveTurnos(remaining);
+        setActiveTurno(remaining[0] || null);
+
+        // Reset and jump to step 2 for new booking
+        setRescheduleMode(false);
+        setSelectedZoneIds([]);
+        setSelectedDateStr(null);
+        setSelectedSlot(null);
+        setShow72hsAlert(false);
+        setStep(2);
       } else {
-        setSelfMgmtSuccess({
-          type: 'cancel',
-          message: 'Tu turno ha sido cancelado con éxito. Se ha enviado un correo y mensaje de WhatsApp de confirmación.'
-        });
+        alert(data.error || 'No se pudo cancelar el turno anterior.');
       }
     } catch (err) {
-      console.error(err);
-      setErrorMessage('Ocurrió un error al procesar la cancelación.');
+      console.error('Error cancelling turno for new booking:', err);
+      alert('Error de conexión al procesar la cancelación.');
     } finally {
-      setSubmittingCancel(false);
+      setSearchingClient(false);
     }
   };
 
-  const handleRescheduleActiveTurno = (targetTurno = activeTurno) => {
-    if (!targetTurno) return;
-    setActiveTurno(targetTurno);
-    
-    const now = new Date();
-    const turnTime = new Date(targetTurno.fecha);
-    const [h, m] = targetTurno.horaInicio.split(':').map(Number);
-    turnTime.setUTCHours(h, m, 0, 0);
-    const diffMs = turnTime.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    
-    if (diffHours < 72) {
-      const confirmNew = window.confirm('⚠️ Faltan menos de 72 hs para tu turno. Si reprogramás ahora, se perderá la seña actual y deberás registrar un nuevo turno abonando una nueva seña.\n\n¿Deseas cancelar el turno actual para poder reservar uno nuevo?');
-      if (confirmNew) {
-        setSubmittingCancel(true);
-        fetch('/api/reservas/cancelar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ turnoId: targetTurno.id, email: formData.email })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.error) {
-            setErrorMessage(data.error);
-          } else {
-            setActiveTurno(null);
-            setActiveTurnos([]);
-            setIsSelfManagement(false);
-            setDniChecked(true);
-            setStep(2);
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          setErrorMessage('Error al procesar el cambio.');
-        })
-        .finally(() => {
-          setSubmittingCancel(false);
-        });
-      }
-    } else {
-      try {
-        const turnZones = JSON.parse(targetTurno.zonas).map(z => ({
-          id: z.id,
-          nombre: z.nombre,
-          precioBase: z.precio || z.precioBase || 0,
-          duracionMinutos: z.duracion || z.duracionMinutos || 0,
-          señaBase: z.seña || z.señaBase || 0
-        }));
-        setSelectedZones(turnZones);
-        setRescheduleMode(true);
-        setStep(2);
-      } catch (err) {
-        setErrorMessage('Error al leer las zonas del turno actual. Por favor, comunícate con nosotros.');
-      }
-    }
-  };
-
+  // 4.2 Handle "Confirmar reprogramación" (Step 4 for rescheduling)
   const handleConfirmReschedule = async () => {
-    if (!acceptedTerms) {
-      setErrorMessage('Debes aceptar las indicaciones previas para proceder.');
-      return;
-    }
-    
-    setLoadingCheckout(true);
+    if (!activeTurno || !selectedDateStr || !selectedSlot) return;
+
+    setSubmitting(true);
     setErrorMessage('');
+
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
       const res = await fetch('/api/reservas/reprogramar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           turnoId: activeTurno.id,
-          email: formData.email,
-          fechaStr: dateStr,
+          email: emailInput.trim(),
+          dni: formData.dni || existingClient?.dni || undefined,
+          fechaStr: selectedDateStr,
           horaInicio: selectedSlot.horaInicio
         })
       });
       const data = await res.json();
-      if (data.error) {
-        setErrorMessage(data.error);
-      } else {
-        setSelfMgmtSuccess({
-          type: 'reschedule',
-          message: 'Tu turno ha sido reprogramado con éxito. Se ha enviado un correo y mensaje de WhatsApp de confirmación con los nuevos detalles.'
-        });
-        setStep(1);
-        setIsSelfManagement(true);
-        setRescheduleMode(false);
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al reprogramar el turno');
       }
+
+      const [y, m, d] = selectedDateStr.split('-');
+      const fechaLegible = `${d}/${m}/${y}`;
+
+      setBookingSuccess({
+        isReschedule: true,
+        fecha: fechaLegible,
+        horario: selectedSlot.horaInicio,
+        duracion: duracionMinutos
+      });
     } catch (err) {
-      console.error(err);
-      setErrorMessage('Ocurrió un error al procesar la reprogramación.');
+      console.error('Error rescheduling turno:', err);
+      setErrorMessage(err.message || 'Error al reprogramar el turno. Por favor, intentá nuevamente.');
     } finally {
-      setLoadingCheckout(false);
+      setSubmitting(false);
     }
   };
 
-  // Handle personal info submit
-  const handleNextStep1 = (e) => {
-    e.preventDefault();
-    if (!formData.nombre || !formData.apellido || !formData.whatsapp || !formData.email) {
-      setErrorMessage('Por favor, completa todos los campos obligatorios.');
+  // 5. Handle "Cancelar Turno"
+  const handleCancelTurno = async (turno) => {
+    const targetTurno = turno || activeTurno;
+    if (!targetTurno) return;
+
+    const confirmCancel = window.confirm(
+      '¿Estás seguro de que deseás cancelar tu turno? Si cancelás, la seña abonada no es reembolsable según las políticas vigentes.'
+    );
+    if (!confirmCancel) return;
+
+    setSearchingClient(true);
+    try {
+      const res = await fetch('/api/reservas/cancelar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          turnoId: targetTurno.id,
+          email: emailInput.trim(),
+          dni: formData.dni || existingClient?.dni || undefined
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('Tu turno ha sido cancelado con éxito.');
+        const remaining = activeTurnos.filter(t => t.id !== targetTurno.id);
+        setActiveTurnos(remaining);
+        setActiveTurno(remaining[0] || null);
+        if (remaining.length === 0) {
+          setShow72hsAlert(false);
+        }
+      } else {
+        alert(data.error || 'No se pudo cancelar el turno.');
+      }
+    } catch (err) {
+      console.error('Error cancelling turno:', err);
+      alert('Error de conexión al cancelar.');
+    } finally {
+      setSearchingClient(false);
+    }
+  };
+
+  // 6. Proceed from Step 1 to Step 2 (Deferred Client)
+  const handleProceedToZones = (e) => {
+    if (e) e.preventDefault();
+    if (!formData.nombre.trim() || !formData.apellido.trim()) {
+      setErrorMessage('Por favor, ingresá tu Nombre y Apellido.');
       return;
     }
-    formData.nombreCompleto = `${formData.nombre.trim()} ${formData.apellido.trim()}`.trim();
+    if (!formData.whatsapp.trim()) {
+      setErrorMessage('Por favor, ingresá tu número de WhatsApp.');
+      return;
+    }
     setErrorMessage('');
     setStep(2);
   };
 
-  // Handle zone selection toggle
-  const toggleZone = (zone) => {
-    setSelectedSlot(null); // clear slots if zones change duration
-    const exists = selectedZones.find(z => z.id === zone.id);
-    if (exists) {
-      setSelectedZones(selectedZones.filter(z => z.id !== zone.id));
-    } else {
-      // If "Cuerpo Completo" is selected, deselect others, or vice versa
-      if (zone.nombre === "Cuerpo Completo") {
-        setSelectedZones([zone]);
-      } else {
-        setSelectedZones([...selectedZones.filter(z => z.nombre !== "Cuerpo Completo"), zone]);
-      }
-    }
+  // 7. Toggle Zone Selection (Step 2)
+  const toggleZone = (id) => {
+    setSelectedZoneIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
-  const handleNextStep2 = () => {
-    if (selectedZones.length === 0) {
-      setErrorMessage('Por favor, selecciona al menos una zona a depilar.');
-      return;
-    }
-    setErrorMessage('');
-    setStep(3);
-  };
-
-  const handleNextStep3 = () => {
-    if (!selectedDate || !selectedSlot) {
-      setErrorMessage('Por favor, selecciona un día y horario para tu turno.');
-      return;
-    }
-    setErrorMessage('');
-    setStep(4);
-  };
-
-  // Submit appointment to backend and redirect to MercadoPago
-  const handleCheckout = async () => {
-    if (!acceptedTerms) {
-      setErrorMessage('Debes aceptar las indicaciones previas para proceder.');
-      return;
-    }
-    
-    setLoadingCheckout(true);
-    setErrorMessage('');
-    
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const zoneIds = selectedZones.map(z => z.id);
-    
-    // Concatenate "Otro" zone text to observations if selected
-    let obs = formData.observaciones;
-    if (selectedZones.some(z => z.nombre === 'Otro') && formData.otroZona) {
-      obs = `[Zona solicitada: ${formData.otroZona}] ${obs}`;
-    }
-
+  // 8. Fetch Monthly Availability (Alta de Turno model)
+  const fetchMonthAvailability = useCallback(async (year, month, dur, total) => {
+    setLoadingMonth(true);
+    setSelectedSlot(null);
     try {
-      const fullPhone = buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp);
-      const res = await fetch('/api/reservas/crear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombreCompleto: formData.nombreCompleto,
-          whatsapp: fullPhone,
-          email: formData.email,
-          dni: formData.dni,
-          fechaStr: dateStr,
-          horaInicio: selectedSlot.horaInicio,
-          selectedZoneIds: zoneIds,
-          observaciones: obs
-        })
+      const q = new URLSearchParams({
+        year: year.toString(),
+        month: month.toString(),
+        duracion: dur.toString(),
+        montoTotal: total.toString()
       });
-
+      if (rescheduleMode && activeTurno) {
+        q.set('excludeTurnoId', activeTurno.id);
+      }
+      const res = await fetch(`/api/disponibilidad?${q.toString()}`);
       const data = await res.json();
-      
-      if (data.success && data.initPoint) {
-        // Redirect client to MercadoPago Checkout
-        window.location.href = data.initPoint;
-      } else {
-        setErrorMessage(data.error || 'Ocurrió un error al crear la reserva.');
-        setLoadingCheckout(false);
+      if (data.days) {
+        setMonthData(data);
       }
     } catch (err) {
-      console.error('Checkout error:', err);
-      setErrorMessage('Error de red. Intenta nuevamente.');
-      setLoadingCheckout(false);
+      console.error('Error fetching monthly availability:', err);
+    } finally {
+      setLoadingMonth(false);
+    }
+  }, [rescheduleMode, activeTurno]);
+
+  useEffect(() => {
+    if (step === 3) {
+      fetchMonthAvailability(calendarYear, calendarMonth, duracionMinutos, valorTotal);
+    }
+  }, [step, calendarYear, calendarMonth, duracionMinutos, valorTotal, fetchMonthAvailability]);
+
+  // Calendar Navigation
+  const handlePrevMonth = () => {
+    if (calendarMonth === 1) {
+      setCalendarYear(prev => prev - 1);
+      setCalendarMonth(12);
+    } else {
+      setCalendarMonth(prev => prev - 1);
+    }
+    setSelectedDateStr(null);
+    setSelectedSlot(null);
+  };
+
+  const handleNextMonth = () => {
+    if (calendarMonth === 12) {
+      setCalendarYear(prev => prev - 1);
+      setCalendarMonth(1);
+    } else {
+      setCalendarMonth(prev => prev + 1);
+    }
+    setSelectedDateStr(null);
+    setSelectedSlot(null);
+  };
+
+  // Calendar Days Grid Array Builder
+  const calendarCells = useMemo(() => {
+    const firstDayIndex = new Date(Date.UTC(calendarYear, calendarMonth - 1, 1, 12, 0, 0)).getUTCDay();
+    // In Argentina: Monday = 0, ..., Sunday = 6
+    const leadingBlanks = (firstDayIndex + 6) % 7;
+    const daysInMonth = new Date(calendarYear, calendarMonth, 0).getDate();
+
+    const cells = [];
+    for (let i = 0; i < leadingBlanks; i++) {
+      cells.push({ isBlank: true, key: `blank-${i}` });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${calendarYear}-${String(calendarMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayInfo = monthData?.days?.[dateStr] || {
+        disponible: false,
+        lleno: false,
+        motivo: 'CARGANDO',
+        slots: []
+      };
+      cells.push({
+        isBlank: false,
+        key: dateStr,
+        dayNumber: d,
+        dateStr,
+        dayInfo
+      });
+    }
+    return cells;
+  }, [calendarYear, calendarMonth, monthData]);
+
+  // 9. Confirm & "Pagar Seña" WhatsApp Bypass (Step 4)
+  const handlePagarSeña = async () => {
+    setSubmitting(true);
+    setErrorMessage('');
+
+    const fullNombre = `${formData.nombre.trim()} ${formData.apellido.trim()}`.trim();
+    const fullPhone = buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp);
+
+    try {
+      if (rescheduleMode && activeTurno) {
+        // Reschedule endpoint
+        const res = await fetch('/api/reservas/reprogramar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            turnoId: activeTurno.id,
+            email: emailInput.trim(),
+            fechaStr: selectedDateStr,
+            horaInicio: selectedSlot.horaInicio
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Error al reprogramar turno');
+        }
+
+        // WhatsApp message for reschedule
+        const [y, m, d] = selectedDateStr.split('-');
+        const fechaLegible = `${d}/${m}/${y}`;
+        const msg = `Hola 👋 Reprogramé mi turno de depilación láser:
+
+Nombre: ${fullNombre || existingClient?.nombreCompleto}
+Nueva Fecha: ${fechaLegible}
+Nuevo Horario: ${selectedSlot.horaInicio} hs
+Duración: ${duracionMinutos} min`;
+
+        const waUrl = `https://wa.me/5491132519008?text=${encodeURIComponent(msg)}`;
+        setBookingSuccess({
+          isReschedule: true,
+          whatsappUrl: waUrl,
+          fecha: fechaLegible,
+          horario: selectedSlot.horaInicio
+        });
+        window.location.href = waUrl;
+      } else {
+        // New Reservation endpoint (Deferred client created here, Turno not booked until deposit paid)
+        const res = await fetch('/api/reservas/crear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombreCompleto: fullNombre,
+            whatsapp: fullPhone,
+            email: emailInput.trim(),
+            dni: formData.dni.trim() || undefined,
+            fechaStr: selectedDateStr,
+            horaInicio: selectedSlot.horaInicio,
+            selectedZoneIds,
+            observaciones: formData.observaciones.trim() || undefined
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Error al procesar reserva');
+        }
+
+        setBookingSuccess({
+          isReschedule: false,
+          whatsappUrl: data.whatsappUrl,
+          solicitud: data.solicitud
+        });
+
+        // Automatically redirect to WhatsApp with the structured message
+        if (data.whatsappUrl) {
+          window.location.href = data.whatsappUrl;
+        }
+      }
+    } catch (err) {
+      console.error('Error in pagar seña:', err);
+      setErrorMessage(err.message || 'Error al procesar la reserva. Por favor, intentá nuevamente.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Calculate prices dynamically for Step 2+
-  // Use isNewClient=false to match the availability API which also uses false
-  const calculatedDetails = calculateTurnDetails(selectedZones, false);
-
-  const progressPercent = ((step - 1) / 3) * 100;
+  // Selected Day's Slots
+  const currentDaySlots = useMemo(() => {
+    if (!selectedDateStr || !monthData?.days?.[selectedDateStr]) return [];
+    return monthData.days[selectedDateStr].slots || [];
+  }, [selectedDateStr, monthData]);
 
   return (
     <div className={styles.container}>
-      {/* Header */}
+      {/* Top Header */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <div className={styles.logoContainer}>
-            <img src="/logo.png" alt="Gonzalo Depilación para Hombres" style={{ width: '240px', height: 'auto', filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.35))' }} />
+          <div className={styles.logoContainer} onClick={() => setStep(1)} style={{ cursor: 'pointer' }}>
+            <Image
+              src="/logo.png"
+              alt="Gonzalo Depilación para Hombres"
+              width={220}
+              height={68}
+              priority
+              className={styles.logoImg}
+            />
           </div>
-          <a href="/login" className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', color: '#000000', borderColor: 'rgba(0, 0, 0, 0.4)', fontWeight: 600 }}>
-            Acceso Interno
-          </a>
+          {step > 1 && (
+            <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-gold)' }}>
+              Paso {step} de 4
+            </div>
+          )}
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main Content Area */}
       <main className={styles.main}>
-        {/* Step Indicator */}
-        <div className={styles.stepsContainer}>
-          <div className={styles.progressBar} style={{ width: `${progressPercent}%` }}></div>
-          <div className={`${styles.stepDot} ${step >= 1 ? styles.stepDotActive : ''} ${step > 1 ? styles.stepDotCompleted : ''}`}>1</div>
-          <div className={`${styles.stepDot} ${step >= 2 ? styles.stepDotActive : ''} ${step > 2 ? styles.stepDotCompleted : ''}`}>2</div>
-          <div className={`${styles.stepDot} ${step >= 3 ? styles.stepDotActive : ''} ${step > 3 ? styles.stepDotCompleted : ''}`}>3</div>
-          <div className={`${styles.stepDot} ${step >= 4 ? styles.stepDotActive : ''} ${step > 4 ? styles.stepDotCompleted : ''}`}>4</div>
-        </div>
-
         {errorMessage && (
-          <div style={{
-            background: 'rgba(198, 40, 40, 0.1)',
-            border: '1px solid var(--status-cancelado)',
-            color: '#ff8a8a',
-            padding: '1rem',
-            borderRadius: '8px',
-            marginBottom: '1.5rem',
-            animation: 'fadeIn 0.3s ease'
-          }}>
+          <div style={{ background: '#fee2e2', border: '1px solid #f87171', color: '#b91c1c', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontWeight: '600' }}>
             {errorMessage}
           </div>
         )}
 
-        {/* STEP 1: Personal Info or Self-Management */}
-        {step === 1 && (
-          isSelfManagement ? (
-            <div className={styles.formSection}>
-              <h2 className={styles.sectionTitle}>Gestionar mi Turno</h2>
-              {selfMgmtSuccess ? (
-                <div className="glass-card premium-border" style={{ textAlign: 'center', padding: '2rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
-                  <h3 style={{ color: 'var(--color-gold)', marginBottom: '1rem' }}>¡Operación exitosa!</h3>
-                  <p style={{ marginBottom: '2rem', lineHeight: '1.6' }}>{selfMgmtSuccess.message}</p>
+        {/* SUCCESS CONFIRMATION MODAL / SCREEN */}
+        {/* SUCCESS CONFIRMATION MODAL / SCREEN */}
+        {bookingSuccess ? (
+          <div style={{ background: '#ffffff', border: '2px solid #22c55e', borderRadius: '16px', padding: '32px 24px', textAlign: 'center', boxShadow: '0 8px 30px rgba(34, 197, 94, 0.15)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '2rem' }}>
+              ✓
+            </div>
+            {bookingSuccess.isReschedule ? (
+              <>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+                  ¡Turno reprogramado con éxito!
+                </h2>
+                <p style={{ color: '#475569', fontSize: '1.05rem', maxWidth: '520px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                  Tu turno ha sido reprogramado para el <strong>{bookingSuccess.fecha}</strong> a las <strong>{bookingSuccess.horario} hs</strong>. Se ha actualizado tu horario en el sistema.
+                </p>
+                <div>
                   <button
+                    type="button"
                     onClick={() => {
-                      setIsSelfManagement(false);
+                      setBookingSuccess(null);
+                      setStep(1);
+                      setRescheduleMode(false);
                       setActiveTurno(null);
-                      setSelfMgmtSuccess(null);
-                      setDniChecked(false);
-                      setFormData(prev => ({ ...prev, email: '' }));
+                      setActiveTurnos([]);
+                      setSelectedDateStr(null);
+                      setSelectedSlot(null);
+                      setSelectedZoneIds([]);
+                      setClientChecked(false);
                     }}
-                    className="btn btn-primary"
+                    style={{ background: 'var(--color-primary-dark, #7a1f1e)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 28px', fontWeight: '700', cursor: 'pointer', fontSize: '1rem' }}
+                  >
+                    Volver al Inicio
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+                  ¡Solicitud lista para enviar!
+                </h2>
+                <p style={{ color: '#475569', fontSize: '1.05rem', maxWidth: '520px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                  Para coordinar el pago de la seña y confirmar tu turno, envíanos la solicitud por WhatsApp. El turno quedará agendado en la agenda una vez recibida la seña.
+                </p>
+
+                <a
+                  href={bookingSuccess.whatsappUrl}
+                  className={styles.btnPagarSena}
+                  style={{ maxWidth: '360px', margin: '0 auto', display: 'inline-flex' }}
+                >
+                  <WhatsAppIcon />
+                  Abrir WhatsApp Ahora
+                </a>
+
+                <div style={{ marginTop: '24px' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem' }}
                   >
                     Volver al inicio
                   </button>
                 </div>
-              ) : (
-                <div>
-                  <p className={styles.sectionSubtitle}>
-                    Hola <strong>{formData.nombreCompleto || activeTurno?.cliente?.nombreCompleto}</strong>, aquí podés consultar y gestionar {activeTurnos.length > 1 ? 'tus turnos activos' : 'tu turno activo'}.
+              </>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* =========================================================
+                PASO 1: IDENTIFICACIÓN Y REGISTRO DIFERIDO
+               ========================================================= */}
+            {step === 1 && (
+              <div>
+                <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                  <h1 style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    Reserva tu Turno Online
+                  </h1>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
+                    Ingresá tu correo electrónico para gestionar o agendar tu sesión de depilación láser.
                   </p>
+                </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
-                    {(activeTurnos.length > 0 ? activeTurnos : (activeTurno ? [activeTurno] : [])).map((t, idx) => {
-                      let zonasFormatted = '';
+                {/* Email Verification Box */}
+                <form onSubmit={handleLookupEmail} style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', marginBottom: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                  <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                    Correo Electrónico
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <input
+                      type="email"
+                      required
+                      placeholder="ejemplo@correo.com"
+                      value={emailInput}
+                      onChange={e => {
+                        setEmailInput(e.target.value);
+                        setClientChecked(false);
+                      }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '14px 16px', border: '1.5px solid var(--border-color)', borderRadius: '10px', fontSize: '16px' }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={searchingClient}
+                      style={{ width: '100%', background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '1rem' }}
+                    >
+                      {searchingClient ? 'Verificando...' : 'Consultar'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Active Turnos List */}
+                {clientChecked && existingClient && activeTurnos && activeTurnos.length > 0 && (
+                  <div style={{ marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px' }}>
+                      {activeTurnos.length === 1 ? '¡Tenés un turno activo agendado!' : `¡Tenés ${activeTurnos.length} turnos activos agendados!`}
+                    </h3>
+
+                    {activeTurnos.map((turno, idx) => {
+                      const diffHours = getHoursUntilTurno(turno);
+                      const isWithin72hs = diffHours < 72;
+                      let parsedZones = '';
                       try {
-                        const parsed = typeof t?.zonas === 'string' ? JSON.parse(t.zonas) : t?.zonas;
-                        if (Array.isArray(parsed)) {
-                          zonasFormatted = parsed.map(z => z?.nombre || z?.name || String(z || '')).filter(Boolean).join(', ');
-                        } else if (typeof parsed === 'object' && parsed !== null) {
-                          zonasFormatted = parsed.nombre || parsed.name || JSON.stringify(parsed);
-                        } else {
-                          zonasFormatted = String(t?.zonas || '');
+                        const p = JSON.parse(turno.zonas);
+                        if (Array.isArray(p)) {
+                          parsedZones = p.map(z => z.nombre).join(', ');
                         }
                       } catch (e) {
-                        zonasFormatted = String(t?.zonas || '');
+                        parsedZones = turno.zonas || '';
                       }
 
-                      const fechaTurnoStr = t?.fecha ? (() => {
-                        try {
-                          return new Date(t.fecha).toLocaleDateString('es-ES', { dateStyle: 'full', timeZone: 'UTC' });
-                        } catch (e) {
-                          return String(t.fecha);
-                        }
-                      })() : '';
-
-                      const senaAmount = Number(t?.valorSeña) || 0;
-                      const totalAmount = Number(t?.valorTotal) || 0;
-                      const saldoAmount = Math.max(0, totalAmount - senaAmount);
-
                       return (
-                        <div key={t?.id || idx} className="glass-card premium-border" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                          {activeTurnos.length > 1 && (
-                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--color-gold)', borderBottom: '1px dashed var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
-                              Turno {idx + 1} de {activeTurnos.length}
-                            </div>
-                          )}
-                          <div className={styles.summaryRow}>
-                            <span>Día del Turno:</span>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                              {fechaTurnoStr}
-                            </span>
-                          </div>
-                          <div className={styles.summaryRow}>
-                            <span>Horario:</span>
-                            <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                              {t?.horaInicio || ''} a {t?.horaFin || ''}
-                            </span>
-                          </div>
-                          <div className={styles.summaryRow} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-                            <span>Zonas contratadas:</span>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right' }}>
-                              {zonasFormatted}
-                            </span>
-                          </div>
-                          <div className={styles.summaryRow}>
-                            <span>Valor total del turno:</span>
-                            <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                              ${totalAmount.toLocaleString('es-ES')}
-                            </span>
-                          </div>
-                          <div className={styles.summaryRow}>
-                            <span>Seña abonada:</span>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                              ${senaAmount.toLocaleString('es-ES')}
-                            </span>
-                          </div>
-                          {Boolean(t?.bonificacion && t.bonificacion > 0 && t.descuentoTipo && t.descuentoTipo !== 'NINGUNO' && t.descuentoTipo !== 'SIN_DESCUENTO') && (
-                            <div className={styles.summaryRow}>
-                              <span>Descuento aplicado:</span>
-                              <span style={{ color: '#ff5252', fontWeight: 600 }}>
-                                -${Number(t.bonificacion).toLocaleString('es-ES')} ({t.descuentoTipo === 'PORCENTAJE' ? `${t.descuentoValor || Math.round((t.bonificacion / (t.valorTotal + t.bonificacion)) * 100)}%` : `$${Number(t.descuentoValor || t.bonificacion).toLocaleString('es-ES')}`})
-                              </span>
+                        <div
+                          key={turno.id || idx}
+                          style={{
+                            background: '#ffffff',
+                            border: isWithin72hs ? '2px solid #ef4444' : '2px solid #7a1f1e',
+                            borderRadius: '16px',
+                            padding: '22px 24px',
+                            marginBottom: '18px',
+                            boxShadow: '0 4px 18px rgba(122, 31, 30, 0.08)'
+                          }}
+                        >
+                          {isWithin72hs && (
+                            <div className={styles.alert72hs} style={{ marginTop: 0, marginBottom: '16px' }}>
+                              <div className={styles.alert72hsTitle}>
+                                <span>⚠️</span> Aviso de Política de Señas (72hs)
+                              </div>
+                              <div style={{ fontSize: '0.88rem', lineHeight: 1.4 }}>
+                                Faltan menos de 72 horas para tu turno. Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs de anticipación. Se cancelará tu turno anterior para agendar uno nuevo.
+                              </div>
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
-                            <button 
-                              onClick={() => handleRescheduleActiveTurno(t)} 
-                              className="btn btn-primary" 
-                              disabled={submittingCancel || submittingReschedule}
-                              style={{ flex: 1 }}
-                            >
-                              🔄 Reprogramar
-                            </button>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                            <span style={{ fontWeight: '800', fontSize: '1.1rem', color: '#7a1f1e' }}>
+                              {activeTurnos.length > 1 ? `Turno #${idx + 1}` : 'Detalles de tu Turno'}
+                            </span>
+                            <span style={{
+                              background: turno.estado === 'SEÑADO' ? '#dcfce7' : '#fef2f2',
+                              color: turno.estado === 'SEÑADO' ? '#166534' : '#991b1b',
+                              padding: '4px 10px',
+                              borderRadius: '20px',
+                              fontSize: '0.8rem',
+                              fontWeight: '800'
+                            }}>
+                              {turno.estado}
+                            </span>
+                          </div>
 
-                            <button 
-                              onClick={() => handleCancelActiveTurno(t)} 
-                              className="btn btn-secondary" 
-                              disabled={submittingCancel || submittingReschedule}
-                              style={{ flex: 1, borderColor: '#ff5252', color: '#ffb4b4', backgroundColor: 'rgba(255,82,82,0.05)' }}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '18px', fontSize: '0.95rem' }}>
+                            <div>
+                              <strong>Fecha:</strong> {new Date(turno.fecha).toLocaleDateString('es-AR', { dateStyle: 'long', timeZone: 'UTC' })}
+                            </div>
+                            <div>
+                              <strong>Horario:</strong> {turno.horaInicio} a {turno.horaFin} hs
+                            </div>
+                            <div>
+                              <strong>Duración:</strong> {turno.duracionMinutos} min
+                            </div>
+                            <div>
+                              <strong>Total:</strong> ${Number(turno.valorTotal).toLocaleString('es-AR')}
+                            </div>
+                            {parsedZones && (
+                              <div style={{ gridColumn: '1 / -1', color: '#475569' }}>
+                                <strong>Zonas:</strong> {parsedZones}
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {isWithin72hs ? (
+                              <button
+                                type="button"
+                                onClick={() => handleNuevoTurnoPor72hs(turno)}
+                                style={{ flex: 1, minWidth: '150px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}
+                              >
+                                ➕ Nuevo turno
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleInitiateReschedule(turno)}
+                                style={{ flex: 1, minWidth: '150px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}
+                              >
+                                🗓️ Reagendar Turno
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleCancelTurno(turno)}
+                              style={{ flex: 1, minWidth: '150px', background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}
                             >
-                              {submittingCancel ? 'Cancelando...' : '❌ Cancelar'}
+                              ✕ Cancelar Turno
                             </button>
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                )}
 
-                  <button 
-                    onClick={() => {
-                      setIsSelfManagement(false);
-                      setActiveTurno(null);
-                      setActiveTurnos([]);
-                      setDniChecked(false);
-                      setFormData(prev => ({ ...prev, email: '' }));
-                    }}
-                    className="btn btn-secondary"
-                    style={{ width: '100%' }}
-                  >
-                    Volver al inicio
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className={styles.formSection}>
-              <h2 className={styles.sectionTitle}>Datos Personales</h2>
-              <p className={styles.sectionSubtitle}>Completá tus datos para iniciar la reserva del turno online.</p>
-
-              {!dniChecked ? (
-                <form onSubmit={handleDniCheck}>
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Ingresá tu Email (Correo Electrónico) *</label>
-                  <input
-                    type="email"
-                    placeholder="Ej. juan@gmail.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                  <small style={{ color: 'var(--text-secondary)', marginTop: '0.4rem', display: 'block' }}>
-                    Utilizamos tu Email para identificarte de forma segura y agilizar tu reserva.
-                  </small>
-                </div>
-                <div className={styles.actionsBar} style={{ justifyContent: 'flex-end' }}>
-                  <button type="submit" className="btn btn-primary" disabled={searchingDni}>
-                    {searchingDni ? 'Verificando...' : 'Continuar'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleNextStep1}>
-                <div className={styles.inputGroup}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className={styles.inputLabel}>Email</label>
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        setDniChecked(false);
-                        setFormData(prev => ({ ...prev, email: '', nombreCompleto: '', whatsapp: '', dni: '' }));
-                      }} 
-                      style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer', fontSize: '0.85rem' }}
+                {/* Client Exists but NO Active Turno */}
+                {clientChecked && existingClient && (!activeTurnos || activeTurnos.length === 0) && (
+                  <div style={{ background: '#ffffff', border: '1.5px solid #86efac', borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#166534', marginBottom: '8px' }}>
+                      ¡Hola {existingClient.nombreCompleto}!
+                    </h3>
+                    <p style={{ color: '#475569', marginBottom: '20px' }}>
+                      No tenés turnos activos registrados. Podés reservar tu próxima sesión ahora mismo.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      style={{ background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 28px', fontSize: '1.05rem', fontWeight: '700', cursor: 'pointer' }}
                     >
-                      Modificar Email
+                      Elegir Zonas y Horario →
                     </button>
                   </div>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    disabled
-                    style={{ opacity: 0.7 }}
-                  />
-                </div>
+                )}
 
-                <div className={styles.inputRow}>
-                  <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Nombre *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Gonzalo"
-                      value={formData.nombre || ''}
-                      onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className={styles.inputGroup} style={{ flex: 1 }}>
-                    <label className={styles.inputLabel}>Apellido *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Pérez"
-                      value={formData.apellido || ''}
-                      onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>Teléfono / WhatsApp *</label>
-                  <PhoneInput
-                    countryCode={formData.whatsappCountry || '54'}
-                    onCountryChange={(code) => setFormData({ ...formData, whatsappCountry: code })}
-                    customCode={formData.whatsappCustomCode || ''}
-                    onCustomCodeChange={(code) => setFormData({ ...formData, whatsappCustomCode: code })}
-                    phoneNumber={formData.whatsapp || ''}
-                    onPhoneChange={(num) => setFormData({ ...formData, whatsapp: num })}
-                    required
-                  />
-                </div>
-
-                <div className={styles.inputGroup}>
-                  <label className={styles.inputLabel}>DNI (Opcional)</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. 12345678"
-                    value={formData.dni}
-                    onChange={(e) => setFormData({ ...formData, dni: e.target.value.replace(/\D/g, '') })}
-                  />
-                  <small style={{ color: 'var(--text-secondary)', marginTop: '0.4rem', display: 'block' }}>
-                    Opcional. Permite registrar tu documento para gestiones administrativas.
-                  </small>
-                </div>
-
-                <div className={styles.actionsBar} style={{ justifyContent: 'flex-end' }}>
-                  <button type="submit" className="btn btn-primary">Siguiente Paso</button>
-                </div>
-              </form>
-            )}
-          </div>
-        ))}
-
-        {/* STEP 2: Zone Selection */}
-        {step === 2 && (
-          <div className={styles.formSection}>
-            <h2 className={styles.sectionTitle}>{rescheduleMode ? 'Zonas de tu Turno' : 'Zonas de Depilación'}</h2>
-            {rescheduleMode ? (
-              <div>
-                <p className={styles.sectionSubtitle}>Zonas contratadas del turno que estás reprogramando:</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-                  {selectedZones.map((z, idx) => (
-                    <div key={idx} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                      <span style={{ fontWeight: 600 }}>{z.nombre}</span>
-                      <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>${(z.precioBase || z.precio || 0).toLocaleString()}</span>
+                {/* Deferred Client Form (Does not exist in DB yet) */}
+                {clientChecked && !existingClient && (
+                  <form onSubmit={handleProceedToZones} style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', border: '1.5px solid var(--border-color)', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <span style={{ display: 'inline-block', background: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700', marginBottom: '6px' }}>
+                        Cliente Nuevo
+                      </span>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                        Completá tus datos para continuar
+                      </h3>
                     </div>
-                  ))}
-                </div>
-                <div className={styles.actionsBar}>
-                  <button onClick={() => {
-                    setRescheduleMode(false);
-                    setIsSelfManagement(true);
-                    setStep(1);
-                  }} className="btn btn-secondary">Atrás</button>
-                  <button onClick={() => setStep(3)} className="btn btn-primary">Elegir Horario</button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className={styles.sectionSubtitle}>Selecciona una o más zonas corporales para realizarte el tratamiento.</p>
 
-                <div className={styles.zonesGrid}>
-                  {zones.map((zone) => {
-                    const isActive = selectedZones.some(z => z.id === zone.id);
+                    <div className={styles.inputRow} style={{ marginBottom: '14px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px' }}>
+                          Nombre *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.nombre}
+                          onChange={e => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                          placeholder="Tu nombre"
+                          style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border-color)', borderRadius: '8px' }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px' }}>
+                          Apellido *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.apellido}
+                          onChange={e => setFormData(prev => ({ ...prev, apellido: e.target.value }))}
+                          placeholder="Tu apellido"
+                          style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border-color)', borderRadius: '8px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px' }}>
+                        WhatsApp *
+                      </label>
+                      <PhoneInput
+                        countryCode={formData.whatsappCountry}
+                        customCode={formData.whatsappCustomCode}
+                        phoneNumber={formData.whatsapp}
+                        onCountryChange={c => setFormData(prev => ({ ...prev, whatsappCountry: c }))}
+                        onCustomCodeChange={code => setFormData(prev => ({ ...prev, whatsappCustomCode: code }))}
+                        onPhoneChange={num => setFormData(prev => ({ ...prev, whatsapp: num }))}
+                        placeholder="Ej: 11 2345 6789"
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px' }}>
+                        DNI (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.dni}
+                        onChange={e => setFormData(prev => ({ ...prev, dni: e.target.value }))}
+                        placeholder="Tu documento"
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border-color)', borderRadius: '8px' }}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      style={{ width: '100%', background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '1.05rem', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      Continuar a Selección de Zonas →
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* =========================================================
+                PASO 2: SELECCIÓN DE ZONAS (NUEVA RESERVA)
+               ========================================================= */}
+            {step === 2 && (
+              <div>
+                <div style={{ marginBottom: '24px' }}>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '6px' }}>
+                    Seleccioná las Zonas a Tratar
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    Podés elegir una o varias zonas. El tiempo y valor total se calcularán automáticamente.
+                  </p>
+                </div>
+
+                {/* Threshold Banner: Regla de $65.000 */}
+                {isThresholdMet ? (
+                  <div className={styles.thresholdBanner}>
+                    <span className={styles.thresholdIcon}>✨</span>
+                    <div>
+                      <strong>¡Turno Preferencial Habilitado!</strong> Al ser un monto de <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong> (mayor o igual a $65.000), se habilitan todos los días disponibles del calendario para agendar.
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.thresholdBannerLocked}>
+                    <span className={styles.thresholdIcon}>ℹ️</span>
+                    <div>
+                      Monto actual: <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong>. En la agenda de autogestión se mostrarán los días que ya cuentan con citas agendadas para optimizar horarios (si seleccionás zonas por $65.000 o más, se habilitan todos los días libres).
+                    </div>
+                  </div>
+                )}
+
+                {/* Zones Catalog Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+                  {zones.map(z => {
+                    const isSelected = selectedZoneIds.includes(z.id);
                     return (
                       <div
-                        key={zone.id}
-                        className={`${styles.zoneCard} ${isActive ? styles.zoneCardActive : ''}`}
-                        onClick={() => toggleZone(zone)}
+                        key={z.id}
+                        onClick={() => toggleZone(z.id)}
+                        style={{
+                          background: isSelected ? '#fef2f2' : '#ffffff',
+                          border: isSelected ? '2px solid #7a1f1e' : '1.5px solid var(--border-color)',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isSelected ? '0 4px 12px rgba(122, 31, 30, 0.12)' : 'none'
+                        }}
                       >
-                        <div className={styles.zoneInfo}>
-                          <span className={styles.zoneName}>{zone.nombre}</span>
-                          <div className={styles.zoneMeta}>
-                            <span className={styles.zoneMetaItem}>
-                              <ClockIcon /> {zone.duracionMinutos} min
-                            </span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          style={{ width: '18px', height: '18px', accentColor: '#7a1f1e', cursor: 'pointer' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '800', fontSize: '1rem', color: isSelected ? '#7a1f1e' : 'var(--text-primary)' }}>
+                            {z.nombre}
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span className={styles.zonePrice}>${zone.precioBase.toLocaleString()}</span>
-                          <div className={`${styles.checkbox} ${isActive ? styles.checkboxActive : ''}`}>
-                            {isActive && '✓'}
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            {z.duracionMinutos} min • ${Number(z.precioBase).toLocaleString('es-AR')}
                           </div>
                         </div>
                       </div>
@@ -783,252 +956,423 @@ export default function Home() {
                   })}
                 </div>
 
-                {/* Sub-form if "Otro" is selected */}
-                {selectedZones.some(z => z.nombre === 'Otro') && (
-                  <div className={styles.inputGroup} style={{ animation: 'fadeIn 0.3s ease' }}>
-                    <label className={styles.inputLabel}>Especificá qué zona deseas depilar y te contactaremos para cotizar *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Espalda completa y hombros"
-                      value={formData.otroZona}
-                      onChange={(e) => setFormData({ ...formData, otroZona: e.target.value })}
-                      required
-                    />
-                  </div>
-                )}
-
-                {selectedZones.length > 0 && (
-                  <div className="glass-card premium-border" style={{ marginTop: '2rem' }}>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--color-gold)' }}>Resumen del Servicio</h3>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span>Duración estimada:</span>
-                      <span style={{ fontWeight: 600 }}>{calculatedDetails.duracionMinutos} minutos</span>
+                {/* Summary Box */}
+                <div style={{ background: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px 24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      Zonas elegidas: <strong>{selectedZoneIds.length}</strong> • Duración estimada: <strong>{duracionMinutos} min</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span>Precio Total Estimado:</span>
-                      <span style={{ fontWeight: 600 }}>${calculatedDetails.valorTotal.toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-gold)' }}>
-                      <span>Seña a abonar hoy (MercadoPago):</span>
-                      <span style={{ fontWeight: 700 }}>${calculatedDetails.valorSeña.toLocaleString()}</span>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '4px' }}>
+                      Total: ${Number(valorTotal).toLocaleString('es-AR')}
+                      <span style={{ fontSize: '0.9rem', color: '#7a1f1e', marginLeft: '12px', fontWeight: '700' }}>
+                        (Seña: ${Number(valorSeña).toLocaleString('es-AR')})
+                      </span>
                     </div>
                   </div>
-                )}
 
-                <div className={styles.actionsBar}>
-                  <button onClick={() => setStep(1)} className="btn btn-secondary">Atrás</button>
-                  <button onClick={handleNextStep2} className="btn btn-primary">Elegir Horario</button>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      ← Volver
+                    </button>
+                    <button
+                      type="button"
+                      disabled={selectedZoneIds.length === 0}
+                      onClick={() => setStep(3)}
+                      style={{ background: selectedZoneIds.length === 0 ? '#cbd5e1' : 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '800', cursor: selectedZoneIds.length === 0 ? 'not-allowed' : 'pointer' }}
+                    >
+                      Continuar a Horarios →
+                    </button>
+                  </div>
                 </div>
-              </>
+              </div>
             )}
-          </div>
-        )}
 
-        {/* STEP 3: Day & Time Selection */}
-        {step === 3 && (
-          <div className={styles.formSection}>
-            <h2 className={styles.sectionTitle}>Elegí Día y Horario</h2>
-            <p className={styles.sectionSubtitle}>Selecciona el día de tu turno. Solo se mostrarán los horarios de atención disponibles.</p>
-
-            <label className={styles.inputLabel}>Seleccionar Día</label>
-            <div className={styles.datesContainer}>
-              {dateList.map((date, index) => {
-                const isActive = selectedDate && selectedDate.toDateString() === date.toDateString();
-                const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
-                const monthName = date.toLocaleDateString('es-ES', { month: 'short' });
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    className={`${styles.dateButton} ${isActive ? styles.dateButtonActive : ''}`}
-                    onClick={() => setSelectedDate(date)}
-                  >
-                    <span className={styles.dateDayName}>{dayName}</span>
-                    <span className={styles.dateDayNumber}>{date.getDate()}</span>
-                    <span className={styles.dateMonthName}>{monthName}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {selectedDate && (
-              <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                <label className={styles.inputLabel}>Horarios Disponibles para {selectedDate.toLocaleDateString('es-ES', { dateStyle: 'long' })}</label>
-                
-                {loadingSlots ? (
-                  <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--color-gold)' }}>
-                    Cargando horarios disponibles...
+            {/* =========================================================
+                PASO 3: CALENDARIO Y HORARIOS (MODELO ALTA DE TURNO)
+               ========================================================= */}
+            {step === 3 && (
+              <div>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    {rescheduleMode && (
+                      <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' }}>
+                        MODO REPROGRAMAR
+                      </span>
+                    )}
+                    <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                      Elegí el Día y Horario
+                    </h2>
                   </div>
-                ) : availableSlots.length === 0 ? (
-                  <div className={styles.emptyState}>
-                    No hay horarios disponibles en este día para la duración seleccionada. Por favor, elegí otra fecha.
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', margin: 0 }}>
+                    Duración del turno: <strong>{duracionMinutos} minutos</strong>. Tocá un día en verde para ver los horarios disponibles pegados a las citas.
+                  </p>
+                </div>
+
+                {/* Calendar Card */}
+                <div className={styles.calendarContainer}>
+                  {/* Month Navigation */}
+                  <div className={styles.calendarNav}>
+                    <button
+                      type="button"
+                      onClick={handlePrevMonth}
+                      className={styles.navBtn}
+                      aria-label="Mes anterior"
+                    >
+                      <span className={styles.navBtnIcon}>←</span>
+                      <span className={styles.navBtnText}> Anterior</span>
+                    </button>
+                    <span className={styles.monthLabel}>
+                      {MONTH_NAMES[calendarMonth - 1]} {calendarYear}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNextMonth}
+                      className={styles.navBtn}
+                      aria-label="Mes siguiente"
+                    >
+                      <span className={styles.navBtnText}>Siguiente </span>
+                      <span className={styles.navBtnIcon}>→</span>
+                    </button>
                   </div>
-                ) : (
-                  <div className={styles.slotsGrid}>
-                    {availableSlots.map((slot, index) => {
-                      const isActive = selectedSlot && selectedSlot.horaInicio === slot.horaInicio;
+
+                  {/* Weekday Headers */}
+                  <div className={styles.calendarWeekdays}>
+                    {WEEKDAYS.map(w => (
+                      <div key={w}>{w}</div>
+                    ))}
+                  </div>
+
+                  {/* Days Grid */}
+                  <div className={styles.calendarGrid}>
+                    {calendarCells.map(cell => {
+                      if (cell.isBlank) {
+                        return <div key={cell.key} style={{ minHeight: '44px' }} />;
+                      }
+
+                      const { dateStr, dayNumber, dayInfo } = cell;
+                      const isSelected = selectedDateStr === dateStr;
+
+                      let cellClass = styles.dayCellDisabled;
+                      let isClickable = false;
+
+                      if (dayInfo.disponible) {
+                        cellClass = isSelected ? `${styles.dayCell} ${styles.dayCellSelected}` : `${styles.dayCell} ${styles.dayCellAvailable}`;
+                        isClickable = true;
+                      } else if (dayInfo.lleno || dayInfo.motivo === 'DIA_LLENO') {
+                        // Fondo rojo para días completos indicado por Luciano
+                        cellClass = `${styles.dayCell} ${styles.dayCellFull}`;
+                      } else if (dayInfo.motivo === 'DIA_CERRADO') {
+                        cellClass = `${styles.dayCell} ${styles.dayCellClosed}`;
+                      }
+
                       return (
-                        <button
-                          key={index}
-                          type="button"
-                          className={`${styles.slotButton} ${isActive ? styles.slotButtonActive : ''}`}
-                          onClick={() => setSelectedSlot(slot)}
+                        <div
+                          key={dateStr}
+                          className={cellClass}
+                          onClick={() => {
+                            if (isClickable) {
+                              setSelectedDateStr(dateStr);
+                              setSelectedSlot(null);
+                              setTimeout(() => {
+                                const el = document.getElementById('slots-section');
+                                if (el) {
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                              }, 60);
+                            }
+                          }}
+                          title={
+                            dayInfo.disponible
+                              ? `${dayInfo.slots?.length || 0} horarios disponibles`
+                              : (dayInfo.lleno ? 'Día completo sin huecos disponibles' : (dayInfo.motivo === 'DIA_CERRADO' ? 'Día aún no abierto para este importe' : 'No disponible'))
+                          }
                         >
-                          {slot.horaInicio}
-                        </button>
+                          <span>{dayNumber}</span>
+                          {dayInfo.disponible && (
+                            <span className={styles.daySlotCount}>
+                              {dayInfo.slots?.length || 0}hs
+                            </span>
+                          )}
+                          {dayInfo.lleno && (
+                            <span style={{ fontSize: '0.62rem', fontWeight: '800', marginTop: '2px' }}>
+                              Lleno
+                            </span>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
+
+                  {/* Legend */}
+                  <div className={styles.calendarLegend}>
+                    <div className={styles.legendItem}>
+                      <span className={styles.legendDot} style={{ background: '#10b981' }}></span>
+                      <span>Disponible</span>
+                    </div>
+                    <div className={styles.legendItem}>
+                      <span className={styles.legendDot} style={{ background: '#f43f5e' }}></span>
+                      <span>Completo (Sin hueco)</span>
+                    </div>
+                    <div className={styles.legendItem}>
+                      <span className={styles.legendDot} style={{ background: '#cbd5e1' }}></span>
+                      <span>No abierto / Pasado</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Available Slots Section for Selected Day */}
+                {selectedDateStr && (
+                  <div className={styles.slotsContainer} id="slots-section">
+                    <div className={styles.slotsHeader}>
+                      <div className={styles.slotsTitle}>
+                        Horarios para el {new Date(selectedDateStr + 'T12:00:00Z').toLocaleDateString('es-AR', { dateStyle: 'full' })}
+                      </div>
+                      <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                        {currentDaySlots.length} horarios encontrados (agrupados por proximidad)
+                      </span>
+                    </div>
+
+                    {currentDaySlots.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                        No se encontraron huecos para la duración seleccionada en este día.
+                      </div>
+                    ) : (
+                      <div className={styles.slotsGrid}>
+                        {currentDaySlots.map((slot, idx) => {
+                          const isSlotSelected = selectedSlot?.horaInicio === slot.horaInicio;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setSelectedSlot(slot)}
+                              className={`${styles.slotBtn} ${isSlotSelected ? styles.slotBtnActive : ''}`}
+                            >
+                              <span>{slot.horaInicio} hs</span>
+                              <span className={styles.slotEndText}>hasta {slot.horaFin} hs</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
+
+                {/* Actions Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (rescheduleMode) {
+                        setStep(1);
+                        setRescheduleMode(false);
+                      } else {
+                        setStep(2);
+                      }
+                    }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    ← Volver
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!selectedSlot}
+                    onClick={() => setStep(4)}
+                    style={{
+                      background: !selectedSlot ? '#cbd5e1' : 'var(--color-gold)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px 24px',
+                      fontWeight: '800',
+                      cursor: !selectedSlot ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Continuar a Confirmación →
+                  </button>
+                </div>
               </div>
             )}
 
-            <div className={styles.actionsBar}>
-              <button onClick={() => setStep(2)} className="btn btn-secondary">Atrás</button>
-              <button
-                onClick={handleNextStep3}
-                className="btn btn-primary"
-                disabled={!selectedSlot}
-              >
-                Confirmar Reserva
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Checkout Summary and MercadoPago */}
-        {step === 4 && (
-          <div className={styles.formSection}>
-            <h2 className={styles.sectionTitle}>{rescheduleMode ? 'Confirmar Reprogramación' : 'Confirmación y Pago'}</h2>
-            <p className={styles.sectionSubtitle}>
-              {rescheduleMode 
-                ? 'Revisa los nuevos detalles de tu turno y confirma para aplicar los cambios. Tu seña se conservará.' 
-                : 'Revisa los detalles de tu turno y procede al pago de la seña por MercadoPago.'}
-            </p>
-
-            <div className="glass-card premium-border" style={{ marginBottom: '2rem' }}>
-              <div className={styles.summaryRow}>
-                <span>Nombre Completo:</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formData.nombreCompleto}</span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span>WhatsApp:</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-                  {formatDisplayPhone(buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp))}
-                </span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span>Día del Turno:</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{selectedDate.toLocaleDateString('es-ES', { dateStyle: 'full' })}</span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span>Horario:</span>
-                <span style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
-                  {selectedSlot.horaInicio} a {selectedSlot.horaFin} ({calculatedDetails.duracionMinutos} min)
-                </span>
-              </div>
-              <div className={styles.summaryRow} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-                <span>Zonas seleccionadas:</span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right' }}>
-                  {selectedZones.map(z => z.nombre === 'Otro' ? formData.otroZona : z.nombre).join(', ')}
-                </span>
-              </div>
-
-              <div className={styles.summaryContainer}>
-                <div className={styles.summaryRow}>
-                  <span>Valor Total:</span>
-                  <span>${calculatedDetails.valorTotal.toLocaleString()}</span>
+            {/* =========================================================
+                PASO 4: CONFIRMACIÓN Y BOTÓN VERDE "PAGAR SEÑA"
+               ========================================================= */}
+            {step === 4 && (
+              <div>
+                <div style={{ marginBottom: '24px' }}>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '6px' }}>
+                    {rescheduleMode ? 'Confirmá el cambio de tu turno' : 'Confirmá tu Reserva'}
+                  </h2>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    {rescheduleMode
+                      ? 'Revisá los datos antes de confirmar la reprogramación de tu turno.'
+                      : 'Revisá los datos antes de proceder al pago de la seña para asegurar tu lugar.'}
+                  </p>
                 </div>
-                <div className={styles.summaryRowSeña}>
-                  <span>{rescheduleMode ? 'Seña (ya abonada):' : 'Seña a abonar:'}</span>
-                  <span>${calculatedDetails.valorSeña.toLocaleString()}</span>
+
+                {/* Summary Card */}
+                <div style={{ background: '#ffffff', border: '1.5px solid var(--border-color)', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: rescheduleMode ? '0' : '20px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>CLIENTE</span>
+                      <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+                        {formData.nombre} {formData.apellido} {existingClient ? `(${existingClient.nombreCompleto})` : ''}
+                      </strong>
+                      <div style={{ fontSize: '0.88rem', color: '#64748b' }}>{emailInput}</div>
+                      <div style={{ fontSize: '0.88rem', color: '#64748b' }}>{formData.whatsapp}</div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>
+                        {rescheduleMode ? 'NUEVA FECHA Y HORA' : 'FECHA Y HORA'}
+                      </span>
+                      <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+                        {new Date(selectedDateStr + 'T12:00:00Z').toLocaleDateString('es-AR', { dateStyle: 'full' })}
+                      </strong>
+                      <div style={{ fontSize: '0.95rem', color: '#7a1f1e', fontWeight: '700', marginTop: '2px' }}>
+                        {selectedSlot?.horaInicio} a {selectedSlot?.horaFin} hs ({duracionMinutos} min)
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>ZONAS ELEGIDAS</span>
+                      <strong style={{ fontSize: '1rem', color: '#0f172a' }}>
+                        {activeZoneObjs.map(z => z.nombre).join(', ') || (activeTurno ? (() => { try { const p = JSON.parse(activeTurno.zonas); return Array.isArray(p) ? p.map(z => z.nombre).join(', ') : activeTurno.zonas; } catch(e) { return activeTurno.zonas; } })() : 'Zonas agendadas')}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Financial Breakdown ONLY for NEW booking, HIDDEN for Reschedule as requested by Luciano */}
+                  {!rescheduleMode && (
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1.05rem' }}>
+                        <span>Valor Total del Servicio:</span>
+                        <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1.15rem', color: '#16a34a', fontWeight: '800' }}>
+                        <span>Seña Requerida:</span>
+                        <span>${Number(valorSeña).toLocaleString('es-AR')}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#64748b' }}>
+                        <span>Saldo a pagar el día de la sesión:</span>
+                        <span>${Number(valorTotal - valorSeña).toLocaleString('es-AR')}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {rescheduleMode && (
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px', color: '#166534', background: '#f0fdf4', padding: '12px 16px', borderRadius: '10px', fontWeight: '600', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>✅</span>
+                      <span>Seña conservada: tu seña abonada previamente se transfiere automáticamente a este nuevo horario.</span>
+                    </div>
+                  )}
                 </div>
-                <div className={styles.summaryRowTotal}>
-                  <span>Saldo a abonar en el local:</span>
-                  <span>${(calculatedDetails.valorTotal - calculatedDetails.valorSeña).toLocaleString()}</span>
+
+                {/* Important Notice */}
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '16px', marginBottom: '24px', fontSize: '0.88rem', color: '#92400e', lineHeight: 1.5 }}>
+                  <strong>Indicaciones Previas Importantes:</strong>
+                  <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+                    <li>Venir afeitado al ras de la noche anterior.</li>
+                    <li>No tomar sol ni rayos UV 48hs antes ni después de la sesión.</li>
+                    <li>La tolerancia por llegada tarde es de 5 minutos al ser turnos exactos.</li>
+                  </ul>
+                </div>
+
+                {/* ACTION BUTTON */}
+                <div style={{ marginBottom: '20px' }}>
+                  {rescheduleMode ? (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleConfirmReschedule}
+                      style={{
+                        width: '100%',
+                        background: '#0284c7',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '16px 24px',
+                        fontSize: '1.15rem',
+                        fontWeight: '800',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
+                        transition: 'transform 0.15s ease, background 0.15s ease'
+                      }}
+                    >
+                      {submitting ? 'Confirmando reprogramación...' : 'Confirmar reprogramación'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handlePagarSeña}
+                      className={styles.btnPagarSena}
+                    >
+                      <WhatsAppIcon />
+                      {submitting ? 'Procesando reserva...' : 'Pagar Seña'}
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem' }}
+                  >
+                    ← Modificar horario o fecha
+                  </button>
                 </div>
               </div>
-            </div>
-
-            {/* Pre-treatment Instructions */}
-            <div className={styles.instructionsCard}>
-              <h3 className={styles.instructionsTitle}>
-                ⚠️ Indicaciones Previas Importantes
-              </h3>
-              <ul className={styles.instructionsList}>
-                <li><span>Tenés que venir <strong>afeitado al ras</strong> con maquinita de afeitar (24hs antes) en las zonas a depilar. No uses cera ni pinza de depilar.</span></li>
-                <li><span>Por favor, asiste con puntualidad. Al ser turnos cortos y precisos, la tolerancia de demora es de solo <strong>5 minutos</strong>.</span></li>
-                <li><span>Dirección del estudio: <strong>Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong>.</span></li>
-              </ul>
-            </div>
-
-            {/* Checkbox to accept terms */}
-            <div className={styles.inputGroup} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '2rem' }}>
-              <input
-                id="terms"
-                type="checkbox"
-                checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                style={{ width: 'auto', marginTop: '0.25rem', cursor: 'pointer' }}
-              />
-              <label htmlFor="terms" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                Confirmo que he leído y acepto venir afeitado al ras y las políticas de demora del local.
-              </label>
-            </div>
-
-            <div className={styles.actionsBar}>
-              <button onClick={() => setStep(3)} className="btn btn-secondary" disabled={loadingCheckout}>Atrás</button>
-              {rescheduleMode ? (
-                <button
-                  onClick={handleConfirmReschedule}
-                  className="btn btn-primary"
-                  style={{ background: 'var(--color-gold)', color: '#000' }}
-                  disabled={!acceptedTerms || loadingCheckout}
-                >
-                  {loadingCheckout ? 'Procesando...' : 'Confirmar Reprogramación'}
-                </button>
-              ) : (
-                <button
-                  onClick={handleCheckout}
-                  className="btn btn-primary"
-                  style={{ background: '#009ee3', color: '#fff' }} // MercadoPago blue style
-                  disabled={!acceptedTerms || loadingCheckout}
-                >
-                  {loadingCheckout ? 'Creando Reserva...' : 'Pagar Seña con MercadoPago'}
-                </button>
-              )}
-            </div>
-          </div>
+            )}
+          </>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className={styles.footer}>
-        <div className={styles.footerContent}>
-          <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Gonzalo Depilación para Hombres</p>
-          <div className={styles.footerLinks}>
-            <a href="https://www.instagram.com/depilacionparahombres/" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
-              <span>📸 Instagram: @depilacionparahombres</span>
-            </a>
-            <a href="https://depilacionparahombres.com/" target="_blank" rel="noopener noreferrer" className={styles.footerLink}>
-              <span>🌐 Sitio Web</span>
-            </a>
-            <span className={styles.footerLink}>
-              📍 Paraná 597, Piso 8, Depto 48, Tribunales, CABA
-            </span>
+      {/* FOOTER: Exclusivamente visible en el PASO 1 como especificó Luciano */}
+      {step === 1 && (
+        <footer className={styles.footer}>
+          <div className={styles.footerContent}>
+            <div className={styles.footerLinks}>
+              <a
+                href="https://www.instagram.com/gonzalo_depilacion/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.footerLink}
+              >
+                <span>📷</span> Instagram
+              </a>
+              <a
+                href="https://depilacionparahombres.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.footerLink}
+              >
+                <span>🌐</span> Sitio Web
+              </a>
+              <a
+                href="https://maps.google.com/?q=Parana+597+Buenos+Aires"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.footerLink}
+              >
+                <span>📍</span> Google Maps
+              </a>
+            </div>
+            <div>
+              © {new Date().getFullYear()} Gonzalo Depilación Masculina • Todos los derechos reservados.
+            </div>
           </div>
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3283.9918239088616!2d-58.3888365!3d-34.6043694!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bccac0b790d96d%3A0xc3cf9e3c9cf1c26b!2sParan%C3%A1%20597%2C%20C1017%20CABA!5e0!3m2!1ses-419!2sar!4v1781197942000!5m2!1ses-419!2sar"
-            className={styles.mapsEmbed}
-            allowFullScreen=""
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          ></iframe>
-          <p style={{ fontSize: '0.75rem', marginTop: '2rem', color: 'var(--text-muted)' }}>
-            © 2026 Gonzalo Depilación. Todos los derechos reservados.
-          </p>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

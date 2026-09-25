@@ -237,6 +237,7 @@ export async function PUT(request, { params }) {
     if (body.clientObservaciones !== undefined && (body.clientObservaciones.trim() !== '' || body.forceClearObservaciones)) {
       clientUpdateData.observaciones = body.clientObservaciones;
     }
+
     // Handle Observaciones del Operador (notasGonzalo):
     // Gonzalo's Rule: Changing operator notes on a turno updates THAT turno and all SUBSEQUENT turnos.
     // It must NEVER change PREVIOUS turnos!
@@ -288,6 +289,7 @@ export async function PUT(request, { params }) {
         clientUpdateData.notasGonzalo = newNotas;
       }
     }
+
     if (body.frecuencia !== undefined && !isNaN(Number(body.frecuencia))) {
       clientUpdateData.frecuencia = Number(body.frecuencia);
     }

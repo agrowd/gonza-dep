@@ -377,17 +377,67 @@
   display: flex;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
+  border-left: 6px solid var(--border-color);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
 }
 
 .neocitaCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
-  border-color: var(--color-gold);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+/* Status soft background tints requested by Luciano matching weekly agenda */
+.neocitaCard.stateSenado {
+  background-color: #e8f5e9 !important;
+  border-color: #c8e6c9 !important;
+  border-left-color: #2e7d32 !important;
+}
+
+.neocitaCard.stateRealizado {
+  background-color: #e3f2fd !important;
+  border-color: #bbdefb !important;
+  border-left-color: #1565c0 !important;
+}
+
+.neocitaCard.stateCancelado {
+  background-color: #ffebee !important;
+  border-color: #ffcdd2 !important;
+  border-left-color: #c62828 !important;
+  opacity: 0.85;
+}
+
+.neocitaCard.stateReprogramado {
+  background-color: #fff3e0 !important;
+  border-color: #ffe0b2 !important;
+  border-left-color: #ef6c00 !important;
+}
+
+.neocitaCard.stateNoAsistio {
+  background-color: #eceff1 !important;
+  border-color: #cfd8dc !important;
+  border-left-color: #78909c !important;
+}
+
+.neocitaCard.statePendienteAut {
+  background-color: #fffde7 !important;
+  border-color: #fff9c4 !important;
+  border-left-color: #fbc02d !important;
+}
+
+.neocitaCard.statePendientePago {
+  background-color: #f3e5f5 !important;
+  border-color: #e1bee7 !important;
+  border-left-color: #8e24aa !important;
+}
+
+.neocitaCard.stateConsulta {
+  background-color: #e0f7fa !important;
+  border-color: #b2ebf2 !important;
+  border-left-color: #00acc1 !important;
 }
 
 .neocitaTimeCol {
@@ -396,16 +446,16 @@
   align-items: center;
   justify-content: center;
   padding: 1rem 0.85rem;
-  min-width: 110px;
-  background-color: rgba(255, 255, 255, 0.03);
-  border-right: 1px solid var(--border-color);
+  min-width: 105px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-right: 1px solid rgba(0, 0, 0, 0.07);
   text-align: center;
 }
 
 .neocitaTimeRange {
   font-size: 0.95rem;
   font-weight: 800;
-  color: var(--color-gold);
+  color: #0f172a;
   line-height: 1.2;
 }
 
@@ -414,8 +464,8 @@
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #334155;
   margin-top: 6px;
 }
 
@@ -715,12 +765,16 @@
 /* Status Pill badge style */
 .statusPill {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.25rem 0.75rem;
   border-radius: 50px;
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   width: fit-content;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .badgeSenado { background-color: var(--status-senado-bg); color: var(--status-senado); }

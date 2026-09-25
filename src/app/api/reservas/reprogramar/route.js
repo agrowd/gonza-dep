@@ -114,13 +114,16 @@ export async function POST(request) {
     }
 
     // 4. Update the appointment in DB
+    const currentObs = turno.observaciones || '';
+    const newObs = currentObs.includes('[REPROGRAMADO_AUTOGESTION]') ? currentObs : `${currentObs} [REPROGRAMADO_AUTOGESTION]`.trim();
     const updatedTurno = await prisma.turno.update({
       where: { id: turnoId },
       data: {
         fecha: targetDate,
         horaInicio,
         horaFin,
-        estado: 'REPROGRAMADO'
+        estado: 'REPROGRAMADO',
+        observaciones: newObs
       },
       include: { cliente: true }
     });
