@@ -50,6 +50,12 @@ export async function GET(request) {
 
     // Helper: calculate slots for a specific day
     const calculateDaySlots = (dayDateStr, dayBusy, hasExistingTurnos) => {
+      // 0. Weekend check: Online bookings are never allowed on Saturdays (6) or Sundays (0)
+      const dayOfWeek = new Date(dayDateStr + 'T12:00:00Z').getUTCDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        return { disponible: false, lleno: false, motivo: 'FIN_DE_SEMANA', slots: [] };
+      }
+
       // 1. If day has full day block
       if (dayBusy.some(b => b.esDiaCompleto)) {
         return { disponible: false, lleno: true, motivo: 'BLOQUEADO', slots: [] };
