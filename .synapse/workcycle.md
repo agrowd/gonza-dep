@@ -1277,5 +1277,26 @@
       * PostgreSQL staging: persistió `2026-07-29 00:00:00 | 0`.
     - Capturas generadas: `staging_agenda_modal_verified.png` y `staging_ficha_settings_verified_new.png`.
   - **Decisión Registrada**: `D-77` en `.synapse/decisions.md`.
+- **25 de Septiembre (14:15 - 14:35 hs - Pase Oficial a Producción Módulos 3, 4, 5 y Mejoras de Agenda/Ficha)**:
+  - **Aprobación del Cliente**: Luciano Gómez dio luz verde vía WhatsApp: *"Perfecto ya con eso podes subir al sistema los cambios, los de autogestión y los de la ficha y agenda que hiciste hoy. Y ahora a la tarde te aviso con cual módulo continuamos"*.
+  - **Instrucción del Usuario**: *"Te doy el ok, que no se te olvide nada de lo que vas a pasar y no haya errores"*.
+  - **Merge a Main y Resolución de Conflictos**:
+    - Se integró la rama `staging` en `main`. Se resolvieron conflictos en 9 archivos tomando como fuente de verdad `staging` (versión probada y validada con D-74 a D-77).
+    - Compilación local exitosa con Turbopack: 40/40 rutas estáticas y dinámicas compiladas en 26.8s sin errores.
+    - Commit `6f5f052` empujado a `origin/main`.
+  - **Despliegue en Producción VPS (Hostinger 187.127.9.216, puerto 3006)**:
+    - Directorio `/srv/gonzalo-dep` actualizado con `git checkout main && git reset --hard origin/main`.
+    - Prisma schema PostgreSQL sincronizado con `agenda_db` vía `npx prisma db push --accept-data-loss` (done en 274ms, cero pérdida de datos).
+    - `npm run build` ejecutado en el servidor: 40/40 rutas compiladas en 24.3s.
+    - PM2 `gonzalo-agenda` (ID 174, PID 1335318) reiniciado en puerto 3006 con estado `online`.
+  - **Verificación E2E en Producción con Puppeteer (`scratch/verify_prod_live.mjs` y `scratch/verify_prod_details.mjs`)**:
+    1. Landing / Autogestión (`/`): Carga perfecta, buscador por email y flujo de reserva.
+    2. Directorio de Clientes (`/admin/clientes`): Carga completa con listado de clientes activos.
+    3. Ficha Histórica (`/admin/clientes?id=...`): Historial limpio a tope, sin doble scroll, mostrando Observaciones del Operador y Comentarios de Turno (`prod_ficha_bertotti.png`).
+    4. Pestaña Notas y Configuración: Acciones Rápidas (WhatsApp, Finalizar Tratamiento, Eliminar Cliente) ubicadas arriba, campos de Fecha Primer Turno y desglose de Sesiones (`prod_ficha_settings.png`).
+    5. Agenda de Turnos (`/admin/agenda`): Vista Día Neocita con tintes suaves por estado (`prod_agenda_dia_view.png`).
+    6. Modal de Turno: Fecha Primer Turno (`29/07/2026`) y Sesiones Realizadas sincronizados (`prod_agenda_modal_palavecino.png`).
+  - **Estado**: ✅ 100% desplegado, operativo y validado en Producción.
+
 
 

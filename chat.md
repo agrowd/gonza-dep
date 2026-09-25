@@ -1662,5 +1662,35 @@
     * PostgreSQL staging constató la persistencia de `2026-07-29 00:00:00 | 0`.
 - **4. Decisión Registrada**: `D-77` en `.synapse/decisions.md`.
 
+## Mensaje del Usuario (2026-09-25 14:15-03:00)
+> [Captura de WhatsApp de Luciano Gómez - `media_1790355698914.png`]:
+> "Perfecto ya con eso podes subir al sistema los cambios, los de autogestión y los de la ficha y agenda que hiciste hoy. Y ahora a la tarde te aviso con cual módulo continuamos"
+> "Te doy el ok, que no se te olvide nada de lo que vas a pasar y no haya errores"
+
+## Respuesta del Asistente (Pase a Producción Módulos 3, 4, 5 y Mejoras de Agenda y Ficha):
+- **1. Merge a Main y Resolución de Conflictos**:
+  - Se realizó el merge de la rama `staging` en `main`.
+  - Se resolvieron los 9 archivos en conflicto tomando la rama `staging` como versión autoritativa y probada (incluyendo desacoplamiento de seña D-74, colores Neocita y mejoras de ficha D-75, autogestión multi-turnos D-76, y sincronización de fecha de primer turno y sesiones D-77).
+  - Compilación local exitosa con Next.js 16.2.9 y Turbopack (40/40 rutas en 26.8s).
+  - Commit de merge `6f5f052` empujado a `origin/main`.
+- **2. Despliegue en Servidor VPS de Producción (`http://187.127.9.216:3006`)**:
+  - En `/srv/gonzalo-dep`: `git fetch origin && git checkout main && git reset --hard origin/main`.
+  - Sincronización de esquema Prisma PostgreSQL sobre la base de datos de producción `agenda_db` (`npx prisma db push --accept-data-loss` ejecutado en 274ms sin pérdida de datos).
+  - `npm run build` ejecutado en el VPS: 40/40 rutas compiladas en 24.3s con cero errores.
+  - PM2 `gonzalo-agenda` (ID 174, PID 1335318) reiniciado en puerto 3006 con estado `online` y lista de procesos guardada en dump PM2.
+- **3. Verificación Automatizada E2E con Puppeteer en Producción**:
+  - `scratch/verify_prod_live.mjs`:
+    * Autogestión (`/`): Home cargada correctamente (`prod_home_verified.png`).
+    * Directorio de Clientes (`/admin/clientes`): Tabla completa con 100% de clientes (`prod_clientes_verified.png`).
+  - `scratch/verify_prod_details.mjs`:
+    * Ficha Histórica (`prod_ficha_bertotti.png`): Historial limpio a tope sin tarjetas superiores innecesarias y sin recuadro con scroll interno (`.paperList`).
+    * Notas y Configuración (`prod_ficha_settings.png`): Acciones Rápidas (WhatsApp, Finalizar Tratamiento, Eliminar) arriba, y campos de Fecha Primer Turno y desglose de Sesiones.
+    * Vista Día Neocita (`prod_agenda_dia_view.png`): Fondos y bordes suaves por estado (verde suave para SEÑADO, azul suave para REALIZADO) y franjas libres con botón directo `+ Agendar`.
+    * Modal de Turno (`prod_agenda_modal_palavecino.png`): Ricardo Palavecino con Fecha Primer Turno `29/07/2026` y Sesiones Realizadas sincronizados.
+- **4. Estado Final**:
+  - Producción (`main`, puerto 3006): **100% desplegado, operativo y validado**.
+  - Staging (`staging`, puerto 3008): **Online y sincronizado**.
+
+
 
 
