@@ -1255,5 +1255,27 @@
       5. Pantalla de éxito verificada: "¡Turno reprogramado con éxito! Tu turno ha sido reprogramado para el 28/09/2026 a las 16:30 hs" y botón "Volver al Inicio".
     - Capturas generadas: `staging_autogestion_email_step1.png`, `staging_autogestion_active_turnos.png`, `staging_autogestion_step3_calendar.png`, `staging_autogestion_step4_reprogramar.png`, `staging_autogestion_reprogramar_success.png`, `staging_autogestion_nuevo_turno_step2.png`.
   - **Decisión Registrada**: `D-76` en `.synapse/decisions.md`.
+- **25 de Septiembre (12:25 - 12:55 hs - Persistencia y Sincronización de Fecha Primer Turno y Sesiones s/ Reporte de Luciano Gomez)**:
+  - **Solicitud del Cliente (Luciano)**:
+    *"La fecha del primer turno y las sesiones que puse en la info del turno no se guardaron en la configuración de la ficha"* (Capturas de Ricardo Palavecino con Fecha Primer Turno `29/07/2026` y Sesiones `2` en Agenda que figuraban vacías en `/admin/clientes`).
+  - **Diagnóstico y Causas Raíz**:
+    1. En `src/app/admin/agenda/page.js`, `checkHasUnsavedChanges()` no comparaba `fechaPrimerTurno` ni `sesionesPrevias`. Al hacer clic en `📁 Ficha Cliente`, navegaba de inmediato a `/admin/clientes` sin invocar el auto-guardado en base de datos.
+    2. En `src/app/admin/clientes/page.js`, `loadClientData()` no calculaba fallback hacia el turno más antiguo si `data.fechaPrimerTurno` era null, mostrando `dd/mm/aaaa` en lugar de la fecha de inicio del cliente.
+    3. En `Notas y Configuración`, solo existía el input `Sesiones Previas (Externas)`, causando confusión con las `Sesiones Realizadas (Total)` vistas en la Agenda.
+  - **Implementación**:
+    1. `src/app/admin/agenda/page.js`: Añadidas comprobaciones `isFechaPrimerChanged` e `isSesionesPreviasChanged` a `checkHasUnsavedChanges()`. En `📁 Ficha Cliente`, `handleCloseDetailsModal()` y `handleScheduleNextTurn()` se aguarda asíncronamente (`await handleSaveClientObservaciones(true)`) antes de redirigir o cerrar. Se actualizan refs y estados locales de forma consistente.
+    2. `src/app/admin/clientes/page.js`: Fallback automático en `loadClientData()` hacia la fecha más antigua de turnos o fecha de alta. En `Notas y Configuración`, se incorporó `🔢 Sesiones Realizadas (Total)` con desglose reactivo `({sis} sis + {prev} prev)` sincronizado bidireccionalmente con `Sesiones Previas (Externas)`.
+  - **Despliegue y Verificación en Staging**:
+    - Compilación local probada y limpia (`npm run build`, 40/40 rutas).
+    - Commit `182cdb5` empujado a `origin/staging`.
+    - Desplegado en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1332783).
+    - Verificación automatizada con Puppeteer (`scratch/verify_fecha_sesiones.mjs`):
+      * Reset inicial en DB: `fechaPrimerTurno = NULL, sesionesPrevias = 0`.
+      * Apertura de turno de Ricardo Palavecino (29/07/2026): detectó fecha `2026-07-29` y total `2`.
+      * Clic en `📁 Ficha Cliente`: ejecutó auto-guardado asíncrono y redirigió a `/admin/clientes`.
+      * Pestaña `Notas y Configuración`: `fechaPrimerTurno: '2026-07-29'`, `sesionesTotal: '2'`, `sesionesPrevias: '0'`, texto `2 sis + 0 prev`.
+      * PostgreSQL staging: persistió `2026-07-29 00:00:00 | 0`.
+    - Capturas generadas: `staging_agenda_modal_verified.png` y `staging_ficha_settings_verified_new.png`.
+  - **Decisión Registrada**: `D-77` en `.synapse/decisions.md`.
 
 
