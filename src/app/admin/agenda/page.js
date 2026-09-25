@@ -775,6 +775,12 @@ export default function AgendaPage() {
       if (effectiveRes && effectiveRes.ok) {
         if (!silent) showToast('Datos del cliente guardados.');
         setTempClientNotasGonzalo(targetNotas);
+        if (targetFechaPrimer) {
+          setTempClientFechaPrimerTurno(targetFechaPrimer);
+          tempClientFechaPrimerTurnoRef.current = targetFechaPrimer;
+        }
+        setTempClientSesionesPrevias(targetSesionesPrevias);
+        tempClientSesionesPreviasRef.current = targetSesionesPrevias;
         setSelectedTurno(prev => {
           if (!prev) return prev;
           return {
@@ -1593,6 +1599,7 @@ export default function AgendaPage() {
 
     const currentTurnoNotas = turno.notasGonzalo || '';
     if (turno.cliente?.id && (
+      checkHasUnsavedChanges() ||
       tempClientObservaciones !== (turno.cliente?.observaciones || '') ||
       (tempClientNotasGonzalo || '').trim() !== currentTurnoNotas.trim() ||
       tempClientFrecuencia !== (turno.cliente?.frecuencia || 4)
@@ -2160,14 +2167,24 @@ export default function AgendaPage() {
       const isTurnoObsChanged = (tempTurnoObservaciones || '').trim() !== (selectedTurno.observaciones || '').trim();
       const isFreqChanged = tempClientFrecuencia !== (selectedTurno.cliente?.frecuencia || 4);
 
-      return isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged;
+      const currentDbFechaPrimer = selectedTurno.cliente?.fechaPrimerTurno
+        ? new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0]
+        : '';
+      const isFechaPrimerChanged = (tempClientFechaPrimerTurno || '') !== currentDbFechaPrimer;
+
+      const currentDbSesionesPrevias = Number(selectedTurno.cliente?.sesionesPrevias || 0);
+      const isSesionesPreviasChanged = Number(tempClientSesionesPrevias || 0) !== currentDbSesionesPrevias;
+
+      return isObsChanged || isNotasChanged || isTurnoObsChanged || isFreqChanged || isFechaPrimerChanged || isSesionesPreviasChanged;
     }
   };
 
-  const handleCloseDetailsModal = () => {
+  const handleCloseDetailsModal = async () => {
     if (checkHasUnsavedChanges()) {
-      const confirmClose = window.confirm('Tenés cambios sin guardar. ¿Estás seguro de cerrar sin guardar los cambios?');
-      if (!confirmClose) return;
+      await handleSaveClientObservaciones(true);
+      if ((tempTurnoObservaciones || '').trim() !== (selectedTurno?.observaciones || '').trim()) {
+        await handleSaveTurnoObservaciones(true);
+      }
     }
     setIsDetailsOpen(false);
     setIsEditing(false);
@@ -3846,7 +3863,7 @@ export default function AgendaPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                            if (checkHasUnsavedChanges()) {
+                            if (checkHasUnsavedChanges() || tempClientFechaPrimerTurno || tempClientSesionesPrevias !== undefined) {
                               await handleSaveClientObservaciones(true);
                             }
                             if (typeof window !== 'undefined' && gridBodyRef.current) {

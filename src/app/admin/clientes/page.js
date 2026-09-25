@@ -410,6 +410,30 @@ function ClientesPageContent() {
 
           const { countryCode, number, customCode } = parsePhoneCountryAndNumber(data.whatsapp || '');
 
+          let initialFechaPrimer = '';
+          if (data.fechaPrimerTurno) {
+            try {
+              initialFechaPrimer = new Date(data.fechaPrimerTurno).toISOString().split('T')[0];
+            } catch {
+              initialFechaPrimer = '';
+            }
+          } else if (data.turnos && data.turnos.length > 0) {
+            const sorted = [...data.turnos].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            if (sorted[0]?.fecha) {
+              try {
+                initialFechaPrimer = new Date(sorted[0].fecha).toISOString().split('T')[0];
+              } catch {
+                initialFechaPrimer = '';
+              }
+            }
+          } else if (data.fechaAlta) {
+            try {
+              initialFechaPrimer = new Date(data.fechaAlta).toISOString().split('T')[0];
+            } catch {
+              initialFechaPrimer = '';
+            }
+          }
+
           setSelectedClient(data);
           setEditNotes({
             nombre,
@@ -422,7 +446,7 @@ function ClientesPageContent() {
             dni: data.dni || '',
             canalAdquisicion: data.canalAdquisicion || 'ORGANICO',
             frecuencia: data.frecuencia,
-            fechaPrimerTurno: data.fechaPrimerTurno ? new Date(data.fechaPrimerTurno).toISOString().split('T')[0] : '',
+            fechaPrimerTurno: initialFechaPrimer,
             fechaNacimiento: data.fechaNacimiento ? new Date(data.fechaNacimiento).toISOString().split('T')[0] : '',
             sesionesPrevias: data.sesionesPrevias !== undefined && data.sesionesPrevias !== null ? data.sesionesPrevias : 0,
             observaciones: data.observaciones || '',
@@ -1543,21 +1567,41 @@ function ClientesPageContent() {
                       </div>
                     </div>
 
-                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
-                        <label className={styles.inputLabel}>Fecha Primer Turno</label>
+                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <div className={styles.inputGroup} style={{ flex: '1 1 200px' }}>
+                        <label className={styles.inputLabel}>📅 Fecha Primer Turno</label>
                         <input
                           type="date"
                           value={editNotes.fechaPrimerTurno || ''}
                           onChange={(e) => setEditNotes({ ...editNotes, fechaPrimerTurno: e.target.value })}
                         />
                       </div>
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <div className={styles.inputGroup} style={{ flex: '1 1 200px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                          <label className={styles.inputLabel} style={{ marginBottom: 0 }}>🔢 Sesiones Realizadas (Total)</label>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                            ({(selectedClient?.turnos || []).filter(t => t.estado === 'REALIZADO').length} sis + {editNotes.sesionesPrevias ?? 0} prev)
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="999"
+                          value={((selectedClient?.turnos || []).filter(t => t.estado === 'REALIZADO').length) + (Number(editNotes.sesionesPrevias) || 0)}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                            const sis = (selectedClient?.turnos || []).filter(t => t.estado === 'REALIZADO').length;
+                            const computedPrevias = Math.max(0, val - sis);
+                            setEditNotes({ ...editNotes, sesionesPrevias: computedPrevias });
+                          }}
+                        />
+                      </div>
+                      <div className={styles.inputGroup} style={{ flex: '1 1 160px' }}>
                         <label className={styles.inputLabel}>Sesiones Previas (Externas)</label>
                         <input
                           type="number"
                           value={editNotes.sesionesPrevias ?? 0}
-                          onChange={(e) => setEditNotes({ ...editNotes, sesionesPrevias: Number(e.target.value) })}
+                          onChange={(e) => setEditNotes({ ...editNotes, sesionesPrevias: Math.max(0, parseInt(e.target.value, 10) || 0) })}
                           min="0"
                           max="999"
                         />
