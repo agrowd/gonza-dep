@@ -2180,12 +2180,6 @@ export default function AgendaPage() {
   };
 
   const handleCloseDetailsModal = async () => {
-    if (checkHasUnsavedChanges()) {
-      await handleSaveClientObservaciones(true);
-      if ((tempTurnoObservaciones || '').trim() !== (selectedTurno?.observaciones || '').trim()) {
-        await handleSaveTurnoObservaciones(true);
-      }
-    }
     setIsDetailsOpen(false);
     setIsEditing(false);
     setSelectedTurno(null);
@@ -2628,8 +2622,8 @@ export default function AgendaPage() {
               });
               const dayBloqueos = bloqueos.filter(b => getAppDateStr(b.fecha) === dateStr);
 
-              const totalRevenue = dayApps.filter(a => a.estado !== 'CANCELADO').reduce((sum, a) => sum + Number(a.valorTotal || 0), 0);
-              const totalSenas = dayApps.filter(a => a.estado !== 'CANCELADO').reduce((sum, a) => sum + Number(a.valorSeña || 0), 0);
+              const totalRevenue = dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorTotal || 0), 0);
+              const totalSenas = dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorSeña || 0), 0);
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
               const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
@@ -3563,7 +3557,6 @@ export default function AgendaPage() {
                             setTempClientFechaPrimerTurno(e.target.value);
                             tempClientFechaPrimerTurnoRef.current = e.target.value;
                           }}
-                          onBlur={() => handleSaveClientObservaciones(true, { fechaPrimerTurno: tempClientFechaPrimerTurnoRef.current })}
                           style={{
                             maxWidth: '180px',
                             padding: '0.45rem 0.6rem',
@@ -3594,7 +3587,6 @@ export default function AgendaPage() {
                           min="0"
                           value={tempClientSesionesTotal}
                           onChange={(e) => handleTotalSesionesChange(e.target.value)}
-                          onBlur={() => handleSaveClientObservaciones(true, { sesionesPrevias: tempClientSesionesPreviasRef.current })}
                           style={{
                             maxWidth: '100px',
                             width: '100px',
@@ -3699,7 +3691,6 @@ export default function AgendaPage() {
                       <textarea
                         value={tempClientObservaciones}
                         onChange={(e) => setTempClientObservaciones(e.target.value)}
-                        onBlur={() => handleSaveClientObservaciones(true)}
                         placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
                         rows={expandedObsGeneral ? 8 : 2}
                         style={{
@@ -3748,7 +3739,6 @@ export default function AgendaPage() {
                       <textarea
                         value={tempClientNotasGonzalo}
                         onChange={(e) => setTempClientNotasGonzalo(e.target.value)}
-                        onBlur={() => handleSaveClientObservaciones(true)}
                         placeholder="Potencia utilizada (J), tolerancia al dolor, zonas sensibles o notas clínicas..."
                         rows={expandedNotasGonzalo ? 8 : 3}
                         style={{
