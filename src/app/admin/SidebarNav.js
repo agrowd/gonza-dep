@@ -131,7 +131,7 @@ const FlashIcon = () => (
 
       <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarHeader}>
-          <img src="/Logo-Gonzalo-Depilacion-para-hombres-Blanco.png" alt="Gonzalo" style={{ width: '210px', height: 'auto' }} />
+          <img src="/Logo-Gonzalo-Depilacion-para-hombres-Blanco.png" alt="Gonzalo" className={styles.sidebarLogo} style={{ width: '210px', height: 'auto' }} />
 
           {/* Close button for mobile inside sidebar */}
           <button onClick={() => setIsOpen(false)} className={styles.mobileCloseBtn} aria-label="Cerrar menú">

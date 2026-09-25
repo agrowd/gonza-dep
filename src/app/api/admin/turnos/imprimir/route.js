@@ -34,7 +34,7 @@ export async function GET(request) {
           gte: new Date(startDate.getTime() - 12 * 3600 * 1000),
           lte: new Date(endDate.getTime() + 12 * 3600 * 1000)
         },
-        estado: { not: 'CANCELADO' }
+        estado: { notIn: ['CANCELADO', 'NO_ASISTIO'] }
       },
       include: {
         cliente: true
