@@ -100,10 +100,27 @@ export default function Home() {
     return calculateTurnDetails(activeZoneObjs, false);
   }, [activeZoneObjs]);
 
-  const valorTotal = calculations.valorTotal;
+  const valorTotal = (rescheduleMode && activeTurno?.valorTotal)
+    ? Number(activeTurno.valorTotal)
+    : calculations.valorTotal;
   const valorSeña = calculations.valorSeña;
-  const duracionMinutos = calculations.duracionMinutos > 0 ? calculations.duracionMinutos : 30;
+  const duracionMinutos = (rescheduleMode && activeTurno?.duracionMinutos)
+    ? Number(activeTurno.duracionMinutos)
+    : (calculations.duracionMinutos > 0 ? calculations.duracionMinutos : 30);
   const isThresholdMet = valorTotal >= 65000;
+
+  // Helper: calculate remaining hours until appointment
+  const getHoursUntilTurno = (t) => {
+    if (!t || !t.fecha) return 999;
+    const nowLocal = new Date();
+    const [h, m] = (t.horaInicio || '12:00').split(':').map(Number);
+    const dObj = new Date(t.fecha);
+    const y = dObj.getUTCFullYear();
+    const mon = dObj.getUTCMonth();
+    const d = dObj.getUTCDate();
+    const turnDate = new Date(y, mon, d, h, m, 0, 0);
+    return (turnDate.getTime() - nowLocal.getTime()) / (1000 * 60 * 60);
+  };
 
   // 3. Client Lookup by Email (Step 1)
   const handleLookupEmail = async (e) => {
@@ -165,13 +182,7 @@ export default function Home() {
     if (!targetTurno) return;
 
     // Check 72 hours rule
-    const nowLocal = new Date();
-    const [h, m] = (targetTurno.horaInicio || '12:00').split(':').map(Number);
-    const turnDate = new Date(targetTurno.fecha);
-    turnDate.setHours(h, m, 0, 0);
-
-    const diffHours = (turnDate.getTime() - nowLocal.getTime()) / (1000 * 60 * 60);
-
+    const diffHours = getHoursUntilTurno(targetTurno);
     if (diffHours < 72) {
       setShow72hsAlert(true);
       setAlert72hsMessage(
@@ -201,6 +212,92 @@ export default function Home() {
     setStep(3);
   };
 
+  // 4.1 Handle "Nuevo turno" when within 72hs (cancels old turn and books fresh)
+  const handleNuevoTurnoPor72hs = async (turno) => {
+    const targetTurno = turno || activeTurno;
+    if (!targetTurno) return;
+
+    const confirmCancel = window.confirm(
+      'Al faltar menos de 72hs, la seña anterior no se conserva según la política de la empresa. Al presionar aceptar se cancelará tu turno anterior y podrás elegir zonas y horario para tu nuevo turno. ¿Deseás continuar?'
+    );
+    if (!confirmCancel) return;
+
+    setSearchingClient(true);
+    try {
+      const res = await fetch('/api/reservas/cancelar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          turnoId: targetTurno.id,
+          email: emailInput.trim(),
+          dni: formData.dni || existingClient?.dni || undefined
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const remaining = activeTurnos.filter(t => t.id !== targetTurno.id);
+        setActiveTurnos(remaining);
+        setActiveTurno(remaining[0] || null);
+
+        // Reset and jump to step 2 for new booking
+        setRescheduleMode(false);
+        setSelectedZoneIds([]);
+        setSelectedDateStr(null);
+        setSelectedSlot(null);
+        setShow72hsAlert(false);
+        setStep(2);
+      } else {
+        alert(data.error || 'No se pudo cancelar el turno anterior.');
+      }
+    } catch (err) {
+      console.error('Error cancelling turno for new booking:', err);
+      alert('Error de conexión al procesar la cancelación.');
+    } finally {
+      setSearchingClient(false);
+    }
+  };
+
+  // 4.2 Handle "Confirmar reprogramación" (Step 4 for rescheduling)
+  const handleConfirmReschedule = async () => {
+    if (!activeTurno || !selectedDateStr || !selectedSlot) return;
+
+    setSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      const res = await fetch('/api/reservas/reprogramar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          turnoId: activeTurno.id,
+          email: emailInput.trim(),
+          dni: formData.dni || existingClient?.dni || undefined,
+          fechaStr: selectedDateStr,
+          horaInicio: selectedSlot.horaInicio
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al reprogramar el turno');
+      }
+
+      const [y, m, d] = selectedDateStr.split('-');
+      const fechaLegible = `${d}/${m}/${y}`;
+
+      setBookingSuccess({
+        isReschedule: true,
+        fecha: fechaLegible,
+        horario: selectedSlot.horaInicio,
+        duracion: duracionMinutos
+      });
+    } catch (err) {
+      console.error('Error rescheduling turno:', err);
+      setErrorMessage(err.message || 'Error al reprogramar el turno. Por favor, intentá nuevamente.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // 5. Handle "Cancelar Turno"
   const handleCancelTurno = async (turno) => {
     const targetTurno = turno || activeTurno;
@@ -218,15 +315,19 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           turnoId: targetTurno.id,
-          email: emailInput.trim()
+          email: emailInput.trim(),
+          dni: formData.dni || existingClient?.dni || undefined
         })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         alert('Tu turno ha sido cancelado con éxito.');
-        setActiveTurno(null);
-        setActiveTurnos([]);
-        handleLookupEmail();
+        const remaining = activeTurnos.filter(t => t.id !== targetTurno.id);
+        setActiveTurnos(remaining);
+        setActiveTurno(remaining[0] || null);
+        if (remaining.length === 0) {
+          setShow72hsAlert(false);
+        }
       } else {
         alert(data.error || 'No se pudo cancelar el turno.');
       }
@@ -467,36 +568,69 @@ Duración: ${duracionMinutos} min`;
         )}
 
         {/* SUCCESS CONFIRMATION MODAL / SCREEN */}
+        {/* SUCCESS CONFIRMATION MODAL / SCREEN */}
         {bookingSuccess ? (
           <div style={{ background: '#ffffff', border: '2px solid #22c55e', borderRadius: '16px', padding: '32px 24px', textAlign: 'center', boxShadow: '0 8px 30px rgba(34, 197, 94, 0.15)' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '2rem' }}>
               ✓
             </div>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
-              ¡Solicitud lista para enviar!
-            </h2>
-            <p style={{ color: '#475569', fontSize: '1.05rem', maxWidth: '520px', margin: '0 auto 24px', lineHeight: 1.5 }}>
-              Para coordinar el pago de la seña y confirmar tu turno, envíanos la solicitud por WhatsApp. El turno quedará agendado en la agenda una vez recibida la seña.
-            </p>
+            {bookingSuccess.isReschedule ? (
+              <>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+                  ¡Turno reprogramado con éxito!
+                </h2>
+                <p style={{ color: '#475569', fontSize: '1.05rem', maxWidth: '520px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                  Tu turno ha sido reprogramado para el <strong>{bookingSuccess.fecha}</strong> a las <strong>{bookingSuccess.horario} hs</strong>. Se ha actualizado tu horario en el sistema.
+                </p>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBookingSuccess(null);
+                      setStep(1);
+                      setRescheduleMode(false);
+                      setActiveTurno(null);
+                      setActiveTurnos([]);
+                      setSelectedDateStr(null);
+                      setSelectedSlot(null);
+                      setSelectedZoneIds([]);
+                      setClientChecked(false);
+                    }}
+                    style={{ background: 'var(--color-primary-dark, #7a1f1e)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 28px', fontWeight: '700', cursor: 'pointer', fontSize: '1rem' }}
+                  >
+                    Volver al Inicio
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+                  ¡Solicitud lista para enviar!
+                </h2>
+                <p style={{ color: '#475569', fontSize: '1.05rem', maxWidth: '520px', margin: '0 auto 24px', lineHeight: 1.5 }}>
+                  Para coordinar el pago de la seña y confirmar tu turno, envíanos la solicitud por WhatsApp. El turno quedará agendado en la agenda una vez recibida la seña.
+                </p>
 
-            <a
-              href={bookingSuccess.whatsappUrl}
-              className={styles.btnPagarSena}
-              style={{ maxWidth: '360px', margin: '0 auto', display: 'inline-flex' }}
-            >
-              <WhatsAppIcon />
-              Abrir WhatsApp Ahora
-            </a>
+                <a
+                  href={bookingSuccess.whatsappUrl}
+                  className={styles.btnPagarSena}
+                  style={{ maxWidth: '360px', margin: '0 auto', display: 'inline-flex' }}
+                >
+                  <WhatsAppIcon />
+                  Abrir WhatsApp Ahora
+                </a>
 
-            <div style={{ marginTop: '24px' }}>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem' }}
-              >
-                Volver al inicio
-              </button>
-            </div>
+                <div style={{ marginTop: '24px' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem' }}
+                  >
+                    Volver al inicio
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -519,7 +653,7 @@ Duración: ${duracionMinutos} min`;
                   <label style={{ display: 'block', fontWeight: '700', marginBottom: '8px', color: 'var(--text-primary)' }}>
                     Correo Electrónico
                   </label>
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <input
                       type="email"
                       required
@@ -529,76 +663,131 @@ Duración: ${duracionMinutos} min`;
                         setEmailInput(e.target.value);
                         setClientChecked(false);
                       }}
-                      style={{ flex: '1', minWidth: '240px', padding: '12px 14px', border: '1.5px solid var(--border-color)', borderRadius: '10px', fontSize: '1rem' }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '14px 16px', border: '1.5px solid var(--border-color)', borderRadius: '10px', fontSize: '16px' }}
                     />
                     <button
                       type="submit"
                       disabled={searchingClient}
-                      style={{ background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: '700', cursor: 'pointer', minWidth: '120px' }}
+                      style={{ width: '100%', background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '1rem' }}
                     >
                       {searchingClient ? 'Verificando...' : 'Consultar'}
                     </button>
                   </div>
                 </form>
 
-                {/* 72hs Policy Alert if user triggered reschedule within 72hs */}
-                {show72hsAlert && (
-                  <div className={styles.alert72hs}>
-                    <div className={styles.alert72hsTitle}>
-                      <span>⚠️</span> Aviso de Política de Señas (72hs)
-                    </div>
-                    <div>{alert72hsMessage}</div>
-                  </div>
-                )}
+                {/* Active Turnos List */}
+                {clientChecked && existingClient && activeTurnos && activeTurnos.length > 0 && (
+                  <div style={{ marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px' }}>
+                      {activeTurnos.length === 1 ? '¡Tenés un turno activo agendado!' : `¡Tenés ${activeTurnos.length} turnos activos agendados!`}
+                    </h3>
 
-                {/* Active Turno Found Card */}
-                {clientChecked && existingClient && activeTurno && (
-                  <div style={{ background: '#ffffff', border: '2px solid #7a1f1e', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 6px 20px rgba(122, 31, 30, 0.08)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                      <span style={{ fontWeight: '800', fontSize: '1.15rem', color: '#7a1f1e' }}>
-                        ¡Tenés un turno activo agendado!
-                      </span>
-                      <span style={{ background: '#fef2f2', color: '#991b1b', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800' }}>
-                        {activeTurno.estado}
-                      </span>
-                    </div>
+                    {activeTurnos.map((turno, idx) => {
+                      const diffHours = getHoursUntilTurno(turno);
+                      const isWithin72hs = diffHours < 72;
+                      let parsedZones = '';
+                      try {
+                        const p = JSON.parse(turno.zonas);
+                        if (Array.isArray(p)) {
+                          parsedZones = p.map(z => z.nombre).join(', ');
+                        }
+                      } catch (e) {
+                        parsedZones = turno.zonas || '';
+                      }
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px', fontSize: '0.95rem' }}>
-                      <div>
-                        <strong>Fecha:</strong> {new Date(activeTurno.fecha).toLocaleDateString('es-AR', { dateStyle: 'long', timeZone: 'UTC' })}
-                      </div>
-                      <div>
-                        <strong>Horario:</strong> {activeTurno.horaInicio} a {activeTurno.horaFin} hs
-                      </div>
-                      <div>
-                        <strong>Duración:</strong> {activeTurno.duracionMinutos} min
-                      </div>
-                      <div>
-                        <strong>Total:</strong> ${Number(activeTurno.valorTotal).toLocaleString('es-AR')}
-                      </div>
-                    </div>
+                      return (
+                        <div
+                          key={turno.id || idx}
+                          style={{
+                            background: '#ffffff',
+                            border: isWithin72hs ? '2px solid #ef4444' : '2px solid #7a1f1e',
+                            borderRadius: '16px',
+                            padding: '22px 24px',
+                            marginBottom: '18px',
+                            boxShadow: '0 4px 18px rgba(122, 31, 30, 0.08)'
+                          }}
+                        >
+                          {isWithin72hs && (
+                            <div className={styles.alert72hs} style={{ marginTop: 0, marginBottom: '16px' }}>
+                              <div className={styles.alert72hsTitle}>
+                                <span>⚠️</span> Aviso de Política de Señas (72hs)
+                              </div>
+                              <div style={{ fontSize: '0.88rem', lineHeight: 1.4 }}>
+                                Faltan menos de 72 horas para tu turno. Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs de anticipación. Se cancelará tu turno anterior para agendar uno nuevo.
+                              </div>
+                            </div>
+                          )}
 
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleInitiateReschedule(activeTurno)}
-                        style={{ flex: 1, minWidth: '160px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer' }}
-                      >
-                        🗓️ Reagendar Turno
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCancelTurno(activeTurno)}
-                        style={{ flex: 1, minWidth: '160px', background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer' }}
-                      >
-                        ✕ Cancelar Turno
-                      </button>
-                    </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                            <span style={{ fontWeight: '800', fontSize: '1.1rem', color: '#7a1f1e' }}>
+                              {activeTurnos.length > 1 ? `Turno #${idx + 1}` : 'Detalles de tu Turno'}
+                            </span>
+                            <span style={{
+                              background: turno.estado === 'SEÑADO' ? '#dcfce7' : '#fef2f2',
+                              color: turno.estado === 'SEÑADO' ? '#166534' : '#991b1b',
+                              padding: '4px 10px',
+                              borderRadius: '20px',
+                              fontSize: '0.8rem',
+                              fontWeight: '800'
+                            }}>
+                              {turno.estado}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '18px', fontSize: '0.95rem' }}>
+                            <div>
+                              <strong>Fecha:</strong> {new Date(turno.fecha).toLocaleDateString('es-AR', { dateStyle: 'long', timeZone: 'UTC' })}
+                            </div>
+                            <div>
+                              <strong>Horario:</strong> {turno.horaInicio} a {turno.horaFin} hs
+                            </div>
+                            <div>
+                              <strong>Duración:</strong> {turno.duracionMinutos} min
+                            </div>
+                            <div>
+                              <strong>Total:</strong> ${Number(turno.valorTotal).toLocaleString('es-AR')}
+                            </div>
+                            {parsedZones && (
+                              <div style={{ gridColumn: '1 / -1', color: '#475569' }}>
+                                <strong>Zonas:</strong> {parsedZones}
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {isWithin72hs ? (
+                              <button
+                                type="button"
+                                onClick={() => handleNuevoTurnoPor72hs(turno)}
+                                style={{ flex: 1, minWidth: '150px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}
+                              >
+                                ➕ Nuevo turno
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleInitiateReschedule(turno)}
+                                style={{ flex: 1, minWidth: '150px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}
+                              >
+                                🗓️ Reagendar Turno
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleCancelTurno(turno)}
+                              style={{ flex: 1, minWidth: '150px', background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: '10px', padding: '12px 18px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem' }}
+                            >
+                              ✕ Cancelar Turno
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
                 {/* Client Exists but NO Active Turno */}
-                {clientChecked && existingClient && !activeTurno && (
+                {clientChecked && existingClient && (!activeTurnos || activeTurnos.length === 0) && (
                   <div style={{ background: '#ffffff', border: '1.5px solid #86efac', borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#166534', marginBottom: '8px' }}>
                       ¡Hola {existingClient.nombreCompleto}!
@@ -888,6 +1077,12 @@ Duración: ${duracionMinutos} min`;
                             if (isClickable) {
                               setSelectedDateStr(dateStr);
                               setSelectedSlot(null);
+                              setTimeout(() => {
+                                const el = document.getElementById('slots-section');
+                                if (el) {
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                              }, 60);
                             }
                           }}
                           title={
@@ -931,7 +1126,7 @@ Duración: ${duracionMinutos} min`;
 
                 {/* Available Slots Section for Selected Day */}
                 {selectedDateStr && (
-                  <div className={styles.slotsContainer}>
+                  <div className={styles.slotsContainer} id="slots-section">
                     <div className={styles.slotsHeader}>
                       <div className={styles.slotsTitle}>
                         Horarios para el {new Date(selectedDateStr + 'T12:00:00Z').toLocaleDateString('es-AR', { dateStyle: 'full' })}
@@ -1010,16 +1205,18 @@ Duración: ${duracionMinutos} min`;
               <div>
                 <div style={{ marginBottom: '24px' }}>
                   <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '6px' }}>
-                    Confirmá tu Reserva
+                    {rescheduleMode ? 'Confirmá el cambio de tu turno' : 'Confirmá tu Reserva'}
                   </h2>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                    Revisá los datos antes de proceder al pago de la seña para asegurar tu lugar.
+                    {rescheduleMode
+                      ? 'Revisá los datos antes de confirmar la reprogramación de tu turno.'
+                      : 'Revisá los datos antes de proceder al pago de la seña para asegurar tu lugar.'}
                   </p>
                 </div>
 
                 {/* Summary Card */}
                 <div style={{ background: '#ffffff', border: '1.5px solid var(--border-color)', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: rescheduleMode ? '0' : '20px' }}>
                     <div>
                       <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>CLIENTE</span>
                       <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
@@ -1030,7 +1227,9 @@ Duración: ${duracionMinutos} min`;
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>FECHA Y HORA</span>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>
+                        {rescheduleMode ? 'NUEVA FECHA Y HORA' : 'FECHA Y HORA'}
+                      </span>
                       <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
                         {new Date(selectedDateStr + 'T12:00:00Z').toLocaleDateString('es-AR', { dateStyle: 'full' })}
                       </strong>
@@ -1042,26 +1241,35 @@ Duración: ${duracionMinutos} min`;
                     <div>
                       <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>ZONAS ELEGIDAS</span>
                       <strong style={{ fontSize: '1rem', color: '#0f172a' }}>
-                        {activeZoneObjs.map(z => z.nombre).join(', ') || 'Zonas agendadas'}
+                        {activeZoneObjs.map(z => z.nombre).join(', ') || (activeTurno ? (() => { try { const p = JSON.parse(activeTurno.zonas); return Array.isArray(p) ? p.map(z => z.nombre).join(', ') : activeTurno.zonas; } catch(e) { return activeTurno.zonas; } })() : 'Zonas agendadas')}
                       </strong>
                     </div>
                   </div>
 
-                  {/* Financial Breakdown */}
-                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1.05rem' }}>
-                      <span>Valor Total del Servicio:</span>
-                      <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong>
+                  {/* Financial Breakdown ONLY for NEW booking, HIDDEN for Reschedule as requested by Luciano */}
+                  {!rescheduleMode && (
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1.05rem' }}>
+                        <span>Valor Total del Servicio:</span>
+                        <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1.15rem', color: '#16a34a', fontWeight: '800' }}>
+                        <span>Seña Requerida:</span>
+                        <span>${Number(valorSeña).toLocaleString('es-AR')}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#64748b' }}>
+                        <span>Saldo a pagar el día de la sesión:</span>
+                        <span>${Number(valorTotal - valorSeña).toLocaleString('es-AR')}</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1.15rem', color: '#16a34a', fontWeight: '800' }}>
-                      <span>Seña Requerida:</span>
-                      <span>${Number(valorSeña).toLocaleString('es-AR')}</span>
+                  )}
+
+                  {rescheduleMode && (
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px', color: '#166534', background: '#f0fdf4', padding: '12px 16px', borderRadius: '10px', fontWeight: '600', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>✅</span>
+                      <span>Seña conservada: tu seña abonada previamente se transfiere automáticamente a este nuevo horario.</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#64748b' }}>
-                      <span>Saldo a pagar el día de la sesión:</span>
-                      <span>${Number(valorTotal - valorSeña).toLocaleString('es-AR')}</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Important Notice */}
@@ -1074,17 +1282,44 @@ Duración: ${duracionMinutos} min`;
                   </ul>
                 </div>
 
-                {/* GREEN "PAGAR SEÑA" BUTTON - WHATSAPP BYPASS AS REQUESTED BY LUCIANO */}
+                {/* ACTION BUTTON */}
                 <div style={{ marginBottom: '20px' }}>
-                  <button
-                    type="button"
-                    disabled={submitting}
-                    onClick={handlePagarSeña}
-                    className={styles.btnPagarSena}
-                  >
-                    <WhatsAppIcon />
-                    {submitting ? 'Procesando reserva...' : 'Pagar Seña'}
-                  </button>
+                  {rescheduleMode ? (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleConfirmReschedule}
+                      style={{
+                        width: '100%',
+                        background: '#0284c7',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '16px 24px',
+                        fontSize: '1.15rem',
+                        fontWeight: '800',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
+                        transition: 'transform 0.15s ease, background 0.15s ease'
+                      }}
+                    >
+                      {submitting ? 'Confirmando reprogramación...' : 'Confirmar reprogramación'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handlePagarSeña}
+                      className={styles.btnPagarSena}
+                    >
+                      <WhatsAppIcon />
+                      {submitting ? 'Procesando reserva...' : 'Pagar Seña'}
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ textAlign: 'center' }}>
