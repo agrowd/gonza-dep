@@ -1597,4 +1597,43 @@
     * `scratch/staging_neocita_colors_verified.png`
 - **5. Decisión Registrada**: `D-75` en `.synapse/decisions.md`.
 
+## Mensaje del Usuario (2026-09-25 10:05-03:00)
+> [6 Capturas de WhatsApp con feedback de Luciano Gomez sobre el Módulo de Autogestión]:
+> 1. Multi-turnos activos (`media_1790341537038.png`): "Y acá le agende 2 turnos pero en autogestion solo le muestra 1 de los turnos, debería dejar cambiar o cancelar independiente los turnos que tiene agendados (pero no agendar si ya tiene turno, eso ya estaba)"
+> 2. Política de seña < 72hs (`media_1790341392838.png` & `media_1790341405168.png`): "Cuándo quiero reagendar y me dice este mensaje de que pierdo la seña porque son menos de 72hs, el botón de reagendar debería decir 'Nuevo turno' y al tocar ese botón debería cancelarse su turno anterior para pasar a agendar uno nuevo"
+> 3. Confirmación de reprogramación > 72hs (`media_1790341485679.png`): "Cuándo puedo reagendar un turno (más de 72hs) y elijo ya fecha y todo, me aparece esta pantalla, pero está sería para agendar nuevo turno, debería decir 'Confirma el cambio de tu turno'. No debería mostrar la seña requerida, ni el valor a pagar ni pedir pagar una seña nueva (abajo aparece el botón de pagar seña en wpp) simplemente debería estar el botón de 'Confirmar reprogramación' y listo lo devuelve al inicio"
+> 4. Input email y botón Consultar (`media_1790341501974.png`): "Acá pone el botón abajo y alarga el cuadro de texto para poder ver el correo que pongo"
+> 5. Auto-scroll en calendario (`media_1790341519886.png`): "Acá cuando elijo el día de turno, que automáticamente me baje el scroll hasta la parte de los horarios por las dudas si algún cliente no sabe que después tiene que bajar"
+
+## Respuesta del Asistente (D-76):
+- **1. Layout de Email en Paso 1 (`src/app/page.js`)**:
+  - Se desacopló el botón 'Consultar' colocándolo debajo del input con `width: 100%`.
+  - El input de email se expandió al 100% del contenedor para que correos largos se lean completos sin recortes ni colapso de ancho.
+- **2. Mapeo de Multi-turnos Activos e Independientes**:
+  - `activeTurnos.map(...)` renderiza tarjetas individuales con su fecha, horario, duración, total, zonas y badge de estado.
+  - Se calcula `diffHours` de forma individual para cada cita.
+  - Se mantiene la restricción de no mostrar el botón de nuevo turno general si el cliente ya cuenta con citas agendadas.
+- **3. Política < 72hs ("➕ Nuevo turno")**:
+  - Si `diffHours < 72`, el botón dice `"➕ Nuevo turno"`.
+  - Al presionarlo, advierte la pérdida de seña, cancela el turno en el backend (`/api/reservas/cancelar`), actualiza el estado y pasa directamente al Paso 2 para elegir zonas y agendar una nueva cita.
+- **4. Confirmación de Reprogramación > 72hs**:
+  - Si `diffHours >= 72`, el botón dice `"🗓️ Reagendar Turno"`.
+  - Salta directo al calendario (Paso 3) conservando las zonas del turno.
+  - Al seleccionar día y horario, avanza al Paso 4 mostrando el título `"Confirmá el cambio de tu turno"`, oculta el desglose de seña y saldo restante (mostrando badge `"Seña conservada"`), y presenta el botón azul `"Confirmar reprogramación"`.
+  - Al pulsar dicho botón, ejecuta `POST /api/reservas/reprogramar` y muestra la pantalla de éxito con `"¡Turno reprogramado con éxito!"` y el botón `"Volver al Inicio"`.
+- **5. Auto-Scroll a la Sección de Horarios**:
+  - En Paso 3, al hacer clic en un día disponible, se dispara un auto-scroll suave (`scrollIntoView({ behavior: 'smooth', block: 'start' })`) hacia el contenedor `#slots-section`.
+- **6. Exclusión de Fines de Semana en Disponibilidad Online (`src/app/api/disponibilidad/route.js`)**:
+  - Se añadió la exclusión estricta de sábados y domingos en el cálculo de disponibilidad online para evitar que se ofrezcan horarios en días que el backend rechaza.
+- **7. Despliegue y Verificación Automatizada en Staging (`http://187.127.9.216:3008`)**:
+  - Desplegado exitosamente en Staging VPS bajo PM2 `gonzalo-agenda-staging` (PID 1330730).
+  - Pruebas E2E con Puppeteer sobre el flujo completo de Luciano Gomez:
+    * Step 1: Input 316px, botón 316px debajo.
+    * Multi-turnos: 2 turnos detectados simultáneamente.
+    * Turno < 72hs: Aviso de política y botón "➕ Nuevo turno". Al tocarlo, cancela y avanza a "Seleccioná las Zonas a Tratar" (Paso 2).
+    * Turno >= 72hs: Botón "🗓️ Reagendar Turno", auto-scroll en calendario, Paso 4 sin seña/saldo y reprogramación confirmada exitosamente con HTTP 200.
+    * Pantalla de éxito validada: "¡Turno reprogramado con éxito!" y botón "Volver al Inicio".
+- **8. Decisión Registrada**: `D-76` en `.synapse/decisions.md`.
+
+
 

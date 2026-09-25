@@ -1224,4 +1224,36 @@
       - `scratch/staging_ficha_settings_verified.png`: Acciones Rápidas en Configuración.
       - `scratch/staging_neocita_colors_verified.png`: Tarjetas diarias con fondos suaves verdes y contraste legible.
   - **Decisión Registrada**: `D-75` en `.synapse/decisions.md`.
+- **25 de Septiembre (10:15 - 10:50 hs - Implementación y Verificación de las 6 Mejoras de Autogestión s/ Feedback de Luciano Gomez)**:
+  - **Solicitud del Cliente (Luciano)**:
+    1. Multi-turnos activos en Autogestión: al consultar email con 2 o más turnos activos, mostrarlos todos en tarjetas independientes con sus propios botones de cambiar/cancelar, restringiendo nuevo turno si ya tiene agendado.
+    2. Política < 72hs al reagendar: si faltan menos de 72hs, el botón debe decir "➕ Nuevo turno", advirtiendo pérdida de seña, cancelando el turno anterior y pasando a Paso 2.
+    3. Confirmación de Reprogramación: en Paso 4 al reagendar (> 72hs), título "Confirmá el cambio de tu turno", supresión de desglose de seña/saldo (seña conservada), y botón "Confirmar reprogramación" que actualiza en DB y muestra pantalla de éxito con "Volver al Inicio".
+    4. Input de email y botón Consultar: botón debajo del input y campo al 100% de ancho para que no se corte el email.
+    5. Auto-scroll a horarios: en Paso 3, al tocar un día en el calendario, bajar automáticamente con scroll suave a la sección de horarios.
+    6. Exclusión de fines de semana en disponibilidad online: evitar que el calendario ofrezca turnos los sábados o domingos.
+  - **Implementación**:
+    1. `src/app/page.js`:
+       - Layout vertical de email en Paso 1 (`width: 100%` y botón abajo).
+       - Mapeo de `activeTurnos.map(...)` para tarjetas individuales independientes con cálculo dinámico de `diffHours` por turno.
+       - Reemplazo condicional del botón: si `diffHours < 72` -> `➕ Nuevo turno` con handler `handleNuevoTurnoPor72hs` (cancela vía `/api/reservas/cancelar` y salta a Paso 2); si `diffHours >= 72` -> `🗓️ Reagendar Turno` con handler `handleInitiateReschedule`.
+       - En Paso 3: `setTimeout` con `scrollIntoView` suave al elemento `#slots-section`.
+       - En Paso 4: Título condicional `"Confirmá el cambio de tu turno"`, supresión de seña y saldo a pagar (badge `"Seña conservada"`), y botón azul `"Confirmar reprogramación"` conectado a `handleConfirmReschedule` (`POST /api/reservas/reprogramar`).
+       - Modal de éxito: vista dedicada de reprogramación con `"¡Turno reprogramado con éxito!"` y botón `"Volver al Inicio"`.
+    2. `src/app/api/disponibilidad/route.js`:
+       - Regla de exclusión estricta de fines de semana (sábados y domingos) para que el calendario de reserva online nunca ofrezca días no laborables.
+  - **Despliegue y Verificación en Staging**:
+    - Compilación local probada y limpia (`npm run build`, 40/40 rutas).
+    - Commit `6e42ba5` y `def66e9` empujados a `origin/staging`.
+    - Desplegado en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1330730).
+    - Base de datos `agenda_db_staging`: configurados turnos de Luciano Gomez (Turno 1: 26/09 18:00hs < 72hs; Turno 2: 30/09 19:30hs >= 72hs).
+    - Verificación automatizada E2E con Puppeteer (`scratch/verify_staging_autogestion_feedback.mjs` y `scratch/verify_nuevo_turno_72hs.mjs`):
+      1. Layout de email: `inputWidth: 316, btnWidth: 316, isButtonBelow: true`.
+      2. Multi-turnos: `activeCardsCount: 2`, `hasAviso72hs: true`, `hasNuevoTurnoBtn: true`, `hasReagendarBtn: true`, `hasCancelarBtn: true`.
+      3. Botón `➕ Nuevo turno`: diálogo nativo aceptado, turno cancelado y salto directo a Paso 2 ("Seleccioná las Zonas a Tratar").
+      4. Reagendado >= 72hs: día 28 seleccionado con auto-scroll a horarios, slot 16:30 hs elegido, Paso 4 con título "Confirmá el cambio de tu turno", seña/saldo ocultados, clic en "Confirmar reprogramación" respondió HTTP 200 `{"success":true,"message":"Turno reprogramado con éxito."}`.
+      5. Pantalla de éxito verificada: "¡Turno reprogramado con éxito! Tu turno ha sido reprogramado para el 28/09/2026 a las 16:30 hs" y botón "Volver al Inicio".
+    - Capturas generadas: `staging_autogestion_email_step1.png`, `staging_autogestion_active_turnos.png`, `staging_autogestion_step3_calendar.png`, `staging_autogestion_step4_reprogramar.png`, `staging_autogestion_reprogramar_success.png`, `staging_autogestion_nuevo_turno_step2.png`.
+  - **Decisión Registrada**: `D-76` en `.synapse/decisions.md`.
+
 
