@@ -1567,4 +1567,34 @@
     * Verificación en base de datos: cantidad de turnos inalterada (`565 -> 565`). Cero turnos creados.
     * Enlace a WhatsApp verificado hacia `5491132519008` con mensaje estructurado completo.
 
+## Mensaje del Usuario (2026-09-25 09:30-03:00)
+> [4 Capturas de WhatsApp con feedback de Luciano Gomez]:
+> 1. Ficha del cliente: quitar las dos tarjetas ("Sesiones Realizadas" y "Fecha Primer Turno") y los tres botones de acciones del inicio de Ficha Histórica para que el listado de turnos aparezca arriba de todo en celulares.
+> 2. Quitar el recuadro con scroll interno (`.paperList`) en el historial para evitar el incómodo doble scroll.
+> 3. Reubicar las acciones del cliente (`WhatsApp`, `Finalizar Tratamiento`, `Eliminar Cliente`) en la pestaña "Notas y Configuración".
+> 4. En la agenda diaria (Neocita), aplicar los mismos fondos suaves por estado que en la agenda semanal (verde para SEÑADO, azul para REALIZADO, rojo para CANCELADO, etc.).
+> 5. "Acá en la web de prueba cuando vas a la ficha de cliente y tocas historial de turnos está puesto de otra forma (sin el cuadradito chico con scroll) y cuando tocas ver en agenda te lleva directo al turno. Pero en el de producción no está puesto eso, podes ponerlo?"
+
+## Respuesta del Asistente (D-75):
+- **1. Optimización de Ficha Histórica (`src/app/admin/clientes/page.js` y `clientes.module.css`)**:
+  - En la pestaña `activeTab === 'history'`, se eliminaron las dos tarjetas (`Sesiones Realizadas` y `Fecha Primer Turno`), dejando el bloque `Historial de Turnos` ocupando el 100% del ancho desde el tope del modal.
+  - En `clientes.module.css`, se removió la restricción `max-height: 400px; overflow-y: auto;` de `.paperList`, permitiendo que el historial se expanda sin generar un recuadro de scroll interno secundario.
+  - Se reubicaron los botones `💬 WhatsApp del Cliente`, `🏁 Finalizar Tratamiento` / `🟢 Reactivar`, y `🗑️ Eliminar Cliente` en la pestaña `activeTab === 'settings'` bajo la sección destacada `Acciones Rápidas`.
+- **2. Colores de Estado en Vista Diaria Neocita (`src/app/admin/agenda/page.js` y `agenda.module.css`)**:
+  - Se inyectó la clase dinámica `${getStatusBlockClass(app.estado)}` en las tarjetas `.neocitaCard`.
+  - Se definieron estilos con fondos suaves y bordes laterales de 6px (`.stateSenado` con `#e8f5e9` y borde verde `#2e7d32`, `.stateRealizado` con `#e3f2fd` y borde azul `#1565c0`, `.stateCancelado` con `#ffebee` y borde rojo `#c62828`, etc.) con tipografía oscura `#0f172a` para máxima legibilidad.
+- **3. Compilación y Despliegue en Staging**:
+  - Compilación local limpia (`npm run build`, 40/40 rutas).
+  - Desplegado en el VPS Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1329185).
+- **4. Verificación Automatizada E2E con Puppeteer**:
+  - Ejecutado script `scratch/verify_staging_feedback.mjs`:
+    * Ficha Histórica verificada: `hasHistorialDeTurnos: true`, `hasSesionesRealizadasInHistory: false`, `paperListMaxHeight: null`. Historial directo en cabecera y sin recuadro con scroll.
+    * Notas y Configuración verificada: `hasAccionesRapidas: true`, `hasWhatsApp: true`, `hasFinalizar: true`, `hasEliminar: true`.
+    * Vista Neocita verificada: 10 tarjetas detectadas con `stateSenado`, `backgroundColor: rgb(232, 245, 233)` y `borderLeftColor: rgb(46, 125, 50)`.
+  - Capturas de validación generadas:
+    * `scratch/staging_ficha_bertotti_history.png`
+    * `scratch/staging_ficha_settings_verified.png`
+    * `scratch/staging_neocita_colors_verified.png`
+- **5. Decisión Registrada**: `D-75` en `.synapse/decisions.md`.
+
 

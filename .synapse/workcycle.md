@@ -1156,7 +1156,7 @@
          - `Cliente.notasGonzalo`: `118`.
 - **24 de Septiembre (11:00 - 11:55 hs - Ajustes Módulo 5 Autogestión, Desacoplamiento de Turno previo a Seña, Logout Staging y Layout Móvil)**:
   - **Solicitud del Usuario y Cliente (Luciano + Gonzalo)**:
-    1. *"Cuando alguien elige zonas y horario para agendar un turno y le da el botón para pagar la seña por wpp, no deje agendarse el turno en el espacio de la agenda ya que todavía no la paga... por ahora que solo mande a wpp la info... y nosotros lo agendamos después de que haya pagado la seña"*.
+    1. *"Cuando alguien elige zonas y horario para agendar un turno y le da el botón para pagar la seña por wpp, no deje agendarse el turno en el espacio de la agenda ya que todavía no la paga... por ahora que solo mandé a wpp la info... y nosotros lo agendamos después de que haya pagado la seña"*.
     2. *"Desde la web de prueba no me deja salir de la sesión para ver lo de autogestión, me devuelve a la agenda"*.
     3. En mobile (fotos de celular enviadas por Luciano): el encabezado de mes ("Septiembre 2026") se solapa con los botones anterior/siguiente, y la columna 7 (`DOM`) se corta en el borde derecho de la pantalla por desborde horizontal.
     4. El número de WhatsApp oficial de Gonzalo es `+54 9 11 3251-9008` (reemplazando el de prueba `5492984696364`).
@@ -1190,3 +1190,38 @@
       - **Verificación en Base de Datos**: Consulta directa en `agenda_db_staging` antes y después de pulsar "Pagar Seña": cantidad de turnos inalterada (`565 -> 565`). Cero turnos creados.
       - **URL WhatsApp**: `https://wa.me/5491132519008` con mensaje con nombre, fecha, hora, zonas, total y seña.
   - **Decisión Registrada**: `D-74` en `.synapse/decisions.md`.
+
+## 📅 Sesión: 25 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Optimizar la pestaña Ficha Histórica en la ficha del paciente eliminando las tarjetas superiores (`Sesiones Realizadas` y `Fecha Primer Turno`).
+- [x] Reubicar los botones de acción rápida (`💬 WhatsApp del Cliente`, `🏁 Finalizar Tratamiento`, `🗑️ Eliminar Cliente`) en la pestaña `Notas y Configuración`.
+- [x] Eliminar la restricción de altura fija y doble scroll (`max-height: 400px; overflow-y: auto;`) en `.paperList` de `clientes.module.css`.
+- [x] Aplicar tintes de fondo suaves (`stateSenado`, `stateRealizado`, `stateCancelado`, `stateReprogramado`, etc.) a las tarjetas de turnos (`.neocitaCard`) en la vista diaria Neocita (`/admin/agenda`, `viewMode === 'day'`) acordes a la vista semanal.
+- [x] Desplegar en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+- [x] Verificar con Puppeteer en Staging capturando evidencias visuales del DOM y CSS.
+
+### 📝 Notas / Bitácora
+- **25 de Septiembre (09:40 - 10:00 hs - Refinamiento de Ficha Histórica y Colores Neocita s/ Feedback de Luciano Gomez)**:
+  - **Solicitud del Cliente (Luciano)**:
+    1. En `Ficha Histórica`, retirar las tarjetas de `Sesiones Realizadas` y `Fecha Primer Turno` y los botones de acción para que el historial aparezca arriba de todo en pantallas móviles.
+    2. Quitar el recuadro con scroll interno (`.paperList`) en el historial para evitar el incómodo "doble scroll".
+    3. Reubicar las acciones del cliente (`WhatsApp`, `Finalizar Tratamiento`, `Eliminar Cliente`) en `Notas y Configuración`.
+    4. En la agenda diaria (Neocita), aplicar los mismos fondos suaves por estado que en la agenda semanal (verde para SEÑADO, azul para REALIZADO, rojo para CANCELADO, etc.).
+  - **Implementación**:
+    1. `src/app/admin/clientes/page.js`: Removida la columna izquierda de la pestaña `history`; `Historial de Turnos` ahora ocupa el ancho completo desde el tope. Agregado bloque de `Acciones Rápidas` al inicio de `settings`.
+    2. `src/app/admin/clientes/clientes.module.css`: Removido `max-height: 400px; overflow-y: auto;` de `.paperList`.
+    3. `src/app/admin/agenda/page.js` y `agenda.module.css`: Inyectada clase `${getStatusBlockClass(app.estado)}` en `.neocitaCard` con fondos `#e8f5e9`, `#e3f2fd`, `#ffebee` y bordes laterales correspondientes.
+  - **Despliegue y Verificación en Staging**:
+    * Compilación local limpia (`npm run build`, 40/40 rutas).
+    * Desplegado en Staging (`187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, PID 1329185).
+    * Verificación automatizada con Puppeteer (`scratch/verify_staging_feedback.mjs`):
+      - `hasHistorialDeTurnos: true`, `hasSesionesRealizadasInHistory: false`, `paperListMaxHeight: null`.
+      - `hasAccionesRapidas: true`, `hasWhatsApp: true`, `hasFinalizar: true`, `hasEliminar: true`.
+      - `.neocitaCard.stateSenado` con `backgroundColor: rgb(232, 245, 233)` y `borderLeftColor: rgb(46, 125, 50)`.
+    * Capturas de evidencia:
+      - `scratch/staging_ficha_bertotti_history.png`: Historial a tope, sin doble scroll, con tarjetas limpias y botón `↗ Ver en Agenda`.
+      - `scratch/staging_ficha_settings_verified.png`: Acciones Rápidas en Configuración.
+      - `scratch/staging_neocita_colors_verified.png`: Tarjetas diarias con fondos suaves verdes y contraste legible.
+  - **Decisión Registrada**: `D-75` en `.synapse/decisions.md`.
+
