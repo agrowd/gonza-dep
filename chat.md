@@ -1691,6 +1691,30 @@
   - Producción (`main`, puerto 3006): **100% desplegado, operativo y validado**.
   - Staging (`staging`, puerto 3008): **Online y sincronizado**.
 
+## Mensaje del Usuario (2026-09-25 15:51 / 16:45-03:00)
+> [Capturas de WhatsApp de Luciano Gómez - `media_1790358901052.png`, `media_1790360798791.png` y `media_1790361444166.png`]:
+> 1. "Acá con el nuevo botón no me deja pulsar el de 'SALIR', quedó más abajo"
+> 2. "Este Ingreso estimado, no cambia si alguien cancelo el turno o si no vino, si pasa eso, se restaría el valor de la sesión del monto"
+> 3. "Y los comentarios de Operador se están Guardando solos, osea se autoguardan aunque salga del turno sin darle a guardar"
+> "Te doy el ok" / "te doy el ok para ambas cosas"
+
+## Respuesta del Asistente (D-78):
+- **1. Visibilidad y Scroll en Menú Lateral Móvil**:
+  - Se habilitó scroll táctil vertical con `overflow-y: auto; -webkit-overflow-scrolling: touch; max-height: 100dvh;` en `.sidebar`.
+  - Se optimizaron márgenes y paddings en viewports móviles reduciendo el espacio bajo el logo (`1.15rem`) y compactando el pie.
+  - Verificado en Producción (`prod_mobile_sidebar_verified.png`) en viewport de 390x640: el botón `🚪 Cerrar Sesión` entra 100% visible a `y = 566px`.
+- **2. Exclusión de Cancelaciones e Inasistencias en Ingreso Estimado**:
+  - En `src/app/admin/agenda/page.js` (`totalRevenue` y `totalSenas`) y `src/app/api/admin/turnos/imprimir/route.js`, se excluyen estrictamente `CANCELADO` y `NO_ASISTIO`.
+  - Verificado en Producción (`prod_sep24_no_asistio_verified.png`) sobre el día 24/09: el turno con `NO_ASISTIO` ($140.000) se restó de forma automática del total del día ($512.000).
+- **3. Desactivación de Autoguardado Espurio en Comentarios de Operador**:
+  - Se removió el evento `onBlur` de los textareas y se eliminó la persistencia forzada en `handleCloseDetailsModal()`.
+  - Al cerrar el modal con `X` o clic afuera sin tocar `💾 Guardar Notas Operador`, las notas temporales se descartan por completo.
+  - Verificado en Producción con Puppeteer (`autoSavePrevented: true`).
+- **4. Despliegue en VPS**:
+  - Producción (`main`, puerto 3006, PM2 `gonzalo-agenda` PID 1338000): Online y verificado.
+  - Staging (`staging`, puerto 3008, PM2 `gonzalo-agenda-staging` PID 1338308): Online y verificado.
+
+
 
 
 

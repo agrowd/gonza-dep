@@ -1297,6 +1297,24 @@
     5. Agenda de Turnos (`/admin/agenda`): Vista Día Neocita con tintes suaves por estado (`prod_agenda_dia_view.png`).
     6. Modal de Turno: Fecha Primer Turno (`29/07/2026`) y Sesiones Realizadas sincronizados (`prod_agenda_modal_palavecino.png`).
   - **Estado**: ✅ 100% desplegado, operativo y validado en Producción.
+- **25 de Septiembre (15:20 - 17:05 hs - Ingreso Estimado con Descuento de Cancelados/Inasistencias, Desactivación de Autoguardado en Notas de Operador y Scroll Móvil en Menú Lateral)**:
+  - **Feedback del Cliente (Luciano Gomez)**:
+    1. *"Acá con el nuevo botón no me deja pulsar el de 'SALIR', quedó más abajo"* (Captura de pantalla de celular mostrando el pie del sidebar cortado).
+    2. *"Este Ingreso estimado, no cambia si alguien cancelo el turno o si no vino, si pasa eso, se restaría el valor de la sesión del monto"* (Captura de la vista diaria Neocita de hoy 25/09 con Ingreso Estimado $705.000).
+    3. *"Y los comentarios de Operador se están Guardando solos, osea se autoguardan aunque salga del turno sin darle a guardar"*.
+  - **Autorización del Usuario**: *"Te doy el ok"* / *"te doy el ok para ambas cosas"*.
+  - **Implementación Técnica**:
+    1. `src/app/admin/layout.module.css` y `src/app/admin/SidebarNav.js`: En `.sidebar` se agregó `overflow-y: auto; -webkit-overflow-scrolling: touch; max-height: 100dvh;`. Se redujo el margen inferior del header (`1.15rem`), el padding vertical (`1.25rem`) y el espaciado del footer en móviles.
+    2. `src/app/admin/agenda/page.js`: En `totalRevenue` y `totalSenas` de la vista diaria Neocita se excluyen `CANCELADO` y `NO_ASISTIO` (`filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO')`). En `src/app/api/admin/turnos/imprimir/route.js` se excluyeron ambos de la consulta SQL.
+    3. `src/app/admin/agenda/page.js`: Se removió el evento `onBlur` de los textareas de `notasGonzalo`, observaciones generales, fecha y sesiones. En `handleCloseDetailsModal()` se eliminó la llamada forzada a `handleSaveClientObservaciones(true)`, permitiendo que cerrar el modal con `X` o clic afuera descarte cambios no guardados.
+  - **Despliegue y Verificación en Producción (puerto 3006, PM2 `gonzalo-agenda` PID 1338000) y Staging (puerto 3008, PM2 `gonzalo-agenda-staging` PID 1338308)**:
+    - Compilación exitosa en local y remoto con Next.js Turbopack (40/40 rutas).
+    - Verificación E2E con Puppeteer en Producción Real (`scratch/verify_prod_new_fixes.mjs`):
+      * Menú lateral en viewport 390x640: botón `🚪 Cerrar Sesión` completamente visible y accesible en `y = 566px` (`prod_mobile_sidebar_verified.png`).
+      * Ingreso Estimado verificado en Jueves 24/09: detectó turno de Juan Carlos Santander ($140.000) como `NO_ASISTIO` y lo excluyó correctamente del total ($512.000 en vez de $652.000) (`prod_sep24_no_asistio_verified.png`).
+      * Autoguardado verificado: al modificar una nota de operador, hacer blur y cerrar el modal con `X`, al reabrir la nota permanece intacta sin modificaciones espurias (`autoSavePrevented: true`).
+  - **Decisión Registrada**: `D-78` en `.synapse/decisions.md`.
+
 
 
 
