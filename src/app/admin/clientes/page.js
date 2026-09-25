@@ -1090,48 +1090,9 @@ function ClientesPageContent() {
             {/* TAB CONTENT: History */}
             {activeTab === 'history' && (
               <div className={styles.ficheContainer}>
-                <div className={styles.grid2}>
-                  
-                  {/* Left Column: Quick Stats */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div className={styles.cardSection}>
-                      <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Sesiones Realizadas</span>
-                      <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-gold)' }}>{stats.totalCount}</span>
-                      {stats.previasCount > 0 && (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.2rem' }}>
-                          ({stats.count} en sistema + {stats.previasCount} previas)
-                        </span>
-                      )}
-                    </div>
-
-                    <div className={styles.cardSection}>
-                      <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Fecha Primer Turno</span>
-                      <span className={styles.detailValue} style={{ fontSize: '1.05rem' }}>{stats.firstDate}</span>
-                    </div>
-
-                    {/* Quick Contacts Actions */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      {selectedClient.estado === 'ACTIVO' ? (
-                        <button onClick={() => handleToggleEstado('FINALIZADO')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#1565c0', color: '#fff', border: 'none' }}>
-                          🏁 Finalizar Tratamiento
-                        </button>
-                      ) : (
-                        <button onClick={() => handleToggleEstado('ACTIVO')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none' }}>
-                          🟢 Reactivar Cliente (Activo)
-                        </button>
-                      )}
-                       <a href={getWhatsAppLink(selectedClient.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#25D366', color: '#fff', border: 'none', fontWeight: 600 }}>
-                        💬 WhatsApp del Cliente
-                      </a>
-                      <button onClick={() => handleDeleteClient(selectedClient.id)} className="btn btn-primary" style={{ backgroundColor: '#d32f2f', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                        <TrashIcon /> Eliminar Cliente
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Paper-card history */}
-                  <div className={styles.cardSection}>
-                    <h3 className={styles.cardSectionTitle}>Historial de Turnos</h3>
+                {/* Full-width: Paper-card history without clutter */}
+                <div className={styles.cardSection}>
+                  <h3 className={styles.cardSectionTitle}>Historial de Turnos</h3>
                     
                     {selectedClient.turnos.length === 0 ? (
                       <div className={styles.emptyState}>Sin historial registrado</div>
@@ -1244,7 +1205,6 @@ function ClientesPageContent() {
                       </div>
                     )}
                   </div>
-                </div>
               </div>
             )}
 
@@ -1323,6 +1283,51 @@ function ClientesPageContent() {
             {/* TAB CONTENT: Settings & Notes */}
             {activeTab === 'settings' && (
               <form onSubmit={handleSaveNotes} className={styles.ficheContainer}>
+                {/* Acciones Rápidas del Cliente */}
+                <div className={styles.cardSection}>
+                  <h3 className={styles.cardSectionTitle}>Acciones Rápidas</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
+                    <a
+                      href={getWhatsAppLink(selectedClient.whatsapp)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#25D366', color: '#fff', border: 'none', fontWeight: 600, padding: '0.75rem 1rem' }}
+                    >
+                      💬 WhatsApp del Cliente
+                    </a>
+
+                    {selectedClient.estado === 'ACTIVO' ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleEstado('FINALIZADO')}
+                        className="btn btn-primary"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#1565c0', color: '#fff', border: 'none', padding: '0.75rem 1rem', fontWeight: 600 }}
+                      >
+                        🏁 Finalizar Tratamiento
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleEstado('ACTIVO')}
+                        className="btn btn-primary"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', padding: '0.75rem 1rem', fontWeight: 600 }}
+                      >
+                        🟢 Reactivar Cliente (Activo)
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClient(selectedClient.id)}
+                      className="btn btn-primary"
+                      style={{ backgroundColor: '#d32f2f', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600, padding: '0.75rem 1rem' }}
+                    >
+                      <TrashIcon /> Eliminar Cliente
+                    </button>
+                  </div>
+                </div>
+
                 <div className={styles.cardSection}>
                   <h3 className={styles.cardSectionTitle}>Datos del Cliente</h3>
                   

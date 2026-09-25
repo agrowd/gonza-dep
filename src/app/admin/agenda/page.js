@@ -2828,7 +2828,7 @@ export default function AgendaPage() {
                           return (
                             <div
                               key={`t-${app.id}`}
-                              className={styles.neocitaCard}
+                              className={`${styles.neocitaCard} ${getStatusBlockClass(app.estado)}`}
                               onClick={() => {
                                 setSelectedTurno(app);
                                 setIsDetailsOpen(true);

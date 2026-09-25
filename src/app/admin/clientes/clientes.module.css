@@ -145,14 +145,11 @@
   padding-bottom: 0.5rem;
 }
 
-/* Paper card style history list */
+/* Paper card style history list - Seamless expansion without inner double scroll */
 .paperList {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 0.5rem;
 }
 
 .modalBody {
