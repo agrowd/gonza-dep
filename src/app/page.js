@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import styles from './page.module.css';
-import { calculateTurnDetails } from '@/lib/calculations.js';
+import { calculateTurnDetails, getBusinessHoursUntilTurno } from '@/lib/calculations.js';
 import PhoneInput from '@/components/PhoneInput.js';
 import { buildFullPhone, parsePhoneCountryAndNumber } from '@/lib/countryCodes.js';
 
@@ -109,17 +109,10 @@ export default function Home() {
     : (calculations.duracionMinutos > 0 ? calculations.duracionMinutos : 30);
   const isThresholdMet = valorTotal >= 65000;
 
-  // Helper: calculate remaining hours until appointment
+  // Helper: calculate remaining business hours until appointment (Mon-Fri, excl Sat-Sun)
   const getHoursUntilTurno = (t) => {
     if (!t || !t.fecha) return 999;
-    const nowLocal = new Date();
-    const [h, m] = (t.horaInicio || '12:00').split(':').map(Number);
-    const dObj = new Date(t.fecha);
-    const y = dObj.getUTCFullYear();
-    const mon = dObj.getUTCMonth();
-    const d = dObj.getUTCDate();
-    const turnDate = new Date(y, mon, d, h, m, 0, 0);
-    return (turnDate.getTime() - nowLocal.getTime()) / (1000 * 60 * 60);
+    return getBusinessHoursUntilTurno(t.fecha, t.horaInicio);
   };
 
   // 3. Client Lookup by Email (Step 1)
@@ -184,12 +177,12 @@ export default function Home() {
     const targetTurno = turno || activeTurno;
     if (!targetTurno) return;
 
-    // Check 72 hours rule
+    // Check 72 business hours rule (excluyendo fines de semana)
     const diffHours = getHoursUntilTurno(targetTurno);
     if (diffHours < 72) {
       setShow72hsAlert(true);
       setAlert72hsMessage(
-        'Faltan menos de 72 horas para tu turno. Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs de anticipación. Se deberá agendar un nuevo turno.'
+        'Faltan menos de 72 horas hábiles para tu turno (sin contar fines de semana). Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs hábiles de anticipación. Se deberá agendar un nuevo turno.'
       );
       return;
     }
@@ -221,7 +214,7 @@ export default function Home() {
     if (!targetTurno) return;
 
     const confirmCancel = window.confirm(
-      'Al faltar menos de 72hs, la seña anterior no se conserva según la política de la empresa. Al presionar aceptar se cancelará tu turno anterior y podrás elegir zonas y horario para tu nuevo turno. ¿Deseás continuar?'
+      'Al faltar menos de 72hs hábiles, la seña anterior no se conserva según la política de la empresa. Al presionar aceptar se cancelará tu turno anterior y podrás elegir zonas y horario para tu nuevo turno. ¿Deseás continuar?'
     );
     if (!confirmCancel) return;
 
@@ -358,10 +351,24 @@ export default function Home() {
   };
 
   // 7. Toggle Zone Selection (Step 2)
+  // Exclusividad mutua: Elegir "Cuerpo Completo" desmarca las demás zonas, y elegir otra desmarca "Cuerpo Completo"
   const toggleZone = (id) => {
-    setSelectedZoneIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    const clickedZone = zones.find(z => z.id === id);
+    const isCuerpoCompleto = clickedZone?.nombre?.trim()?.toLowerCase() === 'cuerpo completo';
+
+    setSelectedZoneIds(prev => {
+      if (isCuerpoCompleto) {
+        // Si se toca Cuerpo Completo: o se desmarca si ya estaba, o queda como única zona seleccionada
+        return prev.includes(id) ? [] : [id];
+      } else {
+        // Si se toca cualquier otra zona: desmarcar Cuerpo Completo y hacer toggle de la zona elegida
+        const withoutCC = prev.filter(x => {
+          const z = zones.find(item => item.id === x);
+          return z?.nombre?.trim()?.toLowerCase() !== 'cuerpo completo';
+        });
+        return withoutCC.includes(id) ? withoutCC.filter(x => x !== id) : [...withoutCC, id];
+      }
+    });
   };
 
   // 8. Fetch Monthly Availability (Alta de Turno model)
@@ -560,11 +567,34 @@ Duración: ${duracionMinutos} min`;
               className={styles.logoImg}
             />
           </div>
-          {step > 1 && (
-            <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-gold)' }}>
-              Paso {step} de 4
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {step > 1 && (
+              <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-gold)' }}>
+                Paso {step} de 4
+              </div>
+            )}
+            <a
+              href="/login"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.82rem',
+                fontWeight: '700',
+                color: '#334155',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                textDecoration: 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                whiteSpace: 'nowrap'
+              }}
+              title="Ingreso a la agenda para operadores"
+            >
+              🔐 Ingreso Operador
+            </a>
+          </div>
         </div>
       </header>
 

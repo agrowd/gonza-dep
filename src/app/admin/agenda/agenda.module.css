@@ -574,6 +574,19 @@
   box-sizing: border-box;
 }
 
+.stickyModalHeader {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: var(--bg-card, #1c1c1e);
+  border-bottom: 1px solid var(--border-color);
+  margin: -1.5rem -1.5rem 1.25rem -1.5rem;
+  padding: 1rem 1.25rem 0.85rem 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .closeBtn {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border-color);
@@ -672,9 +685,15 @@
     min-width: 0 !important;
     box-sizing: border-box !important;
     overflow-x: hidden !important;
-    max-height: none !important;
-    overflow-y: visible !important;
+    max-height: calc(100dvh - 1.5rem) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    position: relative !important;
     margin: 0 auto !important;
+  }
+  .stickyModalHeader {
+    margin: -1.1rem -0.75rem 1rem -0.75rem !important;
+    padding: 0.85rem 0.75rem 0.75rem 0.75rem !important;
   }
   .modalHeader h3 {
     font-size: 1.05rem !important;

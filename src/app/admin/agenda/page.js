@@ -3068,15 +3068,14 @@ export default function AgendaPage() {
       {isDetailsOpen && selectedTurno && (
         <div className={styles.modalOverlay} onClick={handleCloseDetailsModal}>
           <div className={`glass-card premium-border ${styles.modalContent}`} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
-                {isEditing ? 'Editar / Reprogramar Turno' : 'Detalle del Turno'}
-              </h3>
-              <button onClick={handleCloseDetailsModal} className={styles.closeBtn}>&times;</button>
-            </div>
-
             {isEditing ? (
               <form onSubmit={handleSaveEditTurno}>
+                <div className={styles.modalHeader}>
+                  <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
+                    Editar / Reprogramar Turno
+                  </h3>
+                  <button type="button" onClick={handleCloseDetailsModal} className={styles.closeBtn}>&times;</button>
+                </div>
                 <div className={styles.detailGrid}>
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <span className={styles.detailLabel}>Cliente</span>
@@ -3357,7 +3356,7 @@ export default function AgendaPage() {
                   </div>
 
                   <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                    <label className={styles.inputLabel}>
+                    <label className={styles.inputLabel} style={{ color: '#1d4ed8', fontWeight: 700 }}>
                       📝 Comentarios de este Turno (Exclusivo de esta sesión)
                     </label>
                     <textarea
@@ -3382,13 +3381,48 @@ export default function AgendaPage() {
               </form>
             ) : (
               <>
-                <div className={styles.detailGrid}>
-                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <span className={styles.detailLabel}>Cliente</span>
-                    <span className={styles.detailValue} style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
-                    </span>
+                {/* CABECERA FIJA (STICKY HEADER): Cliente, Zonas y botón X para cerrar */}
+                <div className={styles.stickyModalHeader}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div>
+                        <span className={styles.detailLabel} style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          CLIENTE
+                        </span>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.25, wordBreak: 'break-word' }}>
+                          {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '0.45rem' }}>
+                        <span className={styles.detailLabel} style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          ZONAS A DEPILAR
+                        </span>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-gold)', lineHeight: 1.25, marginTop: '0.1rem', wordBreak: 'break-word' }}>
+                          {(() => {
+                            try {
+                              return JSON.parse(selectedTurno.zonas).map(z => z.nombre || z.name).filter(Boolean).join(', ') || 'Ninguna (Bloqueo)';
+                            } catch(e) {
+                              return selectedTurno.zonas || 'Ninguna (Bloqueo)';
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCloseDetailsModal}
+                      className={styles.closeBtn}
+                      title="Cerrar detalle"
+                      aria-label="Cerrar detalle"
+                    >
+                      &times;
+                    </button>
                   </div>
+                </div>
+
+                <div className={styles.detailGrid}>
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Día</span>
                     <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 600 }}>{formatLocalDate(selectedTurno.fecha)}</span>
@@ -3425,19 +3459,6 @@ export default function AgendaPage() {
                     const dynPrices = getUpdatedTurnoPrices(selectedTurno);
                     return (
                       <>
-                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel}>Zonas a depilar</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                            {(() => {
-                              try {
-                                return JSON.parse(selectedTurno.zonas).map(z => z.nombre || z.name).filter(Boolean).join(', ') || 'Ninguna (Bloqueo)';
-                              } catch(e) {
-                                return selectedTurno.zonas || 'Ninguna (Bloqueo)';
-                              }
-                            })()}
-                          </span>
-                        </div>
-
                         {/* Swapped order per Gonzalo's request: VALOR TOTAL in big gold box on top */}
                         <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.14)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.4)', marginBottom: '0.25rem' }}>
                           <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.85rem' }}>VALOR TOTAL (A COBRAR)</span>
@@ -3447,29 +3468,29 @@ export default function AgendaPage() {
                         </div>
 
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
-                          <div className={styles.detailItem}>
-                            <span className={styles.detailLabel}>Valor Original (Sin Descuento)</span>
-                            <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.3rem', textDecoration: 'line-through' }}>
+                          <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0 }}>Valor Original (Sin Descuento)</span>
+                            <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through' }}>
                               ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
                             </span>
                           </div>
                         )}
-                        <div className={styles.detailItem}>
-                          <span className={styles.detailLabel}>Seña Cobrada</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2e7d32', marginTop: '0.3rem' }}>
+                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0 }}>Seña Cobrada</span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2e7d32', margin: 0 }}>
                             ${Number(selectedTurno.valorSeña || 0).toLocaleString('es-ES')}
                           </span>
                         </div>
-                        <div className={styles.detailItem}>
-                          <span className={styles.detailLabel}>Saldo Pendiente en Local</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-gold)', marginTop: '0.3rem' }}>
+                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0 }}>Saldo Pendiente en Local</span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0 }}>
                             ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
                           </span>
                         </div>
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
-                          <div className={styles.detailItem}>
-                            <span className={styles.detailLabel}>Descuento Aplicado</span>
-                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, marginTop: '0.3rem' }}>
+                          <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0 }}>Descuento Aplicado</span>
+                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0 }}>
                               -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-ES')}`})
                             </span>
                           </div>
@@ -3544,7 +3565,7 @@ export default function AgendaPage() {
                   </div>
 
                   {selectedTurno.clienteId && (
-                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.25rem', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.25rem', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '0.65rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                       {/* Fila 1: Fecha Primer Turno (Título a la izquierda, input fecha a la derecha) */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.45rem', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                         <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.85rem' }}>
@@ -3558,7 +3579,8 @@ export default function AgendaPage() {
                             tempClientFechaPrimerTurnoRef.current = e.target.value;
                           }}
                           style={{
-                            maxWidth: '180px',
+                            maxWidth: '165px',
+                            marginRight: '0.5rem',
                             padding: '0.45rem 0.6rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
@@ -3572,7 +3594,7 @@ export default function AgendaPage() {
                         />
                       </div>
 
-                      {/* Fila 2: Sesiones Realizadas (Título a la izquierda, input número a la derecha) */}
+                      {/* Fila 2: Sesiones Realizadas (Título a la izquierda, input número a la derecha con margen hacia adentro) */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', paddingTop: '0.25rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                           <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.85rem' }}>
@@ -3588,8 +3610,9 @@ export default function AgendaPage() {
                           value={tempClientSesionesTotal}
                           onChange={(e) => handleTotalSesionesChange(e.target.value)}
                           style={{
-                            maxWidth: '100px',
-                            width: '100px',
+                            maxWidth: '85px',
+                            width: '85px',
+                            marginRight: '0.6rem',
                             padding: '0.45rem 0.6rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
@@ -3786,16 +3809,16 @@ export default function AgendaPage() {
 
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span className={styles.detailLabel} style={{ color: '#38bdf8' }}>
+                      <span className={styles.detailLabel} style={{ color: '#1d4ed8', fontWeight: 700 }}>
                         📝 Comentarios de este Turno (Exclusivos de esta cita)
                       </span>
                       <button
                         type="button"
                         onClick={() => setExpandedTurnoObs(prev => !prev)}
                         style={{
-                          background: 'rgba(56, 189, 248, 0.1)',
-                          border: '1px solid #38bdf860',
-                          color: '#38bdf8',
+                          background: 'rgba(29, 78, 216, 0.1)',
+                          border: '1px solid rgba(29, 78, 216, 0.4)',
+                          color: '#1d4ed8',
                           borderRadius: '6px',
                           padding: '0.2rem 0.55rem',
                           fontSize: '0.72rem',
@@ -3813,7 +3836,6 @@ export default function AgendaPage() {
                       <textarea
                         value={tempTurnoObservaciones}
                         onChange={(e) => setTempTurnoObservaciones(e.target.value)}
-                        onBlur={() => handleSaveTurnoObservaciones(true)}
                         placeholder="Comentarios exclusivos de este turno (no se repiten en turnos futuros)..."
                         rows={expandedTurnoObs ? 8 : 3}
                         style={{
@@ -3821,7 +3843,7 @@ export default function AgendaPage() {
                           height: expandedTurnoObs ? '200px' : '75px',
                           padding: '0.6rem',
                           borderRadius: '8px',
-                          border: '1px solid #38bdf850',
+                          border: '1px solid rgba(29, 78, 216, 0.45)',
                           backgroundColor: 'var(--bg-secondary)',
                           color: 'var(--text-primary)',
                           fontSize: '0.85rem',
@@ -3835,7 +3857,7 @@ export default function AgendaPage() {
                           type="button"
                           onClick={() => handleSaveTurnoObservaciones(false)}
                           className="btn btn-primary"
-                          style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                          style={{ alignSelf: 'flex-end', fontSize: '0.75rem', padding: '0.35rem 0.85rem', backgroundColor: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
                         >
                           💾 Guardar Comentarios del Turno
                         </button>
@@ -3849,40 +3871,42 @@ export default function AgendaPage() {
                   <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Acciones Rápidas</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
                     {selectedTurno.clienteId && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (checkHasUnsavedChanges() || tempClientFechaPrimerTurno || tempClientSesionesPrevias !== undefined) {
-                              await handleSaveClientObservaciones(true);
-                            }
-                            if (typeof window !== 'undefined' && gridBodyRef.current) {
-                              sessionStorage.setItem('agenda_scroll_pos', gridBodyRef.current.scrollTop.toString());
-                            }
-                            const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
-                            window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
-                          }}
-                          className="btn"
-                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
-                        >
-                          📁 Ficha Cliente
-                        </button>
-                        <button
-                          onClick={() => handleScheduleNextTurn(selectedTurno)}
-                          className="btn"
-                          style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
-                        >
-                          📅 Siguiente Turno
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (checkHasUnsavedChanges() || tempClientFechaPrimerTurno || tempClientSesionesPrevias !== undefined) {
+                            await handleSaveClientObservaciones(true);
+                          }
+                          if (typeof window !== 'undefined' && gridBodyRef.current) {
+                            sessionStorage.setItem('agenda_scroll_pos', gridBodyRef.current.scrollTop.toString());
+                          }
+                          const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
+                          window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
+                        }}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                      >
+                        📁 Ficha Cliente
+                      </button>
                     )}
-                    <button
-                      onClick={() => handleReprogramarTurno(selectedTurno)}
-                      className="btn"
-                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
-                    >
-                      🔄 Reprogramar
-                    </button>
+                    {selectedTurno.clienteId && selectedTurno.estado !== 'REALIZADO' && (
+                      <button
+                        onClick={() => handleScheduleNextTurn(selectedTurno)}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                      >
+                        📅 Siguiente Turno
+                      </button>
+                    )}
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                      <button
+                        onClick={() => handleReprogramarTurno(selectedTurno)}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                      >
+                        🔄 Reprogramar
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
@@ -3945,27 +3969,27 @@ export default function AgendaPage() {
                         ✓ Realizado
                       </button>
                     )}
-                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'FINALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1e40af', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         🏁 Finalizar
                       </button>
                     )}
-                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'MANTENIMIENTO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         🛠️ Mantenimiento
                       </button>
                     )}
-                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'VA_A_AVISAR')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d97706', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ⏳ Va a Avisar
                       </button>
                     )}
-                    {selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ❌ No Asistió
                       </button>
                     )}
-                    {selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✕ Cancelar
                       </button>

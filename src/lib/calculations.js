@@ -57,3 +57,46 @@ export function calculateTurnDetails(selectedZones, isNewClient = false) {
     duracionMinutos
   };
 }
+
+/**
+ * Calculates business hours remaining until appointment in Argentina timezone (UTC-3).
+ * Excludes Saturdays (day 6) and Sundays (day 0).
+ * 
+ * @param {Date|string} turnFecha - Appointment date
+ * @param {string} horaInicio - e.g. "14:30"
+ * @param {Date} [now] - Current date/time (default new Date())
+ * @returns {number} business hours remaining
+ */
+export function getBusinessHoursUntilTurno(turnFecha, horaInicio = '12:00', now = new Date()) {
+  if (!turnFecha) return 999;
+  
+  const dObj = new Date(turnFecha);
+  const y = dObj.getUTCFullYear();
+  const mon = dObj.getUTCMonth();
+  const d = dObj.getUTCDate();
+  const [h, m] = (horaInicio || '12:00').split(':').map(Number);
+
+  // UTC timestamp for appointment (Argentina is UTC-3, so UTC hour is h + 3)
+  const turnUtcMs = Date.UTC(y, mon, d, h + 3, m || 0, 0, 0);
+  const nowUtcMs = now.getTime();
+
+  if (turnUtcMs <= nowUtcMs) return 0;
+
+  const stepMs = 3600000; // 1 hour steps
+  let curUtcMs = nowUtcMs;
+  let businessHours = 0;
+
+  while (curUtcMs < turnUtcMs) {
+    const nextUtcMs = Math.min(curUtcMs + stepMs, turnUtcMs);
+    // Interval check in Argentina time (UTC - 3 hours)
+    const argDate = new Date(curUtcMs - (3 * 3600000));
+    const dayOfWeek = argDate.getUTCDay(); // 0 = Sunday, 6 = Saturday
+
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      businessHours += (nextUtcMs - curUtcMs) / 3600000;
+    }
+    curUtcMs = nextUtcMs;
+  }
+
+  return businessHours;
+}

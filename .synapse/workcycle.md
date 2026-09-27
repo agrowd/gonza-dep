@@ -1328,8 +1328,14 @@
     3. `src/lib/countryCodes.js` y `src/app/page.js`: Sanitización de teléfonos para evitar duplicación de prefijos de país y parseo automático al cargar clientes existentes.
   - **Despliegue y Verificación en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`)**:
     - Compilación limpia con Turbopack (40/40 rutas en 28s).
-    - Verificación automatizada con Puppeteer (`scratch/verify_staging_feedback_fixes.mjs`):
-      * Paso 2: banner 100% eliminado (`hasPreferencial: false`, `bannerEl: false`).
-      * Paso 4: clic en 'Pagar Seña' ejecutó navegación directa a `https://wa.me/5491132519008` con mensaje prellenado formateado y guardó el cliente en PostgreSQL staging (`Luciano Gomez`, `5491176735678`).
-      * Test con email real de Luciano: respondió HTTP 200 `success: true` con `whatsappUrl` y client ID real `532397c9-8d84-405b-87a8-2330250fa694`.
-  - **Decisión Registrada**: `D-79` en `.synapse/decisions.md`.
+- **27 de Septiembre (16:15 hs - Implementación de 8 Puntos de Feedback de Luciano Gómez en Main)**:
+  - **Directiva del Usuario**: *"hacelas en el main, las capturas son del main"* y *"Si te doy el ok y despues de hacer eso hace lo de las capturas que te envio"*.
+  - **Objetivos**:
+    1. Acceso al Panel / Login desde Autogestión (`src/app/page.js`): Botón `🔐 Ingreso Operador` hacia `/login` en el header.
+    2. 72hs Hábiles en Reagendar (`src/lib/calculations.js`, `src/app/page.js`, `/api/reservas/reprogramar`): Exclusión de sábados y domingos en el cálculo de horas hábiles de anticipación.
+    3. Exclusividad de "Cuerpo Completo" (`src/app/page.js`): Selección mutuamente excluyente entre Cuerpo Completo y las demás zonas.
+    4. Sticky Header en Modal de Turno (`src/app/admin/agenda/page.js`): Cliente + Zonas a depilar + botón `✕` fijos arriba al hacer scroll; Zonas ubicadas arriba del día.
+    5. Seña, Saldo y Descuento alineados a la derecha (`src/app/admin/agenda/page.js`): Montos a la derecha del título en la misma fila (`space-between`).
+    6. Margen en Input de Sesiones Realizadas (`src/app/admin/agenda/page.js`): Desplazar input a la izquierda con margen derecho para no tocar el borde.
+    7. Ocultar botones en estado REALIZADO (`src/app/admin/agenda/page.js`): Ocultar Siguiente Turno, Reprogramar, Realizado, Finalizar, Mantenimiento, Va a Avisar, No Asistió y Cancelar.
+    8. Azul más oscuro en Comentarios de este Turno (`src/app/admin/agenda/page.js`): Cambiar de cyan (`#38bdf8`) a azul oscuro (`#1d4ed8`).

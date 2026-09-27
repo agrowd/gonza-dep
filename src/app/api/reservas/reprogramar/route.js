@@ -3,6 +3,7 @@ import prisma from '@/lib/db.js';
 import { sendWhatsAppMessage, parseWppTemplate } from '@/lib/whatsapp.js';
 import { sendRescheduleEmail } from '@/lib/email.js';
 import { cleanupExpiredPendingPayments } from '@/lib/cleanup.js';
+import { getBusinessHoursUntilTurno } from '@/lib/calculations.js';
 
 function minutesToTime(minutes) {
   const hours = Math.floor(minutes / 60);
@@ -92,15 +93,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No es posible agendar turnos los fines de semana (sábados ni domingos).' }, { status: 400 });
     }
 
-    // 2. Enforce 72 hours advance policy
-    const turnTime = new Date(turno.fecha);
-    const [h, m] = turno.horaInicio.split(':').map(Number);
-    turnTime.setUTCHours(h, m, 0, 0);
-    const diffMs = turnTime.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
+    // 2. Enforce 72 business hours advance policy (fines de semana no cuentan)
+    const diffBusinessHours = getBusinessHoursUntilTurno(turno.fecha, turno.horaInicio, now);
 
-    if (diffHours < 72) {
-      return NextResponse.json({ error: 'Faltan menos de 72 horas para tu turno. Por políticas de la empresa, no podés reprogramar directamente de forma gratuita.' }, { status: 400 });
+    if (diffBusinessHours < 72) {
+      return NextResponse.json({
+        error: 'Faltan menos de 72 horas hábiles para tu turno (sin contar fines de semana). Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs hábiles de anticipación. Se deberá agendar un nuevo turno.'
+      }, { status: 400 });
     }
 
     // 3. Check for overlaps for the new date and time
