@@ -5,7 +5,7 @@ import Image from 'next/image';
 import styles from './page.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import PhoneInput from '@/components/PhoneInput.js';
-import { buildFullPhone } from '@/lib/countryCodes.js';
+import { buildFullPhone, parsePhoneCountryAndNumber } from '@/lib/countryCodes.js';
 
 // SVG Icons
 const CalendarIcon = () => (
@@ -146,11 +146,14 @@ export default function Home() {
         const parts = (data.client.nombreCompleto || '').split(' ');
         const nom = parts[0] || '';
         const ape = parts.slice(1).join(' ') || '';
+        const parsedPhone = parsePhoneCountryAndNumber(data.client.whatsapp);
         setFormData(prev => ({
           ...prev,
           nombre: nom,
           apellido: ape,
-          whatsapp: data.client.whatsapp || '',
+          whatsapp: parsedPhone.number || data.client.whatsapp || '',
+          whatsappCountry: parsedPhone.countryCode || '54',
+          whatsappCustomCode: parsedPhone.customCode || '',
           dni: data.client.dni || ''
         }));
 
@@ -451,8 +454,8 @@ export default function Home() {
     setSubmitting(true);
     setErrorMessage('');
 
-    const fullNombre = `${formData.nombre.trim()} ${formData.apellido.trim()}`.trim();
-    const fullPhone = buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp);
+    const fullNombre = `${formData.nombre.trim()} ${formData.apellido.trim()}`.trim() || existingClient?.nombreCompleto || '';
+    const fullPhone = buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp) || existingClient?.whatsapp || formData.whatsapp;
 
     try {
       if (rescheduleMode && activeTurno) {
@@ -525,6 +528,12 @@ Duración: ${duracionMinutos} min`;
     } catch (err) {
       console.error('Error in pagar seña:', err);
       setErrorMessage(err.message || 'Error al procesar la reserva. Por favor, intentá nuevamente.');
+      setTimeout(() => {
+        const errEl = document.getElementById('step4-error-box');
+        if (errEl) {
+          errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
     } finally {
       setSubmitting(false);
     }
@@ -899,23 +908,6 @@ Duración: ${duracionMinutos} min`;
                   </p>
                 </div>
 
-                {/* Threshold Banner: Regla de $65.000 */}
-                {isThresholdMet ? (
-                  <div className={styles.thresholdBanner}>
-                    <span className={styles.thresholdIcon}>✨</span>
-                    <div>
-                      <strong>¡Turno Preferencial Habilitado!</strong> Al ser un monto de <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong> (mayor o igual a $65.000), se habilitan todos los días disponibles del calendario para agendar.
-                    </div>
-                  </div>
-                ) : (
-                  <div className={styles.thresholdBannerLocked}>
-                    <span className={styles.thresholdIcon}>ℹ️</span>
-                    <div>
-                      Monto actual: <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong>. En la agenda de autogestión se mostrarán los días que ya cuentan con citas agendadas para optimizar horarios (si seleccionás zonas por $65.000 o más, se habilitan todos los días libres).
-                    </div>
-                  </div>
-                )}
-
                 {/* Zones Catalog Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px', marginBottom: '24px' }}>
                   {zones.map(z => {
@@ -1281,6 +1273,30 @@ Duración: ${duracionMinutos} min`;
                     <li>La tolerancia por llegada tarde es de 5 minutos al ser turnos exactos.</li>
                   </ul>
                 </div>
+
+                {/* Error message in Step 4 if any occurs */}
+                {errorMessage && (
+                  <div
+                    id="step4-error-box"
+                    style={{
+                      background: '#fee2e2',
+                      border: '1.5px solid #f87171',
+                      color: '#b91c1c',
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      marginBottom: '18px',
+                      fontWeight: '700',
+                      fontSize: '0.95rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.15)'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>⚠️</span>
+                    <div style={{ lineHeight: 1.4 }}>{errorMessage}</div>
+                  </div>
+                )}
 
                 {/* ACTION BUTTON */}
                 <div style={{ marginBottom: '20px' }}>

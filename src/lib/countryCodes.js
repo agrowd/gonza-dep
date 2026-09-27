@@ -102,11 +102,14 @@ export const buildFullPhone = (countryCode, customCode, rawNumber) => {
   const cleanedNum = String(rawNumber || '').replace(/\D/g, '');
   if (!cleanedNum) return '';
   if (countryCode === '54') {
+    if (cleanedNum.startsWith('549')) return cleanedNum;
+    if (cleanedNum.startsWith('54')) return `549${cleanedNum.slice(2)}`;
     return `549${cleanedNum.startsWith('9') ? cleanedNum.slice(1) : cleanedNum}`;
   }
   if (countryCode === 'custom') {
     const code = String(customCode || '').replace(/\D/g, '');
     return `${code}${cleanedNum}`;
   }
+  if (cleanedNum.startsWith(countryCode)) return cleanedNum;
   return `${countryCode}${cleanedNum}`;
 };

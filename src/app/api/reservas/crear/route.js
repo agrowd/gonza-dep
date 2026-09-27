@@ -155,27 +155,7 @@ export async function POST(request) {
       });
     }
 
-    // 3. Enforce maximum 1 active appointment rule
-    const todayZero = new Date(todayStr + 'T00:00:00');
-    const activeTurno = await prisma.turno.findFirst({
-      where: {
-        clienteId: client.id,
-        estado: {
-          in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
-        },
-        fecha: {
-          gte: todayZero
-        }
-      }
-    });
-
-    if (activeTurno) {
-      return NextResponse.json({
-        error: 'Ya tenés un turno activo registrado. Por razones de organización, no es posible agendar turnos paralelos. Podés consultar tu turno para reprogramarlo.'
-      }, { status: 400 });
-    }
-
-    // 4. Calculate appointment duration & values
+    // 3. Calculate appointment duration & values
     const { valorTotal, valorSeña, duracionMinutos } = calculateTurnDetails(dbZones, false);
 
     const startMinutes = timeToMinutes(horaInicio);
