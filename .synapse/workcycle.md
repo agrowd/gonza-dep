@@ -1313,8 +1313,23 @@
       * Menú lateral en viewport 390x640: botón `🚪 Cerrar Sesión` completamente visible y accesible en `y = 566px` (`prod_mobile_sidebar_verified.png`).
       * Ingreso Estimado verificado en Jueves 24/09: detectó turno de Juan Carlos Santander ($140.000) como `NO_ASISTIO` y lo excluyó correctamente del total ($512.000 en vez de $652.000) (`prod_sep24_no_asistio_verified.png`).
       * Autoguardado verificado: al modificar una nota de operador, hacer blur y cerrar el modal con `X`, al reabrir la nota permanece intacta sin modificaciones espurias (`autoSavePrevented: true`).
-  - **Decisión Registrada**: `D-78` en `.synapse/decisions.md`.
-
-
-
-
+- **27 de Septiembre (15:25 - 15:50 hs - Remoción de Banner Preferencial en Paso 2 y Fix de Botón Pagar Seña / WhatsApp en Paso 4)**:
+  - **Feedback del Cliente (Luciano Gomez)**:
+    1. *"Este mensaje no lo vamos a decir, no queremos que el cliente sepa que hay preferencia por el valor del turno jajaja"* (Tachó en verde el banner de $65.000 en el Paso 2).
+    2. *"Acá el botón de pagar seña no me manda al wpp, se queda sin hacer nada"* (Captura de pantalla en el Paso 4 con el botón verde 'Pagar Seña').
+  - **Autorización del Usuario**: *"te doy el ok para ambas cosas"*.
+  - **Diagnóstico y Causa Raíz**:
+    1. El banner de $65.000 (`thresholdBanner` y `thresholdBannerLocked`) era explícito en el JSX de `src/app/page.js`. Bastaba con eliminar la visualización pública conservando intacta la lógica silenciosa en `/api/disponibilidad`.
+    2. En el Paso 4, al presionar 'Pagar Seña' con el email real de Luciano (`lucianogomez4213@gmail.com`), el endpoint `/api/reservas/crear` respondía HTTP 400 (`Ya tenés un turno activo registrado...`). Como en el Paso 4 no existía ningún contenedor para renderizar `errorMessage`, el error quedaba atrapado silenciosamente, el spinner se detenía y la pantalla quedaba estática ("se queda sin hacer nada"). Dicha validación era obsoleta tras la Decisión D-74 donde el agendamiento se desacopló de la creación de turnos directos.
+    3. En `buildFullPhone`, al pasar un teléfono que ya contenía código de país (`54911...`), se anteponía erróneamente otro prefijo generando `549549...`.
+  - **Implementación**:
+    1. `src/app/page.js`: Eliminado completamente el bloque de banner de $65.000 del Paso 2 (`staging_step2_no_banner.png`). En el Paso 4, se agregó una caja de alerta roja llamativa (`#step4-error-box`) sobre el botón con scroll automático si ocurre cualquier error.
+    2. `src/app/api/reservas/crear/route.js`: Se removió la restricción obsoleta de `activeTurno` para solicitudes de WhatsApp.
+    3. `src/lib/countryCodes.js` y `src/app/page.js`: Sanitización de teléfonos para evitar duplicación de prefijos de país y parseo automático al cargar clientes existentes.
+  - **Despliegue y Verificación en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`)**:
+    - Compilación limpia con Turbopack (40/40 rutas en 28s).
+    - Verificación automatizada con Puppeteer (`scratch/verify_staging_feedback_fixes.mjs`):
+      * Paso 2: banner 100% eliminado (`hasPreferencial: false`, `bannerEl: false`).
+      * Paso 4: clic en 'Pagar Seña' ejecutó navegación directa a `https://wa.me/5491132519008` con mensaje prellenado formateado y guardó el cliente en PostgreSQL staging (`Luciano Gomez`, `5491176735678`).
+      * Test con email real de Luciano: respondió HTTP 200 `success: true` con `whatsappUrl` y client ID real `532397c9-8d84-405b-87a8-2330250fa694`.
+  - **Decisión Registrada**: `D-79` en `.synapse/decisions.md`.

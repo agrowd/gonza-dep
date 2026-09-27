@@ -1714,6 +1714,25 @@
   - Producción (`main`, puerto 3006, PM2 `gonzalo-agenda` PID 1338000): Online y verificado.
   - Staging (`staging`, puerto 3008, PM2 `gonzalo-agenda-staging` PID 1338308): Online y verificado.
 
+## Mensaje del Usuario (2026-09-27 15:29-03:00)
+> [Capturas de WhatsApp de Luciano Gómez - `media_1790533481554.png` y `media_1790533506187.png`]:
+> 1. "Este mensaje no lo vamos a decir, no queremos que el cliente sepa que hay preferencia por el valor del turno jajaja" (Banner de $65.000 en el Paso 2 tachado en verde)
+> 2. "Acá el botón de pagar seña no me manda al wpp, se queda sin hacer nada" (Botón verde 'Pagar Seña' en el Paso 4)
+> "te doy el ok para ambas cosas"
+
+## Respuesta del Asistente (D-79):
+- **1. Remoción del Banner Preferencial en Paso 2**:
+  - Se eliminó del JSX de `src/app/page.js` el componente `{isThresholdMet ? thresholdBanner : thresholdBannerLocked}`.
+  - La disponibilidad en el backend se mantiene intacta habilitando silenciosamente los días si el monto supera los $65.000, sin revelar la regla al usuario.
+  - Verificado en Staging (`staging_step2_no_banner.png`): interfaz limpia sin ningún cartel de preferencia.
+- **2. Corrección Integral del Botón 'Pagar Seña' / WhatsApp en Paso 4**:
+  - **Causa Raíz Descubierta**: Al testear Luciano con su email real (`lucianogomez4213@gmail.com`), `/api/reservas/crear` respondía HTTP 400 (`Ya tenés un turno activo registrado...`) debido a una validación obsoleta previa a D-74. Como en el Paso 4 no había contenedor para renderizar `errorMessage`, el botón volvía a su estado estático sin dar aviso ("se queda sin hacer nada").
+  - Se eliminó la comprobación restrictiva de `activeTurno` en `/api/reservas/crear` dado que la solicitud vía WhatsApp no bloquea turnos en la base de datos hasta que el operador la aprueba.
+  - Se integró un contenedor de error llamativo con icono de advertencia (`#step4-error-box`) directamente sobre el botón en el Paso 4 con auto-scroll suave.
+  - Se corrigió `buildFullPhone` en `src/lib/countryCodes.js` para evitar duplicación de códigos de área (`549549...`).
+  - Verificado con Puppeteer en Staging: el botón 'Pagar Seña' dispara la navegación directa a `https://wa.me/5491132519008?text=...` con todos los datos prellenados y persiste el contacto en PostgreSQL (`Luciano Gomez`, `5491176735678`).
+  - Verificado con el email real de Luciano: respondió HTTP 200 `success: true` con `whatsappUrl` y client ID real `532397c9-8d84-405b-87a8-2330250fa694`.
+
 
 
 
