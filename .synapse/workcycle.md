@@ -1328,14 +1328,26 @@
     3. `src/lib/countryCodes.js` y `src/app/page.js`: Sanitización de teléfonos para evitar duplicación de prefijos de país y parseo automático al cargar clientes existentes.
   - **Despliegue y Verificación en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`)**:
     - Compilación limpia con Turbopack (40/40 rutas en 28s).
-- **27 de Septiembre (16:15 hs - Implementación de 8 Puntos de Feedback de Luciano Gómez en Main)**:
+- **27 de Septiembre (16:15 - 16:35 hs - Implementación de 8 Puntos de Feedback de Luciano Gómez en Main)**:
   - **Directiva del Usuario**: *"hacelas en el main, las capturas son del main"* y *"Si te doy el ok y despues de hacer eso hace lo de las capturas que te envio"*.
-  - **Objetivos**:
-    1. Acceso al Panel / Login desde Autogestión (`src/app/page.js`): Botón `🔐 Ingreso Operador` hacia `/login` en el header.
-    2. 72hs Hábiles en Reagendar (`src/lib/calculations.js`, `src/app/page.js`, `/api/reservas/reprogramar`): Exclusión de sábados y domingos en el cálculo de horas hábiles de anticipación.
-    3. Exclusividad de "Cuerpo Completo" (`src/app/page.js`): Selección mutuamente excluyente entre Cuerpo Completo y las demás zonas.
-    4. Sticky Header en Modal de Turno (`src/app/admin/agenda/page.js`): Cliente + Zonas a depilar + botón `✕` fijos arriba al hacer scroll; Zonas ubicadas arriba del día.
-    5. Seña, Saldo y Descuento alineados a la derecha (`src/app/admin/agenda/page.js`): Montos a la derecha del título en la misma fila (`space-between`).
-    6. Margen en Input de Sesiones Realizadas (`src/app/admin/agenda/page.js`): Desplazar input a la izquierda con margen derecho para no tocar el borde.
-    7. Ocultar botones en estado REALIZADO (`src/app/admin/agenda/page.js`): Ocultar Siguiente Turno, Reprogramar, Realizado, Finalizar, Mantenimiento, Va a Avisar, No Asistió y Cancelar.
-    8. Azul más oscuro en Comentarios de este Turno (`src/app/admin/agenda/page.js`): Cambiar de cyan (`#38bdf8`) a azul oscuro (`#1d4ed8`).
+  - **Implementación Técnica**:
+    1. `src/app/page.js`: Añadido botón interactivo `🔐 Ingreso Operador` en la cabecera hacia `/login`.
+    2. `src/lib/calculations.js`, `src/app/page.js` y `src/app/api/reservas/reprogramar/route.js`: Creada función `getBusinessHoursUntilTurno` que calcula horas hábiles exclusivamente de lunes a viernes en hora de Argentina (UTC-3), omitiendo fines de semana.
+    3. `src/app/page.js`: Regla de exclusividad mutua en `toggleZone` para 'Cuerpo Completo': si se marca Cuerpo Completo, se limpian las demás zonas; si se marca otra zona, se desmarca Cuerpo Completo.
+    4. `src/app/admin/agenda/page.js` y `agenda.module.css`: Reubicadas las Zonas a depilar arriba del Día y encapsulados Cliente, Zonas y botón `✕` dentro de `.stickyModalHeader` (`position: sticky; top: 0; z-index: 50;`). En móviles y desktop se mantiene visible al scrollear hacia abajo.
+    5. `src/app/admin/agenda/page.js`: Seña Cobrada, Saldo Pendiente en Local y Descuento Aplicado alineados en fila con sus títulos (`display: flex; justify-content: space-between`).
+    6. `src/app/admin/agenda/page.js`: Añadido `marginRight: '0.6rem'` y `maxWidth: '85px'` al input de Sesiones Realizadas y `padding: '0.65rem 1rem'` al contenedor.
+    7. `src/app/admin/agenda/page.js`: Ocultados los botones irrelevantes cuando `selectedTurno.estado === 'REALIZADO'` (`Siguiente Turno`, `Reprogramar`, `Realizado`, `Finalizar`, `Mantenimiento`, `Va a Avisar`, `No Asistió`, `Cancelar`). Solo quedan visibles `Ficha Cliente`, `Editar Turno`, `WhatsApp`, `Mandar Reseña`, `Ver Recibo Oficial`, `Recibo Email` y `Eliminar`.
+    8. `src/app/admin/agenda/page.js`: Comentarios de este Turno cambiados a azul oscuro `#1d4ed8`.
+  - **Despliegue en Producción (puerto 3006, PM2 `gonzalo-agenda` PID 1369240) y Staging (puerto 3008, PM2 `gonzalo-agenda-staging` PID 1369530)**:
+    - Compilación Turbopack limpia en local (40/40 en 28.8s) y en el servidor VPS (40/40 en 11.4s).
+    - Commit `9fe03c0` pusheado a `main` y sincronizado en `staging`.
+  - **Verificación E2E con Puppeteer en Producción Real (`scratch/verify_feedback_points.mjs` y `scratch/test_mutual_exclusivity.mjs`)**:
+    * Test 1 Header: Botón `🔐 Ingreso Operador` verificado (`true`, `prod_step1_operator_btn.png`).
+    * Test 2 Exclusividad: Selección de Espalda + Piernas -> Clic en Cuerpo Completo desmarcó ambas dejando solo Cuerpo Completo (`prod_step2_only_cuerpo_completo.png`) -> Clic en Axilas desmarcó Cuerpo Completo (`prod_step2_only_axilas.png`).
+    * Test 3 Sticky Header: Modal scrolleado a 400px y 800px mantuvo Cliente, Zonas y botón `✕` anclados en el top (`prod_modal_scrolled_sticky_header.png`).
+    * Test 4 Precios: Seña y Saldo alineados a la derecha (`senaDisplay: flex`, `senaJustify: space-between`).
+    * Test 5 Sesiones Margin: Margen derecho verificado (`9.6px` = 0.6rem).
+    * Test 6 Botones REALIZADO: En turno realizado de Ricardo Palavecino solo se mostraron los 6 botones de gestión posterior y eliminar (`prod_modal_bottom_actions.png`).
+    * Test 7 Comentarios Color: `rgb(29, 78, 216)` (azul oscuro `#1d4ed8`).
+  - **Decisión Registrada**: `D-80` en `.synapse/decisions.md`.

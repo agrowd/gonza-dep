@@ -1737,3 +1737,49 @@
 
 
 
+
+## Mensaje del Usuario (2026-09-27 15:58-03:00)
+> "Si te doy el ok y despues de hacer eso hace lo de las capturas que te envio"
+> "hacelas en el main, las capturas son del main"
+> [5 Capturas de WhatsApp de Luciano Gómez - media_1790533890176.png a media_1790533989258.png]
+> Puntos a implementar:
+> 1. Acceso a Operador en Autogestión
+> 2. Política de 72 hs hábiles (sin contar finde) para reprogramar
+> 3. Cuerpo Completo exclusivo en Paso 2
+> 4. Header fijo en modal con Cliente, Zonas y botón cerrar X
+> 5. Seña cobrada, saldo y descuento alineados a la derecha en misma fila
+> 6. Margen derecho en Sesiones realizadas
+> 7. Ocultar botones irrelevantes cuando el turno está REALIZADO
+> 8. Cambiar celeste de Comentarios de este turno a azul oscuro
+
+## Respuesta del Asistente (D-80):
+- **1. Enlace ?? Ingreso Operador en Autogestión (src/app/page.js)**:
+  - Se agregó botón estilizado en el header que redirige directamente a /login.
+  - Verificado en Producción (prod_step1_operator_btn.png).
+- **2. Cálculo de 72 Horas Hábiles para Reprogramaciones (src/lib/calculations.js y APIs)**:
+  - Se implementó función getBusinessHoursUntilTurno(turnFecha, horaInicio, now) que computa de forma estricta las horas hábiles (Lunes a Viernes de 09:00 a 19:00 en huso horario de Argentina UTC-3) omitiendo fines de semana y feriados.
+  - Integrado tanto en la verificación del frontend (src/app/page.js) como en la ruta backend /api/reservas/reprogramar.
+- **3. Exclusividad Mutua de Cuerpo Completo (src/app/page.js)**:
+  - Al seleccionar "Cuerpo Completo", se desmarcan automáticamente todas las demás zonas.
+  - Al seleccionar cualquier zona individual estando "Cuerpo Completo" activo, se desmarca automáticamente "Cuerpo Completo".
+  - Verificado en Producción (prod_step2_only_cuerpo_completo.png, prod_step2_only_axilas.png).
+- **4. Encabezado Sticky en Modal de Detalle (src/app/admin/agenda/page.js y agenda.module.css)**:
+  - Se encapsularon el Nombre del Cliente, la lista de Zonas (arriba de Día) y el botón ? de cierre dentro de un contenedor .stickyModalHeader con position: sticky; top: 0; z-index: 50; backdrop-filter: blur(12px);.
+  - Se aplicó max-height: calc(100dvh - 1.5rem); overflow-y: auto; al contenedor modal en mobile para garantizar que el scroll interno mantenga el encabezado anclado en celulares.
+  - Verificado en Producción con Puppeteer con scroll a 400px y 800px (prod_modal_top_sticky.png, prod_modal_scrolled_sticky_header.png).
+- **5. Valores Numéricos Alineados a la Derecha en Misma Fila**:
+  - Seña Cobrada, Saldo Pendiente y Descuento Aplicado configurados con display: flex; justify-content: space-between; align-items: center;.
+  - Verificado en Producción (senaDisplay: flex, senaJustify: space-between).
+- **6. Margen Derecho en Input de Sesiones Realizadas**:
+  - Se aplicó marginRight: 0.6rem, maxWidth: 85px y un padding de contenedor de 0.65rem 1rem para separar el control del borde de la pantalla en dispositivos móviles.
+  - Verificado en Producción con Puppeteer (marginRight: 9.6px).
+- **7. Depuración de Botones de Acción en Estado REALIZADO**:
+  - Cuando un turno se encuentra en estado REALIZADO, se ocultan los botones operativos redundantes (Siguiente Turno, Reprogramar, Realizado, Finalizar, Mantenimiento, Va a Avisar, No Asistió, Cancelar).
+  - Solo permanecen visibles los botones de gestión post-atención: Ficha Cliente, Editar Turno, WhatsApp, Mandar Reseña, Ver Recibo Oficial, Recibo Email y Eliminar Turno.
+  - Verificado en Producción (prod_modal_bottom_actions.png).
+- **8. Paleta Azul Oscuro en Comentarios de Turno**:
+  - Se sustituyó el celeste #38bdf8 por azul marino real #1d4ed8 / rgb(29, 78, 216) en títulos, bordes, fondos suaves y botones de acción.
+  - Verificado en Producción con Puppeteer (rgb(29, 78, 216)).
+- **Despliegues en VPS Hostinger (187.127.9.216)**:
+  - Producción (main, puerto 3006, PM2 gonzalo-agenda PID 1369240): Compilado y Online.
+  - Staging (staging, puerto 3008, PM2 gonzalo-agenda-staging PID 1369530): Compilado y Online.
