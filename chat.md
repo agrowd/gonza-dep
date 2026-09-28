@@ -1783,3 +1783,25 @@
 - **Despliegues en VPS Hostinger (187.127.9.216)**:
   - Producción (main, puerto 3006, PM2 gonzalo-agenda PID 1369240): Compilado y Online.
   - Staging (staging, puerto 3008, PM2 gonzalo-agenda-staging PID 1369530): Compilado y Online.
+
+## Mensaje del Usuario (2026-09-27 21:32-03:00)
+> [Captura de pantalla de WhatsApp de Luciano Gómez - `media_1790555545643.png`]
+> "Le aparece así la seña cobrada y el saldo pendiente, osea no están los números a la derecha"
+> "Y los espacios de la fecha de primer turno y cantidad de sesiones me aparecen más cortados"
+
+## Respuesta del Asistente (D-81):
+- **1. Alineación Horizontal de Precios (Fila con Importes a la Derecha)**:
+  - **Diagnóstico**: La clase `.detailItem` definía por defecto `flex-direction: column`. Al aplicar `display: flex` inline sin sobreescribir `flex-direction`, el navegador mantenía la dirección vertical y `align-items: center` centraba los títulos y los números uno debajo del otro.
+  - **Solución**: Se creó la clase `.detailRowBetween` en `agenda.module.css` con `display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;` y se aplicó a `Valor Original`, `Seña Cobrada`, `Saldo Pendiente en Local` y `Descuento Aplicado`.
+  - **Verificación en Producción**: Comprobado con Puppeteer en `prod_mobile_prices_aligned.png`: los 4 renglones quedan perfectamente alineados en una sola fila con títulos a la izquierda y valores a la extrema derecha.
+- **2. Blindaje contra Recorte en Móvil para Fecha de 1° Turno y Sesiones Realizadas**:
+  - **Diagnóstico**: El ancho sumado de `Fecha Primer Turno` (~165px) + `input[type="date"]` (~150px) + `marginRight: 0.6rem` + el padding de la tarjeta (`1rem` = 32px) totalizaba ~355px, desbordando el ancho interno disponible de 310px en celulares de 360px. La propiedad `overflow-x: hidden` del modal recortaba el borde derecho del date picker y empujaba el input de sesiones fuera de la pantalla.
+  - **Solución**:
+    * Se eliminó el `marginRight: 0.6rem` espurio que empujaba los controles hacia el desborde.
+    * Se optimizó el padding del contenedor a `0.6rem 0.7rem`.
+    * Se renombró el título a `?? Fecha 1° Turno` (13px).
+    * Se fijó el ancho del date picker a `135px` con `flexShrink: 0`, y el de sesiones a `65px` con `flexShrink: 0`.
+  - **Verificación en Producción**: Comprobado con Puppeteer en `prod_mobile_inputs_no_overflow.png`: ambos inputs entran 100% holgados dentro de la tarjeta con sus bordes, esquinas redondeadas y botones completamente visibles.
+- **Despliegues en VPS Hostinger (187.127.9.216)**:
+  - Producción (`main`, puerto 3006, PM2 `gonzalo-agenda` PID 1372584): Compilado y Online.
+  - Staging (`staging`, puerto 3008, PM2 `gonzalo-agenda-staging` PID 1372875): Compilado y Online.

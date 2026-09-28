@@ -1351,3 +1351,24 @@
     * Test 6 Botones REALIZADO: En turno realizado de Ricardo Palavecino solo se mostraron los 6 botones de gestión posterior y eliminar (`prod_modal_bottom_actions.png`).
     * Test 7 Comentarios Color: `rgb(29, 78, 216)` (azul oscuro `#1d4ed8`).
   - **Decisión Registrada**: `D-80` en `.synapse/decisions.md`.
+
+- **27 de Septiembre (21:35 - 21:50 hs - Fix de Precios en Fila y Blindaje de Fecha/Sesiones en Móvil s/ Captura de Luciano)**:
+  - **Feedback del Cliente (Luciano Gomez)**:
+    * Captura de pantalla de su celular Android (`media_1790555545643.png`):
+      1. *"Le aparece así la seña cobrada y el saldo pendiente, osea no están los números a la derecha"* (En la captura, SEÑA COBRADA y SALDO PENDIENTE aparecían apilados verticalmente con los importes centrados abajo).
+      2. *"Y los espacios de la fecha de primer turno y cantidad de sesiones me aparecen más cortados"* (El input de fecha tenía el borde derecho recortado y el input de sesiones estaba cortado en un 90% fuera del ancho visible del modal).
+  - **Causa Raíz Descubierta**:
+    1. En `agenda.module.css`, la clase `.detailItem` tiene por defecto `flex-direction: column;` y en `@media (max-width: 600px)` aplica `width: 100%`. Al aplicar estilos inline `display: 'flex', justifyContent: 'space-between', alignItems: 'center'` sin sobreescribir explícitamente `flex-direction`, el navegador mantenía `column`, haciendo que `align-items: center` centrara horizontalmente los títulos y los montos uno debajo del otro.
+    2. El contenedor de fecha y sesiones tenía `padding: 0.65rem 1rem` (32px de padding horizontal) y el input de fecha nativo en Chrome móvil medía ~150px, sumado al label de ~165px y el margen derecho agregado anteriormente (`0.6rem`), sumaba ~355px, desbordando el ancho interno de 310px de la pantalla móvil de 360px. Como `.modalContent` tiene `overflow-x: hidden`, el exceso se recortaba por la derecha.
+  - **Implementación Técnica**:
+    1. `src/app/admin/agenda/agenda.module.css`: Se definió la clase utilitaria `.detailRowBetween` con `display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; box-sizing: border-box !important; border-bottom: 1px solid rgba(255, 255, 255, 0.06);`.
+    2. `src/app/admin/agenda/page.js`:
+       - `Valor Original`, `Seña Cobrada`, `Saldo Pendiente en Local` y `Descuento Aplicado` fueron migrados a `.detailRowBetween`, garantizando que el título quede a la izquierda y el importe a la derecha en la misma línea horizontal en cualquier resolución.
+       - En el bloque de Ficha Histórica, se quitó `.detailItem` y se ajustó el padding a `0.6rem 0.7rem`.
+       - Se renombró el label a `📅 Fecha 1° Turno` (13px), se ajustó el input de fecha a `width: 135px`, `flexShrink: 0`, `margin: 0` y el de sesiones a `width: 65px`, `flexShrink: 0`, `margin: 0`.
+  - **Despliegue y Verificación en Producción (3006, PID 1372584) y Staging (3008, PID 1372875)**:
+    - Compilación limpia Turbopack en local y VPS (40/40 rutas en 26s).
+    - Verificación automatizada con Puppeteer en producción real con viewport móvil de 360x780:
+      * Precios en fila: `onSameLine: true`, `labelLeft: 19`, `valRight: 341` (`prod_mobile_prices_aligned.png`).
+      * Fecha y sesiones: ambos inputs 100% contenidos dentro del modal con margen holgado sin ningún desborde (`prod_mobile_inputs_no_overflow.png`).
+  - **Decisión Registrada**: `D-81` en `.synapse/decisions.md`.
