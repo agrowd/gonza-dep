@@ -1820,3 +1820,36 @@
   - En pantallas m�viles (<= 600px), se configur� una grilla de 3 columnas iguales (grid-template-columns: 1fr 1fr 1fr !important;) para que las 3 pesta�as quepan simult�neamente al 100% del ancho sin requerir scroll.
   - Se introdujeron textos compactos de alto impacto para celulares: '?? Historial', '?? Avisos' y '?? Configurar' (.tabMobileText), manteniendo los t�tulos largos completos en computadoras de escritorio (.tabDesktopText).
   - src/app/admin/clientes/page.js: Se elimin� el estilo inline que forzaba display: flex; flex-wrap: nowrap; overflow-x: auto;.
+
+
+## Mensaje del Usuario (2026-09-28 16:36-03:00)
+> [Captura de pantalla de Gonzalo Siri - media_1790624467810.png]
+> Gonzalo Siri: "Fijate qie no me deja guardar. Necesito lo veas urgente porque estoy atendiendo"
+> Pantalla de Agenda con modal de Ignacio Reynaldi, texto en notas operador: "Pier, torso, manos 120,40,5 / Ax 118,20,7", toast rojo: "⚠️ No autorizado ✕"
+> Usuario: "que paso"
+> Usuario: "Avanza con la implementacion en el main"
+
+## Respuesta del Asistente y Diagnóstico Forense (D-83):
+- **1. Diagnóstico Forense en Servidor VPS (187.127.9.216)**:
+  - Se inspeccionaron los logs de Nginx (/var/log/nginx/access.log) y PM2 (gonzalo-agenda) a las 19:35 UTC (16:35 hs Argentina):
+    * Gonzalo envió peticiones PUT a `/api/admin/turnos/bee5ef8c-...` y `/api/admin/clientes/96dcd42b-...`.
+    * El servidor respondió HTTP 401 Unauthorized (`error: 'No autorizado'`) porque la cookie de sesión había expirado en segundo plano en Safari iOS (su TTL era de solo 7 días y la política ITP de Safari la purgó).
+  - A las 19:39 UTC (16:39 hs Argentina), Gonzalo intentó ir a "Siguiente Turno", el layout lo redirigió a `/login` (HTTP 307), ingresó sus credenciales (`POST /api/auth/login` -> 200 OK) y a las 19:40 UTC creó el turno siguiente.
+  - **Confirmación en Base de Datos PostgreSQL**: Se verificó mediante script que las notas clínicas de Ignacio Reynaldi **SÍ quedaron guardadas en la base de datos** (`notasGonzalo: "Pier torso, manos 120,40,5\nAx 118,20,7"`).
+- **2. Implementación Integral Cuádruple en main**:
+  - `src/lib/auth.js`: Se extendió `SESSION_MAX_AGE` a 90 días (`60 * 60 * 24 * 90`) y se creó el helper `setSessionCookie(response, token, isHttps)` con atributos `httpOnly: true`, `secure: isHttps`, `sameSite: 'lax'`, `path: '/'`.
+  - `src/app/api/auth/login/route.js`: Cookies emitidas con 90 días de persistencia.
+  - `src/app/api/auth/session/route.js`: Rolling session habilitada; cada consulta autenticada renueva el token y extiende la cookie por otros 90 días.
+  - `src/app/api/admin/turnos/[id]/route.js` y `src/app/api/admin/clientes/[id]/route.js`: Renovación automática de la cookie en cada guardado de turno o cliente (`setSessionCookie`).
+  - `src/app/api/auth/quick-reauth/route.js`: Endpoint para re-autenticación instantánea en segundo plano sin recargas.
+  - `src/app/admin/agenda/page.js`:
+    * **Heartbeat por Visibilidad**: `visibilitychange` renueva silenciosamente la cookie en `/api/auth/session` al desbloquear el teléfono o volver a la pestaña.
+    * **Auto-Draft Rescue**: Guardado en tiempo real en `localStorage` (`draft_notas_${turnoId}`) en cada pulsación del textarea de notas del operador, con auto-restauración y limpieza post-guardado.
+    * **Modal de Re-Autenticación de Emergencia (`showReauthModal`)**: Ante un 401, el sistema no borra notas ni muestra un error seco; despliega un modal elegante donde el operador ingresa su clave en 2 segundos y el sistema reintenta automáticamente el guardado pendiente.
+    * Incorporado `credentials: 'include'` en todos los `fetch` de mutación.
+  - `src/app/admin/clientes/page.js`: Incorporado `credentials: 'include'` y mensaje claro ante 401.
+- **3. Despliegue y Estado en VPS (187.127.9.216)**:
+  - Commit en `main`: `5978ff0` y sincronizado con `origin/staging`.
+  - Producción (`/srv/gonzalo-dep`, PM2 `gonzalo-agenda` PID 1391682, puerto 3006): Compilado con Turbopack y ONLINE.
+  - Staging (`/srv/gonzalo-dep-staging`, PM2 `gonzalo-agenda-staging` PID 1392024, puerto 3008): Compilado con Turbopack y ONLINE.
+  - Decisión técnica `D-83` documentada y bloqueada (`🔒 LOCKED`) en `.synapse/decisions.md`.
