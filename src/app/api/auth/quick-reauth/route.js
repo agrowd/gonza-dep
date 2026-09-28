@@ -9,24 +9,30 @@ function hashPassword(password) {
 
 export async function POST(request) {
   try {
-    const { usuario, password } = await request.json();
+    const { password, usuario = 'admin' } = await request.json();
 
-    if (!usuario || !password) {
+    if (!password) {
       return NextResponse.json(
-        { error: 'Usuario y contraseña son requeridos' },
+        { error: 'Contraseña requerida' },
         { status: 400 }
       );
     }
 
     const hashedPassword = hashPassword(password);
 
-    const user = await prisma.usuario.findUnique({
-      where: { usuario }
+    // Find the user (default to 'admin' or specified username)
+    const user = await prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { usuario: usuario },
+          { rol: 'ADMIN' }
+        ]
+      }
     });
 
     if (!user || user.password !== hashedPassword) {
       return NextResponse.json(
-        { error: 'Usuario o contraseña incorrectos' },
+        { error: 'Contraseña incorrecta' },
         { status: 401 }
       );
     }
@@ -49,13 +55,13 @@ export async function POST(request) {
       }
     });
 
-    // Set 90-day persistent cookie
+    // Set 90-day persistent session cookie
     const isHttps = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https:');
     setSessionCookie(response, token, isHttps);
 
     return response;
   } catch (error) {
-    console.error('Error in login API:', error);
+    console.error('Error in quick-reauth API:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

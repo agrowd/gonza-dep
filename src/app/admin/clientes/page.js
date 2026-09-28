@@ -499,6 +499,7 @@ function ClientesPageContent() {
       const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ estado: newEstado })
       });
       const data = await res.json();
@@ -510,7 +511,7 @@ function ClientesPageContent() {
         showToast(`Estado del cliente cambiado a: ${data.estado}`);
         fetchClients(); // refresh list
       } else {
-        showToast(`Error: ${data.error}`, 'error');
+        showToast(res.status === 401 ? '⚠️ Sesión expirada. Por favor iniciá sesión.' : `Error: ${data.error}`, 'error');
       }
     } catch (err) {
       console.error('Error changing client status:', err);
@@ -533,6 +534,7 @@ function ClientesPageContent() {
       const res = await fetch('/api/admin/clientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -774,6 +776,7 @@ function ClientesPageContent() {
       const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -804,6 +807,8 @@ function ClientesPageContent() {
         }));
         showToast('Ficha del cliente actualizada correctamente.');
         fetchClients(); // refresh list
+      } else {
+        showToast(res.status === 401 ? '⚠️ Sesión expirada. Por favor iniciá sesión.' : (data.error || 'Error al actualizar la ficha.'), 'error');
       }
     } catch (err) {
       console.error('Error saving notes:', err);
@@ -818,7 +823,8 @@ function ClientesPageContent() {
     if (!confirm('¿Estás seguro de que deseas eliminar este cliente? Esto borrará también todo su historial de turnos.')) return;
     try {
       const res = await fetch(`/api/admin/clientes/${clientId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       });
       if (res.ok) {
         setIsProfileOpen(false);

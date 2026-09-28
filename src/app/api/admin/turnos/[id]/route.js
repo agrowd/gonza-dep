@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifySessionToken } from '@/lib/auth.js';
+import { verifySessionToken, setSessionCookie } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { sendWhatsAppMessage, parseTemplate, parseWppTemplate } from '@/lib/whatsapp.js';
 import { sendNoShowEmail, sendCancellationEmail, sendRescheduleEmail } from '@/lib/email.js';
@@ -716,7 +716,10 @@ export async function PUT(request, { params }) {
       }
     }
 
-    return NextResponse.json(updatedTurno);
+    const response = NextResponse.json(updatedTurno);
+    const isHttps = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https:');
+    setSessionCookie(response, sessionCookie.value, isHttps);
+    return response;
   } catch (error) {
     console.error('Error updating appointment:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

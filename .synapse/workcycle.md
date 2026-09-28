@@ -1390,3 +1390,26 @@
        - Botones envueltos con los spans semánticos `.tabDesktopText` y `.tabMobileText`.
   - **Decisión Registrada**: `D-82` en `.synapse/decisions.md`.
 
+- **28 de Septiembre (16:36 - 17:10 hs - Solución Integral a Error '⚠️ No autorizado' en Notas de Operador, Extensión de Sesión a 90 Días, Rolling Session y Modal de Re-Autenticación)**:
+  - **Incidente Crítico Reportado por Gonzalo Siri (`media_1790624467810.png`, 16:36 hs)**:
+    * Gonzalo estaba en el gabinete atendiendo al paciente Ignacio Reynaldi e ingresó las notas clínicas del turno: `"Pier, torso, manos 120,40,5 / Ax 118,20,7"`.
+    * Al presionar `[💾 Guardar Notas Operador]`, la aplicación arrojó un toast rojo: `⚠️ No autorizado ✕`.
+    * Mensaje urgente: *"Fijate qie no me deja guardar. Necesito lo veas urgente porque estoy atendiendo"*.
+  - **Diagnóstico Forense**:
+    1. La pestaña de `/admin/agenda` permaneció abierta en Safari iOS en segundo plano. La cookie `session` expiró por su vigencia de solo 7 días (o política ITP de Safari).
+    2. Al llamar a `PUT /api/admin/turnos/[id]` y `PUT /api/admin/clientes/[id]`, el servidor respondió `401 Unauthorized`.
+    3. A las 19:39 UTC (16:39 hs), Gonzalo navegó a crear el siguiente turno, el layout lo redirigió a `/login`, se logueó de nuevo y guardó el turno siguiente, dejando las notas de Ignacio Reynaldi guardadas en la base de datos de producción (`"Pier torso, manos 120,40,5\nAx 118,20,7"`).
+    4. Sin embargo, se identificó la vulnerabilidad de fondo: si un operador experimenta expiración de sesión mientras atiende, corre el riesgo de perder notas clínicas no guardadas o frustrarse por el rechazo de la API.
+  - **Implementación Técnica en `main`**:
+    1. `src/lib/auth.js`: Se definió `SESSION_MAX_AGE = 60 * 60 * 24 * 90` (90 días) y el helper `setSessionCookie(response, token, isHttps)`.
+    2. `src/app/api/auth/login/route.js`: Cookies de sesión emitidas con vigencia de 90 días para operadores.
+    3. `src/app/api/auth/session/route.js`: Rolling session habilitada; cada consulta autenticada renueva el token y extiende la cookie por otros 90 días.
+    4. `src/app/api/admin/turnos/[id]/route.js` y `src/app/api/admin/clientes/[id]/route.js`: En cada guardado exitoso de turno o cliente se refresca automáticamente la cookie de sesión (`setSessionCookie`).
+    5. `src/app/api/auth/quick-reauth/route.js`: Endpoint para re-autenticación instantánea en segundo plano sin recargas de página.
+    6. `src/app/admin/agenda/page.js`:
+       - `visibilitychange`: Cada vez que el operador desbloquea el teléfono o regresa a la pestaña de la agenda, contacta a `/api/auth/session` renovando la cookie silenciosamente.
+       - Rescate de borrador en `localStorage` (`draft_notas_${turnoId}`) en tiempo real en cada pulsación, previniendo pérdida de notas por cierre accidental de pestaña o expiración.
+       - Si `handleSaveClientObservaciones`, `handleSaveTurnoObservaciones` o `handleUpdateStatus` reciben un 401, no arrojan error seco ni descartan las notas; abren un **Modal de Re-Autenticación de Emergencia** (`showReauthModal`) donde el operador ingresa su clave, se reconecta en 2 segundos y el sistema ejecuta automáticamente el guardado pendiente.
+    7. `src/app/admin/clientes/page.js`: Incorporado `credentials: 'include'` en todas las peticiones `PUT`, `POST` y `DELETE` y mensaje claro ante 401.
+  - **Decisión Registrada**: `D-83` en `.synapse/decisions.md`.
+

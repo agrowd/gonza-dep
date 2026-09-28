@@ -43,3 +43,26 @@ export function verifySessionToken(token) {
     return null;
   }
 }
+
+export const SESSION_COOKIE_NAME = 'session';
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 90; // 90 days (3 months for operators)
+
+/**
+ * Sets or refreshes the session cookie on a NextResponse object.
+ * @param {import('next/server').NextResponse} response
+ * @param {string} token
+ * @param {boolean} isHttps
+ */
+export function setSessionCookie(response, token, isHttps = true) {
+  if (!response || !response.cookies) return response;
+  response.cookies.set({
+    name: SESSION_COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_MAX_AGE
+  });
+  return response;
+}

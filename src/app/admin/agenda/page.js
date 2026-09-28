@@ -346,8 +346,60 @@ export default function AgendaPage() {
   const [resendWppModalTurno, setResendWppModalTurno] = useState(null);
   const [resendWppPhone, setResendWppPhone] = useState('');
   const [resendWppType, setResendWppType] = useState('RECORDATORIO_48H');
-  const [sendingWppNotice, setSendingWppNotice] = useState(false);
   const [wppConnectionStatus, setWppConnectionStatus] = useState('UNKNOWN');
+
+  // Emergency Re-Authentication & Draft Rescue States
+  const [showReauthModal, setShowReauthModal] = useState(false);
+  const [reauthPassword, setReauthPassword] = useState('');
+  const [reauthLoading, setReauthLoading] = useState(false);
+  const [reauthError, setReauthError] = useState('');
+  const pendingSaveActionRef = useRef(null);
+
+  // Heartbeat / Rolling Session on Visibility Change (Phone unlocked or browser tab focused)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetch('/api/auth/session', { credentials: 'include' }).catch(() => {});
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }
+  }, []);
+
+  const handleExecuteReauth = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!reauthPassword) return;
+    setReauthLoading(true);
+    setReauthError('');
+    try {
+      const res = await fetch('/api/auth/quick-reauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password: reauthPassword, usuario: 'admin' })
+      });
+      if (res.ok) {
+        setShowReauthModal(false);
+        setReauthPassword('');
+        setReauthError('');
+        showToast('✅ Sesión restaurada con éxito.');
+        if (pendingSaveActionRef.current) {
+          const action = pendingSaveActionRef.current;
+          pendingSaveActionRef.current = null;
+          await action();
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setReauthError(err.error || 'Contraseña incorrecta');
+      }
+    } catch (err) {
+      setReauthError('Error de red al re-autenticar.');
+    } finally {
+      setReauthLoading(false);
+    }
+  };
 
   // Autogestión Real-time Notifications Popup State
   const [autogestionAlert, setAutogestionAlert] = useState(null);
@@ -653,7 +705,15 @@ export default function AgendaPage() {
       if (selectedTurno.cliente) {
         setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
         setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
-        setTempClientNotasGonzalo(selectedTurno.notasGonzalo || '');
+
+        let initialNotas = selectedTurno.notasGonzalo || '';
+        try {
+          const draft = typeof window !== 'undefined' ? localStorage.getItem(`draft_notas_${selectedTurno.id}`) : null;
+          if (draft && draft.trim() && draft.trim() !== initialNotas.trim()) {
+            initialNotas = draft;
+          }
+        } catch (_) {}
+        setTempClientNotasGonzalo(initialNotas);
 
         const clientTurnos = selectedTurno.cliente.turnos || [];
         const completedInSystem = clientTurnos.filter(t => t.estado === 'REALIZADO').length;
@@ -715,6 +775,19 @@ export default function AgendaPage() {
     }
   }, [selectedTurno]);
 
+  // Persist draft notas for current turno in case of accidental tab close or session expiration
+  useEffect(() => {
+    if (selectedTurno?.id && tempClientNotasGonzalo !== undefined) {
+      try {
+        if (tempClientNotasGonzalo && tempClientNotasGonzalo.trim()) {
+          localStorage.setItem(`draft_notas_${selectedTurno.id}`, tempClientNotasGonzalo);
+        } else {
+          localStorage.removeItem(`draft_notas_${selectedTurno.id}`);
+        }
+      } catch (_) {}
+    }
+  }, [selectedTurno?.id, tempClientNotasGonzalo]);
+
   const handleTotalSesionesChange = (newTotalVal) => {
     const val = Math.max(0, parseInt(newTotalVal, 10) || 0);
     setTempClientSesionesTotal(val);
@@ -753,6 +826,7 @@ export default function AgendaPage() {
         res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload)
         });
       }
@@ -761,6 +835,7 @@ export default function AgendaPage() {
       const clientRes = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           observaciones: targetObs,
           frecuencia: targetFreq,
@@ -773,6 +848,7 @@ export default function AgendaPage() {
       const effectiveRes = res || clientRes;
 
       if (effectiveRes && effectiveRes.ok) {
+        try { localStorage.removeItem(`draft_notas_${selectedTurno.id}`); } catch (_) {}
         if (!silent) showToast('Datos del cliente guardados.');
         setTempClientNotasGonzalo(targetNotas);
         if (targetFechaPrimer) {
@@ -797,6 +873,13 @@ export default function AgendaPage() {
           };
         });
         fetchAppointments();
+      } else if (effectiveRes && effectiveRes.status === 401) {
+        console.warn('Session expired (401) during save. Opening emergency re-auth modal.');
+        pendingSaveActionRef.current = async () => {
+          await handleSaveClientObservaciones(silent, overrides);
+        };
+        setShowReauthModal(true);
+        if (!silent) showToast('⚠️ Sesión pausada por inactividad. Ingresá tu clave para guardar tus notas.', 'info');
       } else {
         const err = effectiveRes ? await effectiveRes.json().catch(() => ({})) : {};
         if (!silent) showToast(err.error || 'Error al guardar datos del cliente.', 'error');
@@ -813,6 +896,7 @@ export default function AgendaPage() {
       const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           observaciones: tempTurnoObservaciones
         })
@@ -821,6 +905,13 @@ export default function AgendaPage() {
         if (!silent) showToast('Comentarios de este turno guardados.');
         setSelectedTurno(prev => prev ? { ...prev, observaciones: tempTurnoObservaciones } : null);
         fetchAppointments();
+      } else if (res.status === 401) {
+        console.warn('Session expired (401) during save turno obs. Opening emergency re-auth modal.');
+        pendingSaveActionRef.current = async () => {
+          await handleSaveTurnoObservaciones(silent);
+        };
+        setShowReauthModal(true);
+        if (!silent) showToast('⚠️ Sesión pausada por inactividad. Ingresá tu clave para guardar.', 'info');
       } else {
         const err = await res.json().catch(() => ({}));
         if (!silent) showToast(err.error || 'Error al guardar comentarios del turno.', 'error');
@@ -1402,6 +1493,7 @@ export default function AgendaPage() {
       const res = await fetch(`/api/admin/turnos/${turnoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(updateBody)
       });
       if (res.ok) {
@@ -1421,6 +1513,13 @@ export default function AgendaPage() {
         } else {
           showToast(`Turno actualizado a ${newStatus}.`);
         }
+      } else if (res.status === 401) {
+        console.warn('Session expired (401) during status update. Opening emergency re-auth modal.');
+        pendingSaveActionRef.current = async () => {
+          await handleUpdateStatus(turnoId, newStatus, actionType);
+        };
+        setShowReauthModal(true);
+        showToast('⚠️ Sesión pausada por inactividad. Ingresá tu clave para guardar.', 'info');
       } else {
         const errData = await res.json().catch(() => ({}));
         showToast(errData.error || 'Error al actualizar estado del turno.', 'error');
@@ -1689,6 +1788,7 @@ export default function AgendaPage() {
       const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           fechaStr: editTurno.fechaStr,
           horaInicio: editTurno.horaInicio,
@@ -1726,8 +1826,14 @@ export default function AgendaPage() {
           } : prev.cliente
         } : null);
         fetchAppointments();
+      } else if (res.status === 401) {
+        pendingSaveActionRef.current = async () => {
+          await handleSaveEditTurno(e);
+        };
+        setShowReauthModal(true);
+        showToast('⚠️ Sesión pausada por inactividad. Ingresá tu clave para guardar.', 'info');
       } else {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         showToast(errData.error || 'Error al reprogramar el turno.', 'error');
       }
     } catch (err) {
@@ -5136,6 +5242,121 @@ export default function AgendaPage() {
             >
               Entendido
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Emergency Re-Authentication Modal for Session Recovery */}
+      {showReauthModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+          backdropFilter: 'blur(5px)'
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            color: '#ffffff',
+            padding: '1.5rem',
+            borderRadius: '16px',
+            maxWidth: '380px',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            border: '1px solid #334155',
+            textAlign: 'center',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.4rem' }}>🔐</div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.15rem', color: '#f8fafc', fontWeight: 800 }}>
+              Sesión en Pausa
+            </h3>
+            <p style={{ margin: '0 0 1rem 0', fontSize: '0.84rem', color: '#94a3b8', lineHeight: 1.45 }}>
+              Tu sesión se cerró por inactividad, pero <strong>tus notas están a salvo</strong> en pantalla. Ingresá tu clave de operador para guardar ahora:
+            </p>
+
+            {reauthError && (
+              <div style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                color: '#f87171',
+                padding: '0.55rem',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                marginBottom: '0.85rem',
+                fontWeight: 600,
+                border: '1px solid rgba(239, 68, 68, 0.3)'
+              }}>
+                {reauthError}
+              </div>
+            )}
+
+            <form onSubmit={handleExecuteReauth}>
+              <input
+                type="password"
+                autoFocus
+                value={reauthPassword}
+                onChange={(e) => setReauthPassword(e.target.value)}
+                placeholder="Contraseña de operador..."
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #475569',
+                  backgroundColor: '#0f172a',
+                  color: '#ffffff',
+                  fontSize: '0.95rem',
+                  marginBottom: '1rem',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  textAlign: 'center'
+                }}
+              />
+
+              <div style={{ display: 'flex', gap: '0.6rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowReauthModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid #475569',
+                    backgroundColor: 'transparent',
+                    color: '#94a3b8',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={reauthLoading || !reauthPassword}
+                  style={{
+                    flex: 2,
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: reauthLoading ? '#64748b' : '#16a34a',
+                    color: '#ffffff',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    cursor: reauthLoading ? 'wait' : 'pointer',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  {reauthLoading ? 'Guardando...' : '🔓 Desbloquear y Guardar'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

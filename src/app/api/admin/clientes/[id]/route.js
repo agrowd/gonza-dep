@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifySessionToken } from '@/lib/auth.js';
+import { verifySessionToken, setSessionCookie } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { normalizeWhatsApp } from '@/lib/whatsapp.js';
 
@@ -141,7 +141,10 @@ export async function PUT(request, { params }) {
       data: updateData
     });
 
-    return NextResponse.json(updated);
+    const response = NextResponse.json(updated);
+    const isHttps = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https:');
+    setSessionCookie(response, sessionCookie.value, isHttps);
+    return response;
   } catch (error) {
     console.error('Error updating client:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifySessionToken } from '@/lib/auth.js';
+import { verifySessionToken, createSessionToken, setSessionCookie } from '@/lib/auth.js';
 
-export async function GET() {
+export async function GET(request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
@@ -17,7 +17,7 @@ export async function GET() {
       return NextResponse.json({ authenticated: false });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       authenticated: true,
       user: {
         usuario: payload.usuario,
@@ -25,6 +25,13 @@ export async function GET() {
         rol: payload.rol
       }
     });
+
+    // Rolling session: refresh cookie with fresh 90-day expiration
+    const isHttps = request?.headers?.get('x-forwarded-proto') === 'https' || request?.url?.startsWith('https:');
+    const freshToken = createSessionToken(payload);
+    setSessionCookie(response, freshToken, isHttps);
+
+    return response;
   } catch (error) {
     console.error('Error in session API:', error);
     return NextResponse.json({ authenticated: false }, { status: 500 });
