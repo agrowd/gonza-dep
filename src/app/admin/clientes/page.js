@@ -1102,10 +1102,31 @@ function ClientesPageContent() {
             </div>
 
             {/* Tabs */}
-            <div className={styles.tabs} style={{ padding: '0 1.25rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexWrap: 'nowrap', gap: '0.25rem' }}>
-              <button onClick={() => setActiveTab('history')} className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`} style={{ whiteSpace: 'nowrap' }}>Ficha Histórica</button>
-              <button onClick={() => setActiveTab('logs')} className={`${styles.tabBtn} ${activeTab === 'logs' ? styles.tabBtnActive : ''}`} style={{ whiteSpace: 'nowrap' }}>Historial Notificaciones</button>
-              <button onClick={() => setActiveTab('settings')} className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`} style={{ whiteSpace: 'nowrap' }}>Notas y Configuración</button>
+            <div className={styles.tabs}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`}
+              >
+                <span className={styles.tabDesktopText}>Ficha Histórica</span>
+                <span className={styles.tabMobileText}>📋 Historial</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('logs')}
+                className={`${styles.tabBtn} ${activeTab === 'logs' ? styles.tabBtnActive : ''}`}
+              >
+                <span className={styles.tabDesktopText}>Historial Notificaciones</span>
+                <span className={styles.tabMobileText}>🔔 Avisos</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`}
+              >
+                <span className={styles.tabDesktopText}>Notas y Configuración</span>
+                <span className={styles.tabMobileText}>⚙️ Configurar</span>
+              </button>
             </div>
 
             {/* Scrollable Content Container */}

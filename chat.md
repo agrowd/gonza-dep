@@ -1805,3 +1805,18 @@
 - **Despliegues en VPS Hostinger (187.127.9.216)**:
   - Producción (`main`, puerto 3006, PM2 `gonzalo-agenda` PID 1372584): Compilado y Online.
   - Staging (`staging`, puerto 3008, PM2 `gonzalo-agenda-staging` PID 1372875): Compilado y Online.
+
+## Mensaje del Usuario (2026-09-28 09:25-03:00)
+> [Dos capturas de pantalla de WhatsApp de Luciano Gómez - media_1790598213447.png, media_1790598242721.png]
+> "Despues cuando te diga seguimos con eso, primero arregla esto que te paso"
+> Luciano Gómez: "En la fichas desaparecieron las opciones de 'Historial de notificaciones' y de configuración, osea no me ir para configurar el cliente"
+
+## Respuesta del Asistente (D-82):
+- **1. Diagnóstico y Causa Raíz**:
+  - En la vista de Clientes (/admin/clientes), al abrir la ficha de un paciente, la columna flex del modal comprimía verticalmente el contenedor de pestañas (.tabs) hasta dejar una franja de ~15px donde la barra de scroll horizontal tapaba los textos.
+  - Además, los 3 títulos completos en una sola línea medían 486px, desbordando el ancho visible del modal en móviles (~320px en un dispositivo de 360px). Esto desplazaba la tercera pestaña ('Notas y Configuración') a left: 358px, haciéndola totalmente invisible e inaccesible sin un scroll horizontal del que el usuario no se percataba.
+- **2. Solución Aplicada**:
+  - src/app/admin/clientes/clientes.module.css: Se blindó .tabs con flex-shrink: 0 !important; width: 100%; box-sizing: border-box;.
+  - En pantallas móviles (<= 600px), se configuró una grilla de 3 columnas iguales (grid-template-columns: 1fr 1fr 1fr !important;) para que las 3 pestañas quepan simultáneamente al 100% del ancho sin requerir scroll.
+  - Se introdujeron textos compactos de alto impacto para celulares: '?? Historial', '?? Avisos' y '?? Configurar' (.tabMobileText), manteniendo los títulos largos completos en computadoras de escritorio (.tabDesktopText).
+  - src/app/admin/clientes/page.js: Se eliminó el estilo inline que forzaba display: flex; flex-wrap: nowrap; overflow-x: auto;.

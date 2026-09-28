@@ -1372,3 +1372,21 @@
       * Precios en fila: `onSameLine: true`, `labelLeft: 19`, `valRight: 341` (`prod_mobile_prices_aligned.png`).
       * Fecha y sesiones: ambos inputs 100% contenidos dentro del modal con margen holgado sin ningún desborde (`prod_mobile_inputs_no_overflow.png`).
   - **Decisión Registrada**: `D-81` en `.synapse/decisions.md`.
+
+- **28 de Septiembre (09:30 - 09:40 hs - Optimización de Pestañas en Modal de Clientes s/ Capturas de Luciano Gómez)**:
+  - **Feedback del Cliente (Luciano Gomez)**:
+    * Dos capturas de WhatsApp (`media_1790598213447.png`, `media_1790598242721.png`):
+      - *"En la fichas desaparecieron las opciones de 'Historial de notificaciones' y de configuración, osea no me ir para configurar el cliente"*
+  - **Diagnóstico y Causa Raíz**:
+    1. El modal de clientes tiene altura acotada (`max-height: calc(100dvh - 1.5rem)`) en flex column. El contenedor `.tabs` carecía de `flex-shrink: 0`, por lo que al cargar el listado de turnos, el motor flex colapsaba verticalmente la barra de pestañas hasta 15-28px de altura, superponiendo la barra de scroll y tapando los textos.
+    2. En `src/app/admin/clientes/page.js`, los estilos inline forzaban `display: flex; flex-wrap: nowrap; overflow-x: auto;`. La suma del ancho de las 3 etiquetas completas era de 486px, mientras que en un móvil de 360px el ancho interno del modal es de ~320px. Esto empujaba la tercera pestaña (`Notas y Configuración`) a `left: 358px` (completamente fuera de pantalla a la derecha, requiriendo un scroll horizontal no intuitivo o invisible).
+  - **Implementación**:
+    1. `src/app/admin/clientes/clientes.module.css`:
+       - Agregado `flex-shrink: 0 !important; width: 100%; box-sizing: border-box;` en `.tabs`.
+       - Creadas clases utilitarias `.tabDesktopText` y `.tabMobileText`.
+       - En `@media (max-width: 600px)`, se definió una grilla de 3 columnas iguales (`grid-template-columns: 1fr 1fr 1fr !important; overflow: visible !important; width: 100% !important;`) y botones con texto abreviado de alto impacto visual (`📋 Historial`, `🔔 Avisos`, `⚙️ Configurar`).
+    2. `src/app/admin/clientes/page.js`:
+       - Removido el estilo inline que forzaba `overflowX: auto` y `white-space: nowrap`.
+       - Botones envueltos con los spans semánticos `.tabDesktopText` y `.tabMobileText`.
+  - **Decisión Registrada**: `D-82` en `.synapse/decisions.md`.
+

@@ -254,6 +254,10 @@
   display: flex;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 1rem;
+  padding: 0 1.25rem;
+  flex-shrink: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tabBtn {
@@ -267,6 +271,11 @@
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  white-space: nowrap;
 }
 
 .tabBtnActive {
@@ -276,6 +285,14 @@
 
 .tabBtn:hover {
   color: var(--text-primary);
+}
+
+.tabDesktopText {
+  display: inline;
+}
+
+.tabMobileText {
+  display: none;
 }
 
 /* Phone Prefix & Input Rows */
@@ -375,14 +392,34 @@
     line-height: 1.3;
   }
   .tabs {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    gap: 0.25rem;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 0.25rem !important;
+    padding: 0 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+    flex-shrink: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .tabBtn {
-    padding: 0.6rem 0.85rem;
-    font-size: 0.82rem;
-    white-space: nowrap;
-    flex-shrink: 0;
+    padding: 0.55rem 0.2rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    min-height: 42px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    border-radius: 6px 6px 0 0 !important;
+    width: 100% !important;
+  }
+  .tabDesktopText {
+    display: none !important;
+  }
+  .tabMobileText {
+    display: inline !important;
   }
 }
+
