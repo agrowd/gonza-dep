@@ -3468,29 +3468,29 @@ export default function AgendaPage() {
                         </div>
 
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
-                          <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0 }}>Valor Original (Sin Descuento)</span>
-                            <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through' }}>
+                          <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Valor Original (Sin Descuento)</span>
+                            <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap' }}>
                               ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
                             </span>
                           </div>
                         )}
-                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0 }}>Seña Cobrada</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2e7d32', margin: 0 }}>
+                        <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Seña Cobrada</span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>
                             ${Number(selectedTurno.valorSeña || 0).toLocaleString('es-ES')}
                           </span>
                         </div>
-                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0 }}>Saldo Pendiente en Local</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0 }}>
+                        <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Saldo Pendiente en Local</span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>
                             ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
                           </span>
                         </div>
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
-                          <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0 }}>Descuento Aplicado</span>
-                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0 }}>
+                          <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Descuento Aplicado</span>
+                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>
                               -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-ES')}`})
                             </span>
                           </div>
@@ -3565,11 +3565,33 @@ export default function AgendaPage() {
                   </div>
 
                   {selectedTurno.clienteId && (
-                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.25rem', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '0.65rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{
+                      gridColumn: '1 / -1',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      marginTop: '0.25rem',
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      padding: '0.6rem 0.7rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}>
                       {/* Fila 1: Fecha Primer Turno (Título a la izquierda, input fecha a la derecha) */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.45rem', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.85rem' }}>
-                          📅 Fecha Primer Turno
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        paddingBottom: '0.4rem',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}>
+                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.8rem' }}>
+                          📅 Fecha 1° Turno
                         </span>
                         <input
                           type="date"
@@ -3579,28 +3601,40 @@ export default function AgendaPage() {
                             tempClientFechaPrimerTurnoRef.current = e.target.value;
                           }}
                           style={{
-                            maxWidth: '165px',
-                            marginRight: '0.5rem',
-                            padding: '0.45rem 0.6rem',
+                            width: '135px',
+                            maxWidth: '140px',
+                            minWidth: '120px',
+                            flexShrink: 0,
+                            padding: '0.35rem 0.4rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '16px',
+                            fontSize: '13px',
                             fontWeight: 600,
                             textAlign: 'center',
-                            boxSizing: 'border-box'
+                            boxSizing: 'border-box',
+                            margin: 0
                           }}
                         />
                       </div>
 
-                      {/* Fila 2: Sesiones Realizadas (Título a la izquierda, input número a la derecha con margen hacia adentro) */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', paddingTop: '0.25rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.85rem' }}>
+                      {/* Fila 2: Sesiones Realizadas (Título a la izquierda, input número a la derecha) */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        paddingTop: '0.2rem',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', minWidth: 0 }}>
+                          <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.8rem' }}>
                             🔢 Sesiones Realizadas
                           </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                             ({(selectedTurno.cliente?.turnos || []).filter(t => t.estado === 'REALIZADO').length} sis + {tempClientSesionesPrevias} prev)
                           </span>
                         </div>
@@ -3610,18 +3644,20 @@ export default function AgendaPage() {
                           value={tempClientSesionesTotal}
                           onChange={(e) => handleTotalSesionesChange(e.target.value)}
                           style={{
-                            maxWidth: '85px',
-                            width: '85px',
-                            marginRight: '0.6rem',
-                            padding: '0.45rem 0.6rem',
+                            width: '65px',
+                            maxWidth: '75px',
+                            minWidth: '55px',
+                            flexShrink: 0,
+                            padding: '0.35rem 0.4rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '16px',
+                            fontSize: '15px',
                             fontWeight: 700,
                             textAlign: 'center',
-                            boxSizing: 'border-box'
+                            boxSizing: 'border-box',
+                            margin: 0
                           }}
                         />
                       </div>

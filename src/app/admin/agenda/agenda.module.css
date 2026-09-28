@@ -768,6 +768,17 @@
   gap: 0.25rem;
 }
 
+.detailRowBetween {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .detailLabel {
   font-size: 0.8rem;
   color: var(--text-secondary);
