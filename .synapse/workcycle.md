@@ -1413,3 +1413,24 @@
     7. `src/app/admin/clientes/page.js`: Incorporado `credentials: 'include'` en todas las peticiones `PUT`, `POST` y `DELETE` y mensaje claro ante 401.
   - **Decisión Registrada**: `D-83` en `.synapse/decisions.md`.
 
+## 📅 Sesión: 29 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver error crítico `ReferenceError: Can't find variable: sendingWppNotice` al pulsar `[📲 Reenviar]` en WhatsApp de turno.
+- [x] Habilitar selección de plantilla para reenvío: `🎉 Alta / Confirmación de Turno`, `⏰ Recordatorio de Turno (48 hs)` y `🔄 Turno Reprogramado`.
+- [x] Extender endpoint `/api/admin/turnos/[id]/enviar-aviso` para resolver plantillas oficiales de confirmación/alta manual y reprogramación.
+- [x] Corregir scope y ESLint en modal de clientes (`getRelevantTurnForNotice`) e incorporar `credentials: 'include'`.
+- [x] Compilar localmente con Turbopack y desplegar en VPS Producción (3006) y Staging (3008).
+
+### 📝 Notas / Bitácora
+- **29 de Septiembre (11:20 - 11:35 hs - Fix de Crash en Reenvío de WhatsApp y Soporte Integral de Alta de Turno)**:
+  - **Incidente Reportado por Luciano Gómez (`media_1790691669156.png`, `media_1790691696725.png`)**:
+    * Al abrir el modal del paciente Santino y presionar `[📲 Reenviar]` junto a su teléfono para reenviar el mensaje de alta de turno, la app crasheó en el Error Boundary: `Can't find variable: sendingWppNotice`.
+  - **Causa Raíz**:
+    * En `src/app/admin/agenda/page.js`, `sendingWppNotice` se usaba en `handleSendWppNotice` y en el JSX (`disabled={sendingWppNotice}`) pero jamás se declaró con `useState`.
+    * En `/api/admin/turnos/[id]/enviar-aviso`, solo se contemplaba `CONFIRMACION` (con plantilla genérica) y `RECORDATORIO`, omitiendo la plantilla de alta manual (`wtsp_confirmation_manual_template`) y la de reprogramación (`wtsp_reschedule_template`).
+  - **Implementación**:
+    1. `src/app/admin/agenda/page.js`: Declarado `const [sendingWppNotice, setSendingWppNotice] = useState(false);`. Incorporado `credentials: 'include'`. Actualizado el modal con 3 opciones claras: `🎉 Alta / Confirmación de Turno`, `⏰ Recordatorio de Turno (48 hs)` y `🔄 Turno Reprogramado`.
+    2. `src/app/api/admin/turnos/[id]/enviar-aviso/route.js`: Soporte completo para `CONFIRMACION` / `ALTA_TURNO` buscando `wtsp_confirmation_manual_template` (si fue admin) o `wtsp_confirmation_template`, `REPROGRAMADO` (`wtsp_reschedule_template`) y recordatorio (`wtsp_reminder_template`).
+    3. `src/app/admin/clientes/page.js`: Declarado `getRelevantTurnForNotice` para limpiar IIFEs en JSX, incorporado `credentials: 'include'` y sincronizadas las opciones de reenvío.
+  - **Decisiones y Errores**: `D-84` en `.synapse/decisions.md` y `ERR-31` en `.synapse/errores.md`.

@@ -65,15 +65,29 @@ export async function POST(request, { params }) {
       let rawMessage = '';
       if (customMessage && customMessage.trim()) {
         rawMessage = customMessage.trim();
-      } else if (tipo === 'CONFIRMACION') {
-        const confConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_confirmation_template' } });
-        const defaultConf = "¡Hola {Nombre}! Tu turno de depilación láser para el {Día} {FechaTurno} a las {Horario} hs en {Dirección} ha sido CONFIRMADO. Zonas: {Zonas}.";
-        const template = confConfig?.value || defaultConf;
+      } else if (tipo === 'CONFIRMACION' || tipo === 'ALTA_TURNO') {
+        let template = null;
+        if (turno.creadoPor === 'ADMIN') {
+          const manualConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_confirmation_manual_template' } });
+          template = manualConfig?.value;
+        }
+        if (!template) {
+          const confConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_confirmation_template' } });
+          template = confConfig?.value;
+        }
+        if (!template) {
+          template = "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] para [Zonas] fue agendado con éxito. Recordá venir afeitado al ras. ¡Te esperamos!";
+        }
+        rawMessage = parseTemplate(template, turno.cliente, turno, address);
+      } else if (tipo === 'REPROGRAMADO') {
+        const reschedConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_reschedule_template' } });
+        const defaultResched = "¡Hola [Nombre]! Tu turno fue reprogramado con éxito para el día [FechaTurno] a las [Horario] para [Zonas]. Recordá venir afeitado al ras. ¡Te esperamos!";
+        const template = reschedConfig?.value || defaultResched;
         rawMessage = parseTemplate(template, turno.cliente, turno, address);
       } else {
         // Default: RECORDATORIO_48H / RECORDATORIO
         const remConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_reminder_template' } });
-        const defaultRem = "¡Hola {Nombre}! Te recuerdo el turno de depilación láser para el {Día} {FechaTurno} a las {Horario} hs en {Dirección}. Recordá venir rasurado. ¡Te esperamos!";
+        const defaultRem = "NO RESPONDER ESTE MENSAJE\nHola [Nombre], te recuerdo tu turno de depilación láser para el [DiaCompleto] a las [Horario] hs.\n\nRecordá que tenés que VENIR AFEITADO AL RAS.\n\nIMPORTANTE: al ser turnos muy cortos, la tolerancia de demora por llegar tarde es de 5 minutos.\n\nDIRECCIÓN:\n[Direccion]";
         const template = remConfig?.value || defaultRem;
         rawMessage = parseTemplate(template, turno.cliente, turno, address);
       }

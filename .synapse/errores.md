@@ -275,3 +275,13 @@
 4. En `/chats`, `getBestDisplayName` y las filas de chat priorizan el nombre oficial del cliente, con iniciales limpias ("AK"), badge `⚡ Cliente`, y panel de ficha con observaciones, notas del operador y link a la agenda.
 **Estado:** ✅ FIXED
 
+## ERR-31: Crash de Panel con 'ReferenceError: Can't find variable: sendingWppNotice' al pulsar Reenviar WhatsApp (2026-09-29)
+**Síntoma:** Al abrir el modal de un turno en la Agenda (`/admin/agenda`) y presionar el botón `[📲 Reenviar]` junto al número de WhatsApp del cliente para reenviar el aviso de alta/confirmación del turno, la pantalla se rompe de inmediato mostrando el Error Boundary: `⚠️ Ocurrió un error en el Panel` con `Can't find variable: sendingWppNotice`.
+**Root Cause:** En `src/app/admin/agenda/page.js`, el estado `sendingWppNotice` se utilizó en el handler `handleSendWppNotice` y en el JSX del modal de reenvío de WhatsApp (`disabled={sendingWppNotice}`), pero nunca se declaró con `useState` en las cabeceras del componente (a diferencia de `sendingEmailNotice` que sí estaba declarado). Al abrir el modal, la evaluación de JSX detonó un ReferenceError no capturado en React. Además, el endpoint `/api/admin/turnos/[id]/enviar-aviso` no contemplaba las plantillas de alta manual (`wtsp_confirmation_manual_template`) ni de reprogramación (`wtsp_reschedule_template`).
+**Solución:** 
+1. En `src/app/admin/agenda/page.js`, se declaró `const [sendingWppNotice, setSendingWppNotice] = useState(false);`.
+2. Se actualizaron los radios del modal para permitir elegir entre: `🎉 Alta / Confirmación de Turno`, `⏰ Recordatorio de Turno (48 hs)` y `🔄 Turno Reprogramado`.
+3. En `/api/admin/turnos/[id]/enviar-aviso/route.js`, se implementó soporte completo para `CONFIRMACION` (buscando `wtsp_confirmation_manual_template` para altas de admin o `wtsp_confirmation_template`) y `REPROGRAMADO` (`wtsp_reschedule_template`).
+4. Se agregó `credentials: 'include'` en los fetches de reenvío y en `/api/whatsapp/status`.
+**Commit:** `b607ce7` (próximo commit)
+**Estado:** ✅ FIXED

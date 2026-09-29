@@ -347,6 +347,7 @@ export default function AgendaPage() {
   const [resendWppPhone, setResendWppPhone] = useState('');
   const [resendWppType, setResendWppType] = useState('RECORDATORIO_48H');
   const [wppConnectionStatus, setWppConnectionStatus] = useState('UNKNOWN');
+  const [sendingWppNotice, setSendingWppNotice] = useState(false);
 
   // Emergency Re-Authentication & Draft Rescue States
   const [showReauthModal, setShowReauthModal] = useState(false);
@@ -1578,8 +1579,12 @@ export default function AgendaPage() {
   const handleOpenResendWpp = (turno) => {
     setResendWppModalTurno(turno);
     setResendWppPhone(turno.cliente?.whatsapp || '');
-    setResendWppType('RECORDATORIO_48H');
-    fetch('/api/whatsapp/status')
+    if (turno.estado === 'REPROGRAMADO') {
+      setResendWppType('REPROGRAMADO');
+    } else {
+      setResendWppType('CONFIRMACION');
+    }
+    fetch('/api/whatsapp/status', { credentials: 'include' })
       .then(r => r.json())
       .then(d => setWppConnectionStatus(d.status || 'UNKNOWN'))
       .catch(() => setWppConnectionStatus('DISCONNECTED'));
@@ -1599,6 +1604,7 @@ export default function AgendaPage() {
       const res = await fetch(`/api/admin/turnos/${resendWppModalTurno.id}/enviar-aviso`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           canal: 'WHATSAPP',
           whatsapp: resendWppPhone.trim(),
@@ -4979,17 +4985,6 @@ export default function AgendaPage() {
                   Tipo de Mensaje a Reenviar
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'RECORDATORIO_48H' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'RECORDATORIO_48H' ? '#22c55e' : 'var(--border-color)' }}>
-                    <input
-                      type="radio"
-                      name="agendaWppType"
-                      value="RECORDATORIO_48H"
-                      checked={resendWppType === 'RECORDATORIO_48H'}
-                      onChange={(e) => setResendWppType(e.target.value)}
-                    />
-                    <span><strong>Recordatorio de Turno (48 hs)</strong> (Plantilla oficial con día, horario, zonas, seña y ubicación)</span>
-                  </label>
-
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'CONFIRMACION' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'CONFIRMACION' ? '#22c55e' : 'var(--border-color)' }}>
                     <input
                       type="radio"
@@ -4998,7 +4993,29 @@ export default function AgendaPage() {
                       checked={resendWppType === 'CONFIRMACION'}
                       onChange={(e) => setResendWppType(e.target.value)}
                     />
-                    <span><strong>Confirmación de Turno</strong> (Aviso oficial de confirmación de reserva)</span>
+                    <span><strong>🎉 Alta / Confirmación de Turno</strong> (Mensaje oficial de confirmación de reserva / turno agendado)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'RECORDATORIO_48H' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'RECORDATORIO_48H' ? '#22c55e' : 'var(--border-color)' }}>
+                    <input
+                      type="radio"
+                      name="agendaWppType"
+                      value="RECORDATORIO_48H"
+                      checked={resendWppType === 'RECORDATORIO_48H'}
+                      onChange={(e) => setResendWppType(e.target.value)}
+                    />
+                    <span><strong>⏰ Recordatorio de Turno (48 hs)</strong> (Plantilla oficial con día, horario, zonas, seña y ubicación)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'REPROGRAMADO' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'REPROGRAMADO' ? '#22c55e' : 'var(--border-color)' }}>
+                    <input
+                      type="radio"
+                      name="agendaWppType"
+                      value="REPROGRAMADO"
+                      checked={resendWppType === 'REPROGRAMADO'}
+                      onChange={(e) => setResendWppType(e.target.value)}
+                    />
+                    <span><strong>🔄 Turno Reprogramado</strong> (Aviso oficial con nueva fecha y horario)</span>
                   </label>
                 </div>
               </div>

@@ -260,12 +260,21 @@ function ClientesPageContent() {
   const handleOpenResendWpp = (turno) => {
     setResendWppModalTurno(turno);
     setResendWppPhone(selectedClient?.whatsapp || turno?.cliente?.whatsapp || editNotes.whatsapp || '');
-    setResendWppType('RECORDATORIO_48H');
+    if (turno.estado === 'REPROGRAMADO') {
+      setResendWppType('REPROGRAMADO');
+    } else {
+      setResendWppType('CONFIRMACION');
+    }
     // Check WhatsApp service status
-    fetch('/api/whatsapp/status')
+    fetch('/api/whatsapp/status', { credentials: 'include' })
       .then(r => r.json())
       .then(d => setWppConnectionStatus(d.status || 'UNKNOWN'))
       .catch(() => setWppConnectionStatus('DISCONNECTED'));
+  };
+
+  const getRelevantTurnForNotice = () => {
+    if (!stats || !selectedClient) return null;
+    return stats.nextTurn || selectedClient.turnos?.find(t => t.estado !== 'CANCELADO') || selectedClient.turnos?.[0] || null;
   };
 
   const handleSendWppNotice = async (e) => {
@@ -281,6 +290,7 @@ function ClientesPageContent() {
       const res = await fetch(`/api/admin/turnos/${resendWppModalTurno.id}/enviar-aviso`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           canal: 'WHATSAPP',
           whatsapp: resendWppPhone.trim(),
@@ -1264,54 +1274,50 @@ function ClientesPageContent() {
               <div className={styles.cardSection}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <h3 className={styles.cardSectionTitle} style={{ margin: 0 }}>Mensajes Enviados</h3>
-                  {(() => {
-                    const relevantTurn = stats.nextTurn || selectedClient.turnos?.find(t => t.estado !== 'CANCELADO') || selectedClient.turnos?.[0];
-                    if (!relevantTurn) return null;
-                    return (
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenResendWpp(relevantTurn)}
-                          className="btn"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            backgroundColor: '#16a34a',
-                            borderColor: '#16a34a',
-                            color: '#fff',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          📲 Reenviar WhatsApp (48hs)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenResendEmail(relevantTurn)}
-                          className="btn"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            backgroundColor: '#4f46e5',
-                            borderColor: '#4f46e5',
-                            color: '#fff',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          📧 Reenviar Email
-                        </button>
-                      </div>
-                    );
-                  })()}
+                  {getRelevantTurnForNotice() && (
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenResendWpp(getRelevantTurnForNotice())}
+                        className="btn"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          backgroundColor: '#16a34a',
+                          borderColor: '#16a34a',
+                          color: '#fff',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📲 Reenviar WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenResendEmail(getRelevantTurnForNotice())}
+                        className="btn"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          backgroundColor: '#4f46e5',
+                          borderColor: '#4f46e5',
+                          color: '#fff',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📧 Reenviar Email
+                      </button>
+                    </div>
+                  )}
                 </div>
                 {selectedClient.notificaciones.length === 0 ? (
                   <div className={styles.emptyState}>No hay notificaciones enviadas a este cliente.</div>
@@ -2167,17 +2173,6 @@ function ClientesPageContent() {
                   Tipo de Mensaje a Reenviar
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'RECORDATORIO_48H' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'RECORDATORIO_48H' ? '#22c55e' : 'var(--border-color)' }}>
-                    <input
-                      type="radio"
-                      name="clientWppType"
-                      value="RECORDATORIO_48H"
-                      checked={resendWppType === 'RECORDATORIO_48H'}
-                      onChange={(e) => setResendWppType(e.target.value)}
-                    />
-                    <span><strong>Recordatorio de Turno (48 hs)</strong> (Plantilla oficial con día, horario, zonas, seña y ubicación)</span>
-                  </label>
-
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'CONFIRMACION' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'CONFIRMACION' ? '#22c55e' : 'var(--border-color)' }}>
                     <input
                       type="radio"
@@ -2186,7 +2181,29 @@ function ClientesPageContent() {
                       checked={resendWppType === 'CONFIRMACION'}
                       onChange={(e) => setResendWppType(e.target.value)}
                     />
-                    <span><strong>Confirmación de Turno</strong> (Aviso oficial de confirmación de reserva)</span>
+                    <span><strong>🎉 Alta / Confirmación de Turno</strong> (Mensaje oficial de confirmación de reserva / turno agendado)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'RECORDATORIO_48H' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'RECORDATORIO_48H' ? '#22c55e' : 'var(--border-color)' }}>
+                    <input
+                      type="radio"
+                      name="clientWppType"
+                      value="RECORDATORIO_48H"
+                      checked={resendWppType === 'RECORDATORIO_48H'}
+                      onChange={(e) => setResendWppType(e.target.value)}
+                    />
+                    <span><strong>⏰ Recordatorio de Turno (48 hs)</strong> (Plantilla oficial con día, horario, zonas, seña y ubicación)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: 'var(--text-primary)', cursor: 'pointer', backgroundColor: resendWppType === 'REPROGRAMADO' ? 'rgba(34, 197, 94, 0.12)' : 'transparent', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid', borderColor: resendWppType === 'REPROGRAMADO' ? '#22c55e' : 'var(--border-color)' }}>
+                    <input
+                      type="radio"
+                      name="clientWppType"
+                      value="REPROGRAMADO"
+                      checked={resendWppType === 'REPROGRAMADO'}
+                      onChange={(e) => setResendWppType(e.target.value)}
+                    />
+                    <span><strong>🔄 Turno Reprogramado</strong> (Aviso oficial con nueva fecha y horario)</span>
                   </label>
                 </div>
               </div>
