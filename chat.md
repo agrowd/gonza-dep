@@ -1853,3 +1853,38 @@
   - Producción (`/srv/gonzalo-dep`, PM2 `gonzalo-agenda` PID 1391682, puerto 3006): Compilado con Turbopack y ONLINE.
   - Staging (`/srv/gonzalo-dep-staging`, PM2 `gonzalo-agenda-staging` PID 1392024, puerto 3008): Compilado con Turbopack y ONLINE.
   - Decisión técnica `D-83` documentada y bloqueada (`🔒 LOCKED`) en `.synapse/decisions.md`.
+
+
+## Mensaje del Usuario (2026-09-29 11:21-03:00)
+> [Dos capturas de pantalla de WhatsApp de Luciano Gómez - media_1790691669156.png, media_1790691696725.png]
+> Captura 1: Modal del turno de Santino (Estado: REPROGRAMADO, Zonas: Espalda) con círculo naranja en el botón `[+54 9 1121584180] [📲 Reenviar]`.
+> Luciano Gómez: "Cuando pulso el botón de reenviar para reenviar el mensaje de la alta de turnos"
+> Captura 2: Error Boundary en el panel: `⚠️ Ocurrió un error en el Panel` con `Can't find variable: sendingWppNotice`.
+> Luciano Gómez: "Me aparece este error"
+
+## Respuesta del Asistente (D-84 / ERR-31):
+- **1. Causa Raíz Descubierta**:
+  - En `src/app/admin/agenda/page.js`, al pulsar `[📲 Reenviar]` se ejecutaba `handleOpenResendWpp(selectedTurno)`, abriendo el modal de reenvío de WhatsApp.
+  - Dentro del JSX del modal, el botón de envío y el de cancelar evaluaban `disabled={sendingWppNotice}` y `sendingWppNotice ? 'Enviando...' : ...`.
+  - Sin embargo, `sendingWppNotice` no estaba declarado con `useState` en el componente (a diferencia de `sendingEmailNotice` que sí lo estaba), arrojando de inmediato un `ReferenceError: Can't find variable: sendingWppNotice` que crasheaba el panel en el Error Boundary de React.
+  - Además, el backend `/api/admin/turnos/[id]/enviar-aviso` no contemplaba la plantilla oficial de alta manual (`wtsp_confirmation_manual_template`) ni la de reprogramación (`wtsp_reschedule_template`).
+- **2. Solución Aplicada**:
+  - `src/app/admin/agenda/page.js`:
+    * Declarado el estado `const [sendingWppNotice, setSendingWppNotice] = useState(false);`.
+    * En `handleOpenResendWpp`, se incorporó `credentials: 'include'` y se preselecciona inteligentemente `REPROGRAMADO` si el turno está reprogramado, o `CONFIRMACION` para el alta de turno.
+    * En el modal se habilitaron tres selectores claros: `🎉 Alta / Confirmación de Turno`, `⏰ Recordatorio de Turno (48 hs)` y `🔄 Turno Reprogramado`.
+    * En `handleSendWppNotice`, se pasó `credentials: 'include'`.
+  - `src/app/api/admin/turnos/[id]/enviar-aviso/route.js`:
+    * Soporte para `CONFIRMACION` (buscando `wtsp_confirmation_manual_template` para turnos creados por admin o `wtsp_confirmation_template`).
+    * Soporte para `REPROGRAMADO` (buscando `wtsp_reschedule_template`).
+    * Soporte para `RECORDATORIO_48H` (buscando `wtsp_reminder_template`).
+  - `src/app/admin/clientes/page.js`:
+    * Extraída la función `getRelevantTurnForNotice` para limpiar IIFEs en JSX.
+    * Sincronizados los selectores y añadido `credentials: 'include'`.
+- **3. Verificación y Despliegue**:
+  - Compilación limpia con Turbopack en local y servidor (41/41 rutas).
+  - Git commits `d17643d` en `main` y `staging`.
+  - Desplegado y reiniciado en VPS:
+    * Producción (`/srv/gonzalo-dep`, PM2 `gonzalo-agenda` PID 1404853, puerto 3006): **ONLINE**.
+    * Staging (`/srv/gonzalo-dep-staging`, PM2 `gonzalo-agenda-staging` PID 1405015, puerto 3008): **ONLINE**.
+  - Documentación registrada en `.synapse/decisions.md` (`D-84`), `.synapse/errores.md` (`ERR-31`) y `.synapse/workcycle.md`.
