@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import prisma from './db.js';
 
 /**
  * Create a reusable SMTP transporter and sender address.
@@ -46,15 +47,14 @@ export function formatEmailParagraphs(rawText) {
 }
 
 /**
- * Sends a notification email to a client who did not show up for their scheduled appointment.
+ * Replaces placeholders in subject strings without HTML tags.
  */
-export async function sendNoShowEmail(clientEmail, clientName, turnDetails, customSubject, customBody) {
-  const { transporter, from, bcc } = getMailConfig();
+export function applyEmailTemplatePlaceholdersPlain(templateText, clientName = '', turnDetails = {}, address = '') {
+  if (!templateText) return '';
 
-  const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
-  
-  // Format Date (e.g. viernes, 19 de junio de 2026)
-  const dateObj = new Date(fecha);
+  const { fecha, horaInicio, horaFin, zonas, valorSeña, valorTotal } = turnDetails || {};
+
+  const dateObj = fecha ? new Date(fecha) : new Date();
   const dateFormatted = dateObj.toLocaleDateString('es-ES', {
     weekday: 'long',
     day: 'numeric',
@@ -63,7 +63,9 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
     timeZone: 'UTC'
   });
 
-  // Try to parse zones string safely
+  const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
+  const diaFormatted = rawWeekday ? (rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1)) : '';
+
   let zonesText = '';
   try {
     const zonesArray = typeof zonas === 'string' ? JSON.parse(zonas) : zonas;
@@ -72,20 +74,99 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
     zonesText = zonas || 'Sesión de depilación';
   }
 
-  const subject = customSubject || 'Aviso de turno no asistido - Gonzalo Depilación';
+  const horaStr = horaInicio ? (horaFin ? `${horaInicio} a ${horaFin}` : `${horaInicio}`) : '';
+  const señaNum = Number(valorSeña || 0);
+  const totalNum = Number(valorTotal || 0);
+  const saldoNum = Math.max(0, totalNum - señaNum);
+  const addrStr = address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)';
 
-  const defaultBody = "Lamentamos informarte que, según nuestras políticas de cancelación y de reserva vigentes, la seña abonada se retiene para cubrir los costos logísticos y operativos de la sesión reservada que no pudimos utilizar.\n\nSi deseas programar una nueva sesión de depilación láser, puedes hacerlo en cualquier momento a través de nuestro portal web ingresando con tu usuario habitual o reservando un nuevo turno.";
+  return templateText
+    .replace(/(\{|\[)(cliente|nombre|Nombre|Cliente)(\}|\])/gi, clientName || 'Cliente')
+    .replace(/(\{|\[)(día|dia|Día|Dia)(\}|\])/gi, diaFormatted)
+    .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, dateFormatted)
+    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])/gi, `${horaStr} hs`)
+    .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, zonesText)
+    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, `$${señaNum.toLocaleString('es-AR')}`)
+    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, `$${saldoNum.toLocaleString('es-AR')}`)
+    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, `$${totalNum.toLocaleString('es-AR')}`)
+    .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, addrStr);
+}
 
-  let rawBody = customBody || defaultBody;
-  rawBody = rawBody
-    .replace(/\{cliente\}/gi, `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
-    .replace(/\{fecha\}/gi, `<strong style="color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</strong>`)
-    .replace(/\{horario\}/gi, `<strong style="color: #d4a54d !important; font-weight: bold; text-decoration: none !important;">${horaInicio} hs</strong>`)
-    .replace(/\{zonas\}/gi, `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
-    .replace(/\{seña\}/gi, `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
-    .replace(/\{total\}/gi, `<strong style="color: #ffffff !important;">$${(valorTotal || 0).toLocaleString()}</strong>`);
+/**
+ * Replaces placeholders in HTML body strings with styled elements.
+ */
+export function applyEmailTemplatePlaceholders(templateText, clientName = '', turnDetails = {}, address = '') {
+  if (!templateText) return '';
 
-  const formattedParagraphs = formatEmailParagraphs(rawBody);
+  const { fecha, horaInicio, horaFin, zonas, valorSeña, valorTotal } = turnDetails || {};
+
+  const dateObj = fecha ? new Date(fecha) : new Date();
+  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
+
+  const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
+  const diaFormatted = rawWeekday ? (rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1)) : '';
+
+  let zonesText = '';
+  try {
+    const zonesArray = typeof zonas === 'string' ? JSON.parse(zonas) : zonas;
+    zonesText = Array.isArray(zonesArray) ? zonesArray.map(z => z.nombre || z).join(', ') : (zonas || 'Sesión de depilación');
+  } catch (e) {
+    zonesText = zonas || 'Sesión de depilación';
+  }
+
+  const horaStr = horaInicio ? (horaFin ? `${horaInicio} a ${horaFin}` : `${horaInicio}`) : '';
+  const señaNum = Number(valorSeña || 0);
+  const totalNum = Number(valorTotal || 0);
+  const saldoNum = Math.max(0, totalNum - señaNum);
+  const addrStr = address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)';
+
+  return templateText
+    .replace(/(\{|\[)(cliente|nombre|Nombre|Cliente)(\}|\])/gi, `<strong style="color: #ffffff !important;">${clientName || 'Cliente'}</strong>`)
+    .replace(/(\{|\[)(día|dia|Día|Dia)(\}|\])/gi, `<strong style="color: #d4a54d !important; text-transform: capitalize;">${diaFormatted}</strong>`)
+    .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, `<strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong>`)
+    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])/gi, `<strong style="color: #d4a54d !important;">${horaStr} hs</strong>`)
+    .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
+    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, `<strong style="color: #a5d6a7 !important;">$${señaNum.toLocaleString('es-AR')}</strong>`)
+    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, `<strong style="color: #ffb74d !important;">$${saldoNum.toLocaleString('es-AR')}</strong>`)
+    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, `<strong style="color: #ffffff !important;">$${totalNum.toLocaleString('es-AR')}</strong>`)
+    .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, `<strong style="color: #ffffff !important;">${addrStr}</strong>`);
+}
+
+/**
+ * Sends a notification email to a client who did not show up for their scheduled appointment.
+ */
+export async function sendNoShowEmail(clientEmail, clientName, turnDetails, customSubject, customBody) {
+  const { transporter, from, bcc } = getMailConfig();
+
+  let subjectTemplate = customSubject;
+  let bodyTemplate = customBody;
+
+  if (!subjectTemplate || !bodyTemplate) {
+    try {
+      const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_noshow_subject' } });
+      const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_noshow_body' } });
+      if (!subjectTemplate) subjectTemplate = subjectConfig?.value;
+      if (!bodyTemplate) bodyTemplate = bodyConfig?.value;
+    } catch (e) {
+      console.error('Error loading email_noshow config from DB:', e);
+    }
+  }
+
+  const defaultSubject = 'Aviso de turno no asistido - Gonzalo Depilación';
+  const defaultBody = "Lamentamos informarte que, según nuestras políticas de cancelación y de reserva vigentes, la seña abonada de {seña} se retiene para cubrir los costos logísticos y operativos de la sesión reservada que no pudimos utilizar.\n\nSi deseas programar una nueva sesión de depilación láser, puedes hacerlo en cualquier momento a través de nuestro portal web ingresando con tu usuario habitual o reservando un nuevo turno.";
+
+  const rawSubject = subjectTemplate || defaultSubject;
+  const rawBody = bodyTemplate || defaultBody;
+
+  const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, clientName, turnDetails);
+  const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
+  const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -94,113 +175,13 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
       <meta charset="utf-8">
       <title>${subject}</title>
       <style>
-        body {
-          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #121212;
-          color: #f0ede6;
-          margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        a, a:link, a:visited, a:hover, a:active {
-          color: #ffffff !important;
-          text-decoration: none !important;
-        }
-        x-apple-data-detectors,
-        x-apple-data-detectors a,
-        .x-apple-data-detectors a,
-        a[x-apple-data-detectors],
-        a[href^="x-apple-data-detectors"] {
-          color: #ffffff !important;
-          text-decoration: none !important;
-          font-size: inherit !important;
-          font-family: inherit !important;
-          font-weight: inherit !important;
-          line-height: inherit !important;
-        }
-        .container {
-          max-width: 600px;
-          margin: 20px auto;
-          background-color: #1d1d1d;
-          border: 1px solid #d4a54d;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .header {
-          background-color: #282a2b;
-          border-bottom: 2px solid #d4a54d;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          color: #d4a54d;
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
-        }
-        .greeting {
-          font-size: 18px;
-          font-weight: bold;
-          color: #ffffff;
-          margin-bottom: 20px;
-        }
-        .highlight-box {
-          background-color: #282a2b;
-          border-left: 4px solid #d4a54d;
-          padding: 20px;
-          margin: 25px 0;
-          border-radius: 4px;
-        }
-        .highlight-title {
-          font-weight: bold;
-          color: #d4a54d;
-          margin-bottom: 10px;
-          font-size: 15px;
-          text-transform: uppercase;
-        }
-        .details-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        .details-list li {
-          margin-bottom: 10px;
-          display: flex;
-          justify-content: space-between;
-        }
-        .details-label {
-          color: #b0adab;
-        }
-        .details-value {
-          font-weight: bold;
-          color: #ffffff;
-        }
-        .note {
-          font-size: 14px;
-          color: #b0adab;
-          border-top: 1px solid #282a2b;
-          padding-top: 20px;
-          margin-top: 30px;
-        }
-        .footer {
-          background-color: #121212;
-          padding: 20px 30px;
-          text-align: center;
-          font-size: 12px;
-          color: #777777;
-          border-top: 1px solid #282a2b;
-        }
-        .footer a {
-          color: #d4a54d;
-          text-decoration: none;
-        }
+        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
+        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
+        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
       </style>
     </head>
     <body>
@@ -209,39 +190,12 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
           <h1>GONZALO DEPILACIÓN LÁSER</h1>
         </div>
         <div class="content">
-          <div class="greeting">Hola ${clientName},</div>
-          
-          <div class="highlight-box">
-            <div class="highlight-title">Detalles del Turno</div>
-            <ul class="details-list">
-              <li>
-                <span class="details-label">Fecha:</span>
-                <span class="details-value" style="color: #ffffff !important; text-decoration: none !important;">${dateFormatted}</span>
-              </li>
-              <li>
-                <span class="details-label">Horario:</span>
-                <span class="details-value" style="color: #d4a54d !important; text-decoration: none !important; font-weight: bold;">${horaInicio} hs</span>
-              </li>
-              <li>
-                <span class="details-label">Zonas:</span>
-                <span class="details-value">${zonesText}</span>
-              </li>
-              <li>
-                <span class="details-label">Seña abonada:</span>
-                <span class="details-value" style="color: #ff8a8a;">$${(valorSeña || 0).toLocaleString()}</span>
-              </li>
-            </ul>
-          </div>
-
-          ${formattedParagraphs}
-
-          <div class="note">
-            Si crees que esto ha sido un error de registro o tuviste un inconveniente de fuerza mayor, por favor contáctanos directamente respondiendo a este correo o escribiéndonos por WhatsApp para que podamos evaluar tu situación.
-          </div>
+          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
+          ${formattedBodyHtml}
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Diseñado para brindarte el mejor servicio en depilación láser masculina.
+          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
         </div>
       </div>
     </body>
@@ -260,145 +214,51 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
 /**
  * Sends a confirmation email when an appointment is confirmed (paid or manually booked).
  */
-export async function sendConfirmationEmail(clientEmail, clientName, turnDetails) {
+export async function sendConfirmationEmail(clientEmail, clientName, turnDetails, customSubject, customBody) {
   const { transporter, from, bcc } = getMailConfig();
 
-  const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
-  
-  const dateObj = new Date(fecha);
-  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
+  let subjectTemplate = customSubject;
+  let bodyTemplate = customBody;
 
-  let zonesText = '';
-  try {
-    const zonesArray = JSON.parse(zonas);
-    zonesText = zonesArray.map(z => z.nombre).join(', ');
-  } catch (e) {
-    zonesText = zonas || 'Sesión de depilación';
+  if (!subjectTemplate || !bodyTemplate) {
+    try {
+      const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_confirmation_subject' } });
+      const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_confirmation_body' } });
+      const addressConfig = await prisma.configuracion.findUnique({ where: { key: 'address' } });
+      const address = addressConfig?.value || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)';
+
+      if (!subjectTemplate) subjectTemplate = subjectConfig?.value;
+      if (!bodyTemplate) bodyTemplate = bodyConfig?.value;
+    } catch (e) {
+      console.error('Error loading email_confirmation config from DB:', e);
+    }
   }
+
+  const defaultSubject = 'Confirmación de turno - Gonzalo Depilación';
+  const defaultBody = "¡Tu reserva ha sido confirmada con éxito!\n\nA continuación te detallamos los datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras de la noche anterior. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.\n\n¡Te esperamos!";
+
+  const rawSubject = subjectTemplate || defaultSubject;
+  const rawBody = bodyTemplate || defaultBody;
+
+  const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, clientName, turnDetails);
+  const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
+  const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Confirmación de Turno</title>
+      <title>${subject}</title>
       <style>
-        body {
-          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #121212;
-          color: #f0ede6;
-          margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        a, a:link, a:visited, a:hover, a:active {
-          color: #ffffff !important;
-          text-decoration: none !important;
-        }
-        x-apple-data-detectors,
-        x-apple-data-detectors a,
-        .x-apple-data-detectors a,
-        a[x-apple-data-detectors],
-        a[href^="x-apple-data-detectors"] {
-          color: #ffffff !important;
-          text-decoration: none !important;
-          font-size: inherit !important;
-          font-family: inherit !important;
-          font-weight: inherit !important;
-          line-height: inherit !important;
-        }
-        .container {
-          max-width: 600px;
-          margin: 20px auto;
-          background-color: #1d1d1d;
-          border: 1px solid #d4a54d;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .header {
-          background-color: #282a2b;
-          border-bottom: 2px solid #d4a54d;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          color: #d4a54d;
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
-        }
-        .greeting {
-          font-size: 18px;
-          font-weight: bold;
-          color: #ffffff;
-          margin-bottom: 20px;
-        }
-        .highlight-box {
-          background-color: #282a2b;
-          border-left: 4px solid #d4a54d;
-          padding: 20px;
-          margin: 25px 0;
-          border-radius: 4px;
-        }
-        .highlight-title {
-          font-weight: bold;
-          color: #d4a54d;
-          margin-bottom: 10px;
-          font-size: 15px;
-          text-transform: uppercase;
-        }
-        .details-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        .details-list li {
-          margin-bottom: 10px;
-          display: flex;
-          justify-content: space-between;
-        }
-        .details-label {
-          color: #b0adab;
-        }
-        .details-value {
-          font-weight: bold;
-          color: #ffffff;
-        }
-        .note {
-          font-size: 14px;
-          color: #b0adab;
-          border-top: 1px solid #282a2b;
-          padding-top: 20px;
-          margin-top: 30px;
-        }
-        .note p {
-          margin: 0 0 12px 0;
-          line-height: 1.5;
-        }
-        .note p:last-child {
-          margin-bottom: 0;
-        }
-        .footer {
-          background-color: #121212;
-          padding: 20px 30px;
-          text-align: center;
-          font-size: 12px;
-          color: #777777;
-          border-top: 1px solid #282a2b;
-        }
+        body { font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+        a, a:link, a:visited, a:hover, a:active { color: #ffffff !important; text-decoration: none !important; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
+        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
+        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
       </style>
     </head>
     <body>
@@ -407,41 +267,12 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
           <h1>GONZALO DEPILACIÓN LÁSER</h1>
         </div>
         <div class="content">
-          <div class="greeting">Hola ${clientName},</div>
-          <p style="color: #f0ede6; line-height: 1.6;">¡Tu reserva ha sido confirmada con éxito! A continuación te detallamos los datos de tu turno:</p>
-          
-          <div class="highlight-box">
-            <div class="highlight-title">Detalles del Turno</div>
-            <ul class="details-list">
-              <li>
-                <span class="details-label">Fecha:</span>
-                <span class="details-value"><a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong></a></span>
-              </li>
-              <li>
-                <span class="details-label">Horario:</span>
-                <span class="details-value"><a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">${horaInicio} hs</strong></a></span>
-              </li>
-              <li>
-                <span class="details-label">Zonas:</span>
-                <span class="details-value" style="color: #ffffff !important;">${zonesText}</span>
-              </li>
-              <li>
-                <span class="details-label">Seña abonada:</span>
-                <span class="details-value" style="color: #a5d6a7 !important; font-weight: bold;">$${valorSeña.toLocaleString()}</span>
-              </li>
-            </ul>
-          </div>
-
-          <div class="note">
-            <p style="font-weight: bold; color: #d4a54d; margin-bottom: 12px; font-size: 15px;">⚠️ Recordatorios importantes:</p>
-            <p style="margin-bottom: 10px; line-height: 1.5; color: #e0e0e0;">- Recordá venir <strong style="color: #ffffff;">afeitado al ras</strong> con maquinita de afeitar (24 horas antes) en las zonas a depilar. No uses cera ni pinza.</p>
-            <p style="margin-bottom: 10px; line-height: 1.5; color: #e0e0e0;">- Por favor asistí con puntualidad. La tolerancia máxima de demora es de solo <strong style="color: #ffffff;">5 minutos</strong>.</p>
-            <p style="margin-bottom: 0; line-height: 1.5; color: #e0e0e0;">- Dirección del estudio: <a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important;">Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)</strong></a>.</p>
-          </div>
+          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
+          ${formattedBodyHtml}
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Para reprogramar o cancelar, por favor ponte en contacto con nosotros.
+          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
         </div>
       </div>
     </body>
@@ -452,7 +283,7 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
     from,
     to: clientEmail,
     bcc,
-    subject: `Confirmación de turno - Gonzalo Depilación`,
+    subject,
     html: htmlContent
   });
 }
@@ -460,150 +291,52 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
 /**
  * Sends a cancellation email when an appointment is cancelled.
  */
-export async function sendCancellationEmail(clientEmail, clientName, turnDetails, withLossOfDeposit = false) {
+export async function sendCancellationEmail(clientEmail, clientName, turnDetails, withLossOfDeposit = false, customSubject, customBody) {
   const { transporter, from, bcc } = getMailConfig();
 
-  const { fecha, horaInicio, zonas, valorSeña } = turnDetails;
-  
-  const dateObj = new Date(fecha);
-  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
+  let subjectTemplate = customSubject;
+  let bodyTemplate = customBody;
 
-  let zonesText = '';
-  try {
-    const zonesArray = JSON.parse(zonas);
-    zonesText = zonesArray.map(z => z.nombre).join(', ');
-  } catch (e) {
-    zonesText = zonas || 'Sesión de depilación';
+  if (!subjectTemplate || !bodyTemplate) {
+    try {
+      const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_cancellation_subject' } });
+      const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_cancellation_body' } });
+      if (!subjectTemplate) subjectTemplate = subjectConfig?.value;
+      if (!bodyTemplate) bodyTemplate = bodyConfig?.value;
+    } catch (e) {
+      console.error('Error loading email_cancellation config from DB:', e);
+    }
   }
 
-  const policyText = withLossOfDeposit
-    ? `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">De acuerdo con nuestras políticas corporativas de reserva y cancelación, la seña abonada de <strong style="color: #ff8a8a;">$${(valorSeña || 0).toLocaleString()}</strong> ha sido retenida para cubrir los costos de reserva del espacio.</p>`
-    : `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">Al haberse realizado la cancelación con más de 72 horas de anticipación (o por disposición administrativa), tu seña original de <strong style="color: #a5d6a7;">$${(valorSeña || 0).toLocaleString()}</strong> queda registrada <strong style="color: #ffffff;">a tu favor</strong>. Por favor, ponte en contacto con nosotros para coordinar la reprogramación de tu cita utilizando esta seña.</p>`;
+  const defaultSubject = withLossOfDeposit
+    ? 'Cancelación de turno (seña retenida) - Gonzalo Depilación'
+    : 'Cancelación de turno - Gonzalo Depilación';
+
+  const defaultBody = withLossOfDeposit
+    ? "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n\nDe acuerdo con nuestras políticas de reserva y cancelación, la seña abonada de {seña} ha sido retenida para cubrir los costos logísticos del horario reservado."
+    : "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n\nAl haberse realizado con la anticipación correspondiente, tu seña queda registrada a tu favor. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.";
+
+  const rawSubject = subjectTemplate || defaultSubject;
+  const rawBody = bodyTemplate || defaultBody;
+
+  const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, clientName, turnDetails);
+  const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
+  const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Cancelación de Turno</title>
+      <title>${subject}</title>
       <style>
-        body {
-          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #121212;
-          color: #f0ede6;
-          margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        a, a:link, a:visited, a:hover, a:active {
-          color: #ffffff !important;
-          text-decoration: none !important;
-        }
-        x-apple-data-detectors,
-        x-apple-data-detectors a,
-        .x-apple-data-detectors a,
-        a[x-apple-data-detectors],
-        a[href^="x-apple-data-detectors"] {
-          color: #ffffff !important;
-          text-decoration: none !important;
-          font-size: inherit !important;
-          font-family: inherit !important;
-          font-weight: inherit !important;
-          line-height: inherit !important;
-        }
-        .container {
-          max-width: 600px;
-          margin: 20px auto;
-          background-color: #1d1d1d;
-          border: 1px solid #d4a54d;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .header {
-          background-color: #282a2b;
-          border-bottom: 2px solid #d4a54d;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          margin: 0;
-          color: #d4a54d;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
-        }
-        .greeting {
-          font-size: 18px;
-          font-weight: 700;
-          color: #ffffff;
-          margin-bottom: 20px;
-        }
-        .highlight-box {
-          background-color: #282a2b;
-          border-left: 4px solid #d4a54d;
-          padding: 20px;
-          margin: 25px 0;
-          border-radius: 4px;
-        }
-        .highlight-title {
-          font-weight: bold;
-          color: #d4a54d;
-          margin-bottom: 10px;
-          font-size: 15px;
-          text-transform: uppercase;
-        }
-        .details-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        .details-list li {
-          margin-bottom: 10px;
-          font-size: 15px;
-          display: flex;
-          justify-content: space-between;
-          border-bottom: 1px dotted rgba(255,255,255,0.05);
-          padding-bottom: 8px;
-        }
-        .details-list li:last-child {
-          margin-bottom: 0;
-          border-bottom: none;
-          padding-bottom: 0;
-        }
-        .details-label {
-          color: #b0adab;
-        }
-        .details-value {
-          font-weight: bold;
-          color: #ffffff;
-        }
-        .note {
-          font-size: 14px;
-          color: #b0adab;
-          border-top: 1px solid #282a2b;
-          padding-top: 20px;
-          margin-top: 30px;
-        }
-        .footer {
-          background-color: #121212;
-          padding: 20px 30px;
-          text-align: center;
-          font-size: 12px;
-          color: #777777;
-          border-top: 1px solid #282a2b;
-        }
+        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
+        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
+        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
       </style>
     </head>
     <body>
@@ -612,51 +345,23 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
           <h1>GONZALO DEPILACIÓN LÁSER</h1>
         </div>
         <div class="content">
-          <div class="greeting">Hola ${clientName},</div>
-          <p style="margin-bottom: 1rem; line-height: 1.6; color: #f0ede6;">Te informamos que tu turno para depilación láser ha sido <strong style="color: #ffffff;">cancelado</strong>:</p>
-          
-          <div class="highlight-box">
-            <div class="highlight-title">Detalles del Turno Cancelado</div>
-            <ul class="details-list">
-              <li>
-                <span class="details-label">Fecha:</span>
-                <span class="details-value"><a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong></a></span>
-              </li>
-              <li>
-                <span class="details-label">Horario:</span>
-                <span class="details-value"><a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">${horaInicio} hs</strong></a></span>
-              </li>
-              <li>
-                <span class="details-label">Zonas:</span>
-                <span class="details-value" style="color: #ffffff !important;">${zonesText}</span>
-              </li>
-            </ul>
-          </div>
-
-          ${policyText}
-
-          <div class="note">
-            Si crees que esto es un error o deseas volver a agendar tu turno, podés hacerlo a través de nuestro sitio web en cualquier momento.
-          </div>
+          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
+          ${formattedBodyHtml}
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Diseñado para brindarte el mejor servicio en depilación láser masculina.
+          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
         </div>
       </div>
     </body>
     </html>
   `;
 
-  const mailSubject = withLossOfDeposit
-    ? `Cancelación de turno (seña retenida) - Gonzalo Depilación`
-    : `Cancelación de turno - Gonzalo Depilación`;
-
   await transporter.sendMail({
     from,
     to: clientEmail,
     bcc,
-    subject: mailSubject,
+    subject,
     html: htmlContent
   });
 }
@@ -722,104 +427,21 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
       <meta charset="utf-8">
       <title>Recibo Comercial - Gonzalo Depilación</title>
       <style>
-        body {
-          font-family: Arial, sans-serif;
-          background-color: #f4f4f4;
-          color: #111111;
-          margin: 0;
-          padding: 20px;
-        }
-        .receipt-container {
-          max-width: 620px;
-          margin: 0 auto;
-          background-color: #ffffff;
-          border: 2px solid #333333;
-          padding: 20px;
-          box-sizing: border-box;
-        }
-        .header-box {
-          border: 1px solid #777777;
-          padding: 12px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 15px;
-        }
-        .header-left {
-          width: 42%;
-          font-size: 12px;
-          line-height: 1.4;
-        }
-        .header-left h2 {
-          font-size: 16px;
-          margin: 0 0 4px 0;
-          color: #000000;
-        }
-        .header-center {
-          width: 16%;
-          text-align: center;
-          border-left: 1px solid #cccccc;
-          border-right: 1px solid #cccccc;
-          padding: 0 5px;
-        }
-        .letter-x {
-          font-size: 24px;
-          font-weight: 900;
-          margin: 0;
-          line-height: 1;
-        }
-        .header-center span {
-          font-size: 8px;
-          display: block;
-          color: #555555;
-          margin-top: 2px;
-        }
-        .header-right {
-          width: 38%;
-          text-align: right;
-          font-size: 12px;
-          line-height: 1.4;
-        }
-        .header-right h3 {
-          font-size: 16px;
-          margin: 0 0 2px 0;
-          letter-spacing: 1px;
-        }
-        .client-box {
-          border: 1px solid #cccccc;
-          padding: 10px 12px;
-          font-size: 13px;
-          margin-bottom: 15px;
-          background-color: #fafafa;
-        }
-        .items-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
-          border: 1px solid #cccccc;
-        }
-        .items-table th {
-          background-color: #eeeeee;
-          padding: 8px 12px;
-          font-size: 13px;
-          border-bottom: 1px solid #cccccc;
-        }
-        .total-box {
-          text-align: right;
-          font-size: 16px;
-          font-weight: bold;
-          padding: 10px 0;
-          border-top: 2px solid #333333;
-          margin-top: 15px;
-        }
-        .footer-legend {
-          text-align: center;
-          font-size: 11px;
-          color: #666666;
-          margin-top: 20px;
-          border-top: 1px solid #eeeeee;
-          padding-top: 10px;
-        }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; color: #111111; margin: 0; padding: 20px; }
+        .receipt-container { max-width: 620px; margin: 0 auto; background-color: #ffffff; border: 2px solid #333333; padding: 20px; box-sizing: border-box; }
+        .header-box { border: 1px solid #777777; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header-left { width: 42%; font-size: 12px; line-height: 1.4; }
+        .header-left h2 { font-size: 16px; margin: 0 0 4px 0; color: #000000; }
+        .header-center { width: 16%; text-align: center; border-left: 1px solid #cccccc; border-right: 1px solid #cccccc; padding: 0 5px; }
+        .letter-x { font-size: 24px; font-weight: 900; margin: 0; line-height: 1; }
+        .header-center span { font-size: 8px; display: block; color: #555555; margin-top: 2px; }
+        .header-right { width: 38%; text-align: right; font-size: 12px; line-height: 1.4; }
+        .header-right h3 { font-size: 16px; margin: 0 0 2px 0; letter-spacing: 1px; }
+        .client-box { border: 1px solid #cccccc; padding: 10px 12px; font-size: 13px; margin-bottom: 15px; background-color: #fafafa; }
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #cccccc; }
+        .items-table th { background-color: #eeeeee; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #cccccc; }
+        .total-box { text-align: right; font-size: 16px; font-weight: bold; padding: 10px 0; border-top: 2px solid #333333; margin-top: 15px; }
+        .footer-legend { text-align: center; font-size: 11px; color: #666666; margin-top: 20px; border-top: 1px solid #eeeeee; padding-top: 10px; }
       </style>
     </head>
     <body>
@@ -884,63 +506,46 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
 /**
  * Sends a maintenance reminder email to the client.
  */
-export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
+export async function sendMaintenanceEmail(clientEmail, customSubject, customBody) {
   const { transporter, from, bcc } = getMailConfig();
+
+  let subjectTemplate = customSubject;
+  let bodyTemplate = customBody;
+
+  if (!subjectTemplate || !bodyTemplate) {
+    try {
+      const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_subject' } });
+      const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_body' } });
+      if (!subjectTemplate) subjectTemplate = subjectConfig?.value;
+      if (!bodyTemplate) bodyTemplate = bodyConfig?.value;
+    } catch (e) {
+      console.error('Error loading email_maintenance config from DB:', e);
+    }
+  }
+
+  const defaultSubject = '¡Es hora de tu mantenimiento! - Gonzalo Depilación';
+  const defaultBody = "¡Hola {cliente}!\n\nHace dos meses y medio finalizaste tu tratamiento de depilación láser.\n\nTe escribimos para invitarte a realizar una sesión de mantenimiento. Mantener los resultados te ayudará a lucir siempre impecable y conservar el efecto del tratamiento a largo plazo.\n\nPodés reservar tu turno ingresando directamente a nuestro sitio web.\n\n¡Te esperamos!";
+
+  const rawSubject = subjectTemplate || defaultSubject;
+  const rawBody = bodyTemplate || defaultBody;
+
+  const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, 'Cliente', {});
+  const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, 'Cliente', {});
+  const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>\${subject}</title>
+      <title>${subject}</title>
       <style>
-        body {
-          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #121212;
-          color: #f0ede6;
-          margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        .container {
-          max-width: 600px;
-          margin: 20px auto;
-          background-color: #1d1d1d;
-          border: 1px solid #d4a54d;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .header {
-          background-color: #282a2b;
-          border-bottom: 2px solid #d4a54d;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          color: #d4a54d;
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
-        }
-        .body-text {
-          margin-bottom: 25px;
-          white-space: pre-line;
-        }
-        .footer {
-          background-color: #121212;
-          padding: 20px 30px;
-          text-align: center;
-          font-size: 12px;
-          color: #777777;
-          border-top: 1px solid #282a2b;
-        }
+        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
+        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
       </style>
     </head>
     <body>
@@ -949,10 +554,10 @@ export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
           <h1>GONZALO DEPILACIÓN LÁSER</h1>
         </div>
         <div class="content">
-          <div class="body-text">\${bodyText}</div>
+          ${formattedBodyHtml}
         </div>
         <div class="footer">
-          &copy; \${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
+          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
           Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
         </div>
       </div>
@@ -964,7 +569,7 @@ export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
     from,
     to: clientEmail,
     bcc,
-    subject: subject,
+    subject,
     html: htmlContent
   });
 }
@@ -972,49 +577,32 @@ export async function sendMaintenanceEmail(clientEmail, subject, bodyText) {
 /**
  * Sends a rescheduling email to the client when their appointment details are changed.
  */
-export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, subjectTemplate, bodyTemplate) {
+export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, customSubject, customBody) {
   const { transporter, from, bcc } = getMailConfig();
 
-  const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
-  
-  const dateObj = new Date(fecha);
-  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
+  let subjectTemplate = customSubject;
+  let bodyTemplate = customBody;
 
-  let zonesText = '';
-  try {
-    const zonesArray = JSON.parse(zonas);
-    zonesText = zonesArray.map(z => z.nombre).join(', ');
-  } catch (e) {
-    zonesText = zonas || 'Sesión de depilación';
+  if (!subjectTemplate || !bodyTemplate) {
+    try {
+      const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reprogram_subject' } });
+      const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reprogram_body' } });
+      if (!subjectTemplate) subjectTemplate = subjectConfig?.value;
+      if (!bodyTemplate) bodyTemplate = bodyConfig?.value;
+    } catch (e) {
+      console.error('Error loading email_reprogram config from DB:', e);
+    }
   }
 
-  const address = 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)';
+  const defaultSubject = 'Reprogramación de turno - Gonzalo Depilación';
+  const defaultBody = "Te informamos que tu turno para depilación láser ha sido reprogramado con éxito.\n\nA continuación te detallamos los nuevos datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. Si tenés alguna duda, comunicate con nosotros.\n\n¡Te esperamos!";
 
-  const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
-  const diaFormatted = rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1);
+  const rawSubject = subjectTemplate || defaultSubject;
+  const rawBody = bodyTemplate || defaultBody;
 
-  const replacePlaceholders = (text) => {
-    if (!text) return '';
-    return text
-      .replaceAll('{cliente}', `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
-      .replaceAll('{día}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
-      .replaceAll('{dia}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
-      .replaceAll('{fecha}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${dateFormatted}</strong></a>`)
-      .replaceAll('{horario}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaInicio} hs</strong></a>`)
-      .replaceAll('{zonas}', `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
-      .replaceAll('{seña}', `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
-      .replaceAll('{saldo}', `<strong style="color: #ffb74d !important;">$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}</strong>`)
-      .replaceAll('{direccion}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important;">${address}</strong></a>`);
-  };
-
-  const subject = replacePlaceholders(subjectTemplate || 'Reprogramación de turno - Gonzalo Depilación');
-  const rawBodyText = replacePlaceholders(bodyTemplate || 'Tu turno ha sido reprogramado con éxito.');
-  const formattedBodyHtml = formatEmailParagraphs(rawBodyText);
+  const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, clientName, turnDetails);
+  const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
+  const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -1023,75 +611,13 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
       <meta charset="utf-8">
       <title>${subject}</title>
       <style>
-        body {
-          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #121212;
-          color: #f0ede6;
-          margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        a, a:link, a:visited, a:hover, a:active {
-          color: #d4a54d !important;
-          text-decoration: none !important;
-        }
-        x-apple-data-detectors,
-        x-apple-data-detectors a,
-        .x-apple-data-detectors a,
-        a[x-apple-data-detectors],
-        a[href^="x-apple-data-detectors"],
-        a[href^="calendar:"] {
-          color: #d4a54d !important;
-          text-decoration: none !important;
-          font-size: inherit !important;
-          font-family: inherit !important;
-          font-weight: inherit !important;
-          line-height: inherit !important;
-        }
-        .container {
-          max-width: 600px;
-          margin: 20px auto;
-          background-color: #1d1d1d;
-          border: 1px solid #d4a54d;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .header {
-          background-color: #282a2b;
-          border-bottom: 2px solid #d4a54d;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          color: #d4a54d;
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
-        }
-        .greeting {
-          font-size: 18px;
-          font-weight: bold;
-          color: #ffffff;
-          margin-bottom: 20px;
-        }
-        .body-text {
-          margin-bottom: 25px;
-        }
-        .footer {
-          background-color: #121212;
-          padding: 20px 30px;
-          text-align: center;
-          font-size: 12px;
-          color: #777777;
-          border-top: 1px solid #282a2b;
-        }
+        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
+        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
+        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
       </style>
     </head>
     <body>
@@ -1100,8 +626,8 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
           <h1>GONZALO DEPILACIÓN LÁSER</h1>
         </div>
         <div class="content">
-          <div class="greeting">Hola ${clientName},</div>
-          <div class="body-text">${formattedBodyHtml}</div>
+          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
+          ${formattedBodyHtml}
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
@@ -1116,7 +642,7 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
     from,
     to: clientEmail,
     bcc,
-    subject: subject,
+    subject,
     html: htmlContent
   });
 }
@@ -1124,49 +650,32 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
 /**
  * Sends a 7-day automated email reminder to the client.
  */
-export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetails, address, subjectTemplate, bodyTemplate) {
+export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetails, address, customSubject, customBody) {
   const { transporter, from, bcc } = getMailConfig();
 
-  const { fecha, horaInicio, zonas, valorSeña, valorTotal } = turnDetails;
-  
-  const dateObj = new Date(fecha);
-  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
+  let subjectTemplate = customSubject;
+  let bodyTemplate = customBody;
 
-  let zonesText = '';
-  try {
-    const zonesArray = JSON.parse(zonas);
-    zonesText = zonesArray.map(z => z.nombre).join(', ');
-  } catch (e) {
-    zonesText = zonas || 'Sesión de depilación';
+  if (!subjectTemplate || !bodyTemplate) {
+    try {
+      const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_subject' } });
+      const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_body' } });
+      if (!subjectTemplate) subjectTemplate = subjectConfig?.value;
+      if (!bodyTemplate) bodyTemplate = bodyConfig?.value;
+    } catch (e) {
+      console.error('Error loading email_reminder_7days config from DB:', e);
+    }
   }
 
-  const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
-  const diaFormatted = rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1);
+  const defaultSubject = 'Recordatorio de tu turno en 7 días - Gonzalo Depilación';
+  const defaultBody = "¡Hola {cliente}!\n\nTe recordamos que tenés un turno programado para dentro de 7 días:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. Si necesitás reprogramar o cancelar, recordá hacerlo con un mínimo de 72 hs de anticipación para conservar tu seña.\n\n¡Te esperamos!";
 
-  const replacePlaceholders = (text) => {
-    if (!text) return '';
-    return text
-      .replaceAll('{cliente}', `<strong style="color: #ffffff !important;">${clientName || ''}</strong>`)
-      .replaceAll('{día}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
-      .replaceAll('{dia}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${diaFormatted}</strong></a>`)
-      .replaceAll('{fecha}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold; text-transform: capitalize;">${dateFormatted}</strong></a>`)
-      .replaceAll('{horario}', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaInicio} hs</strong></a>`)
-      .replaceAll('{zonas}', `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
-      .replaceAll('{seña}', `<strong style="color: #a5d6a7 !important;">$${(valorSeña || 0).toLocaleString()}</strong>`)
-      .replaceAll('{saldo}', `<strong style="color: #ffb74d !important;">$${((valorTotal || 0) - (valorSeña || 0)).toLocaleString()}</strong>`)
-      .replaceAll('{direccion}', `<a href="#" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #ffffff !important;">${address || 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)'}</strong></a>`)
-      .replaceAll('dentro de 7 días', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">dentro de 7 días</strong></a>`)
-      .replaceAll('dentro de 24 horas', `<a href="#" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"><strong style="color: #d4a54d !important;">dentro de 24 horas</strong></a>`);
-  };
+  const rawSubject = subjectTemplate || defaultSubject;
+  const rawBody = bodyTemplate || defaultBody;
 
-  const subject = replacePlaceholders(subjectTemplate || 'Recordatorio de tu turno en 7 días - Gonzalo Depilación');
-  const rawBodyText = replacePlaceholders(bodyTemplate || 'Te recordamos que tenés un turno programado para dentro de 7 días.');
-  const formattedBodyHtml = formatEmailParagraphs(rawBodyText);
+  const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, clientName, turnDetails, address);
+  const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails, address);
+  const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -1175,75 +684,13 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
       <meta charset="utf-8">
       <title>${subject}</title>
       <style>
-        body {
-          font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          background-color: #121212;
-          color: #f0ede6;
-          margin: 0;
-          padding: 0;
-          -webkit-font-smoothing: antialiased;
-        }
-        a, a:link, a:visited, a:hover, a:active {
-          color: #d4a54d !important;
-          text-decoration: none !important;
-        }
-        x-apple-data-detectors,
-        x-apple-data-detectors a,
-        .x-apple-data-detectors a,
-        a[x-apple-data-detectors],
-        a[href^="x-apple-data-detectors"],
-        a[href^="calendar:"] {
-          color: #d4a54d !important;
-          text-decoration: none !important;
-          font-size: inherit !important;
-          font-family: inherit !important;
-          font-weight: inherit !important;
-          line-height: inherit !important;
-        }
-        .container {
-          max-width: 600px;
-          margin: 20px auto;
-          background-color: #1d1d1d;
-          border: 1px solid #d4a54d;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .header {
-          background-color: #282a2b;
-          border-bottom: 2px solid #d4a54d;
-          padding: 30px;
-          text-align: center;
-        }
-        .header h1 {
-          color: #d4a54d;
-          margin: 0;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: 1px;
-        }
-        .content {
-          padding: 40px 30px;
-          line-height: 1.6;
-          font-size: 16px;
-        }
-        .greeting {
-          font-size: 18px;
-          font-weight: bold;
-          color: #ffffff;
-          margin-bottom: 20px;
-        }
-        .body-text {
-          margin-bottom: 25px;
-        }
-        .footer {
-          background-color: #121212;
-          padding: 20px 30px;
-          text-align: center;
-          font-size: 12px;
-          color: #777777;
-          border-top: 1px solid #282a2b;
-        }
+        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
+        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
+        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
       </style>
     </head>
     <body>
@@ -1252,8 +699,8 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
           <h1>GONZALO DEPILACIÓN LÁSER</h1>
         </div>
         <div class="content">
-          <div class="greeting">Hola ${clientName},</div>
-          <div class="body-text">${formattedBodyHtml}</div>
+          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
+          ${formattedBodyHtml}
         </div>
         <div class="footer">
           &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
@@ -1268,7 +715,7 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
     from,
     to: clientEmail,
     bcc,
-    subject: subject,
+    subject,
     html: htmlContent
   });
 }

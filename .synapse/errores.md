@@ -285,3 +285,13 @@
 4. Se agregó `credentials: 'include'` en los fetches de reenvío y en `/api/whatsapp/status`.
 **Commit:** `b607ce7` (próximo commit)
 **Estado:** ✅ FIXED
+
+## ERR-32: Plantillas de Correo de Confirmación, Cancelación y Reprogramación ignoraban textos configurados en el Panel Admin (2026-09-30)
+**Síntoma:** Luciano Gómez reportó que al modificar los textos de correo de confirmación de turno en la sección `/admin/configuracion`, los mails enviados a los clientes continuaban llegando con el texto antiguo/estático sin tomar los cambios guardados.
+**Root Cause:** En `src/lib/email.js`, las funciones `sendConfirmationEmail`, `sendCancellationEmail`, `sendNoShowEmail`, `sendRescheduleEmail` y `sendMaintenanceEmail` utilizaban cadenas HTML *hardcodeadas* dentro del código fuente y nunca consultaban la base de datos `prisma.configuracion` (únicamente `sendReminder7DaysEmail` realizaba la consulta a DB).
+**Solución:** 
+1. Se importó `prisma` en `src/lib/email.js`.
+2. Se crearon los helpers `applyEmailTemplatePlaceholdersPlain` (para asuntos sin etiquetas HTML) y `applyEmailTemplatePlaceholders` (para cuerpos HTML con resaltado en dorado/blanco de `{fecha}`, `{horario}`, `{zonas}`, `{seña}`, `{saldo}`, `{total}`, `{direccion}`, `{cliente}`, `{dia}`).
+3. Se refactorizaron `sendConfirmationEmail`, `sendCancellationEmail`, `sendNoShowEmail`, `sendRescheduleEmail` y `sendMaintenanceEmail` para consultar automáticamente `prisma.configuracion` cuando no reciban plantillas personalizadas explícitas, usando textos legibles como fallback seguro.
+**Estado:** ✅ FIXED
+

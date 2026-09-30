@@ -1888,3 +1888,18 @@
     * ProducciÃ³n (`/srv/gonzalo-dep`, PM2 `gonzalo-agenda` PID 1404853, puerto 3006): **ONLINE**.
     * Staging (`/srv/gonzalo-dep-staging`, PM2 `gonzalo-agenda-staging` PID 1405015, puerto 3008): **ONLINE**.
   - DocumentaciÃ³n registrada en `.synapse/decisions.md` (`D-84`), `.synapse/errores.md` (`ERR-31`) y `.synapse/workcycle.md`.
+
+## Mensaje del Usuario (2026-09-30 17:21-03:00)
+> [Captura de pantalla de Luciano Gómez - media_1790799343927.png]
+> "Estoy haciendo cambios en el texto en el texto de confirmación de turnos al mail, pero no aparecen en los mails, osea no está tomando el texto que pongo"
+
+## Respuesta del Asistente (D-85 / ERR-32):
+- **1. Causa Raíz Descubierta**:
+  - En src/lib/email.js, las funciones sendConfirmationEmail, sendCancellationEmail, sendNoShowEmail, sendRescheduleEmail y sendMaintenanceEmail no leían la base de datos de PostgreSQL (prisma.configuracion), conteniendo plantillas HTML *hardcodeadas* estáticas en el código fuente.
+- **2. Solución Aplicada**:
+  - Refactorización de src/lib/email.js conectando prisma e implementando los interpoladores pplyEmailTemplatePlaceholdersPlain y pplyEmailTemplatePlaceholders.
+  - Soporte universal de variables dinámicas: {fecha}, {horario}, {zonas}, {seña}, {saldo}, {total}, {direccion}, {cliente}, {dia}.
+  - Fallbacks seguros en caso de que alguna plantilla no esté definida en base de datos.
+- **3. Verificación y Despliegue**:
+  - Compilación limpia Turbopack en local (41/41 rutas estáticas y dinámicas).
+  - Documentación en Ariadne Engine: D-85 en .synapse/decisions.md y ERR-32 en .synapse/errores.md.

@@ -1434,3 +1434,20 @@
     2. `src/app/api/admin/turnos/[id]/enviar-aviso/route.js`: Soporte completo para `CONFIRMACION` / `ALTA_TURNO` buscando `wtsp_confirmation_manual_template` (si fue admin) o `wtsp_confirmation_template`, `REPROGRAMADO` (`wtsp_reschedule_template`) y recordatorio (`wtsp_reminder_template`).
     3. `src/app/admin/clientes/page.js`: Declarado `getRelevantTurnForNotice` para limpiar IIFEs en JSX, incorporado `credentials: 'include'` y sincronizadas las opciones de reenvío.
   - **Decisiones y Errores**: `D-84` en `.synapse/decisions.md` y `ERR-31` en `.synapse/errores.md`.
+
+## 📅 Sesión: 30 de Septiembre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver el problema reportado por Luciano Gómez (`media_1790799343927.png`) sobre plantillas de correo en `/admin/configuracion` que no se reflejaban en los mails despachados.
+- [x] Refactorizar `src/lib/email.js` para consultar dinámicamente `prisma.configuracion` (claves `email_confirmation_subject`, `email_confirmation_body`, `email_cancellation_*`, `email_noshow_*`, `email_reprogram_*`, `email_maintenance_*`).
+- [x] Implementar interpoladores `applyEmailTemplatePlaceholdersPlain` y `applyEmailTemplatePlaceholders` con soporte insensible a mayúsculas/minúsculas y corchetes/llaves (`{fecha}`, `{horario}`, `{zonas}`, `{seña}`, `{saldo}`, `{total}`, `{direccion}`, `{cliente}`, `{dia}`).
+- [x] Ejecutar prueba de compilación local (`npm run build`).
+- [x] Registrar Decisión `D-85` en `.synapse/decisions.md` y Error `ERR-32` en `.synapse/errores.md`.
+
+### 📝 Notas / Bitácora
+- **30 de Septiembre (Fix de Plantillas Dinámicas de Correo en Configuración)**:
+  - Luciano Gómez envió captura de la sección *Correo de Confirmación de Turno (Alta)* en `/admin/configuracion` reportando que los cambios de texto no se aplicaban en los mails enviados a los clientes.
+  - Causa Raíz: `src/lib/email.js` no leía la base de datos PostgreSQL (`prisma.configuracion`) al despachar `sendConfirmationEmail`, `sendCancellationEmail`, `sendNoShowEmail`, `sendRescheduleEmail` y `sendMaintenanceEmail`, usando plantillas estáticas *hardcodeadas*.
+  - Solución: Refactorización completa de `src/lib/email.js` conectando `prisma.configuracion` con fallbacks seguros e interpolación dinámica de etiquetas clave.
+  - Decisiones y Errores: `D-85` en `.synapse/decisions.md` y `ERR-32` en `.synapse/errores.md`.
+
