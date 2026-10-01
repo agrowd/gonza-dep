@@ -1458,7 +1458,11 @@
 - [x] Corregir duplicidad y agregar etiquetado automático `[Turno reprogramado de DD/MM/YYYY a las HH:MM hs]` en `Turno.observaciones` al reprogramar citas (vía autogestión y vía admin).
 - [x] Incluir `updatedAt: { gte: sinceDate }` en `/api/admin/autogestion-alertas` para que las reprogramaciones y cancelaciones generen inmediatamente el cartel de alerta emergente en la agenda.
 - [x] Implementar 6 solicitudes de Damián Parapugno y Luciano Gómez: 1) Sidebar "Agenda de Turnos" y botón "Ver Reserva Online" destacado; 2) Pestaña "⚙️ ABM Clientes" sin bloque de Observaciones Administrativas; 3) Campo `🎂 Fecha de Cumpleaños` (`<input type="date">`) en la tarjeta clínica de agenda; 4) Etiqueta `[Frecuencia de turno cambiada de X a Y]` en `Turno.observaciones`; 5) Selector de Método de Pago (`metodoPago`: `EFECTIVO` / `TRANSFERENCIA`) en `Turno` y detalle de turno; 6) Restauración bidireccional y suave de la posición de scroll al salir de la Ficha del Cliente hacia la Agenda.
+- [x] Resolver reporte urgente de Damián Parapugno: "Las fichas se ven cortadas" en móvil (`media_1790888095235.png`, `media_1790888108916.png`, `media_1790888126293.png`).
+- [x] Corregir recorte horizontal derecho de importes monetarios (`VALOR ORIGINAL`, `SEÑA`, `SALDO`, `DESCUENTO`), inputs de fecha (`Fecha 1° Turno`, `Cumpleaños`) y botones de expandir.
+- [x] Eliminar trampa de doble scroll (`overflow: hidden !important` en `.modalOverlay`, único contenedor de scroll en `.modalContent` con `padding-bottom: 3.5rem !important`).
+- [x] Blindar opacidad al 100% en fondo de modal y cabecera (`background-color: var(--bg-card, #ffffff) !important`).
 - [x] Probar compilación local limpia con Next.js Turbopack (`npm run build`).
-- [x] Registrar Decisión `D-87` en `.synapse/decisions.md`.
+- [x] Registrar Decisión `D-88` en `.synapse/decisions.md` y Error `ERR-34` en `.synapse/errores.md`.
 
 

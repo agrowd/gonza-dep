@@ -301,4 +301,19 @@
 **Solución:** Se incluyó `updatedAt: { gte: sinceDate }` en el filtro `where.AND`, se agregaron las condiciones para `REPROGRAMADO` y `CANCELADO`, y se ordenaron los resultados por `updatedAt: 'desc'`, permitiendo la aparición inmediata del popup emergente en la agenda.
 **Estado:** ✅ FIXED
 
+## ERR-34: Fichas de Turno y Perfil Recortadas en Dispositivos Móviles ("Las fichas se ven cortadas") (2026-10-01)
+**Síntoma:** Damián Parapugno reportó mediante capturas de pantalla de móvil (`media_1790888095235.png` y `media_1790888108916.png`) que al abrir las fichas de turno en la agenda móvil (`https://agenda.depilacionparahombres.com`), los valores monetarios del lateral derecho (`$75.0...`, `$34.0...`, `-$7000 (10...`) aparecían recortados en su último dígito; los inputs de fecha quedaban al ras del borde; la información de horario quedaba solapada bajo la cabecera; y el modal se cortaba al medio en la parte inferior sin permitir ver ni pulsar las acciones rápidas ni el botón de eliminar.
+**Root Cause:**
+1. En `agenda.module.css`, `.modalContent` tenía `width: calc(100vw - 0.75rem)` dentro de un `.modalOverlay` con `padding: 1rem 0.4rem` (0.8rem horizontal), desbordando físicamente los 360px de pantalla y provocando que `overflow-x: hidden` cercenara los números a la derecha.
+2. En `.detailRowBetween`, el label sin `min-width: 0` competía con números con `whiteSpace: nowrap`, empujándolos fuera de la tarjeta.
+3. Trampa de doble scroll: `.modalOverlay` tenía `overflow-y: auto` y `padding-bottom: 50vh`, mientras que `.modalContent` también tenía `overflow-y: auto` y `max-height: calc(100dvh - 1.5rem)`. Los gestos táctiles competían entre ambos contenedores y la tarjeta quedaba visualmente partida a la mitad de la pantalla.
+4. La cabecera sticky medía casi 145px de alto y `.glass-card` semi-transparente permitía que el texto del calendario subyacente interfiriera visualmente.
+**Solución:**
+1. `.modalOverlay` bloqueado con `overflow: hidden !important` y centrado flex, dejando a `.modalContent` como único contenedor con scroll táctil nativo suave y padding inferior de `3.5rem`.
+2. Modal y cabecera con fondo 100% sólido opaco (`var(--bg-card, #ffffff) !important`).
+3. `.detailRowBetween` con `detailLabel` flexible (`flex: 1 1 auto; min-width: 0; word-break: break-word`) y `detailValue` protegido (`flex: 0 0 auto; max-width: 55%; white-space: nowrap`), impidiendo cualquier desborde o recorte de números.
+4. Rediseño responsivo de inputs de fecha y sesiones en la tarjeta clínica y compactación vertical de `stickyModalHeader`.
+**Commit:** `1a64f43` (próximo commit)
+**Estado:** ✅ FIXED
+
 

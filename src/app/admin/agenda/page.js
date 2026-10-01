@@ -3529,16 +3529,16 @@ export default function AgendaPage() {
                         <span className={styles.detailLabel} style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           CLIENTE
                         </span>
-                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.25, wordBreak: 'break-word' }}>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, wordBreak: 'break-word' }}>
                           {selectedTurno.cliente?.nombreCompleto || 'Cliente Desconocido'}
                         </div>
                       </div>
 
-                      <div style={{ marginTop: '0.45rem' }}>
+                      <div style={{ marginTop: '0.35rem' }}>
                         <span className={styles.detailLabel} style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           ZONAS A DEPILAR
                         </span>
-                        <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-gold)', lineHeight: 1.25, marginTop: '0.1rem', wordBreak: 'break-word' }}>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-gold)', lineHeight: 1.25, marginTop: '0.1rem', wordBreak: 'break-word' }}>
                           {(() => {
                             try {
                               return JSON.parse(selectedTurno.zonas).map(z => z.nombre || z.name).filter(Boolean).join(', ') || 'Ninguna (Bloqueo)';
@@ -3609,26 +3609,34 @@ export default function AgendaPage() {
 
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Valor Original (Sin Descuento)</span>
-                            <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                              Valor Original (Sin Descuento)
+                            </span>
+                            <span className={styles.detailValue} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
                               ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
                             </span>
                           </div>
                         )}
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Seña Cobrada</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                            Seña Cobrada
+                          </span>
+                          <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
                             ${Number(selectedTurno.valorSeña || 0).toLocaleString('es-ES')}
                           </span>
                         </div>
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Saldo Pendiente en Local</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                            Saldo Pendiente en Local
+                          </span>
+                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
                             ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
                           </span>
                         </div>
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.2rem' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>💳 Método de Pago</span>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                            💳 Método de Pago
+                          </span>
                           <select
                             value={selectedTurno.metodoPago || 'EFECTIVO'}
                             onChange={async (e) => {
@@ -3658,7 +3666,9 @@ export default function AgendaPage() {
                               color: 'var(--text-primary)',
                               fontSize: '0.8rem',
                               fontWeight: '600',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              maxWidth: '145px',
+                              flexShrink: 0
                             }}
                           >
                             <option value="EFECTIVO">💵 Efectivo</option>
@@ -3667,8 +3677,10 @@ export default function AgendaPage() {
                         </div>
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Descuento Aplicado</span>
-                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                              Descuento Aplicado
+                            </span>
+                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.9rem', flexShrink: 0 }}>
                               -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-ES')}`})
                             </span>
                           </div>
@@ -3762,13 +3774,13 @@ export default function AgendaPage() {
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '0.5rem',
+                        gap: '0.4rem',
                         paddingBottom: '0.4rem',
                         borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                         width: '100%',
                         boxSizing: 'border-box'
                       }}>
-                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.8rem' }}>
+                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.78rem', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
                           📅 Fecha 1° Turno
                         </span>
                         <input
@@ -3779,16 +3791,16 @@ export default function AgendaPage() {
                             tempClientFechaPrimerTurnoRef.current = e.target.value;
                           }}
                           style={{
-                            width: '135px',
-                            maxWidth: '140px',
-                            minWidth: '120px',
+                            width: '125px',
+                            maxWidth: '130px',
+                            minWidth: '100px',
                             flexShrink: 0,
-                            padding: '0.35rem 0.4rem',
+                            padding: '0.3rem 0.35rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '13px',
+                            fontSize: '12px',
                             fontWeight: 600,
                             textAlign: 'center',
                             boxSizing: 'border-box',
@@ -3803,16 +3815,18 @@ export default function AgendaPage() {
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '0.5rem',
+                        gap: '0.4rem',
                         paddingTop: '0.2rem',
+                        paddingBottom: '0.4rem',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                         width: '100%',
                         boxSizing: 'border-box'
                       }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', minWidth: 0 }}>
-                          <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.8rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flex: '1 1 auto', minWidth: 0 }}>
+                          <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
                             🔢 Sesiones Realizadas
                           </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
                             ({(selectedTurno.cliente?.turnos || []).filter(t => t.estado === 'REALIZADO').length} sis + {tempClientSesionesPrevias} prev)
                           </span>
                         </div>
@@ -3831,7 +3845,7 @@ export default function AgendaPage() {
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '15px',
+                            fontSize: '14px',
                             fontWeight: 700,
                             textAlign: 'center',
                             boxSizing: 'border-box',
@@ -3846,12 +3860,12 @@ export default function AgendaPage() {
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '0.5rem',
+                        gap: '0.4rem',
                         paddingTop: '0.2rem',
                         width: '100%',
                         boxSizing: 'border-box'
                       }}>
-                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.8rem' }}>
+                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.78rem', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
                           🎂 Fecha de Cumpleaños
                         </span>
                         <input
@@ -3859,16 +3873,16 @@ export default function AgendaPage() {
                           value={tempClientFechaNacimiento}
                           onChange={(e) => setTempClientFechaNacimiento(e.target.value)}
                           style={{
-                            width: '135px',
-                            maxWidth: '140px',
-                            minWidth: '120px',
+                            width: '125px',
+                            maxWidth: '130px',
+                            minWidth: '100px',
                             flexShrink: 0,
-                            padding: '0.35rem 0.4rem',
+                            padding: '0.3rem 0.35rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '13px',
+                            fontSize: '12px',
                             fontWeight: 600,
                             textAlign: 'center',
                             boxSizing: 'border-box',
@@ -3940,12 +3954,15 @@ export default function AgendaPage() {
                   )}
 
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span className={styles.detailLabel}>Observaciones Generales del Cliente</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', gap: '0.4rem', width: '100%' }}>
+                      <span className={styles.detailLabel} style={{ flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
+                        Observaciones Generales del Cliente
+                      </span>
                       <button
                         type="button"
                         onClick={() => setExpandedObsGeneral(prev => !prev)}
                         style={{
+                          flexShrink: 0,
                           background: 'rgba(255,255,255,0.06)',
                           border: '1px solid var(--border-color)',
                           color: 'var(--text-secondary)',
@@ -3956,7 +3973,8 @@ export default function AgendaPage() {
                           fontWeight: 600,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.25rem'
+                          gap: '0.25rem',
+                          whiteSpace: 'nowrap'
                         }}
                       >
                         {expandedObsGeneral ? '⤡ Reducir' : '⤢ Ampliar'}
@@ -3970,8 +3988,8 @@ export default function AgendaPage() {
                         rows={expandedObsGeneral ? 8 : 2}
                         style={{
                           width: '100%',
-                          height: expandedObsGeneral ? '200px' : '70px',
-                          padding: '0.6rem',
+                          height: expandedObsGeneral ? '180px' : '65px',
+                          padding: '0.55rem',
                           borderRadius: '8px',
                           border: '1px solid var(--border-color)',
                           backgroundColor: 'var(--bg-secondary)',
@@ -3986,14 +4004,15 @@ export default function AgendaPage() {
                   </div>
 
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span className={styles.detailLabel} style={{ color: 'var(--color-gold)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', gap: '0.4rem', width: '100%' }}>
+                      <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
                         🛡️ Observaciones del Operador (Potencia, Clínica, Indicaciones)
                       </span>
                       <button
                         type="button"
                         onClick={() => setExpandedNotasGonzalo(prev => !prev)}
                         style={{
+                          flexShrink: 0,
                           background: 'rgba(212, 165, 77, 0.1)',
                           border: '1px solid #d4a54d60',
                           color: 'var(--color-gold)',
@@ -4004,7 +4023,8 @@ export default function AgendaPage() {
                           fontWeight: 600,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.25rem'
+                          gap: '0.25rem',
+                          whiteSpace: 'nowrap'
                         }}
                       >
                         {expandedNotasGonzalo ? '⤡ Reducir' : '⤢ Ampliar'}
@@ -4018,8 +4038,8 @@ export default function AgendaPage() {
                         rows={expandedNotasGonzalo ? 8 : 3}
                         style={{
                           width: '100%',
-                          height: expandedNotasGonzalo ? '220px' : '85px',
-                          padding: '0.6rem',
+                          height: expandedNotasGonzalo ? '200px' : '75px',
+                          padding: '0.55rem',
                           borderRadius: '8px',
                           border: '1px solid #d4a54d50',
                           backgroundColor: 'var(--bg-secondary)',
@@ -4060,14 +4080,15 @@ export default function AgendaPage() {
                   </div>
 
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span className={styles.detailLabel} style={{ color: '#1d4ed8', fontWeight: 700 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', gap: '0.4rem', width: '100%' }}>
+                      <span className={styles.detailLabel} style={{ color: '#1d4ed8', fontWeight: 700, flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
                         📝 Comentarios de este Turno (Exclusivos de esta cita)
                       </span>
                       <button
                         type="button"
                         onClick={() => setExpandedTurnoObs(prev => !prev)}
                         style={{
+                          flexShrink: 0,
                           background: 'rgba(29, 78, 216, 0.1)',
                           border: '1px solid rgba(29, 78, 216, 0.4)',
                           color: '#1d4ed8',
@@ -4078,7 +4099,8 @@ export default function AgendaPage() {
                           fontWeight: 600,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.25rem'
+                          gap: '0.25rem',
+                          whiteSpace: 'nowrap'
                         }}
                       >
                         {expandedTurnoObs ? '⤡ Reducir' : '⤢ Ampliar'}
@@ -4092,8 +4114,8 @@ export default function AgendaPage() {
                         rows={expandedTurnoObs ? 8 : 3}
                         style={{
                           width: '100%',
-                          height: expandedTurnoObs ? '200px' : '75px',
-                          padding: '0.6rem',
+                          height: expandedTurnoObs ? '180px' : '70px',
+                          padding: '0.55rem',
                           borderRadius: '8px',
                           border: '1px solid rgba(29, 78, 216, 0.45)',
                           backgroundColor: 'var(--bg-secondary)',
@@ -4119,7 +4141,7 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Actions Panel */}
-                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', paddingBottom: '3.5rem', width: '100%', boxSizing: 'border-box' }}>
                   <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Acciones Rápidas</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
                     {selectedTurno.clienteId && (
