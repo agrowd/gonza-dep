@@ -1461,8 +1461,10 @@
 - [x] Resolver reporte urgente de Damián Parapugno: "Las fichas se ven cortadas" en móvil (`media_1790888095235.png`, `media_1790888108916.png`, `media_1790888126293.png`).
 - [x] Corregir recorte horizontal derecho de importes monetarios (`VALOR ORIGINAL`, `SEÑA`, `SALDO`, `DESCUENTO`), inputs de fecha (`Fecha 1° Turno`, `Cumpleaños`) y botones de expandir.
 - [x] Eliminar trampa de doble scroll (`overflow: hidden !important` en `.modalOverlay`, único contenedor de scroll en `.modalContent` con `padding-bottom: 3.5rem !important`).
-- [x] Blindar opacidad al 100% en fondo de modal y cabecera (`background-color: var(--bg-card, #ffffff) !important`).
+- [x] Atender feedback de Damián Parapugno (`media_1790890557673.png`): "Acá quedó bien sin cortar pero métodos quedó así, y el color déjalo como estaba antes que estaba bueno".
+- [x] Corregir apilado vertical de letras en "💳 Método de Pago" (`whiteSpace: 'nowrap'`, `flexShrink: 0`, `minWidth: 'fit-content'`).
+- [x] Restaurar color y acabado original de `glass-card` con `backdrop-filter: blur(16px)` en `.modalContent` y cabecera.
 - [x] Probar compilación local limpia con Next.js Turbopack (`npm run build`).
-- [x] Registrar Decisión `D-88` en `.synapse/decisions.md` y Error `ERR-34` en `.synapse/errores.md`.
+- [x] Registrar Decisión `D-88` y `D-89` en `.synapse/decisions.md` y Error `ERR-34` en `.synapse/errores.md`.
 
 

@@ -26,11 +26,12 @@
 
 ### Problemas Resueltos:
 1. **Recorte Lateral Derecho de Importes**:
-   - En `VALOR ORIGINAL`, `SEÑA`, `SALDO`, `MÉTODO DE PAGO` y `DESCUENTO`, se protegió la etiqueta con `flex: 1 1 auto; min-width: 0; word-break: break-word` y el valor numérico con `flex: 0 0 auto; max-width: 55%; white-space: nowrap`. Ningún número se corta en el borde derecho en pantallas móviles (360px).
+   - En `VALOR ORIGINAL`, `SEÑA`, `SALDO`, `MÉTODO DE PAGO` y `DESCUENTO`, se protegió la etiqueta con `flex: 1 1 auto; min-width: 0; word-break: break-word` y el valor numérico con `flex: 0 0 auto; max-width: 55%; white-space: nowrap`. Ningún número se corta en el borde derecho en pantallas móviles (360px). Damián confirmó: *"Acá quedó bien sin cortar"*.
 2. **Eliminación de la Trampa de Doble Scroll**:
    - Se configuró `.modalOverlay` con `overflow: hidden !important` y centrado flex. `.modalContent` actúa como único contenedor de desplazamiento con scroll táctil suave (`-webkit-overflow-scrolling: touch; overscroll-behavior: contain`) y `padding-bottom: 3.5rem !important`, despejando completamente el panel de acciones rápidas y el botón eliminar.
-3. **Opacidad al 100% (No Transparente)**:
-   - Se aplicó `background-color: var(--bg-card, #ffffff) !important` a `.modalContent` y `stickyModalHeader`, eliminando el efecto translúcido de `glass-card` que permitía que el calendario del fondo interfiriera visualmente.
-4. **Cabecera y Entradas Clínicas Compactas**:
-   - Reducción proporcional de tipografías en la cabecera fija y ajuste responsivo de los inputs de fecha (`Fecha 1° Turno` y `Cumpleaños`) a `125px` para evitar desbordes.
+3. **Restauración del Color Original Glassmorphism**:
+   - Atendiendo a la preferencia de Damián (*"el color déjalo como estaba antes que estaba bueno"*), se removió el fondo plano forzado y se restableció el efecto `glass-card` con `backdrop-filter: blur(16px)` y sombras refinadas.
+4. **Corrección de Apilado Vertical en "💳 Método de Pago"**:
+   - Se removió `wordBreak: 'break-word'` y `minWidth: 0` que provocaban que las letras de `💳 Método de Pago` se apilaran verticalmente en 1ch. Se fijó `whiteSpace: 'nowrap'`, `flexShrink: 0`, `minWidth: 'fit-content'` y `minWidth: '125px'` en el selector, quedando siempre prolijo y horizontal.
+
 

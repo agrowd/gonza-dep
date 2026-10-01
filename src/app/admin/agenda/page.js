@@ -3609,7 +3609,7 @@ export default function AgendaPage() {
 
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
                               Valor Original (Sin Descuento)
                             </span>
                             <span className={styles.detailValue} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -3618,7 +3618,7 @@ export default function AgendaPage() {
                           </div>
                         )}
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
                             Seña Cobrada
                           </span>
                           <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -3626,7 +3626,7 @@ export default function AgendaPage() {
                           </span>
                         </div>
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
                             Saldo Pendiente en Local
                           </span>
                           <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -3634,7 +3634,7 @@ export default function AgendaPage() {
                           </span>
                         </div>
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.2rem' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '0.8rem', fontWeight: 600 }}>
                             💳 Método de Pago
                           </span>
                           <select
@@ -3659,15 +3659,17 @@ export default function AgendaPage() {
                               }
                             }}
                             style={{
-                              padding: '0.25rem 0.5rem',
+                              padding: '0.3rem 0.55rem',
                               borderRadius: '6px',
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '0.8rem',
+                              fontSize: '0.82rem',
                               fontWeight: '600',
                               cursor: 'pointer',
-                              maxWidth: '145px',
+                              width: 'auto',
+                              minWidth: '125px',
+                              maxWidth: '150px',
                               flexShrink: 0
                             }}
                           >
@@ -3677,7 +3679,7 @@ export default function AgendaPage() {
                         </div>
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.78rem' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
                               Descuento Aplicado
                             </span>
                             <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.9rem', flexShrink: 0 }}>
