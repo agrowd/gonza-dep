@@ -216,6 +216,7 @@ export async function PUT(request, { params }) {
     if (horaFin) updateData.horaFin = horaFin;
     if (estado) updateData.estado = estado;
     if (subEstado !== undefined) updateData.subEstado = subEstado;
+    if (body.metodoPago !== undefined) updateData.metodoPago = body.metodoPago;
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
 
     // If rescheduled (date or time changed or status is REPROGRAMADO), append record tag
@@ -294,7 +295,16 @@ export async function PUT(request, { params }) {
     }
 
     if (body.frecuencia !== undefined && !isNaN(Number(body.frecuencia))) {
-      clientUpdateData.frecuencia = Number(body.frecuencia);
+      const newFreq = Number(body.frecuencia);
+      const oldFreq = oldTurn.cliente ? (oldTurn.cliente.frecuencia || 4) : 4;
+      if (oldFreq !== newFreq) {
+        const freqTag = `[Frecuencia de turno cambiada de ${oldFreq} a ${newFreq}]`;
+        const currentObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
+        if (!currentObs.includes(freqTag)) {
+          updateData.observaciones = currentObs ? `${currentObs} ${freqTag}` : freqTag;
+        }
+      }
+      clientUpdateData.frecuencia = newFreq;
     }
     if (body.fechaPrimerTurno !== undefined) {
       clientUpdateData.fechaPrimerTurno = body.fechaPrimerTurno ? new Date(body.fechaPrimerTurno) : null;

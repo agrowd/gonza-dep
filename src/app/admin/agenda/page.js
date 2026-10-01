@@ -325,6 +325,7 @@ export default function AgendaPage() {
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
   const [tempClientFechaPrimerTurno, setTempClientFechaPrimerTurno] = useState('');
+  const [tempClientFechaNacimiento, setTempClientFechaNacimiento] = useState('');
   const [tempClientSesionesTotal, setTempClientSesionesTotal] = useState(0);
   const [tempClientSesionesPrevias, setTempClientSesionesPrevias] = useState(0);
   const tempClientFechaPrimerTurnoRef = useRef('');
@@ -473,9 +474,21 @@ export default function AgendaPage() {
   useEffect(() => {
     if (appointments && appointments.length > 0) {
       const scrollPos = sessionStorage.getItem('agenda_scroll_pos');
-      if (scrollPos && gridBodyRef.current) {
-        gridBodyRef.current.scrollTop = parseInt(scrollPos, 10);
+      const winScrollPos = sessionStorage.getItem('agenda_window_scroll');
+      if (scrollPos || winScrollPos) {
+        const restoreScroll = () => {
+          if (scrollPos && gridBodyRef.current) {
+            gridBodyRef.current.scrollTop = parseInt(scrollPos, 10);
+          }
+          if (winScrollPos) {
+            window.scrollTo(0, parseInt(winScrollPos, 10));
+          }
+        };
+        restoreScroll();
+        setTimeout(restoreScroll, 100);
+        setTimeout(restoreScroll, 300);
         sessionStorage.removeItem('agenda_scroll_pos');
+        sessionStorage.removeItem('agenda_window_scroll');
       }
     }
   }, [loading, appointments]);
@@ -750,11 +763,22 @@ export default function AgendaPage() {
         }
         setTempClientFechaPrimerTurno(initialDate);
         tempClientFechaPrimerTurnoRef.current = initialDate;
+
+        let initialBday = '';
+        if (selectedTurno.cliente.fechaNacimiento) {
+          try {
+            initialBday = new Date(selectedTurno.cliente.fechaNacimiento).toISOString().split('T')[0];
+          } catch {
+            initialBday = '';
+          }
+        }
+        setTempClientFechaNacimiento(initialBday);
       } else {
         setTempClientObservaciones('');
         setTempClientFrecuencia(4);
         setTempClientNotasGonzalo('');
         setTempClientFechaPrimerTurno('');
+        setTempClientFechaNacimiento('');
         tempClientFechaPrimerTurnoRef.current = '';
         setTempClientSesionesTotal(0);
         setTempClientSesionesPrevias(0);
@@ -766,6 +790,7 @@ export default function AgendaPage() {
       setTempClientFrecuencia(4);
       setTempClientNotasGonzalo('');
       setTempClientFechaPrimerTurno('');
+      setTempClientFechaNacimiento('');
       tempClientFechaPrimerTurnoRef.current = '';
       setTempClientSesionesTotal(0);
       setTempClientSesionesPrevias(0);
@@ -811,6 +836,7 @@ export default function AgendaPage() {
         : (tempClientSesionesPreviasRef.current !== undefined ? tempClientSesionesPreviasRef.current : tempClientSesionesPrevias);
       const targetObs = overrides.observaciones !== undefined ? overrides.observaciones : tempClientObservaciones;
       const targetFreq = overrides.frecuencia !== undefined ? overrides.frecuencia : tempClientFrecuencia;
+      const targetFechaNacimiento = overrides.fechaNacimiento !== undefined ? overrides.fechaNacimiento : (tempClientFechaNacimiento || null);
 
       const payload = {
         notasGonzalo: targetNotas,
@@ -818,6 +844,7 @@ export default function AgendaPage() {
         forceClearObservaciones: targetObs === '',
         frecuencia: targetFreq,
         fechaPrimerTurno: targetFechaPrimer,
+        fechaNacimiento: targetFechaNacimiento,
         sesionesPrevias: targetSesionesPrevias
       };
 
@@ -842,6 +869,7 @@ export default function AgendaPage() {
           frecuencia: targetFreq,
           notasGonzalo: targetNotas,
           fechaPrimerTurno: targetFechaPrimer,
+          fechaNacimiento: targetFechaNacimiento,
           sesionesPrevias: targetSesionesPrevias
         })
       });
@@ -3599,6 +3627,44 @@ export default function AgendaPage() {
                             ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
                           </span>
                         </div>
+                        <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.2rem' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>💳 Método de Pago</span>
+                          <select
+                            value={selectedTurno.metodoPago || 'EFECTIVO'}
+                            onChange={async (e) => {
+                              const val = e.target.value;
+                              try {
+                                const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ metodoPago: val })
+                                });
+                                if (res.ok) {
+                                  const updated = await res.json();
+                                  setSelectedTurno(prev => ({ ...prev, metodoPago: val }));
+                                  showToast(`Método de pago: ${val === 'EFECTIVO' ? '💵 Efectivo' : '🏦 Transferencia'}`);
+                                  fetchAppointments();
+                                }
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-secondary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.8rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="EFECTIVO">💵 Efectivo</option>
+                            <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                          </select>
+                        </div>
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
                             <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left' }}>Descuento Aplicado</span>
@@ -3774,8 +3840,46 @@ export default function AgendaPage() {
                         />
                       </div>
 
+                      {/* Fila 3: Fecha de Cumpleaños (Título a la izquierda, cuadro de fecha a la derecha) */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        paddingTop: '0.2rem',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}>
+                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', margin: 0, fontSize: '0.8rem' }}>
+                          🎂 Fecha de Cumpleaños
+                        </span>
+                        <input
+                          type="date"
+                          value={tempClientFechaNacimiento}
+                          onChange={(e) => setTempClientFechaNacimiento(e.target.value)}
+                          style={{
+                            width: '135px',
+                            maxWidth: '140px',
+                            minWidth: '120px',
+                            flexShrink: 0,
+                            padding: '0.35rem 0.4rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            boxSizing: 'border-box',
+                            margin: 0
+                          }}
+                        />
+                      </div>
+
                       {(tempClientFechaPrimerTurno !== (selectedTurno.cliente?.fechaPrimerTurno ? new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0] : '') ||
-                        tempClientSesionesPrevias !== (selectedTurno.cliente?.sesionesPrevias || 0)) && (
+                        tempClientSesionesPrevias !== (selectedTurno.cliente?.sesionesPrevias || 0) ||
+                        tempClientFechaNacimiento !== (selectedTurno.cliente?.fechaNacimiento ? new Date(selectedTurno.cliente.fechaNacimiento).toISOString().split('T')[0] : '')) && (
                         <button
                           type="button"
                           onClick={() => handleSaveClientObservaciones(false)}

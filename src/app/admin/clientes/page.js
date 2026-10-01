@@ -1140,8 +1140,8 @@ function ClientesPageContent() {
                 onClick={() => setActiveTab('settings')}
                 className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`}
               >
-                <span className={styles.tabDesktopText}>Notas y Configuración</span>
-                <span className={styles.tabMobileText}>⚙️ Configurar</span>
+                <span className={styles.tabDesktopText}>ABM Clientes</span>
+                <span className={styles.tabMobileText}>⚙️ ABM Clientes</span>
               </button>
             </div>
 
@@ -1641,34 +1641,7 @@ function ClientesPageContent() {
                       </div>
                     </div>
 
-                    <div className={styles.inputGroup}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        <label className={styles.inputLabel} style={{ marginBottom: 0 }}>
-                          Observaciones Administrativas (Comentarios personales, CBU, trabajo, etc.)
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => insertDateStamp('observaciones')}
-                          style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            borderRadius: '4px',
-                            color: '#e5e7eb',
-                            fontSize: '0.72rem',
-                            padding: '0.2rem 0.5rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          📅 Insertar Fecha Hoy
-                        </button>
-                      </div>
-                      <textarea
-                        value={editNotes.observaciones}
-                        onChange={(e) => setEditNotes({ ...editNotes, observaciones: e.target.value })}
-                        placeholder="Ej. Trabaja en tribunales, buena tolerancia al dolor, suele transferir al instante."
-                        rows="4"
-                      />
-                    </div>
+
 
                     <div className={styles.inputGroup} style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '1.25rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>

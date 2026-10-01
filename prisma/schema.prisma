@@ -57,6 +57,7 @@ model Turno {
   estado           String   @default("PENDIENTE_PAGO") // "SEÑADO", "REALIZADO", "CANCELADO", "REPROGRAMADO", "NO_ASISTIO", "PENDIENTE_AUTORIZACION", "PENDIENTE_PAGO", "CONSULTA"
   señaEstado       String?  // "CONSERVADA", "PERDIDA"
   subEstado        String?  // "SIGUIENTE_TURNO", "VA_A_AVISAR", "MANTENIMIENTO", "FINALIZADO"
+  metodoPago       String?  @default("EFECTIVO") // "EFECTIVO", "TRANSFERENCIA"
   enviarNotificaciones Boolean @default(true)
   observaciones    String?
   notasGonzalo     String?

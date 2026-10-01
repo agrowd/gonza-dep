@@ -68,7 +68,7 @@ const FlashIcon = () => (
 
   const navItems = [
     { name: 'Alta de Turno', path: '/admin/alta-turno', icon: <FlashIcon /> },
-    { name: 'Agenda', path: '/admin/agenda', icon: <CalendarIcon /> },
+    { name: 'Agenda de Turnos', path: '/admin/agenda', icon: <CalendarIcon /> },
     { name: 'Clientes', path: '/admin/clientes', icon: <UsersIcon /> },
     { name: 'Estadísticas', path: '/admin/estadisticas', icon: <ChartIcon /> },
     { name: 'Notificaciones', path: '/admin/notificaciones', icon: <BellIcon /> },
@@ -206,23 +206,13 @@ const FlashIcon = () => (
             href="/"
             target="_blank"
             rel="noopener noreferrer"
+            className={styles.logoutBtn}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
               marginBottom: '0.5rem',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(212, 165, 77, 0.12)',
-              border: '1px solid rgba(212, 165, 77, 0.35)',
-              color: 'var(--color-gold)',
-              fontSize: '0.8rem',
-              fontWeight: '700',
-              textDecoration: 'none',
-              boxSizing: 'border-box',
-              cursor: 'pointer'
+              backgroundColor: 'rgba(212, 165, 77, 0.2)',
+              borderColor: 'var(--color-gold)',
+              color: '#ffffff',
+              textDecoration: 'none'
             }}
           >
             <span>🌐</span>
