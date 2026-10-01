@@ -11,13 +11,24 @@ export async function GET(request) {
 
     const turnos = await prisma.turno.findMany({
       where: {
-        OR: [
-          { observaciones: { contains: '[AUTOGESTION]' } },
-          { observaciones: { contains: '[ONLINE]' } }
-        ],
-        createdAt: {
-          gte: sinceDate
-        }
+        AND: [
+          {
+            OR: [
+              { observaciones: { contains: 'AUTOGESTION' } },
+              { observaciones: { contains: 'ONLINE' } },
+              { observaciones: { contains: 'REPROGRAMADO' } },
+              { observaciones: { contains: 'CANCELADO' } },
+              { estado: 'REPROGRAMADO' },
+              { estado: 'CANCELADO' }
+            ]
+          },
+          {
+            OR: [
+              { createdAt: { gte: sinceDate } },
+              { updatedAt: { gte: sinceDate } }
+            ]
+          }
+        ]
       },
       include: {
         cliente: {
@@ -30,7 +41,7 @@ export async function GET(request) {
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        updatedAt: 'desc'
       },
       take: limit
     });

@@ -217,20 +217,23 @@ export async function PUT(request, { params }) {
     if (estado) updateData.estado = estado;
     if (subEstado !== undefined) updateData.subEstado = subEstado;
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
-    if (checkEstado === 'CANCELADO') {
-      if (typeof preserveDeposit === 'boolean') {
-        updateData.señaEstado = preserveDeposit ? 'CONSERVADA' : 'PERDIDA';
-      } else if (señaEstado) {
-        updateData.señaEstado = señaEstado;
+
+    // If rescheduled (date or time changed or status is REPROGRAMADO), append record tag
+    if (isDateChanged || isTimeChanged || estado === 'REPROGRAMADO') {
+      const oldDate = new Date(oldTurn.fecha);
+      const oldD = String(oldDate.getUTCDate()).padStart(2, '0');
+      const oldM = String(oldDate.getUTCMonth() + 1).padStart(2, '0');
+      const oldY = oldDate.getUTCFullYear();
+      const oldFechaStr = `${oldD}/${oldM}/${oldY}`;
+      const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${oldTurn.horaInicio} hs]`;
+
+      const currentObs = (observaciones !== undefined ? observaciones : oldTurn.observaciones) || '';
+      if (!currentObs.includes(tagReprogram)) {
+        updateData.observaciones = `${currentObs} ${tagReprogram}`.trim();
       }
+    } else if (observaciones !== undefined) {
+      updateData.observaciones = observaciones;
     }
-    if (estado) updateData.estado = estado;
-    if (valorTotal !== undefined) updateData.valorTotal = valorTotal;
-    if (valorSeña !== undefined) updateData.valorSeña = valorSeña;
-    if (bonificacion !== undefined) updateData.bonificacion = Number(bonificacion);
-    if (descuentoTipo !== undefined) updateData.descuentoTipo = descuentoTipo;
-    if (descuentoValor !== undefined) updateData.descuentoValor = Number(descuentoValor);
-    if (observaciones !== undefined) updateData.observaciones = observaciones;
 
     // Sync client-level operator notes and frequency, or clientObservaciones if explicitly passed
     const clientUpdateData = {};

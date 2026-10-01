@@ -295,3 +295,10 @@
 3. Se refactorizaron `sendConfirmationEmail`, `sendCancellationEmail`, `sendNoShowEmail`, `sendRescheduleEmail` y `sendMaintenanceEmail` para consultar automáticamente `prisma.configuracion` cuando no reciban plantillas personalizadas explícitas, usando textos legibles como fallback seguro.
 **Estado:** ✅ FIXED
 
+## ERR-33: Alertas de Cancelación y Reprogramación de Autogestión Omitidas por Filtro de Fecha de Creación (2026-10-01)
+**Síntoma:** Cuando un cliente reprogramaba o cancelaba un turno activo previamente agendado a través de la autogestión, la Agenda administrativa en el panel no mostraba el cartel emergente de alerta ("Turno Reprogramado" o "Turno Cancelado").
+**Root Cause:** En `/api/admin/autogestion-alertas/route.js`, la consulta Prisma utilizaba exclusivamente `createdAt: { gte: sinceDate }`. Si el turno original había sido creado hace más de 24/48 hs, al reprogramar o cancelar se actualizaba `updatedAt`, pero el filtro por `createdAt` lo descartaba por completo.
+**Solución:** Se incluyó `updatedAt: { gte: sinceDate }` en el filtro `where.AND`, se agregaron las condiciones para `REPROGRAMADO` y `CANCELADO`, y se ordenaron los resultados por `updatedAt: 'desc'`, permitiendo la aparición inmediata del popup emergente en la agenda.
+**Estado:** ✅ FIXED
+
+

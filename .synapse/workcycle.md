@@ -1451,3 +1451,13 @@
   - Solución: Refactorización completa de `src/lib/email.js` conectando `prisma.configuracion` con fallbacks seguros e interpolación dinámica de etiquetas clave.
   - Decisiones y Errores: `D-85` en `.synapse/decisions.md` y `ERR-32` en `.synapse/errores.md`.
 
+## 📅 Sesión: 1 de Octubre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver 5 solicitudes enviadas por Luciano Gómez en capturas de pantalla (`media_1790872613770.png` a `media_1790872768219.png`).
+- [x] Corregir duplicidad y agregar etiquetado automático `[Turno reprogramado de DD/MM/YYYY a las HH:MM hs]` en `Turno.observaciones` al reprogramar citas (vía autogestión y vía admin).
+- [x] Incluir `updatedAt: { gte: sinceDate }` en `/api/admin/autogestion-alertas` para que las reprogramaciones y cancelaciones generen inmediatamente el cartel de alerta emergente en la agenda.
+- [x] Probar compilación local de `gonzalo-dep` (`npm run build`).
+- [x] Registrar Decisión `D-86` en `.synapse/decisions.md` y Error `ERR-33` en `.synapse/errores.md`.
+
+

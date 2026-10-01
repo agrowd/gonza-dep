@@ -113,8 +113,19 @@ export async function POST(request) {
     }
 
     // 4. Update the appointment in DB
+    const oldDate = new Date(turno.fecha);
+    const oldD = String(oldDate.getUTCDate()).padStart(2, '0');
+    const oldM = String(oldDate.getUTCMonth() + 1).padStart(2, '0');
+    const oldY = oldDate.getUTCFullYear();
+    const oldFechaStr = `${oldD}/${oldM}/${oldY}`;
+    const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${turno.horaInicio} hs]`;
+
     const currentObs = turno.observaciones || '';
-    const newObs = currentObs.includes('[REPROGRAMADO_AUTOGESTION]') ? currentObs : `${currentObs} [REPROGRAMADO_AUTOGESTION]`.trim();
+    let newObs = currentObs.includes('[REPROGRAMADO_AUTOGESTION]') ? currentObs : `${currentObs} [REPROGRAMADO_AUTOGESTION]`.trim();
+    if (!newObs.includes(tagReprogram)) {
+      newObs = `${newObs} ${tagReprogram}`.trim();
+    }
+
     const updatedTurno = await prisma.turno.update({
       where: { id: turnoId },
       data: {
@@ -122,7 +133,8 @@ export async function POST(request) {
         horaInicio,
         horaFin,
         estado: 'REPROGRAMADO',
-        observaciones: newObs
+        observaciones: newObs,
+        updatedAt: new Date()
       },
       include: { cliente: true }
     });
