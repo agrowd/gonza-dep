@@ -1482,4 +1482,16 @@
 - [x] Desplegar en servidor VPS en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
 - [x] Registrar Decisión `D-90` en `.synapse/decisions.md` y Error `ERR-35` en `.synapse/errores.md`.
 
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Módulos Prioritarios Mejoras AppWeb)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Implementar Módulo 1 (Ficha: Bloqueo de Clientes): botón de bloqueo/desbloqueo, badge `🚫 (Bloqueado)`, ocultamiento de turnos activos y calendario con días rojos (`dayCellFull`) no clickeables en Autogestión con texto *"No hay turnos disponibles proximamente, volverse a contactar mas adelante para consultar disponibilidad de fechas"* y botón 'Salir'.
+- [x] Implementar Módulo 2 (Clientes: Reseñas de Google y Notificaciones): Checkbox de reseñas en tabla de clientes y modal de turno, filtros (`con_resena`, `sin_resena`), sincronización reactiva con botón `⭐ Mandar Reseña` (ocultamiento al enviar y reaparición al desmarcar).
+- [x] Implementar Módulo 3 (Notificaciones: Matriz Granular de Notificaciones & Plantilla "Va a Avisar"): Interruptor maestro y permisos detallados por canal (WhatsApp, Email) y evento (Alta, Cancelación, Reprogramación, Mantenimiento) mediante helper `canSendNotification`.
+- [x] Integrar plantillas de "Va a Avisar" en `/api/admin/configuracion` y panel de Configuración para WhatsApp y Correo.
+- [x] Verificar compilación local Next.js limpia (`npm run build` 41/41 rutas).
+- [x] Desplegar exclusivamente en rama `staging` y servidor Staging VPS (`http://187.127.9.216:3008`).
+- [x] Registrar Decisión `D-91` en `.synapse/decisions.md`.
+
+
 

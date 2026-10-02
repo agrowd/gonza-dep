@@ -4040,6 +4040,72 @@ export default function AgendaPage() {
                     </div>
                   )}
 
+                  {selectedTurno.cliente && (
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', marginTop: '0.25rem' }}>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedTurno.cliente.enviarNotificaciones !== false}
+                            onChange={async (e) => {
+                              const nextVal = e.target.checked;
+                              setSelectedTurno(prev => ({
+                                ...prev,
+                                cliente: { ...prev.cliente, enviarNotificaciones: nextVal }
+                              }));
+                              try {
+                                await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ enviarNotificaciones: nextVal })
+                                });
+                                showToast(nextVal ? 'Notificaciones activadas para el cliente.' : 'Notificaciones pausadas.');
+                              } catch (err) {
+                                console.error('Error toggling notif in agenda modal:', err);
+                              }
+                            }}
+                            style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#16a34a' }}
+                          />
+                          <span>🔔 Notificaciones Automáticas</span>
+                        </label>
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(selectedTurno.cliente.recibioResena)}
+                            onChange={async (e) => {
+                              const nextVal = e.target.checked;
+                              setSelectedTurno(prev => ({
+                                ...prev,
+                                cliente: { ...prev.cliente, recibioResena: nextVal }
+                              }));
+                              setTurnos(prevList => prevList.map(t => {
+                                if (t.cliente?.id === selectedTurno.cliente?.id) {
+                                  return { ...t, cliente: { ...t.cliente, recibioResena: nextVal } };
+                                }
+                                return t;
+                              }));
+                              try {
+                                await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ recibioResena: nextVal })
+                                });
+                                showToast(nextVal ? 'Marcado: ya recibió / envió reseña de Google ⭐' : 'Marcado: pendiente de reseña.');
+                              } catch (err) {
+                                console.error('Error toggling recibioResena in agenda modal:', err);
+                              }
+                            }}
+                            style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#eab308' }}
+                          />
+                          <span>⭐ Reseña de Google Solicitada</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', gap: '0.4rem', width: '100%' }}>
                       <span className={styles.detailLabel} style={{ flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
@@ -4365,16 +4431,39 @@ export default function AgendaPage() {
                         💬 WhatsApp
                       </a>
                     )}
-                    {selectedTurno.cliente?.whatsapp && (
+                    {selectedTurno.cliente?.whatsapp && !selectedTurno.cliente?.recibioResena && (
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           const clientName = selectedTurno.cliente?.nombreCompleto?.split(' ')[0] || 'Hola';
                           const reviewMsg = `¡Hola ${clientName}! Esperamos que hayas tenido una excelente sesión en Gonzalo Depilación Masculina ✨ Nos ayudaría muchísimo que nos dejes tu opinión y reseña en Google: https://g.page/r/gonzalo-depilacion/review ¡Muchas gracias!`;
                           const cleanPhone = selectedTurno.cliente?.whatsapp?.replace(/\D/g, '');
                           const link = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(reviewMsg)}`;
                           window.open(link, '_blank');
                           showToast('Abriendo WhatsApp para pedir reseña en Google ⭐');
+
+                          if (selectedTurno.cliente?.id) {
+                            try {
+                              await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ recibioResena: true })
+                              });
+                              setSelectedTurno(prev => ({
+                                ...prev,
+                                cliente: { ...prev.cliente, recibioResena: true }
+                              }));
+                              setTurnos(prevList => prevList.map(t => {
+                                if (t.cliente?.id === selectedTurno.cliente?.id) {
+                                  return { ...t, cliente: { ...t.cliente, recibioResena: true } };
+                                }
+                                return t;
+                              }));
+                            } catch (err) {
+                              console.error('Error al actualizar recibioResena:', err);
+                            }
+                          }
                         }}
                         className="btn"
                         style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#eab308', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
@@ -5000,6 +5089,20 @@ export default function AgendaPage() {
                     rows="2"
                   />
                 </div>
+
+                {newTurno.estado !== 'BLOQUEADO' && (
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', marginTop: '0.25rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <input
+                        type="checkbox"
+                        checked={newTurno.enviarNotificaciones !== false}
+                        onChange={(e) => setNewTurno(prev => ({ ...prev, enviarNotificaciones: e.target.checked }))}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#16a34a' }}
+                      />
+                      <span>🔔 Enviar notificaciones automáticas al cliente</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {newTurnoWarning && (

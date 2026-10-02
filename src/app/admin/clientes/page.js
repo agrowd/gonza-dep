@@ -57,6 +57,8 @@ function ClientesPageContent() {
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [resenaFilter, setResenaFilter] = useState('all');
+  const [notifFilter, setNotifFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   // Profile modal states
@@ -92,7 +94,15 @@ function ClientesPageContent() {
     observaciones: '',
     notesGonzalo: '',
     canalAdquisicion: 'ORGANICO',
-    enviarNotificaciones: true
+    enviarNotificaciones: true,
+    bloqueado: false,
+    recibioResena: false,
+    notifWhatsapp: true,
+    notifEmail: true,
+    notifAltaTurno: true,
+    notifCancelacion: true,
+    notifReprogramacion: true,
+    notifMantenimiento: true
   });
 
   // Edit notes state
@@ -112,7 +122,15 @@ function ClientesPageContent() {
     frecuencia: 4,
     observaciones: '',
     notasGonzalo: '',
-    enviarNotificaciones: true
+    enviarNotificaciones: true,
+    bloqueado: false,
+    recibioResena: false,
+    notifWhatsapp: true,
+    notifEmail: true,
+    notifAltaTurno: true,
+    notifCancelacion: true,
+    notifReprogramacion: true,
+    notifMantenimiento: true
   });
 
   const formatCanalAdquisicion = (canal) => {
@@ -384,9 +402,9 @@ function ClientesPageContent() {
   };
 
   // Fetch clients list
-  const fetchClients = (customSearch = search) => {
+  const fetchClients = (customSearch = search, customFilter = filter, customResena = resenaFilter, customNotif = notifFilter) => {
     setLoading(true);
-    fetch(`/api/admin/clientes?search=${encodeURIComponent(customSearch)}&filter=${filter}`)
+    fetch(`/api/admin/clientes?search=${encodeURIComponent(customSearch)}&filter=${customFilter}&resena=${customResena}&notif=${customNotif}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -395,6 +413,85 @@ function ClientesPageContent() {
       })
       .catch(err => console.error('Error fetching clients:', err))
       .finally(() => setLoading(false));
+  };
+
+  const handleToggleClientNotif = async (client) => {
+    const nextVal = client.enviarNotificaciones === false ? true : false;
+    setClients(prev => prev.map(c => c.id === client.id ? { ...c, enviarNotificaciones: nextVal } : c));
+    try {
+      const res = await fetch(`/api/admin/clientes/${client.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ enviarNotificaciones: nextVal })
+      });
+      if (res.ok) {
+        showToast(nextVal ? `Notificaciones activadas para ${client.nombreCompleto}.` : `Notificaciones pausadas para ${client.nombreCompleto}.`);
+        if (selectedClient && selectedClient.id === client.id) {
+          setSelectedClient(prev => ({ ...prev, enviarNotificaciones: nextVal }));
+          setEditNotes(prev => ({ ...prev, enviarNotificaciones: nextVal }));
+        }
+      } else {
+        setClients(prev => prev.map(c => c.id === client.id ? { ...c, enviarNotificaciones: !nextVal } : c));
+        showToast('Error al actualizar notificación del cliente.', 'error');
+      }
+    } catch (err) {
+      console.error('Error toggling notif:', err);
+      setClients(prev => prev.map(c => c.id === client.id ? { ...c, enviarNotificaciones: !nextVal } : c));
+      showToast('Error de red al actualizar notificaciones.', 'error');
+    }
+  };
+
+  const handleToggleClientResena = async (client) => {
+    const nextVal = !client.recibioResena;
+    setClients(prev => prev.map(c => c.id === client.id ? { ...c, recibioResena: nextVal } : c));
+    try {
+      const res = await fetch(`/api/admin/clientes/${client.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ recibioResena: nextVal })
+      });
+      if (res.ok) {
+        showToast(nextVal ? `Marcado: ${client.nombreCompleto} recibió link de reseñas ⭐` : `Marcado: reseña pendiente para ${client.nombreCompleto}.`);
+        if (selectedClient && selectedClient.id === client.id) {
+          setSelectedClient(prev => ({ ...prev, recibioResena: nextVal }));
+          setEditNotes(prev => ({ ...prev, recibioResena: nextVal }));
+        }
+      } else {
+        setClients(prev => prev.map(c => c.id === client.id ? { ...c, recibioResena: !nextVal } : c));
+        showToast('Error al actualizar estado de reseña.', 'error');
+      }
+    } catch (err) {
+      console.error('Error toggling resena:', err);
+      setClients(prev => prev.map(c => c.id === client.id ? { ...c, recibioResena: !nextVal } : c));
+      showToast('Error de red al actualizar reseña.', 'error');
+    }
+  };
+
+  const handleToggleBloqueado = async () => {
+    if (!selectedClient) return;
+    const nextVal = !selectedClient.bloqueado;
+    try {
+      const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ bloqueado: nextVal })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedClient(prev => ({ ...prev, bloqueado: nextVal }));
+        setEditNotes(prev => ({ ...prev, bloqueado: nextVal }));
+        setClients(prev => prev.map(c => c.id === selectedClient.id ? { ...c, bloqueado: nextVal } : c));
+        showToast(nextVal ? '🚫 Cliente bloqueado. No podrá reservar turnos por autogestión.' : '🟢 Cliente desbloqueado correctamente.');
+      } else {
+        showToast(data.error || 'Error al cambiar bloqueo del cliente.', 'error');
+      }
+    } catch (err) {
+      console.error('Error toggling bloqueado:', err);
+      showToast('Error de red al cambiar bloqueo.', 'error');
+    }
   };
 
   const [globalNotifEnabled, setGlobalNotifEnabled] = useState(true);
@@ -412,8 +509,8 @@ function ClientesPageContent() {
   }, []);
 
   useEffect(() => {
-    fetchClients();
-  }, [filter]);
+    fetchClients(search, filter, resenaFilter, notifFilter);
+  }, [filter, resenaFilter, notifFilter]);
 
   const router = useRouter();
   const fromPage = searchParams.get('from');
@@ -474,7 +571,15 @@ function ClientesPageContent() {
             sesionesPrevias: data.sesionesPrevias !== undefined && data.sesionesPrevias !== null ? data.sesionesPrevias : 0,
             observaciones: data.observaciones || '',
             notasGonzalo: data.notasGonzalo || '',
-            enviarNotificaciones: data.enviarNotificaciones !== false
+            enviarNotificaciones: data.enviarNotificaciones !== false,
+            bloqueado: Boolean(data.bloqueado),
+            recibioResena: Boolean(data.recibioResena),
+            notifWhatsapp: data.notifWhatsapp !== false,
+            notifEmail: data.notifEmail !== false,
+            notifAltaTurno: data.notifAltaTurno !== false,
+            notifCancelacion: data.notifCancelacion !== false,
+            notifReprogramacion: data.notifReprogramacion !== false,
+            notifMantenimiento: data.notifMantenimiento !== false
           });
           setActiveTab('history');
           setIsProfileOpen(true);
@@ -818,7 +923,15 @@ function ClientesPageContent() {
           sesionesPrevias: data.sesionesPrevias,
           observaciones: data.observaciones,
           notasGonzalo: data.notasGonzalo,
-          enviarNotificaciones: data.enviarNotificaciones
+          enviarNotificaciones: data.enviarNotificaciones,
+          bloqueado: data.bloqueado,
+          recibioResena: data.recibioResena,
+          notifWhatsapp: data.notifWhatsapp,
+          notifEmail: data.notifEmail,
+          notifAltaTurno: data.notifAltaTurno,
+          notifCancelacion: data.notifCancelacion,
+          notifReprogramacion: data.notifReprogramacion,
+          notifMantenimiento: data.notifMantenimiento
         });
         setEditNotes(prev => ({
           ...prev,
@@ -826,7 +939,15 @@ function ClientesPageContent() {
           whatsappCountry: parsedSaved.countryCode,
           whatsappCustomCode: parsedSaved.customCode,
           canalAdquisicion: data.canalAdquisicion || prev.canalAdquisicion,
-          enviarNotificaciones: data.enviarNotificaciones
+          enviarNotificaciones: data.enviarNotificaciones,
+          bloqueado: data.bloqueado,
+          recibioResena: data.recibioResena,
+          notifWhatsapp: data.notifWhatsapp,
+          notifEmail: data.notifEmail,
+          notifAltaTurno: data.notifAltaTurno,
+          notifCancelacion: data.notifCancelacion,
+          notifReprogramacion: data.notifReprogramacion,
+          notifMantenimiento: data.notifMantenimiento
         }));
         showToast('Ficha del cliente actualizada correctamente.');
         fetchClients(); // refresh list
@@ -1015,6 +1136,26 @@ function ClientesPageContent() {
           <option value="canceled">Que han cancelado</option>
           <option value="no_show">Que no asistieron</option>
         </select>
+        <select
+          className={styles.filterSelect}
+          value={notifFilter}
+          onChange={(e) => setNotifFilter(e.target.value)}
+          title="Filtro de Notificaciones"
+        >
+          <option value="all">Todas las Notif.</option>
+          <option value="activas">Notificaciones Activas</option>
+          <option value="pausadas">Notificaciones Pausadas</option>
+        </select>
+        <select
+          className={styles.filterSelect}
+          value={resenaFilter}
+          onChange={(e) => setResenaFilter(e.target.value)}
+          title="Filtro de Reseña de Google"
+        >
+          <option value="all">Todas las Reseñas</option>
+          <option value="con_resena">Con Reseña enviada</option>
+          <option value="sin_resena">Sin Reseña (Pendiente)</option>
+        </select>
       </form>
 
       {/* List Table */}
@@ -1034,6 +1175,8 @@ function ClientesPageContent() {
                 <th>Nombre</th>
                 <th>WhatsApp</th>
                 <th>Email</th>
+                <th style={{ textAlign: 'center' }}>Notif.</th>
+                <th style={{ textAlign: 'center' }}>Reseña</th>
                 <th>Sesiones</th>
                 <th>Canal</th>
                 <th>Estado</th>
@@ -1045,10 +1188,39 @@ function ClientesPageContent() {
                 return (
                   <tr key={client.id}>
                     <td onClick={() => handleClientClick(client.id)} className={styles.clientName}>
-                      {client.nombreCompleto}
+                      <span>{client.nombreCompleto}</span>
+                      {client.bloqueado && (
+                        <span style={{ marginLeft: '6px', fontSize: '0.7rem', color: '#b91c1c', backgroundColor: '#fee2e2', border: '1px solid #f87171', padding: '1px 5px', borderRadius: '4px', fontWeight: 'bold' }}>
+                          🚫 (Bloqueado)
+                        </span>
+                      )}
                     </td>
                     <td className={styles.metaText}>{formatDisplayPhone(client.whatsapp)}</td>
                     <td className={styles.metaText}>{client.email}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={client.enviarNotificaciones !== false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleToggleClientNotif(client);
+                        }}
+                        title={client.enviarNotificaciones !== false ? 'Notificaciones activadas (Click para pausar)' : 'Notificaciones pausadas (Click para activar)'}
+                        style={{ width: '1.15rem', height: '1.15rem', cursor: 'pointer', accentColor: '#16a34a' }}
+                      />
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(client.recibioResena)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleToggleClientResena(client);
+                        }}
+                        title={client.recibioResena ? 'Reseña enviada / recibida' : 'Pendiente de reseña de Google'}
+                        style={{ width: '1.15rem', height: '1.15rem', cursor: 'pointer', accentColor: '#eab308' }}
+                      />
+                    </td>
                     <td style={{ fontWeight: 600 }}>{realizadosCount}</td>
                     <td className={styles.metaText}>
                       {formatCanalAdquisicion(client.canalAdquisicion)}
@@ -1078,6 +1250,16 @@ function ClientesPageContent() {
                     <h3 className={styles.ficheTitle} style={{ margin: 0, fontSize: '1.3rem', wordBreak: 'break-word', color: 'var(--text-primary)' }}>
                       {selectedClient.nombreCompleto}
                     </h3>
+                    {selectedClient.bloqueado && (
+                      <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #f87171', fontWeight: 'bold' }}>
+                        🚫 (Bloqueado)
+                      </span>
+                    )}
+                    {selectedClient.recibioResena && (
+                      <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.45rem', borderRadius: '4px', backgroundColor: '#fef9c3', color: '#854d0e', border: '1px solid #fde047', fontWeight: 'bold' }}>
+                        ⭐ Reseña Enviada
+                      </span>
+                    )}
                     {selectedClient.enviarNotificaciones === false && (
                       <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.45rem', borderRadius: '4px', backgroundColor: '#d4a54d', color: '#000', fontWeight: 'bold' }}>
                         ⚠️ Notificaciones Desactivadas
@@ -1389,6 +1571,25 @@ function ClientesPageContent() {
 
                     <button
                       type="button"
+                      onClick={handleToggleBloqueado}
+                      className="btn btn-primary"
+                      style={{
+                        backgroundColor: selectedClient.bloqueado ? '#16a34a' : '#b91c1c',
+                        color: '#fff',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        fontWeight: 600,
+                        padding: '0.75rem 1rem'
+                      }}
+                    >
+                      {selectedClient.bloqueado ? '🟢 Desbloquear Cliente' : '🚫 Bloquear Cliente'}
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => handleDeleteClient(selectedClient.id)}
                       className="btn btn-primary"
                       style={{ backgroundColor: '#d32f2f', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 600, padding: '0.75rem 1rem' }}
@@ -1566,16 +1767,121 @@ function ClientesPageContent() {
                       />
                     </div>
 
+                    {/* Master Switch Notificaciones */}
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                       <input
                         type="checkbox"
                         id="enviarNotificaciones"
                         checked={editNotes.enviarNotificaciones}
                         onChange={(e) => setEditNotes({ ...editNotes, enviarNotificaciones: e.target.checked })}
-                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#16a34a' }}
                       />
-                      <label htmlFor="enviarNotificaciones" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '500', color: 'var(--text-primary)' }}>
-                        Enviar notificaciones automáticas (WhatsApp y Email)
+                      <label htmlFor="enviarNotificaciones" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        Enviar notificaciones automáticas (Interruptor Maestro)
+                      </label>
+                    </div>
+
+                    {/* Matriz Granular de Notificaciones */}
+                    <div style={{
+                      gridColumn: '1 / -1',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '1rem',
+                      marginTop: '0.35rem',
+                      opacity: editNotes.enviarNotificaciones ? 1 : 0.5,
+                      transition: 'opacity 0.2s ease'
+                    }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)', marginBottom: '0.75rem' }}>
+                        Matriz Granular de Notificaciones por Canal y Evento:
+                      </div>
+
+                      {/* Canales */}
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                          Canales Habilitados:
+                        </div>
+                        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={editNotes.notifWhatsapp !== false}
+                              disabled={!editNotes.enviarNotificaciones}
+                              onChange={(e) => setEditNotes({ ...editNotes, notifWhatsapp: e.target.checked })}
+                              style={{ accentColor: '#25D366' }}
+                            />
+                            <span>💬 WhatsApp</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={editNotes.notifEmail !== false}
+                              disabled={!editNotes.enviarNotificaciones}
+                              onChange={(e) => setEditNotes({ ...editNotes, notifEmail: e.target.checked })}
+                              style={{ accentColor: '#4f46e5' }}
+                            />
+                            <span>📧 Email</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Tipos de Eventos */}
+                      <div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                          Tipos de Notificaciones Permitidas:
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.6rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={editNotes.notifAltaTurno !== false}
+                              disabled={!editNotes.enviarNotificaciones}
+                              onChange={(e) => setEditNotes({ ...editNotes, notifAltaTurno: e.target.checked })}
+                            />
+                            <span>🎉 Alta / Confirmación de Turno</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={editNotes.notifCancelacion !== false}
+                              disabled={!editNotes.enviarNotificaciones}
+                              onChange={(e) => setEditNotes({ ...editNotes, notifCancelacion: e.target.checked })}
+                            />
+                            <span>❌ Cancelación de Turno</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={editNotes.notifReprogramacion !== false}
+                              disabled={!editNotes.enviarNotificaciones}
+                              onChange={(e) => setEditNotes({ ...editNotes, notifReprogramacion: e.target.checked })}
+                            />
+                            <span>🔄 Reprogramación de Turno</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={editNotes.notifMantenimiento !== false}
+                              disabled={!editNotes.enviarNotificaciones}
+                              onChange={(e) => setEditNotes({ ...editNotes, notifMantenimiento: e.target.checked })}
+                            />
+                            <span>⏰ Recordatorio / Mantenimiento</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Checkbox Reseña de Google */}
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        id="recibioResena"
+                        checked={Boolean(editNotes.recibioResena)}
+                        onChange={(e) => setEditNotes({ ...editNotes, recibioResena: e.target.checked })}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#eab308' }}
+                      />
+                      <label htmlFor="recibioResena" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        ⭐ El cliente ya recibió / envió reseña de Google
                       </label>
                     </div>
                   </div>

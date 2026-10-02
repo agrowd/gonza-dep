@@ -61,7 +61,15 @@ export async function PUT(request, { params }) {
       fechaPrimerTurno,
       fechaNacimiento,
       sesionesPrevias,
-      enviarNotificaciones
+      enviarNotificaciones,
+      bloqueado,
+      recibioResena,
+      notifWhatsapp,
+      notifEmail,
+      notifAltaTurno,
+      notifCancelacion,
+      notifReprogramacion,
+      notifMantenimiento
     } = body;
 
     const cleanDni = dni !== undefined ? (dni ? String(dni).replace(/\D/g, '').trim() : null) : undefined;
@@ -134,7 +142,15 @@ export async function PUT(request, { params }) {
     if (fechaPrimerTurno !== undefined) updateData.fechaPrimerTurno = fechaPrimerTurno ? new Date(fechaPrimerTurno) : null;
     if (fechaNacimiento !== undefined) updateData.fechaNacimiento = fechaNacimiento ? new Date(fechaNacimiento) : null;
     if (sesionesPrevias !== undefined && !isNaN(Number(sesionesPrevias))) updateData.sesionesPrevias = Number(sesionesPrevias);
-    if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = enviarNotificaciones;
+    if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
+    if (bloqueado !== undefined) updateData.bloqueado = Boolean(bloqueado);
+    if (recibioResena !== undefined) updateData.recibioResena = Boolean(recibioResena);
+    if (notifWhatsapp !== undefined) updateData.notifWhatsapp = Boolean(notifWhatsapp);
+    if (notifEmail !== undefined) updateData.notifEmail = Boolean(notifEmail);
+    if (notifAltaTurno !== undefined) updateData.notifAltaTurno = Boolean(notifAltaTurno);
+    if (notifCancelacion !== undefined) updateData.notifCancelacion = Boolean(notifCancelacion);
+    if (notifReprogramacion !== undefined) updateData.notifReprogramacion = Boolean(notifReprogramacion);
+    if (notifMantenimiento !== undefined) updateData.notifMantenimiento = Boolean(notifMantenimiento);
 
     const updated = await prisma.cliente.update({
       where: { id },

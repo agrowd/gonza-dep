@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { sendWhatsAppMessage, getWhatsAppStatus, parseTemplate, checkRelayStatus } from '@/lib/whatsapp.js';
+import { canSendNotification } from '@/lib/notifications.js';
 
 // GET: Retrieve turnos for a specific week and notification config
 export async function GET(request) {
@@ -114,6 +115,8 @@ export async function GET(request) {
           nombreCompleto: t.cliente.nombreCompleto,
           whatsapp: t.cliente.whatsapp,
           email: t.cliente.email,
+          enviarNotificaciones: t.cliente.enviarNotificaciones,
+          canReceiveWppReminder: canSendNotification(t.cliente, 'WHATSAPP', 'RECORDATORIO'),
           lastNotification: t.cliente.notificaciones[0] || null
         },
         previewText
@@ -171,6 +174,11 @@ export async function POST(request) {
     const results = [];
 
     for (const t of turnos) {
+      if (!canSendNotification(t.cliente, 'WHATSAPP', 'RECORDATORIO')) {
+        results.push({ turnoId: t.id, cliente: t.cliente?.nombreCompleto || 'Cliente', status: 'SKIPPED', error: 'Notificaciones desactivadas para este cliente' });
+        continue;
+      }
+
       const message = parseTemplate(reminderTemplate, t.cliente, t, address);
       try {
         await sendWhatsAppMessage(t.cliente.whatsapp, message);

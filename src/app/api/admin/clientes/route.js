@@ -15,6 +15,8 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const search = (searchParams.get('search') || '').trim();
     const filter = searchParams.get('filter') || 'all'; // all, new, recurrent, upcoming, no_upcoming, canceled, no_show
+    const resenaFilter = searchParams.get('resena') || 'all'; // all, con_resena, sin_resena
+    const notifFilter = searchParams.get('notif') || 'all'; // all, activas, pausadas
 
     // Query builder
     let whereClause = {};
@@ -68,6 +70,22 @@ export async function GET(request) {
           default:
             return true;
         }
+      });
+    }
+
+    if (resenaFilter && resenaFilter !== 'all') {
+      clients = clients.filter(c => {
+        if (resenaFilter === 'con_resena') return c.recibioResena === true;
+        if (resenaFilter === 'sin_resena') return !c.recibioResena;
+        return true;
+      });
+    }
+
+    if (notifFilter && notifFilter !== 'all') {
+      clients = clients.filter(c => {
+        if (notifFilter === 'activas') return c.enviarNotificaciones === true;
+        if (notifFilter === 'pausadas') return !c.enviarNotificaciones;
+        return true;
       });
     }
 

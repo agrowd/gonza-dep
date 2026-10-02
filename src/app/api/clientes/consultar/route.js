@@ -66,15 +66,34 @@ export async function GET(request) {
       return NextResponse.json({ exists: false });
     }
 
+    if (client.bloqueado) {
+      return NextResponse.json({
+        exists: true,
+        bloqueado: true,
+        client: {
+          id: client.id,
+          nombreCompleto: client.nombreCompleto,
+          whatsapp: client.whatsapp,
+          email: client.email,
+          bloqueado: true
+        },
+        hasActiveTurno: false,
+        activeTurno: null,
+        activeTurnos: []
+      });
+    }
+
     const hasActiveTurno = client.turnos.length > 0;
 
     return NextResponse.json({
       exists: true,
+      bloqueado: false,
       client: {
         id: client.id,
         nombreCompleto: client.nombreCompleto,
         whatsapp: client.whatsapp,
-        email: client.email
+        email: client.email,
+        bloqueado: false
       },
       hasActiveTurno,
       activeTurno: hasActiveTurno ? client.turnos[0] : null,
