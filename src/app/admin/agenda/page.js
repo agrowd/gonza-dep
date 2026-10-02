@@ -3013,7 +3013,7 @@ export default function AgendaPage() {
                                 {/* Renglón 1: Horario libre destacado y duración */}
                                 <div className={styles.neocitaFreeSlotRowTop}>
                                   <div className={styles.neocitaFreeSlotTime}>
-                                    <span style={{ fontSize: '0.85rem' }}>🟢</span>
+                                    <span style={{ fontSize: '0.85rem' }}>🟡</span>
                                     <span>Libre: {startTimeStr} a {endTimeStr} hs</span>
                                   </div>
                                   <span className={styles.neocitaFreeSlotDuration}>
