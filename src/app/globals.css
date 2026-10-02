@@ -116,7 +116,7 @@ a:hover {
 }
 
 /* Generic Form Inputs */
-input, select, textarea {
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
@@ -127,6 +127,12 @@ input, select, textarea {
   transition: var(--transition);
   width: 100%;
   outline: none;
+}
+
+input[type="checkbox"], input[type="radio"] {
+  width: auto;
+  cursor: pointer;
+  accent-color: var(--color-gold);
 }
 
 input:focus, select:focus, textarea:focus {

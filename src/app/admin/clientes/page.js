@@ -1768,7 +1768,7 @@ function ClientesPageContent() {
                     </div>
 
                     {/* Master Switch Notificaciones */}
-                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <div className={styles.checkboxRow} style={{ marginTop: '0.5rem' }}>
                       <input
                         type="checkbox"
                         id="enviarNotificaciones"
@@ -1872,7 +1872,7 @@ function ClientesPageContent() {
                     </div>
 
                     {/* Checkbox Reseña de Google */}
-                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+                    <div className={styles.checkboxRow}>
                       <input
                         type="checkbox"
                         id="recibioResena"
