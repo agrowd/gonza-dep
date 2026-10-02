@@ -94,4 +94,29 @@
   4. Formato de fecha corregido a `DD/MM/YYYY`.
 - **Verificación Final**: La API `GET /api/admin/autogestion-alertas` en producción devuelve `count: 0`. La pantalla de agenda en móviles queda 100% limpia sin ventanas emergentes intrusivas.
 
+## Sesión: 2 de Octubre de 2026 - Color Diferenciado de Espacio Libre y Fix de Fecha Actual al Abrir Agenda
+
+### Requerimientos de Gonzalo Siri (WhatsApp):
+1. *"El turno libre se lee con doble renglón está perfecto. Lo podrías poner al espacio libre con un color diferente para que se note simple vista"* (`media_1790965759459.png`, `media_1790965787650.png`).
+2. *"Otro error que tira, ahora es que al abrir la agenda me muestra la fecha 23 de julio, en lugar de la fecha del día de hoy"* (`media_1790965811260.png`).
+
+### Solución Implementada:
+1. **Color Contrastante para el Espacio Libre**:
+   - Rediseño de `.neocitaFreeSlot` en `src/app/admin/agenda/agenda.module.css` a la paleta cálida ámbar/oro de la marca:
+     - Fondo: `#fffbeb` (ámbar crema cálido).
+     - Borde punteado: `1.5px dashed #f59e0b`.
+     - Borde izquierdo: `6px solid #d97706`.
+     - Texto horario: `#b45309` (0.96rem, peso 800) con emoji ámbar `🟡`.
+     - Badge duración: `#92400e` con fondo `rgba(245, 158, 11, 0.18)` y borde ámbar.
+     - Texto descriptivo: `Disponible para agendar` en `#78350f` (peso 600).
+     - Botón `+ Agendar`: Gradiente vino distintivo `linear-gradient(135deg, #7a1e1e 0%, #991b1b 100%)` con texto blanco y sombra.
+   - Rompe completamente la monotonía del verde de los turnos señados (`SEÑADO`), haciendo que cualquier horario libre resalte a primera vista.
+2. **Apertura Incondicional en HOY (Erradicación del 23 de Julio)**:
+   - Diagnóstico forense en los logs de Nginx reveló que el acceso directo guardado en la pantalla de inicio del iPhone de Gonzalo apuntaba a `/admin/agenda?date=2026-07-23&view=week` desde las pruebas de julio.
+   - En `src/app/admin/agenda/page.js`: se valida si `dateParam` es estrictamente anterior a hoy (`parsedStart < startOfToday`) sin un contexto activo (`turnoId`, `reprogramarTurnoId`, `newTurno`, `fromClient`, `fromStats`). En tal caso, se descarta incondicionalmente, fijando `initialDate = new Date()` (HOY en GMT-3) e `initialView = 'day'` en celulares, y limpiando la URL con `window.history.replaceState`.
+3. **Compilación y Validación**:
+   - `npm run build` ejecutado exitosamente con Next.js Turbopack (41/41 páginas con 0 errores).
+   - Decisión `D-95` y Error `ERR-37` registrados en `.synapse/`.
+
+
 

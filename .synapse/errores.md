@@ -324,7 +324,26 @@
 2. Se ejecutó la migración SQL `ALTER TABLE "Turno" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp(3) without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP;` en PostgreSQL.
 3. Se recompilaron los bindings con `npx prisma generate` y se realizó el despliegue tanto en producción (`gonzalo-agenda`) como en staging (`gonzalo-agenda-staging`).
 4. Se verificó con un test directo a la API que responde HTTP 200 OK y devuelve las alertas de autogestión sin errores.
-**Commit:** `254487d`
+## ERR-36: Alertas emergentes recurrentes de turnos antiguos en agenda tras migración SQL (2026-10-02)
+**Síntoma:** Gonzalo Siri reportó que al abrir la agenda (`/admin/agenda`) se repetían una y otra vez alertas emergentes de turnos ya pasados de agosto y septiembre (`media_1790963963058.png`).
+**Root Cause:** La migración SQL que añadió la columna `updatedAt` inicializó 641 turnos históricos con la fecha actual `2026-10-02`, engañando al endpoint `/api/admin/autogestion-alertas` que evalúa `updatedAt >= sinceDate`.
+**Solución:**
+1. Se ejecutó saneamiento SQL en PostgreSQL (`agenda_db` y `agenda_db_staging`): `UPDATE "Turno" SET "updatedAt" = "createdAt" WHERE "createdAt" < '2026-10-01 00:00:00';`.
+2. Se persistieron los IDs descartados en `localStorage` (`dismissed_autogestion_alerts`) para que nunca vuelvan a aparecer tras cerrarse.
+3. Se blindó el filtro de autogestión para ignorar modificaciones de administradores y mostrar fechas en formato `DD/MM/YYYY`.
+**Commit:** `0dacea4`
 **Estado:** ✅ FIXED
+
+## ERR-37: Apertura de Agenda en Fecha Pasada (23 de Julio) por Accesos Directos Obsoletos en Móvil (2026-10-02)
+**Síntoma:** Gonzalo Siri reportó: *"Otro error que tira, ahora es que al abrir la agenda me muestra la fecha 23 de julio, en lugar de la fecha del día de hoy"* (`media_1790965811260.png`).
+**Root Cause:** Los logs de Nginx revelaron que el acceso directo guardado en la pantalla de inicio del iPhone de Gonzalo apuntaba a `GET /admin/agenda?date=2026-07-23&view=week` desde las pruebas de julio. La inicialización de la agenda leía `dateParam` y `viewParam` sin validar si la fecha era anterior a hoy.
+**Solución:**
+1. En `src/app/admin/agenda/page.js`, se implementó detección de fechas obsoletas en el hook de montaje inicial: si `dateParam` es estrictamente anterior a hoy y no viene acompañado de un contexto explícito (`turnoId`, `reprogramarTurnoId`, `newTurno`, `fromClient`, `fromStats`), se descarta automáticamente y se fija `initialDate = new Date()` (HOY en UTC-3).
+2. En dispositivos móviles (< 768px), se fuerza `initialView = 'day'` (vista diaria Neocita) si proviene de un enlace obsoleto.
+3. Se limpian los parámetros residuales de la barra de direcciones con `window.history.replaceState({}, '', window.location.pathname)`.
+4. Se rediseñó el componente de espacio libre (`.neocitaFreeSlot`) en `agenda.module.css` con paleta ámbar/oro de alto contraste (`#fffbeb`, `#d97706`, `#f59e0b`, `🟡`, botón vino `#7a1e1e`) para que contraste inmediatamente con los turnos señados verdes.
+**Commit:** `próximo commit`
+**Estado:** ✅ FIXED
+
 
 

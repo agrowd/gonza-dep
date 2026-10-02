@@ -1498,5 +1498,10 @@
   - Saneamiento en base de datos PostgreSQL (`agenda_db` y `agenda_db_staging`): actualización de `updatedAt = createdAt` para 641 turnos históricos creados antes del 1 de octubre que habían adquirido `updatedAt = hoy` por la migración SQL, descartando falsas alertas de turnos de agosto y septiembre.
   - Despliegue en `main` de persistencia en `localStorage` (`dismissed_autogestion_alerts`) y filtro estricto por tags de autogestión con exclusión de administradores y formato `DD/MM/YYYY`.
   - Verificado en Producción real: 0 alertas recurrentes parásitas (`count: 0`), pantalla despejada.
+- [x] Atender feedback de Gonzalo Siri (`media_1790965759459.png`, `media_1790965787650.png`, `media_1790965811260.png`):
+  1. *"El turno libre se lee con doble renglón está perfecto. Lo podrías poner al espacio libre con un color diferente para que se note simple vista"*: Rediseñado `.neocitaFreeSlot` en `agenda.module.css` con paleta ámbar/oro de la marca (`#fffbeb`, `#d97706`, `#f59e0b`, `🟡`, `#92400e`, botón vino `#7a1e1e` con sombra), logrando alto contraste frente al verde de los turnos `SEÑADO`.
+  2. *"Otro error que tira, ahora es que al abrir la agenda me muestra la fecha 23 de julio, en lugar de la fecha del día de hoy"*: Diagnóstico forense en logs de Nginx detectó petición `GET /admin/agenda?date=2026-07-23&view=week` desde el iPhone de Gonzalo (acceso directo guardado en pantalla de inicio desde julio). Se implementó sanitización en el montaje: si `dateParam` es anterior a hoy y no tiene contexto explícito (`turnoId`, `reprogramarTurnoId`, `newTurno`, etc.), se descarta y abre en HOY (`new Date()`, GMT-3) en vista diaria (`'day'`) en móviles, limpiando los parámetros con `window.history.replaceState`.
+  3. Compilación exitosa con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores).
+  4. Registro de Decisión `D-95` en `.synapse/decisions.md` y Errores `ERR-36` y `ERR-37` en `.synapse/errores.md`.
 
 

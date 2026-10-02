@@ -1079,15 +1079,29 @@ export default function AgendaPage() {
         setFromStats(true);
       }
       
+      const isNewTurnoReq = searchParams.get('newTurno') === 'true';
+      const reprogramarTurnoId = searchParams.get('reprogramarTurnoId');
+      const hasExplicitTurnoContext = Boolean(turnoIdParam || reprogramarTurnoId || isNewTurnoReq || fromClientParam || fromStatsParam);
+      
+      const today = new Date();
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      let isStalePastDate = false;
       if (dateParam) {
         const parsedDate = parseYYYYMMDD(dateParam);
         if (!isNaN(parsedDate.getTime())) {
-          initialDate = parsedDate;
+          const parsedStart = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+          // If the date in query params is strictly in the past and there is no active turno/client context:
+          // It is a stale shortcut / old saved link (e.g. from months ago like 23 de julio).
+          // Discard it so opening the agenda always lands on TODAY!
+          if (parsedStart < startOfToday && !hasExplicitTurnoContext) {
+            isStalePastDate = true;
+            initialDate = today;
+          } else {
+            initialDate = parsedDate;
+          }
         }
       }
-      
-      const isNewTurnoReq = searchParams.get('newTurno') === 'true';
-      const reprogramarTurnoId = searchParams.get('reprogramarTurnoId');
       const timeParam = searchParams.get('time');
       const horaFinParam = searchParams.get('horaFin');
       const duracionParam = parseInt(searchParams.get('duracion') || '30', 10);
@@ -1265,13 +1279,15 @@ export default function AgendaPage() {
           .catch(err => console.error('Error loading turno:', err));
       }
 
-      if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
+      if (isStalePastDate) {
+        initialView = window.innerWidth < 768 ? 'day' : 'week';
+      } else if (viewParam && ['week', 'day', 'month'].includes(viewParam)) {
         initialView = viewParam;
       } else if (window.innerWidth < 768) {
         initialView = 'day';
       }
 
-      if (dateParam && !isNewTurnoReq && !reprogramarTurnoId && !turnoIdParam) {
+      if ((dateParam || viewParam) && !hasExplicitTurnoContext) {
         try {
           window.history.replaceState({}, '', window.location.pathname);
         } catch (e) {}
@@ -2984,7 +3000,7 @@ export default function AgendaPage() {
                                 {/* Renglón 1: Horario libre destacado y duración */}
                                 <div className={styles.neocitaFreeSlotRowTop}>
                                   <div className={styles.neocitaFreeSlotTime}>
-                                    <span style={{ fontSize: '0.85rem' }}>🟢</span>
+                                    <span style={{ fontSize: '0.85rem' }}>🟡</span>
                                     <span>Libre: {startTimeStr} a {endTimeStr} hs</span>
                                   </div>
                                   <span className={styles.neocitaFreeSlotDuration}>
