@@ -135,11 +135,12 @@ function ClientesPageContent() {
     }
   };
 
-  // Helper to calculate age
+  // Helper to calculate age (ignores year 2000 placeholder for Day/Month only)
   const calculateAge = (dateInput) => {
     if (!dateInput) return null;
     const birthDate = new Date(dateInput);
     if (isNaN(birthDate.getTime())) return null;
+    if (birthDate.getFullYear() === 2000) return null;
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
@@ -147,6 +148,18 @@ function ClientesPageContent() {
       age--;
     }
     return age >= 0 ? age : null;
+  };
+
+  const formatBirthDate = (dateInput) => {
+    if (!dateInput) return 'Sin registrar';
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return 'Sin registrar';
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    if (d.getUTCFullYear() === 2000) {
+      return `${day}/${month}`;
+    }
+    return `${day}/${month}/${d.getUTCFullYear()}`;
   };
 
   // Helper to insert date stamp into notes
@@ -195,7 +208,7 @@ function ClientesPageContent() {
 
     const rows = clients.map(c => {
       const sesionesCount = (Number(c.sesionesPrevias) || 0) + (c.turnos ? c.turnos.filter(t => t.estado === 'REALIZADO').length : 0);
-      const birthStr = c.fechaNacimiento ? new Date(c.fechaNacimiento).toLocaleDateString('es-AR') : '';
+      const birthStr = c.fechaNacimiento ? formatBirthDate(c.fechaNacimiento) : '';
       const firstDateStr = c.fechaPrimerTurno ? new Date(c.fechaPrimerTurno).toLocaleDateString('es-AR') : '';
       const altaStr = c.fechaAlta ? new Date(c.fechaAlta).toLocaleDateString('es-AR') : '';
 
@@ -1075,7 +1088,7 @@ function ClientesPageContent() {
                     <span className={styles.clientMetaItem}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')}</span>
                     <span className={styles.clientMetaItem}>DNI: {selectedClient.dni || 'Sin registrar'}</span>
                     <span className={styles.clientMetaItem}>
-                      Nacimiento: {selectedClient.fechaNacimiento ? `${new Date(selectedClient.fechaNacimiento).toLocaleDateString('es-ES')}${stats.edad !== null ? ` (${stats.edad} años)` : ''}` : 'Sin registrar'}
+                      Nacimiento: {selectedClient.fechaNacimiento ? `${formatBirthDate(selectedClient.fechaNacimiento)}${stats.edad !== null ? ` (${stats.edad} años)` : ''}` : 'Sin registrar'}
                     </span>
                     <span className={styles.clientMetaItem}>Canal: {formatCanalAdquisicion(selectedClient.canalAdquisicion)}</span>
                   </div>

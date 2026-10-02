@@ -226,7 +226,7 @@ export async function PUT(request, { params }) {
       const oldM = String(oldDate.getUTCMonth() + 1).padStart(2, '0');
       const oldY = oldDate.getUTCFullYear();
       const oldFechaStr = `${oldD}/${oldM}/${oldY}`;
-      const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${oldTurn.horaInicio} hs]`;
+      const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${oldTurn.horaInicio} hs - Administrador]`;
 
       const currentObs = (observaciones !== undefined ? observaciones : oldTurn.observaciones) || '';
       if (!currentObs.includes(tagReprogram)) {
@@ -298,7 +298,7 @@ export async function PUT(request, { params }) {
       const newFreq = Number(body.frecuencia);
       const oldFreq = oldTurn.cliente ? (oldTurn.cliente.frecuencia || 4) : 4;
       if (oldFreq !== newFreq) {
-        const freqTag = `[Frecuencia de turno cambiada de ${oldFreq} a ${newFreq}]`;
+        const freqTag = `[Frecuencia de turno cambiada de ${oldFreq} a ${newFreq} semanas]`;
         const currentObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
         if (!currentObs.includes(freqTag)) {
           updateData.observaciones = currentObs ? `${currentObs} ${freqTag}` : freqTag;
@@ -308,6 +308,9 @@ export async function PUT(request, { params }) {
     }
     if (body.fechaPrimerTurno !== undefined) {
       clientUpdateData.fechaPrimerTurno = body.fechaPrimerTurno ? new Date(body.fechaPrimerTurno) : null;
+    }
+    if (body.fechaNacimiento !== undefined) {
+      clientUpdateData.fechaNacimiento = body.fechaNacimiento ? new Date(body.fechaNacimiento) : null;
     }
     if (body.sesionesPrevias !== undefined && !isNaN(Number(body.sesionesPrevias))) {
       clientUpdateData.sesionesPrevias = Number(body.sesionesPrevias);
@@ -338,18 +341,25 @@ export async function PUT(request, { params }) {
     }
 
     // Append deposit preservation / loss tag to TURNO observaciones (exclusive to this session)
-    if (estado === 'CANCELADO' && Number(oldTurn.valorSeña) > 0) {
+    if (estado === 'CANCELADO') {
       const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
       const dateStr = oldTurn.fecha ? new Date(oldTurn.fecha).toLocaleDateString('es-ES') : '';
-      if (body.preserveDeposit) {
-        const creditTag = `[Seña a favor: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Guardada por cancelación ${dateStr})]`;
-        if (!currentTurnoObs.includes(creditTag)) {
-          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${creditTag}` : creditTag;
+      if (Number(oldTurn.valorSeña) > 0) {
+        if (body.preserveDeposit) {
+          const creditTag = `[Seña a favor: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Guardada por cancelación ${dateStr}) - Administrador]`;
+          if (!currentTurnoObs.includes(creditTag)) {
+            updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${creditTag}` : creditTag;
+          }
+        } else {
+          const lossTag = `[Pierde seña: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Cancelación con menos de 72hs) - Administrador]`;
+          if (!currentTurnoObs.includes(lossTag)) {
+            updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${lossTag}` : lossTag;
+          }
         }
       } else {
-        const lossTag = `[Pierde seña: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Cancelación con menos de 72hs)]`;
-        if (!currentTurnoObs.includes(lossTag)) {
-          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${lossTag}` : lossTag;
+        const cancelTag = `[Cancelado - Administrador]`;
+        if (!currentTurnoObs.includes(cancelTag)) {
+          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${cancelTag}` : cancelTag;
         }
       }
     }

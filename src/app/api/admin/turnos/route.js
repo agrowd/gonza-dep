@@ -327,6 +327,7 @@ export async function POST(request) {
         descuentoTipo: descuentoTipo || 'NINGUNO',
         descuentoValor: Number(descuentoValor || 0),
         estado: estado || 'SEÑADO',
+        metodoPago: body.metodoPago || 'TRANSFERENCIA',
         observaciones,
         notasGonzalo: finalNotasGonzalo
       },

@@ -326,6 +326,8 @@ export default function AgendaPage() {
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
   const [tempClientFechaPrimerTurno, setTempClientFechaPrimerTurno] = useState('');
   const [tempClientFechaNacimiento, setTempClientFechaNacimiento] = useState('');
+  const [tempClientBdayDay, setTempClientBdayDay] = useState('');
+  const [tempClientBdayMonth, setTempClientBdayMonth] = useState('');
   const [tempClientSesionesTotal, setTempClientSesionesTotal] = useState(0);
   const [tempClientSesionesPrevias, setTempClientSesionesPrevias] = useState(0);
   const tempClientFechaPrimerTurnoRef = useRef('');
@@ -765,20 +767,35 @@ export default function AgendaPage() {
         tempClientFechaPrimerTurnoRef.current = initialDate;
 
         let initialBday = '';
+        let initialDay = '';
+        let initialMonth = '';
         if (selectedTurno.cliente.fechaNacimiento) {
           try {
-            initialBday = new Date(selectedTurno.cliente.fechaNacimiento).toISOString().split('T')[0];
+            const bDate = new Date(selectedTurno.cliente.fechaNacimiento);
+            const iso = bDate.toISOString().split('T')[0];
+            initialBday = iso;
+            const parts = iso.split('-');
+            if (parts.length === 3) {
+              initialMonth = String(parseInt(parts[1], 10));
+              initialDay = String(parseInt(parts[2], 10));
+            }
           } catch {
             initialBday = '';
+            initialDay = '';
+            initialMonth = '';
           }
         }
         setTempClientFechaNacimiento(initialBday);
+        setTempClientBdayDay(initialDay);
+        setTempClientBdayMonth(initialMonth);
       } else {
         setTempClientObservaciones('');
         setTempClientFrecuencia(4);
         setTempClientNotasGonzalo('');
         setTempClientFechaPrimerTurno('');
         setTempClientFechaNacimiento('');
+        setTempClientBdayDay('');
+        setTempClientBdayMonth('');
         tempClientFechaPrimerTurnoRef.current = '';
         setTempClientSesionesTotal(0);
         setTempClientSesionesPrevias(0);
@@ -791,6 +808,8 @@ export default function AgendaPage() {
       setTempClientNotasGonzalo('');
       setTempClientFechaPrimerTurno('');
       setTempClientFechaNacimiento('');
+      setTempClientBdayDay('');
+      setTempClientBdayMonth('');
       tempClientFechaPrimerTurnoRef.current = '';
       setTempClientSesionesTotal(0);
       setTempClientSesionesPrevias(0);
@@ -897,6 +916,7 @@ export default function AgendaPage() {
               frecuencia: targetFreq,
               notasGonzalo: targetNotas,
               fechaPrimerTurno: targetFechaPrimer,
+              fechaNacimiento: targetFechaNacimiento,
               sesionesPrevias: targetSesionesPrevias
             }
           };
@@ -3638,7 +3658,7 @@ export default function AgendaPage() {
                             💳 Método de Pago
                           </span>
                           <select
-                            value={selectedTurno.metodoPago || 'EFECTIVO'}
+                            value={selectedTurno.metodoPago || 'TRANSFERENCIA'}
                             onChange={async (e) => {
                               const val = e.target.value;
                               try {
@@ -3651,7 +3671,7 @@ export default function AgendaPage() {
                                 if (res.ok) {
                                   const updated = await res.json();
                                   setSelectedTurno(prev => ({ ...prev, metodoPago: val }));
-                                  showToast(`Método de pago: ${val === 'EFECTIVO' ? '💵 Efectivo' : '🏦 Transferencia'}`);
+                                  showToast(`Método de pago: ${val === 'TRANSFERENCIA' ? '🏦 Transferencia' : '💵 Efectivo'}`);
                                   fetchAppointments();
                                 }
                               } catch (err) {
@@ -3673,8 +3693,8 @@ export default function AgendaPage() {
                               flexShrink: 0
                             }}
                           >
-                            <option value="EFECTIVO">💵 Efectivo</option>
                             <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                            <option value="EFECTIVO">💵 Efectivo</option>
                           </select>
                         </div>
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
@@ -3856,7 +3876,7 @@ export default function AgendaPage() {
                         />
                       </div>
 
-                      {/* Fila 3: Fecha de Cumpleaños (Título a la izquierda, cuadro de fecha a la derecha) */}
+                      {/* Fila 3: Fecha de Cumpleaños (Día y Mes) */}
                       <div style={{
                         display: 'flex',
                         flexDirection: 'row',
@@ -3868,29 +3888,94 @@ export default function AgendaPage() {
                         boxSizing: 'border-box'
                       }}>
                         <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.78rem', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
-                          🎂 Fecha de Cumpleaños
+                          🎂 Cumpleaños
                         </span>
-                        <input
-                          type="date"
-                          value={tempClientFechaNacimiento}
-                          onChange={(e) => setTempClientFechaNacimiento(e.target.value)}
-                          style={{
-                            width: '125px',
-                            maxWidth: '130px',
-                            minWidth: '100px',
-                            flexShrink: 0,
-                            padding: '0.3rem 0.35rem',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-secondary)',
-                            color: 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            textAlign: 'center',
-                            boxSizing: 'border-box',
-                            margin: 0
-                          }}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+                          <select
+                            value={tempClientBdayDay}
+                            onChange={(e) => {
+                              const dVal = e.target.value;
+                              setTempClientBdayDay(dVal);
+                              if (dVal && tempClientBdayMonth) {
+                                setTempClientFechaNacimiento(`2000-${tempClientBdayMonth.padStart(2, '0')}-${dVal.padStart(2, '0')}`);
+                              } else if (!dVal && !tempClientBdayMonth) {
+                                setTempClientFechaNacimiento('');
+                              }
+                            }}
+                            style={{
+                              padding: '0.28rem 0.2rem',
+                              borderRadius: '7px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-secondary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              textAlign: 'center',
+                              minWidth: '54px',
+                              cursor: 'pointer',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            <option value="">Día</option>
+                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                              <option key={day} value={String(day)}>{day}</option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={tempClientBdayMonth}
+                            onChange={(e) => {
+                              const mVal = e.target.value;
+                              setTempClientBdayMonth(mVal);
+                              if (tempClientBdayDay && mVal) {
+                                setTempClientFechaNacimiento(`2000-${mVal.padStart(2, '0')}-${tempClientBdayDay.padStart(2, '0')}`);
+                              } else if (!tempClientBdayDay && !mVal) {
+                                setTempClientFechaNacimiento('');
+                              }
+                            }}
+                            style={{
+                              padding: '0.28rem 0.2rem',
+                              borderRadius: '7px',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-secondary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              textAlign: 'center',
+                              minWidth: '60px',
+                              cursor: 'pointer',
+                              boxSizing: 'border-box'
+                            }}
+                          >
+                            <option value="">Mes</option>
+                            {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((name, i) => (
+                              <option key={i + 1} value={String(i + 1)}>{name}</option>
+                            ))}
+                          </select>
+
+                          {(tempClientBdayDay || tempClientBdayMonth) && (
+                            <button
+                              type="button"
+                              title="Borrar cumpleaños"
+                              onClick={() => {
+                                setTempClientBdayDay('');
+                                setTempClientBdayMonth('');
+                                setTempClientFechaNacimiento('');
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#ff5252',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                padding: '0 2px',
+                                lineHeight: 1
+                              }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {(tempClientFechaPrimerTurno !== (selectedTurno.cliente?.fechaPrimerTurno ? new Date(selectedTurno.cliente.fechaPrimerTurno).toISOString().split('T')[0] : '') ||

@@ -118,7 +118,7 @@ export async function POST(request) {
     const oldM = String(oldDate.getUTCMonth() + 1).padStart(2, '0');
     const oldY = oldDate.getUTCFullYear();
     const oldFechaStr = `${oldD}/${oldM}/${oldY}`;
-    const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${turno.horaInicio} hs]`;
+    const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${turno.horaInicio} hs - Autogestión]`;
 
     const currentObs = turno.observaciones || '';
     let newObs = currentObs.includes('[REPROGRAMADO_AUTOGESTION]') ? currentObs : `${currentObs} [REPROGRAMADO_AUTOGESTION]`.trim();

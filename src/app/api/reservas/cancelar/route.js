@@ -48,7 +48,16 @@ export async function POST(request) {
 
     // Perform cancellation in DB
     const currentObs = turno.observaciones || '';
-    const newObs = currentObs.includes('[CANCELADO_AUTOGESTION]') ? currentObs : `${currentObs} [CANCELADO_AUTOGESTION]`.trim();
+    let cancelTag = '';
+    if (Number(turno.valorSeña) > 0) {
+      cancelTag = `[Pierde seña: $${Number(turno.valorSeña).toLocaleString('es-ES')} - Autogestión]`;
+    } else {
+      cancelTag = `[Cancelado - Autogestión]`;
+    }
+    let newObs = currentObs.includes('[CANCELADO_AUTOGESTION]') ? currentObs : `${currentObs} [CANCELADO_AUTOGESTION]`.trim();
+    if (!newObs.includes(cancelTag)) {
+      newObs = `${newObs} ${cancelTag}`.trim();
+    }
     const updatedTurno = await prisma.turno.update({
       where: { id: turnoId },
       data: {
