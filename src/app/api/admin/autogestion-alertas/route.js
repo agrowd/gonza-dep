@@ -8,25 +8,31 @@ export async function GET(request) {
     const sinceHours = parseInt(searchParams.get('sinceHours') || '48', 10);
 
     const sinceDate = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
+    // Exclude old historical turnos from past months (e.g., August, July)
+    const minTurnoDate = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
     const turnos = await prisma.turno.findMany({
       where: {
         AND: [
           {
             OR: [
-              { observaciones: { contains: 'AUTOGESTION' } },
-              { observaciones: { contains: 'ONLINE' } },
-              { observaciones: { contains: 'REPROGRAMADO' } },
-              { observaciones: { contains: 'CANCELADO' } },
-              { estado: 'REPROGRAMADO' },
-              { estado: 'CANCELADO' }
+              { observaciones: { contains: '[CANCELADO_AUTOGESTION]' } },
+              { observaciones: { contains: '[REPROGRAMADO_AUTOGESTION]' } },
+              { observaciones: { contains: '- Autogestión]' } },
+              { observaciones: { contains: '- Autogestion]' } },
+              { observaciones: { contains: 'AUTOGESTION' } }
             ]
           },
           {
-            OR: [
-              { createdAt: { gte: sinceDate } },
-              { updatedAt: { gte: sinceDate } }
-            ]
+            NOT: {
+              observaciones: { contains: 'Administrador' }
+            }
+          },
+          {
+            fecha: { gte: minTurnoDate }
+          },
+          {
+            updatedAt: { gte: sinceDate }
           }
         ]
       },
@@ -47,11 +53,20 @@ export async function GET(request) {
     });
 
     const alertas = turnos.map(t => {
-      let tipo = 'RESERVA';
-      if (t.estado === 'REPROGRAMADO' || t.observaciones?.includes('[REPROGRAMADO_AUTOGESTION]')) {
-        tipo = 'REPROGRAMACION';
-      } else if (t.estado === 'CANCELADO' || t.observaciones?.includes('[CANCELADO_AUTOGESTION]')) {
+      let tipo = 'REPROGRAMACION';
+      if (
+        t.estado === 'CANCELADO' ||
+        t.observaciones?.includes('[CANCELADO_AUTOGESTION]') ||
+        t.observaciones?.includes('[Pierde seña:') ||
+        t.observaciones?.includes('[Cancelado -')
+      ) {
         tipo = 'CANCELACION';
+      } else if (
+        t.estado === 'REPROGRAMADO' ||
+        t.observaciones?.includes('[REPROGRAMADO_AUTOGESTION]') ||
+        t.observaciones?.includes('[Turno reprogramado')
+      ) {
+        tipo = 'REPROGRAMACION';
       }
 
       let zonasTexto = '';
@@ -62,7 +77,12 @@ export async function GET(request) {
         zonasTexto = t.zonas;
       }
 
-      const dateStr = t.fecha.toISOString().split('T')[0];
+      const dateIso = t.fecha.toISOString().split('T')[0];
+      const d = new Date(t.fecha);
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const year = d.getUTCFullYear();
+      const fechaFormateada = `${day}/${month}/${year}`;
 
       return {
         id: t.id,
@@ -72,7 +92,8 @@ export async function GET(request) {
         clienteWhatsapp: t.cliente?.whatsapp || '',
         clienteEmail: t.cliente?.email || '',
         tipo,
-        fecha: dateStr,
+        fecha: fechaFormateada,
+        fechaRaw: dateIso,
         horaInicio: t.horaInicio,
         horaFin: t.horaFin,
         duracionMinutos: t.duracionMinutos,

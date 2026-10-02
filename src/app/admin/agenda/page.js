@@ -19,14 +19,33 @@ const toYYYYMMDD = (dateInput) => {
   return `${year}-${month}-${day}`;
 };
 
-// Timezone-safe YYYY-MM-DD parser (avoids UTC offset shifts)
+// Timezone-safe YYYY-MM-DD and DD/MM/YYYY parser (avoids UTC offset shifts)
 const parseYYYYMMDD = (dateStr) => {
   if (!dateStr) return new Date();
   if (dateStr instanceof Date) return dateStr;
-  const cleanStr = typeof dateStr === 'string' ? dateStr.split('T')[0] : '';
+  const cleanStr = typeof dateStr === 'string' ? dateStr.split('T')[0].trim() : '';
   if (!cleanStr) return new Date(dateStr);
+  if (cleanStr.includes('/')) {
+    const [day, month, year] = cleanStr.split('/').map(Number);
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      return new Date(year, month - 1, day);
+    }
+  }
   const [year, month, day] = cleanStr.split('-').map(Number);
   return new Date(year, month - 1, day);
+};
+
+const formatAlertDate = (dateVal) => {
+  if (!dateVal) return '';
+  if (typeof dateVal === 'string' && dateVal.includes('/')) return dateVal;
+  if (typeof dateVal === 'string' && dateVal.includes('-')) {
+    const parts = dateVal.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const [y, m, d] = parts;
+      return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+    }
+  }
+  return dateVal;
 };
 
 const getAppDateStr = (fechaInput) => {
@@ -405,42 +424,45 @@ export default function AgendaPage() {
     }
   };
 
-  // Autogestión Real-time Notifications Popup State
+  // Autogestión Real-time Notifications Popup State (persisted in localStorage)
   const [autogestionAlert, setAutogestionAlert] = useState(null);
-  const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
-
-  // Poll for autogestión bookings, reschedules, and cancellations
-  useEffect(() => {
-    let isMounted = true;
-    const fetchAutogestionAlerts = async () => {
-      try {
-        const res = await fetch('/api/admin/autogestion-alertas?limit=10&sinceHours=24');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.alertas && data.alertas.length > 0 && isMounted) {
-          const unread = data.alertas.find(a => !dismissedAlerts.has(a.id));
-          if (unread) {
-            setAutogestionAlert(unread);
-          }
+  const [dismissedAlerts, setDismissedAlerts] = useState(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem('dismissed_autogestion_alerts');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return new Set(parsed);
         }
-      } catch (e) {
-        // silent catch
       }
-    };
+    } catch (e) {
+      console.warn('Error reading dismissed_autogestion_alerts from localStorage:', e);
+    }
+    return new Set();
+  });
 
-    fetchAutogestionAlerts();
-    const interval = setInterval(fetchAutogestionAlerts, 20000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [dismissedAlerts]);
+  const handleDismissAutogestion = (alert) => {
+    if (!alert || !alert.id) return;
+    setDismissedAlerts(prev => {
+      const next = new Set([...prev, alert.id]);
+      try {
+        const arr = Array.from(next).slice(-200);
+        localStorage.setItem('dismissed_autogestion_alerts', JSON.stringify(arr));
+      } catch (e) {
+        console.warn('Error saving dismissed_autogestion_alerts to localStorage:', e);
+      }
+      return next;
+    });
+    setAutogestionAlert(null);
+  };
 
   const handleVerTurnoAutogestion = async (alert) => {
-    setDismissedAlerts(prev => new Set([...prev, alert.id]));
-    setAutogestionAlert(null);
-    if (alert.fecha) {
-      const targetDate = parseYYYYMMDD(alert.fecha);
+    if (!alert || !alert.id) return;
+    handleDismissAutogestion(alert);
+    const dateToJump = alert.fechaRaw || alert.fecha;
+    if (dateToJump) {
+      const targetDate = parseYYYYMMDD(dateToJump);
       setSelectedDate(targetDate);
       setViewMode('day');
     }
@@ -456,10 +478,48 @@ export default function AgendaPage() {
     }
   };
 
-  const handleDismissAutogestion = (alert) => {
-    setDismissedAlerts(prev => new Set([...prev, alert.id]));
-    setAutogestionAlert(null);
-  };
+  // Poll for autogestión bookings, reschedules, and cancellations
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAutogestionAlerts = async () => {
+      try {
+        const res = await fetch('/api/admin/autogestion-alertas?limit=10&sinceHours=24');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.alertas && data.alertas.length > 0 && isMounted) {
+          // Double-check against localStorage to ensure dismissed alerts never pop up again
+          let currentDismissed = dismissedAlerts;
+          try {
+            const stored = localStorage.getItem('dismissed_autogestion_alerts');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed)) {
+                currentDismissed = new Set([...currentDismissed, ...parsed]);
+              }
+            }
+          } catch (e) {}
+
+          const unread = data.alertas.find(a => !currentDismissed.has(a.id));
+          if (unread) {
+            setAutogestionAlert(unread);
+          } else {
+            setAutogestionAlert(null);
+          }
+        } else if (isMounted) {
+          setAutogestionAlert(null);
+        }
+      } catch (e) {
+        // silent catch
+      }
+    };
+
+    fetchAutogestionAlerts();
+    const interval = setInterval(fetchAutogestionAlerts, 20000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [dismissedAlerts]);
 
   const savedScrollRef = useRef(0);
   const gridBodyRef = useRef(null);
@@ -5429,7 +5489,7 @@ export default function AgendaPage() {
             </button>
           </div>
           <div style={{ fontSize: '0.92rem', color: '#1e293b', marginBottom: '14px', lineHeight: 1.45 }}>
-            <strong>{autogestionAlert.clienteNombre}</strong> {autogestionAlert.tipo === 'RESERVA' ? 'hizo una reserva online' : (autogestionAlert.tipo === 'REPROGRAMACION' ? 'reprogramó su turno' : 'canceló su turno')} para el <strong>{autogestionAlert.fecha}</strong> a las <strong>{autogestionAlert.horaInicio} hs</strong>.
+            <strong>{autogestionAlert.clienteNombre}</strong> {autogestionAlert.tipo === 'RESERVA' ? 'hizo una reserva online' : (autogestionAlert.tipo === 'REPROGRAMACION' ? 'reprogramó su turno' : 'canceló su turno')} para el <strong>{formatAlertDate(autogestionAlert.fecha)}</strong> a las <strong>{autogestionAlert.horaInicio} hs</strong>.
             {autogestionAlert.zonasTexto && (
               <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
                 Zonas: {autogestionAlert.zonasTexto}
