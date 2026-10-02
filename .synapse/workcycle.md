@@ -1482,4 +1482,17 @@
 - [x] Desplegar en servidor VPS en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
 - [x] Registrar Decisión `D-90` en `.synapse/decisions.md` y Error `ERR-35` en `.synapse/errores.md`.
 
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Espacio Libre en Vista Diaria Neocita)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender requerimiento con captura de WhatsApp de Gonzalo Siri (`media_1790959948860.png`): *"Podes hacer que el espacio que dejas para un turno libre sea de dos renglones en lugar de 1 como se ve aca, asi esta mas legible y destacado"*.
+- [x] Diseñar e implementar tarjeta de espacio libre de dos renglones (`.neocitaFreeSlot`) en `agenda.module.css`:
+  - Renglón 1: Horario libre destacado (`🟢 Libre: {startTimeStr} a {endTimeStr} hs`) en verde `#15803d` (0.96rem, peso 800) + Badge de duración estilizado con cronómetro (`⏱️ {durationText}`).
+  - Renglón 2: Leyenda descriptiva (`Disponible para agendar`) en slate `#475569` + Botón de acción directo `+ Agendar` con estilo de píldora interactiva con hover en tono vino/oro de la marca.
+  - Borde izquierdo grueso de 6px sólido verde (`#16a34a`), fondo suave `#f0fdf4`, borde punteado `#86efac`, sombra suave y altura aumentada de ~32px a ~76px para máxima ergonomía táctil en celulares.
+- [x] Reemplazar estilo inline de `free_slot` en `src/app/admin/agenda/page.js` por las clases modulares `.neocitaFreeSlotRowTop`, `.neocitaFreeSlotTime`, `.neocitaFreeSlotDuration`, `.neocitaFreeSlotRowBottom`, `.neocitaFreeSlotLabel`, `.neocitaFreeSlotAction`.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 páginas con 0 errores).
+- [x] Desplegar en Producción (`agenda.depilacionparahombres.com`, puerto 3006) y Staging (`http://187.127.9.216:3008`, puerto 3008).
+- [x] Registrar Decisión `D-94` en `.synapse/decisions.md`.
+
 

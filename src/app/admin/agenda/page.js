@@ -2918,31 +2918,29 @@ export default function AgendaPage() {
                                   });
                                   setIsNewOpen(true);
                                 }}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  padding: '0.4rem 0.85rem',
-                                  borderRadius: '8px',
-                                  backgroundColor: 'rgba(34, 197, 94, 0.05)',
-                                  border: '1px dashed rgba(34, 197, 94, 0.35)',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.15s ease'
-                                }}
+                                className={styles.neocitaFreeSlot}
                                 title="Espacio libre: haz clic para agendar un turno en este horario"
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                                  <span style={{ fontSize: '0.75rem' }}>🟢</span>
-                                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#16a34a' }}>
-                                    Libre: {startTimeStr} a {endTimeStr}
-                                  </span>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                    ({durationText})
+                                {/* Renglón 1: Horario libre destacado y duración */}
+                                <div className={styles.neocitaFreeSlotRowTop}>
+                                  <div className={styles.neocitaFreeSlotTime}>
+                                    <span style={{ fontSize: '0.85rem' }}>🟢</span>
+                                    <span>Libre: {startTimeStr} a {endTimeStr} hs</span>
+                                  </div>
+                                  <span className={styles.neocitaFreeSlotDuration}>
+                                    ⏱️ {durationText}
                                   </span>
                                 </div>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-gold)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                                  + Agendar
-                                </span>
+
+                                {/* Renglón 2: Estado secundario y botón de acción */}
+                                <div className={styles.neocitaFreeSlotRowBottom}>
+                                  <span className={styles.neocitaFreeSlotLabel}>
+                                    Disponible para agendar
+                                  </span>
+                                  <span className={styles.neocitaFreeSlotAction}>
+                                    + Agendar
+                                  </span>
+                                </div>
                               </div>
                             );
                           }
