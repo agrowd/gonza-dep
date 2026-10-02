@@ -5,7 +5,7 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const sinceHours = parseInt(searchParams.get('sinceHours') || '48', 10);
+    const sinceHours = parseInt(searchParams.get('sinceHours') || '4', 10);
 
     const sinceDate = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
     // Exclude old historical turnos from past months (e.g., August, July)
@@ -101,7 +101,8 @@ export async function GET(request) {
         valorTotal: t.valorTotal,
         valorSeña: t.valorSeña,
         estado: t.estado,
-        createdAt: t.createdAt.toISOString()
+        createdAt: t.createdAt.toISOString(),
+        updatedAt: (t.updatedAt || t.createdAt).toISOString()
       };
     });
 
