@@ -316,4 +316,15 @@
 **Commit:** `1a64f43` (próximo commit)
 **Estado:** ✅ FIXED
 
+## ERR-35: Error 500 "Error interno del servidor" en Reprogramación de Autogestión por ausencia de updatedAt en modelo Turno (2026-10-02)
+**Síntoma:** Al intentar confirmar la reprogramación de un turno en el portal web de autogestión (`agenda.depilacionparahombres.com`), la interfaz arrojaba el cartel de alerta en rojo: `⚠️ Error interno del servidor` al pulsar `[Confirmar reprogramación]`.
+**Root Cause:** En `src/app/api/reservas/reprogramar/route.js`, la llamada `prisma.turno.update(...)` pasaba `updatedAt: new Date()`, y en `/api/admin/autogestion-alertas/route.js` la consulta Prisma utilizaba `updatedAt: { gte: sinceDate }` y `orderBy: { updatedAt: 'desc' }`. Sin embargo, el modelo `Turno` en `prisma/schema.prisma` y la tabla `"Turno"` en PostgreSQL no tenían definida la columna `updatedAt`. Al ejecutarse, Prisma arrojaba una excepción `PrismaClientValidationError: Unknown argument updatedAt. Did you mean createdAt?`, detonando el bloque `catch (error)` global de la ruta con HTTP 500.
+**Solución:** 
+1. Se agregó `updatedAt DateTime @default(now()) @updatedAt` al modelo `Turno` en `prisma/schema.prisma`.
+2. Se ejecutó la migración SQL `ALTER TABLE "Turno" ADD COLUMN IF NOT EXISTS "updatedAt" timestamp(3) without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP;` en PostgreSQL.
+3. Se recompilaron los bindings con `npx prisma generate` y se realizó el despliegue tanto en producción (`gonzalo-agenda`) como en staging (`gonzalo-agenda-staging`).
+4. Se verificó con un test directo a la API que responde HTTP 200 OK y devuelve las alertas de autogestión sin errores.
+**Commit:** `254487d`
+**Estado:** ✅ FIXED
+
 

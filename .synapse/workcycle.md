@@ -1467,4 +1467,19 @@
 - [x] Probar compilación local limpia con Next.js Turbopack (`npm run build`).
 - [x] Registrar Decisión `D-88` y `D-89` en `.synapse/decisions.md` y Error `ERR-34` en `.synapse/errores.md`.
 
+## 📅 Sesión: 2 de Octubre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver error crítico HTTP 500 "Error interno del servidor" en `/api/reservas/reprogramar` reportado por Damián Parapugno (`media_1790945957810.png`).
+- [x] Incorporar columna `updatedAt` al modelo `Turno` en `prisma/schema.prisma` y aplicar migración en base de datos PostgreSQL de producción.
+- [x] Añadir sufijo de actor en etiqueta de reprogramación: `[Turno reprogramado de DD/MM/YYYY a las HH:MM hs - Administrador]` y `[Turno reprogramado de DD/MM/YYYY a las HH:MM hs - Autogestión]` (`media_1790945922414.png`).
+- [x] Añadir sufijo de actor y estado de seña en cancelación: `[Seña a favor: $... (Guardada por cancelación DD/MM/YYYY) - Administrador]`, `[Pierde seña: $... (Cancelación con menos de 72hs) - Administrador]`, `[Pierde seña: $... - Autogestión]`.
+- [x] Reemplazar `<input type="date">` de cumpleaños por dos selectores nativos compactos de `Día` (1-31) y `Mes` (Ene-Dic) para evitar deslizar años en teclado móvil, almacenando año comodín neutro `2000` y visualizando `DD/MM` en fichas.
+- [x] Sincronizar campo `fechaNacimiento` en endpoint `PUT /api/admin/turnos/[id]` para actualización atómica desde la tarjeta clínica de agenda.
+- [x] Añadir la palabra "semanas" al comentario de cambio de frecuencia: `[Frecuencia de turno cambiada de X a Y semanas]`.
+- [x] Predeterminar el espacio y selector de método de pago en `TRANSFERENCIA` (por defecto en Prisma, en creación de turnos y en la UI de agenda).
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`) verificando 41/41 rutas con 0 errores.
+- [x] Desplegar en servidor VPS en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
+- [x] Registrar Decisión `D-90` en `.synapse/decisions.md` y Error `ERR-35` en `.synapse/errores.md`.
+
 
