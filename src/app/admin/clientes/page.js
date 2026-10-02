@@ -1241,8 +1241,8 @@ function ClientesPageContent() {
       {/* PROFILE MODAL (Ficha completa) */}
       {isProfileOpen && selectedClient && stats && (
         <div className={agendaStyles.modalOverlay}>
-          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ width: '100%', maxWidth: '850px', display: 'flex', flexDirection: 'column', maxHeight: '92vh', padding: 0, margin: '0 auto', boxSizing: 'border-box' }}>
-            <div className={agendaStyles.modalHeader} style={{ padding: '1.25rem 1.25rem 0.75rem 1.25rem', marginBottom: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem', width: '100%', boxSizing: 'border-box', borderBottom: '1px solid var(--border-color)' }}>
+          <div className={`glass-card premium-border ${agendaStyles.modalContent} ${styles.profileModalContent}`}>
+            <div className={`${agendaStyles.modalHeader} ${styles.profileHeader}`}>
               {/* Row 1: Client Title & Close Button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '0.75rem' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1538,7 +1538,7 @@ function ClientesPageContent() {
                 {/* Acciones Rápidas del Cliente */}
                 <div className={styles.cardSection}>
                   <h3 className={styles.cardSectionTitle}>Acciones Rápidas</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <div className={styles.quickActionsGrid}>
                     <a
                       href={getWhatsAppLink(selectedClient.whatsapp)}
                       target="_blank"
@@ -1604,7 +1604,7 @@ function ClientesPageContent() {
                   
                   <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr', marginBottom: '1.5rem' }}>
                     <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <div className={styles.inputGroup}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                           <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Nombre *</label>
                           <button
@@ -1632,7 +1632,7 @@ function ClientesPageContent() {
                         />
                       </div>
 
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <div className={styles.inputGroup}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                           <label className={styles.inputLabel} style={{ marginBottom: 0 }}>Apellido *</label>
                           <button
@@ -1662,7 +1662,7 @@ function ClientesPageContent() {
                     </div>
 
                     <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <div className={styles.inputGroup}>
                         <label className={styles.inputLabel}>
                           Fecha de Nacimiento (Opcional)
                           {editNotes.fechaNacimiento && calculateAge(editNotes.fechaNacimiento) !== null && (
@@ -1678,7 +1678,7 @@ function ClientesPageContent() {
                         />
                       </div>
 
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <div className={styles.inputGroup}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
                           <label className={styles.inputLabel} style={{ marginBottom: 0 }}>DNI (Solo números)</label>
                           <button
@@ -1830,7 +1830,7 @@ function ClientesPageContent() {
                         <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
                           Tipos de Notificaciones Permitidas:
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.6rem' }}>
+                        <div className={styles.notifTypesGrid}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
@@ -1892,7 +1892,7 @@ function ClientesPageContent() {
                   
                   <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr' }}>
                     <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <div className={styles.inputGroup}>
                         <label className={styles.inputLabel}>Canal de Adquisición *</label>
                         <select
                           value={editNotes.canalAdquisicion || 'ORGANICO'}
@@ -1906,7 +1906,7 @@ function ClientesPageContent() {
                           <option value="PUBLICIDAD">Publicidad</option>
                         </select>
                       </div>
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
+                      <div className={styles.inputGroup}>
                         <label className={styles.inputLabel}>Frecuencia (Semanas) *</label>
                         <input
                           type="number"
@@ -1919,8 +1919,8 @@ function ClientesPageContent() {
                       </div>
                     </div>
 
-                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div className={styles.inputGroup} style={{ flex: '1 1 200px' }}>
+                    <div className={styles.clinicalSessionsGrid}>
+                      <div className={styles.inputGroup}>
                         <label className={styles.inputLabel}>📅 Fecha Primer Turno</label>
                         <input
                           type="date"
@@ -1928,7 +1928,7 @@ function ClientesPageContent() {
                           onChange={(e) => setEditNotes({ ...editNotes, fechaPrimerTurno: e.target.value })}
                         />
                       </div>
-                      <div className={styles.inputGroup} style={{ flex: '1 1 200px' }}>
+                      <div className={styles.inputGroup}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
                           <label className={styles.inputLabel} style={{ marginBottom: 0 }}>🔢 Sesiones Realizadas (Total)</label>
                           <span style={{ fontSize: '0.72rem', color: 'var(--color-gold)', fontWeight: 600 }}>
@@ -1948,7 +1948,7 @@ function ClientesPageContent() {
                           }}
                         />
                       </div>
-                      <div className={styles.inputGroup} style={{ flex: '1 1 160px' }}>
+                      <div className={styles.inputGroup}>
                         <label className={styles.inputLabel}>Sesiones Previas (Externas)</label>
                         <input
                           type="number"
