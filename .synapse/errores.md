@@ -340,4 +340,22 @@
 **Commit:** `8e52e10`
 **Estado:** ✅ FIXED
 
+## ERR-37: Encogimiento de ficha de cliente y scrolls laterales/horizontales en móviles (2026-10-02)
+**Síntoma:** El usuario envió 4 capturas de pantalla de la ficha de cliente en `/admin/clientes` (pestaña `⚙️ ABM Clientes`) reportando: *"Arregla este error por el cual esto en vez de adaptarse se hace pequeño y añade scrolls laterales y horizontales"*. En móviles de 360-390px, el modal presentaba: 1) Las tarjetas blancas interiores comprimidas a ~280px con márgenes grises gigantescos a los costados; 2) Scroll horizontal parásito donde el usuario podía arrastrar la pantalla a los lados; 3) El selector nativo de fecha (`input[type="date"]`) desbordaba el borde derecho de la tarjeta; 4) Los checkboxes de canales rompían las etiquetas o se deformaban por estiramiento al 100%; 5) El título "Acciones Rápidas" se recortaba a "Ac"; 6) La sección de sesiones clínicas colapsaba en 3 columnas minúsculas ilegibles.
+**Root Cause:**
+1. **Triple padding anidado**: `.modalOverlay` (`padding: 0.5rem`) + `.modalContent` (`padding: 1.25rem`) + `.modalBody` (`padding: 0.75rem`) + `.cardSection` (`padding: 1.25rem`) consumían más de 70px de espacio útil lateral, estrangulando las tarjetas en viewports angostos.
+2. **Trampa de doble scroll**: `.modalContent` tenía `overflow-y: auto !important` mientras que `.modalBody` tenía `overflow-y: auto`, provocando competencia de gestos táctiles en WebKit iOS/Android y desbordes con scroll horizontal por default.
+3. **Desborde de inputs de fecha**: `<input type="date">` en WebKit no respeta el ancho del contenedor a menos que se fuerce `box-sizing: border-box`, `width: 100%`, `min-width: 0`, `max-width: 100%` y `-webkit-appearance: none`.
+4. **Regla global de inputs**: En `src/app/globals.css`, la regla `input, select, textarea { width: 100% }` afectaba indiscriminadamente a los checkboxes (`type="checkbox"`), forzándolos al 100% de ancho del flex container y descolocando los textos de los labels.
+5. **Grillas inline rígidas**: `display: flex` con `repeat(auto-fit, minmax(200px, 1fr))` forzaba anchos mínimos superiores al ancho interno de la tarjeta, rompiendo el contenedor hacia la derecha.
+**Solución:**
+1. En `src/app/globals.css`, se refinó el selector a `input:not([type="checkbox"]):not([type="radio"])` y se estilaron checkboxes con `width: auto !important` y `accent-color: var(--color-gold)`.
+2. En `src/app/admin/clientes/clientes.module.css`, se creó `.profileModalContent` con `padding: 0 !important; overflow: hidden !important; width: calc(100vw - 0.5rem) !important;` y se delegó el scroll exclusivamente a `.modalBody` (`overflow-y: auto !important; overflow-x: hidden !important; touch-action: pan-y !important; overscroll-behavior: contain !important;`).
+3. Se blindaron `.cardSection` y `.inputGroup` con `width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;`.
+4. Se implementaron clases responsivas `.quickActionsGrid`, `.notifTypesGrid` y `.clinicalSessionsGrid` que colapsan a 1 columna (`grid-template-columns: 1fr !important`) en pantallas móviles `<= 600px`.
+5. Se creó `.checkboxRow` para alinear horizontalmente cada casilla con su texto correspondiente sin saltos de línea.
+6. Verificado con Puppeteer en Staging (`http://187.127.9.216:3008`): ancho de tarjeta 340px (94% del ancho de iPhone de 390px), 0px de scroll horizontal (`hasHorizontalScroll: false`) y scroll vertical fluido.
+**Commit:** `9d99cb7`, `98c88bd`, `3ccf069`
+**Estado:** ✅ FIXED
+
 

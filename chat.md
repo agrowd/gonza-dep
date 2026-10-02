@@ -84,5 +84,41 @@
 - Verificación automatizada con Puppeteer en Staging: fecha visualizada como `29/12/2026`, botón "Entendido" descarta el cartel, y al recargar la página la alerta ya NO vuelve a aparecer.
 - Producción (`https://agenda.depilacionparahombres.com`, puerto 3006) 100% aislada e intacta (HTTP 200 OK).
 
+## Sesión: 2 de Octubre de 2026 - Corrección de Encogimiento y Desborde/Scrolls en Modal de Cliente (ABM Clientes Móvil)
+
+### Problema Reportado:
+- Reporte del usuario con 4 capturas (`media_1790956635053.png` a `media_1790956682611.png`): *"Arregla este error por el cual esto en vez de adaptarse se hace pequeño y añade scrolls laterales y horizontales"*.
+- En dispositivos móviles (iPhone 390px, Android 360px), el modal de la Ficha del Cliente (`⚙️ ABM Clientes`) sufría:
+  1. **Encogimiento severo**: Tarjetas reducidas a ~280px con márgenes laterales grises excesivos (>70px perdidos por padding anidado).
+  2. **Scroll horizontal parásito**: Desplazamiento lateral de la pantalla y contenido saliéndose por la derecha.
+  3. **Desborde de inputs**: Selector nativo de fecha (`input[type="date"]`) quebraba el contenedor de tarjeta.
+  4. **Deformación de checkboxes**: La regla global `input { width: 100% }` estiraba las casillas de verificación deformando los textos de canales y tipos de avisos.
+  5. **Textos y botones cortados**: El título "Acciones Rápidas" se recortaba a "Ac" y los botones de sesiones colapsaban en 3 columnas minúsculas.
+
+### Soluciones Implementadas:
+1. **Eliminación de Paddings Anidados y Ancho al 100%**:
+   - Se definió `.profileModalContent` con `width: calc(100vw - 0.5rem) !important; padding: 0 !important;` y `.cardSection` con `width: 100% !important; box-sizing: border-box !important;`.
+   - Las tarjetas blancas pasaron de 280px a 340px útiles en iPhone de 390px (94% del ancho de pantalla).
+2. **Scroll Vertical Único y 0px de Scroll Horizontal**:
+   - `.profileModalContent` con `overflow: hidden !important; padding: 0 !important;`.
+   - `.modalBody` configurado como único scroll container: `overflow-y: auto !important; overflow-x: hidden !important; touch-action: pan-y !important; overscroll-behavior: contain !important; -webkit-overflow-scrolling: touch !important;`.
+3. **Blindaje de Inputs de Fecha, Textareas y Selects**:
+   - Agregado a `.inputGroup` y sus campos: `width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;`.
+   - Para `<input type="date">`: `display: block; -webkit-appearance: none;` impidiendo desbordes en WebKit iOS/Android.
+4. **Grillas Responsivas a 1 Columna en Pantallas Móviles (<= 600px)**:
+   - Creadas clases `.quickActionsGrid`, `.notifTypesGrid` y `.clinicalSessionsGrid` con `grid-template-columns: 1fr !important` en móvil.
+5. **Alineación de Checkboxes y Canales**:
+   - En `globals.css`: refinado `input:not([type="checkbox"]):not([type="radio"])` y agregada regla específica para casillas (`width: auto !important; accent-color: var(--color-gold)`).
+   - En el formulario: implementado `.checkboxRow` con `white-space: nowrap` para canales (`💬 WhatsApp`, `📧 Email`).
+
+### Estado de Despliegue y Verificación:
+- Compilación local limpia con Next.js Turbopack (`npm run build`, 41/41 páginas, 0 errores).
+- Commits en rama `staging`: `9d99cb7`, `98c88bd`, `3ccf069`.
+- Desplegado y verificado en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+- Medición automatizada con Puppeteer:
+  - iPhone (390px): `bodyWidth: 353px`, `bodyScrollWidth: 353px`, `cardWidth: 340px`, `hasHorizontalScroll: false`.
+  - Android (360px): `bodyWidth: 323px`, `bodyScrollWidth: 323px`, `cardWidth: 310px`, `hasHorizontalScroll: false`.
+- Producción (`https://agenda.depilacionparahombres.com`, puerto 3006) 100% aislada e intacta (HTTP 200 OK).
+
 
 

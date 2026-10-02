@@ -1509,6 +1509,28 @@
 - [x] Verificar E2E con Puppeteer en Staging: fecha visualizada como `29/12/2026`, botón "Entendido" descarta alerta, y al recargar la página la alerta NO vuelve a aparecer (`alertAfterReload === null`).
 - [x] Registrar Decisión `D-92` en `.synapse/decisions.md` y Error `ERR-36` en `.synapse/errores.md`.
 
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Blindaje Móvil de Ficha de Cliente ABM)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver reporte con capturas (`media_1790956635053.png` a `media_1790956682611.png`): "Arregla este error por el cual esto en vez de adaptarse se hace pequeño y añade scrolls laterales y horizontales".
+- [x] Diagnosticar las causas del encogimiento ("se hace pequeño"): triple anidación de paddings laterales (`modalOverlay`, `modalContent`, `modalBody`, `cardSection`) que robaban más de 70px en pantallas de 360-390px, reduciendo las tarjetas a 280px flotando en amplios márgenes grises.
+- [x] Diagnosticar causas de scroll lateral y horizontal: competencia de doble scroll (`modalContent` y `modalBody` con `overflow-y: auto`), selector de fecha `<input type="date">` rompiendo márgenes por falta de `box-sizing: border-box`, regla global `input { width: 100% }` estirando checkboxes, y grillas con `minmax(200px, 1fr)`.
+- [x] Refinar `src/app/globals.css`: excluir checkboxes y radios de `width: 100%` (`input:not([type="checkbox"]):not([type="radio"])`), agregando regla dedicada con `width: auto !important` y `accent-color: var(--color-gold)`.
+- [x] Implementar en `src/app/admin/clientes/clientes.module.css`:
+  - `.profileModalContent`: `padding: 0 !important; overflow: hidden !important; width: calc(100vw - 0.5rem) !important;` (ocupa el ancho completo en móvil).
+  - `.profileHeader`: cabecera responsiva compacta con `padding: 0.75rem 0.75rem 0.5rem 0.75rem !important;`.
+  - `.modalBody`: único contenedor de scroll con `overflow-y: auto !important; overflow-x: hidden !important; touch-action: pan-y !important; overscroll-behavior: contain !important; -webkit-overflow-scrolling: touch !important; width: 100% !important; box-sizing: border-box !important; padding: 0 0.35rem 3.5rem 0.35rem !important;`.
+  - `.ficheContainer` y `.cardSection`: `width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; overflow-x: hidden !important;`. Ancho de tarjeta expandido a 340px (94% del ancho de iPhone 390px).
+  - `.inputGroup`: `width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;`.
+  - `.inputGroup input[type="date"]`: `display: block; -webkit-appearance: none; width: 100% !important; min-width: 0 !important;`.
+  - Grillas responsivas: `.quickActionsGrid`, `.notifTypesGrid` y `.clinicalSessionsGrid` colapsando a `grid-template-columns: 1fr !important;` en móviles `<= 600px`.
+  - `.checkboxRow`: alineación horizontal perfecta y compacta de casillas con sus etiquetas sin salto de línea (`white-space: nowrap`).
+- [x] Actualizar `src/app/admin/clientes/page.js` reemplazando estilos inline rígidos con las nuevas clases CSS modulares.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build` 41/41 rutas con 0 errores).
+- [x] Desplegar en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`). Producción (`3006`) intacta.
+- [x] Validar con Puppeteer en Staging bajo viewports de iPhone (390px) y Android (360px): `hasHorizontalScroll: false`, `bodyWidth === bodyScrollWidth`, tarjetas al 94% de ancho, cero desborde y visuales perfectos.
+- [x] Registrar Decisión `D-93` en `.synapse/decisions.md` y Error `ERR-37` en `.synapse/errores.md`.
+
 
 
 
