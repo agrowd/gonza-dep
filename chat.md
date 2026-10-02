@@ -120,5 +120,31 @@
   - Android (360px): `bodyWidth: 323px`, `bodyScrollWidth: 323px`, `cardWidth: 310px`, `hasHorizontalScroll: false`.
 - Producción (`https://agenda.depilacionparahombres.com`, puerto 3006) 100% aislada e intacta (HTTP 200 OK).
 
+## Sesión: 2 de Octubre de 2026 - Espacio Libre de Dos Renglones en Vista Diaria Neocita
+
+### Requerimiento de Gonzalo Siri:
+- Captura de pantalla de WhatsApp (`media_1790959948860.png`): *"Podes hacer que el espacio que dejas para un turno libre sea de dos renglones en lugar de 1 como se ve aca, asi esta mas legible y destacado"*.
+- En la vista diaria de la agenda, los espacios libres entre turnos se mostraban en una franja comprimida de una sola línea (~32px de alto) con texto pequeño, difícil de distinguir y poco ergonómica para pulsar en celulares.
+
+### Solución Implementada:
+1. **Tarjeta de Dos Renglones (`.neocitaFreeSlot`)**:
+   - Altura incrementada de ~32px a **76px** (más del doble de área táctil para interactuar con el pulgar en móviles).
+   - Fondo verde suave `#f0fdf4`, borde punteado verde `#86efac`, borde izquierdo grueso de **6px sólido verde `#16a34a`** a juego con el diseño de las tarjetas de turnos de la vista diaria, y sombra sutil.
+2. **Renglón 1 (Horario y Duración Destacada)**:
+   - Izquierda: `🟢 Libre: {startTimeStr} a {endTimeStr} hs` en tipografía grande (`0.96rem`, peso 800) y verde vivo (`#15803d`).
+   - Derecha: Badge de píldora de duración con icono de cronómetro (`⏱️ {durationText}`) sobre fondo verde suave (`#166534`).
+3. **Renglón 2 (Subtítulo y Botón de Acción)**:
+   - Izquierda: Texto explicativo `Disponible para agendar` (`0.82rem`, color slate `#475569`, peso 600).
+   - Derecha: Botón de acción interactivo `+ Agendar` con estilo de píldora en tono vino/oro de la marca con hover animado y feedback táctil.
+4. **Preservación Funcional**:
+   - Al tocar la tarjeta o el botón se abre el modal "Agendar Nuevo Turno" con la fecha y horas de inicio y fin ya precompletadas.
+
+### Estado de Despliegue y Verificación:
+- Compilación local exitosa con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores).
+- Commit en rama `staging`: `1b91203`.
+- Desplegado y verificado en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+- Verificación con Puppeteer: captura móvil generada en `scratch/staging_free_slot_mobile.png` mostrando la tarjeta de dos renglones entre turnos con 76.3px de alto y 332px de ancho, alineación perfecta y máxima legibilidad.
+- Producción (`https://agenda.depilacionparahombres.com`, puerto 3006) 100% aislada e intacta (HTTP 200 OK).
+
 
 

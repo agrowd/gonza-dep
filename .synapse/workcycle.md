@@ -1531,6 +1531,21 @@
 - [x] Validar con Puppeteer en Staging bajo viewports de iPhone (390px) y Android (360px): `hasHorizontalScroll: false`, `bodyWidth === bodyScrollWidth`, tarjetas al 94% de ancho, cero desborde y visuales perfectos.
 - [x] Registrar Decisión `D-93` en `.synapse/decisions.md` y Error `ERR-37` en `.synapse/errores.md`.
 
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Espacio Libre en Vista Diaria Neocita)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender requerimiento con captura de WhatsApp de Gonzalo Siri (`media_1790959948860.png`): *"Podes hacer que el espacio que dejas para un turno libre sea de dos renglones en lugar de 1 como se ve aca, asi esta mas legible y destacado"*.
+- [x] Diseñar e implementar tarjeta de espacio libre de dos renglones (`.neocitaFreeSlot`) en `agenda.module.css`:
+  - Renglón 1: Horario libre destacado (`🟢 Libre: {startTimeStr} a {endTimeStr} hs`) en verde `#15803d` (0.96rem, peso 800) + Badge de duración estilizado con cronómetro (`⏱️ {durationText}`).
+  - Renglón 2: Leyenda descriptiva (`Disponible para agendar`) en slate `#475569` + Botón de acción directo `+ Agendar` con estilo de píldora interactiva con hover en tono vino/oro de la marca.
+  - Borde izquierdo grueso de 6px sólido verde (`#16a34a`), fondo suave `#f0fdf4`, borde punteado `#86efac`, sombra suave y altura aumentada de ~32px a ~76px para máxima ergonomía táctil en celulares.
+- [x] Reemplazar estilo inline de `free_slot` en `src/app/admin/agenda/page.js` por las clases modulares `.neocitaFreeSlotRowTop`, `.neocitaFreeSlotTime`, `.neocitaFreeSlotDuration`, `.neocitaFreeSlotRowBottom`, `.neocitaFreeSlotLabel`, `.neocitaFreeSlotAction`.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 páginas con 0 errores).
+- [x] Subir cambios a GitHub en rama `staging` (commit `1b91203`).
+- [x] Desplegar en Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`). Producción (`3006`) intacta.
+- [x] Verificar E2E con Puppeteer en Staging bajo viewport móvil: altura de 76px, ancho completo de 332px, tipografía nítida y perfectamente alineada (`scratch/staging_free_slot_mobile.png`).
+- [x] Registrar Decisión `D-94` en `.synapse/decisions.md`.
+
 
 
 
