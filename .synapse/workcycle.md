@@ -1493,5 +1493,22 @@
 - [x] Desplegar exclusivamente en rama `staging` y servidor Staging VPS (`http://187.127.9.216:3008`).
 - [x] Registrar Decisión `D-91` en `.synapse/decisions.md`.
 
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Alertas Emergentes de Autogestión en Agenda)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver feedback urgente de Gonzalo Siri y Luciano Gómez (`media_1790953830917.png` y `media_1790953845208.png`):
+  1. Reaparición permanente de popups al abrir o recargar la agenda ("Cada vez que abro la agenda me vuelve a mostrar los mensajes emergentes").
+  2. Notificaciones de turnos viejos de agosto ("Y nos aparecen notificaciones de cambios que se hicieron en agosto incluso").
+  3. Formato de fecha en popups en `DD/MM/YYYY` ("La fecha de las notificaciones está como año-mes-dia, ponelo como dia-mes-año").
+  4. Restricción estricta a cambios exclusivos de Autogestión ("Y esas notificaciones solo aparecen con cambios que se hacen por autogestion no? - Sei, exactamente").
+- [x] Persistir IDs de alertas descartadas en `localStorage` (`dismissed_autogestion_alerts`) al presionar "Entendido", "✕" o "Ver Turno ↗".
+- [x] Refactorizar consulta Prisma en `/api/admin/autogestion-alertas` eliminando `{ estado: 'CANCELADO' }` y `{ estado: 'REPROGRAMADO' }` genéricos, filtrando exclusivamente por tags de autogestión (`[CANCELADO_AUTOGESTION]`, `[REPROGRAMADO_AUTOGESTION]`, `- Autogestión]`), excluyendo cambios de administradores (`NOT: { observaciones: { contains: 'Administrador' } }`) y descartando turnos pasados (`fecha >= minTurnoDate`).
+- [x] Formatear fecha a `DD/MM/YYYY` en endpoint (`fechaFormateada`) y en frontend con helper defensivo `formatAlertDate`.
+- [x] Validar compilación local (`npm run build`) con Next.js Turbopack: 41/41 rutas con 0 errores.
+- [x] Desplegar a rama `staging` y Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+- [x] Verificar E2E con Puppeteer en Staging: fecha visualizada como `29/12/2026`, botón "Entendido" descarta alerta, y al recargar la página la alerta NO vuelve a aparecer (`alertAfterReload === null`).
+- [x] Registrar Decisión `D-92` en `.synapse/decisions.md` y Error `ERR-36` en `.synapse/errores.md`.
+
+
 
 

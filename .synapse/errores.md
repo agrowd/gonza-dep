@@ -327,4 +327,17 @@
 **Commit:** `254487d`
 **Estado:** ✅ FIXED
 
+## ERR-36: Alertas emergentes reaparecían en cada apertura de la agenda, mostraban turnos viejos de agosto y fecha en formato YYYY-MM-DD (2026-10-02)
+**Síntoma:** Gonzalo Siri y Luciano Gómez reportaron en WhatsApp (`media_1790953830917.png` y `media_1790953845208.png`): 1) "Cada vez que abro la agenda me vuelve a mostrar los mensajes emergentes", 2) "Y nos aparecen notificaciones de cambios que se hicieron en agosto incluso", 3) "La fecha de las notificaciones está como año-mes-dia, ponelo como dia-mes-año" (`YYYY-MM-DD` en vez de `DD/MM/YYYY`), 4) "Y esas notificaciones solo aparecen con cambios que se hacen por autogestion no?".
+**Root Cause:**
+1. En `src/app/admin/agenda/page.js`, `dismissedAlerts` se almacenaba únicamente en memoria de React (`useState(new Set())`). Al recargar la página, cerrar el navegador o reabrir la app, el set se reiniciaba a vacío, mostrando nuevamente el popup.
+2. En `src/app/api/admin/autogestion-alertas/route.js`, el filtro incluía `{ estado: 'CANCELADO' }` y `{ estado: 'REPROGRAMADO' }` genéricamente. Al haberse agregado la columna `updatedAt` con `DEFAULT CURRENT_TIMESTAMP`, todos los turnos históricos de agosto y meses anteriores tenían `updatedAt = hoy`, capturando cancelaciones antiguas e intervenciones administrativas manuales.
+3. El endpoint devolvía `dateStr = t.fecha.toISOString().split('T')[0]` (`YYYY-MM-DD`), renderizándose textualmente como `2026-10-14`.
+**Solución:**
+1. Persistencia de `dismissed_autogestion_alerts` en `localStorage` con lectura inicial y escritura atómica al pulsar "Entendido", "✕" o "Ver Turno ↗".
+2. En `/api/admin/autogestion-alertas`, se eliminaron `{ estado: 'CANCELADO' }` y `{ estado: 'REPROGRAMADO' }` genéricos; se filtró exclusivamente por tags de autogestión (`[CANCELADO_AUTOGESTION]`, `[REPROGRAMADO_AUTOGESTION]`, `- Autogestión]`); se excluyeron explícitamente cambios administrativos (`NOT: { observaciones: { contains: 'Administrador' } }`); y se acotó la fecha del turno a `fecha >= minTurnoDate` (48hs) para descartar citas pasadas de agosto.
+3. Formateo de fecha a `DD/MM/YYYY` (`dia/mes/año`) en backend (`fechaFormateada`) y helper de respaldo `formatAlertDate` en frontend.
+**Commit:** `8e52e10`
+**Estado:** ✅ FIXED
+
 
