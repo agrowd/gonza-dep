@@ -1494,5 +1494,9 @@
 - [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 páginas con 0 errores).
 - [x] Desplegar en Producción (`agenda.depilacionparahombres.com`, puerto 3006) y Staging (`http://187.127.9.216:3008`, puerto 3008).
 - [x] Registrar Decisión `D-94` en `.synapse/decisions.md`.
+- [x] Resolver feedback de Gonzalo Siri (`media_1790963963058.png`): "Además, cada vez que abro la agenda me repite una y otra vez los mismos mensajes emergentes".
+  - Saneamiento en base de datos PostgreSQL (`agenda_db` y `agenda_db_staging`): actualización de `updatedAt = createdAt` para 641 turnos históricos creados antes del 1 de octubre que habían adquirido `updatedAt = hoy` por la migración SQL, descartando falsas alertas de turnos de agosto y septiembre.
+  - Despliegue en `main` de persistencia en `localStorage` (`dismissed_autogestion_alerts`) y filtro estricto por tags de autogestión con exclusión de administradores y formato `DD/MM/YYYY`.
+  - Verificado en Producción real: 0 alertas recurrentes parásitas (`count: 0`), pantalla despejada.
 
 

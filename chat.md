@@ -85,4 +85,13 @@
 - Desplegado en Producción en el servidor VPS (`agenda.depilacionparahombres.com`, PM2 `gonzalo-agenda`, puerto 3006).
 - Verificado estado HTTP 200 OK en producción.
 
+### Corrección Adicional Inmediata: Erradicación de Alertas Emergentes Recurrentes
+- **Problema Reportado por Gonzalo Siri (`media_1790963963058.png`)**: *"Además, cada vez que abro la agenda me repite una y otra vez los mismos mensajes emergentes"*. Mostraba popups de turnos pasados de agosto y con fecha en formato `YYYY-MM-DD`.
+- **Causas Raíz Resueltas**:
+  1. La adición de la columna `updatedAt` con `DEFAULT CURRENT_TIMESTAMP` había asignado la fecha de hoy a cientos de turnos antiguos de agosto/septiembre que tenían tags viejos de reprogramación.
+  2. En PostgreSQL (`agenda_db`), se ejecutó `UPDATE "Turno" SET "updatedAt" = "createdAt" WHERE "createdAt" < '2026-10-01'`, restaurando la fecha real para 641 citas históricas y eliminando todas las falsas alarmas antiguas.
+  3. Se desplegó en `main` la persistencia de alertas descartadas en `localStorage` (`dismissed_autogestion_alerts`) para que al presionar "Entendido", "✕" o "Ver Turno ↗" nunca vuelvan a emerger.
+  4. Formato de fecha corregido a `DD/MM/YYYY`.
+- **Verificación Final**: La API `GET /api/admin/autogestion-alertas` en producción devuelve `count: 0`. La pantalla de agenda en móviles queda 100% limpia sin ventanas emergentes intrusivas.
+
 
