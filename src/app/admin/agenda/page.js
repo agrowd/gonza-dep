@@ -449,6 +449,7 @@ export default function AgendaPage() {
       try {
         const arr = Array.from(next).slice(-200);
         localStorage.setItem('dismissed_autogestion_alerts', JSON.stringify(arr));
+        localStorage.setItem('last_autogestion_dismissed_time', Date.now().toString());
       } catch (e) {
         console.warn('Error saving dismissed_autogestion_alerts to localStorage:', e);
       }
@@ -483,12 +484,13 @@ export default function AgendaPage() {
     let isMounted = true;
     const fetchAutogestionAlerts = async () => {
       try {
-        const res = await fetch('/api/admin/autogestion-alertas?limit=10&sinceHours=24');
+        const res = await fetch('/api/admin/autogestion-alertas?limit=10&sinceHours=4');
         if (!res.ok) return;
         const data = await res.json();
         if (data.alertas && data.alertas.length > 0 && isMounted) {
           // Double-check against localStorage to ensure dismissed alerts never pop up again
           let currentDismissed = dismissedAlerts;
+          let lastDismissedTime = 0;
           try {
             const stored = localStorage.getItem('dismissed_autogestion_alerts');
             if (stored) {
@@ -497,9 +499,19 @@ export default function AgendaPage() {
                 currentDismissed = new Set([...currentDismissed, ...parsed]);
               }
             }
+            const storedTime = localStorage.getItem('last_autogestion_dismissed_time');
+            if (storedTime) {
+              lastDismissedTime = parseInt(storedTime, 10) || 0;
+            }
           } catch (e) {}
 
-          const unread = data.alertas.find(a => !currentDismissed.has(a.id));
+          const unread = data.alertas.find(a => {
+            if (currentDismissed.has(a.id)) return false;
+            const alertTime = new Date(a.updatedAt || a.createdAt).getTime();
+            if (lastDismissedTime > 0 && alertTime <= lastDismissedTime) return false;
+            return true;
+          });
+
           if (unread) {
             setAutogestionAlert(unread);
           } else {
@@ -1287,7 +1299,8 @@ export default function AgendaPage() {
         initialView = 'day';
       }
 
-      if ((dateParam || viewParam) && !hasExplicitTurnoContext) {
+      // Limpiar query params de la URL una vez consumidos para que futuras recargas o navegaciones abran siempre en HOY
+      if (dateParam || viewParam || turnoIdParam || fromClientParam) {
         try {
           window.history.replaceState({}, '', window.location.pathname);
         } catch (e) {}
@@ -3000,7 +3013,7 @@ export default function AgendaPage() {
                                 {/* Renglón 1: Horario libre destacado y duración */}
                                 <div className={styles.neocitaFreeSlotRowTop}>
                                   <div className={styles.neocitaFreeSlotTime}>
-                                    <span style={{ fontSize: '0.85rem' }}>🟡</span>
+                                    <span style={{ fontSize: '0.85rem' }}>🟢</span>
                                     <span>Libre: {startTimeStr} a {endTimeStr} hs</span>
                                   </div>
                                   <span className={styles.neocitaFreeSlotDuration}>
