@@ -618,12 +618,19 @@ Duración: ${duracionMinutos} min`;
               className={styles.logoImg}
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className={styles.headerControls}>
             {step > 1 && (
               <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-gold)' }}>
                 Paso {step} de 4
               </div>
             )}
+            <a
+              href="https://depilacionparahombres.com/"
+              className={styles.btnVolverWeb}
+              title="Volver al sitio web principal"
+            >
+              ← Volver a la web
+            </a>
             <a
               href="/login"
               style={{
@@ -1509,7 +1516,7 @@ Duración: ${duracionMinutos} min`;
           <div className={styles.footerContent}>
             <div className={styles.footerLinks}>
               <a
-                href="https://www.instagram.com/gonzalo_depilacion/"
+                href="https://www.instagram.com/depilacionparahombres/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.footerLink}

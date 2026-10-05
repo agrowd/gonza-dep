@@ -33,6 +33,39 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btnVolverWeb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-gold, #7a1f1e);
+  background-color: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 8px;
+  padding: 7px 14px;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(122, 31, 30, 0.08);
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btnVolverWeb:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(122, 31, 30, 0.12);
 }
 
 .logoContainer {
@@ -61,6 +94,10 @@
   .logoImg {
     height: 46px;
     max-width: 180px;
+  }
+  .btnVolverWeb {
+    font-size: 0.82rem;
+    padding: 6px 10px;
   }
 }
 

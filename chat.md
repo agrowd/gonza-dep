@@ -210,3 +210,18 @@
 ### Validación:
 - `npm run build` ejecutado exitosamente (41/41 rutas válidas, 0 errores en 108s).
 - Decisiones `D-97`, `D-98` y Errores `ERR-39`, `ERR-40`, `ERR-41` documentados en `.synapse/`.
+
+## Sesión: 5 de Octubre de 2026 (Seguimiento 2) - Enlace de Instagram y Botón "← Volver a la web"
+
+### Requerimiento del Usuario:
+- Modificar el enlace de Instagram en el pie para que dirija a `https://www.instagram.com/depilacionparahombres/`.
+- Agregar arriba el botón visible `← Volver a la web` apuntando a `https://depilacionparahombres.com/`.
+
+### Implementación:
+1. En `src/app/page.js`:
+   - Enlace de Instagram en el pie de página actualizado a `https://www.instagram.com/depilacionparahombres/`.
+   - Incorporado botón `.btnVolverWeb` con el texto "← Volver a la web" apuntando a `https://depilacionparahombres.com/` en la cabecera superior.
+2. En `src/app/page.module.css`:
+   - Creada clase `.btnVolverWeb` con colores de marca (`#7a1f1e`, fondo suave `#fef2f2`, borde `#fecaca`, sombra y hover reactivo).
+   - Ajustada `.headerContent` con `flex-wrap: wrap` y media queries para adaptación ergonómica en móviles de 360-390px.
+3. Decisión `D-99` registrada en `.synapse/decisions.md`.

@@ -1559,3 +1559,6 @@
   6. Robustecer despacho de WhatsApp manual normalizando el target telefónico en el relay (`port 3007`), agregando timeout a `getNumberId` y clarificando errores de timeout vs desconexión.
 - [x] Compilar localmente con Next.js Turbopack (`npm run build`) verificando 41/41 rutas y 0 errores en 108s.
 - [x] Registrar Decisiones `D-97` y `D-98` en `.synapse/decisions.md` y Errores `ERR-39`, `ERR-40`, `ERR-41` en `.synapse/errores.md`.
+- [x] Actualizar enlace de Instagram en pie de página a `https://www.instagram.com/depilacionparahombres/`.
+- [x] Agregar botón visible "← Volver a la web" en la cabecera superior apuntando a `https://depilacionparahombres.com/`.
+- [x] Registrar Decisión `D-99` en `.synapse/decisions.md`.
