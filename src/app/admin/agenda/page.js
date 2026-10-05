@@ -3732,7 +3732,7 @@ export default function AgendaPage() {
 
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
                               Valor Original (Sin Descuento)
                             </span>
                             <span className={styles.detailValue} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -3741,7 +3741,7 @@ export default function AgendaPage() {
                           </div>
                         )}
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
                             Seña Cobrada
                           </span>
                           <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -3749,7 +3749,7 @@ export default function AgendaPage() {
                           </span>
                         </div>
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
                             Saldo Pendiente en Local
                           </span>
                           <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -3757,7 +3757,7 @@ export default function AgendaPage() {
                           </span>
                         </div>
                         <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.2rem' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '0.8rem', fontWeight: 600 }}>
+                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.8rem', fontWeight: 600 }}>
                             💳 Método de Pago
                           </span>
                           <select
@@ -3782,18 +3782,19 @@ export default function AgendaPage() {
                               }
                             }}
                             style={{
-                              padding: '0.3rem 0.55rem',
+                              padding: '0.35rem 0.5rem',
                               borderRadius: '6px',
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '0.82rem',
+                              fontSize: '13px',
                               fontWeight: '600',
                               cursor: 'pointer',
                               width: 'auto',
-                              minWidth: '125px',
-                              maxWidth: '150px',
-                              flexShrink: 0
+                              minWidth: '115px',
+                              maxWidth: '140px',
+                              flexShrink: 0,
+                              boxSizing: 'border-box'
                             }}
                           >
                             <option value="TRANSFERENCIA">🏦 Transferencia</option>
@@ -3802,7 +3803,7 @@ export default function AgendaPage() {
                         </div>
                         {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                           <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 'fit-content', fontSize: '0.78rem' }}>
+                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
                               Descuento Aplicado
                             </span>
                             <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.9rem', flexShrink: 0 }}>
@@ -3815,8 +3816,8 @@ export default function AgendaPage() {
                   })()}
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>WhatsApp</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
-                      <span className={styles.detailValue}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
+                      <span className={styles.detailValue} style={{ minWidth: 0, wordBreak: 'break-word', flex: '1 1 auto' }}>
                         {selectedTurno.cliente?.whatsapp ? formatDisplayPhone(selectedTurno.cliente.whatsapp) : 'N/A'}
                       </span>
                       {selectedTurno.cliente?.whatsapp && (
@@ -3837,7 +3838,9 @@ export default function AgendaPage() {
                             alignItems: 'center',
                             gap: '0.25rem',
                             whiteSpace: 'nowrap',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                            flexShrink: 0,
+                            marginLeft: 'auto'
                           }}
                         >
                           📲 Reenviar
@@ -3848,8 +3851,8 @@ export default function AgendaPage() {
 
                   <div className={styles.detailItem}>
                     <span className={styles.detailLabel}>Email</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
-                      <span className={styles.detailValue} style={{ fontSize: '0.9rem', wordBreak: 'break-all' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
+                      <span className={styles.detailValue} style={{ fontSize: '0.85rem', wordBreak: 'break-all', minWidth: 0, flex: '1 1 auto' }}>
                         {selectedTurno.cliente?.email || 'Sin email'}
                       </span>
                       {selectedTurno.cliente && (
@@ -3870,7 +3873,9 @@ export default function AgendaPage() {
                             alignItems: 'center',
                             gap: '0.25rem',
                             whiteSpace: 'nowrap',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                            flexShrink: 0,
+                            marginLeft: 'auto'
                           }}
                         >
                           ✏️ Reenviar
@@ -3891,7 +3896,8 @@ export default function AgendaPage() {
                       borderRadius: '8px',
                       border: '1px solid var(--border-color)',
                       width: '100%',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      overflow: 'hidden'
                     }}>
                       {/* Fila 1: Fecha Primer Turno (Título a la izquierda, input fecha a la derecha) */}
                       <div style={{
@@ -3916,16 +3922,16 @@ export default function AgendaPage() {
                             tempClientFechaPrimerTurnoRef.current = e.target.value;
                           }}
                           style={{
-                            width: '125px',
-                            maxWidth: '130px',
-                            minWidth: '100px',
+                            width: '120px',
+                            maxWidth: '125px',
+                            minWidth: '95px',
                             flexShrink: 0,
                             padding: '0.3rem 0.35rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '12px',
+                            fontSize: '14px',
                             fontWeight: 600,
                             textAlign: 'center',
                             boxSizing: 'border-box',
@@ -3961,9 +3967,9 @@ export default function AgendaPage() {
                           value={tempClientSesionesTotal}
                           onChange={(e) => handleTotalSesionesChange(e.target.value)}
                           style={{
-                            width: '65px',
-                            maxWidth: '75px',
-                            minWidth: '55px',
+                            width: '60px',
+                            maxWidth: '70px',
+                            minWidth: '50px',
                             flexShrink: 0,
                             padding: '0.35rem 0.4rem',
                             borderRadius: '8px',
@@ -4011,10 +4017,11 @@ export default function AgendaPage() {
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '12px',
+                              fontSize: '13px',
                               fontWeight: 600,
                               textAlign: 'center',
-                              minWidth: '54px',
+                              minWidth: '48px',
+                              maxWidth: '52px',
                               cursor: 'pointer',
                               boxSizing: 'border-box'
                             }}
@@ -4042,10 +4049,11 @@ export default function AgendaPage() {
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '12px',
+                              fontSize: '13px',
                               fontWeight: 600,
                               textAlign: 'center',
-                              minWidth: '60px',
+                              minWidth: '54px',
+                              maxWidth: '58px',
                               cursor: 'pointer',
                               boxSizing: 'border-box'
                             }}
@@ -4110,20 +4118,24 @@ export default function AgendaPage() {
 
                   {selectedTurno.clienteId && (
                     <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                      <span className={styles.detailLabel}>Frecuencia Estimada del Tratamiento (Semanas)</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+                      <span className={styles.detailLabel} style={{ wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.25 }}>
+                        Frecuencia Estimada del Tratamiento (Semanas)
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
                         <select
                           value={tempClientFrecuencia}
                           onChange={(e) => setTempClientFrecuencia(Number(e.target.value))}
                           style={{
-                            padding: '0.5rem',
+                            padding: '0.45rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '0.85rem',
+                            fontSize: '14px',
                             fontWeight: 600,
-                            flex: 1
+                            flex: '1 1 130px',
+                            minWidth: 0,
+                            boxSizing: 'border-box'
                           }}
                         >
                           {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(w => (
@@ -4134,7 +4146,7 @@ export default function AgendaPage() {
                           <button
                             onClick={handleSaveClientObservaciones}
                             className="btn btn-primary"
-                            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem', backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                           >
                             💾 Guardar Frecuencia
                           </button>

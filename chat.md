@@ -225,3 +225,36 @@
    - Creada clase `.btnVolverWeb` con colores de marca (`#7a1f1e`, fondo suave `#fef2f2`, borde `#fecaca`, sombra y hover reactivo).
    - Ajustada `.headerContent` con `flex-wrap: wrap` y media queries para adaptación ergonómica en móviles de 360-390px.
 3. Decisión `D-99` registrada en `.synapse/decisions.md`.
+
+## Sesión: 5 de Octubre de 2026 (Seguimiento 3) - Blindaje Definitivo de Modal de Turnos en Móviles (Fix Recorte Lateral en iPhone)
+
+### Requerimiento / Diagnóstico del Usuario:
+- Gonzalo Siri envió captura (`media_1791240587728.png`) con el mensaje *"Veo la pantalla cortada"*.
+- Diagnóstico: en iPhone (WebKit iOS), el modal de detalle del turno (`/admin/agenda`) aparecía desplazado/cortado por el lateral derecho, truncando el saldo pendiente (`$57.000` se leía `$5`), método de pago, botones de reenvío de WhatsApp y Email, fecha de 1° turno, sesiones y cumpleaños.
+- Causa raíz:
+  1. Ausencia del objeto de exportación `viewport` en `src/app/layout.js`, provocando auto-zoom agresivo de iOS (~1.25x) al interactuar con inputs o selectores clínicos (< 16px).
+  2. `width: calc(100vw - 0.7rem)` en `.modalContent` que desbordaba la pantalla en iOS.
+  3. `min-width: fit-content` en `.detailRowBetween .detailLabel` impidiendo quiebre de texto en filas financieras.
+  4. Falta de envoltura flexible y corte defensivo en filas de contacto (WhatsApp / Email).
+
+### Implementación Realizada:
+1. En `src/app/layout.js`:
+   - Exportado objeto `viewport` con `width: 'device-width'`, `initialScale: 1`, `maximumScale: 1`, `userScalable: false`, `viewportFit: 'cover'`.
+2. En `src/app/admin/agenda/agenda.module.css`:
+   - En `@media (max-width: 600px)`:
+     - `.modalOverlay`: `width: 100% !important; height: 100% !important; height: 100dvh !important; max-width: 100vw !important; max-height: 100dvh !important; padding: max(0.4rem, env(safe-area-inset-top, 0px)) 0.35rem max(0.4rem, env(safe-area-inset-bottom, 0px)) 0.35rem !important; display: flex !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important; overflow: hidden !important; touch-action: none !important; z-index: 2000 !important;`.
+     - `.modalContent`: `padding: 0.85rem 0.75rem 3.5rem 0.75rem !important; width: 100% !important; max-width: calc(100vw - 0.7rem) !important; min-width: 0 !important; box-sizing: border-box !important; overflow-x: hidden !important;`.
+     - `.stickyModalHeader`: `margin: -0.85rem -0.75rem 0.85rem -0.75rem !important; padding: 0.75rem 0.75rem 0.65rem 0.75rem !important; width: auto !important; box-sizing: border-box !important;`.
+     - `.detailGrid`: `display: grid !important; grid-template-columns: 1fr !important; gap: 0.9rem !important; width: 100% !important; min-width: 0 !important;`.
+     - `.detailRowBetween`: `padding: 0.4rem 0 !important; gap: 0.4rem !important; width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;`.
+     - `.detailRowBetween .detailLabel`: `min-width: 0 !important; flex: 1 1 auto !important; word-break: break-word !important;`.
+     - `.detailRowBetween .detailValue`: `max-width: 50% !important; text-align: right !important; white-space: nowrap !important; min-width: 0 !important;`.
+3. En `src/app/admin/agenda/page.js`:
+   - Fila `Saldo Pendiente en Local`: `min-width: 0`, `wordBreak: 'break-word'`.
+   - Fila `Método de Pago`: selector con `maxWidth: 140px`, `fontSize: 13px`, etiqueta flexible.
+   - Fila `WhatsApp` y `Email`: contenedor flexible con `flex-wrap: wrap`, email con `wordBreak: 'break-all'`, botones de reenvío con `flexShrink: 0`.
+   - Tarjeta clínica: contenedor con `overflow: 'hidden'`, input date a `120px` (`fontSize: 14px`), sesiones a `60px` (`fontSize: 14px`), cumpleaños Día/Mes con selects nativos compactos a `48px` y `54px` (`fontSize: 13px`).
+   - Frecuencia estimada: label con `wordBreak: 'break-word'`, container con `flexWrap: 'wrap'`.
+4. Compilación con Next.js Turbopack (`npm run build`): 41/41 rutas con 0 errores en 57s.
+5. Decisiones `D-100` y Errores `ERR-42` registrados en `.synapse/decisions.md` y `.synapse/errores.md`.
+

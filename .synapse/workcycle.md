@@ -1562,3 +1562,16 @@
 - [x] Actualizar enlace de Instagram en pie de página a `https://www.instagram.com/depilacionparahombres/`.
 - [x] Agregar botón visible "← Volver a la web" en la cabecera superior apuntando a `https://depilacionparahombres.com/`.
 - [x] Registrar Decisión `D-99` en `.synapse/decisions.md`.
+
+## 📅 Sesión: 5 de Octubre de 2026 (Seguimiento - Blindaje Móvil Definitivo de Modal de Turnos en iPhone)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver reporte de Gonzalo Siri (`media_1791240587728.png`): *"Veo la pantalla cortada"*.
+- [x] Identificar la causa raíz del recorte lateral derecho en iPhones (WebKit iOS auto-zoom al interactuar con inputs menores a 16px, ancho rígido `100vw`, y `min-width: fit-content` en `.detailLabel`).
+- [x] Declarar objeto `viewport` en `src/app/layout.js` (`maximumScale: 1, userScalable: false, viewportFit: 'cover'`) erradicando el auto-zoom de Safari.
+- [x] Ajustar layout de `.modalOverlay` (`width: 100%`) y `.modalContent` (`width: 100%; max-width: calc(100vw - 0.7rem); overflow-x: hidden`) en `agenda.module.css`.
+- [x] Flexibilizar `.detailRowBetween` con `word-break: break-word; min-width: 0;` en labels y `max-width: 50%` en valores numéricos.
+- [x] Proteger filas de WhatsApp y Email (`word-break: break-all; flex-wrap: wrap`) y compactar tarjeta clínica a tamaños ergonómicos (13-14px) con `overflow: hidden`.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 57s).
+- [x] Registrar Decisión `D-100` en `.synapse/decisions.md` y Error `ERR-42` en `.synapse/errores.md`.
+

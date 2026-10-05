@@ -419,3 +419,18 @@
 2. Se aplicó `normalizeWhatsApp(phone)` al payload enviado al servicio relay en el puerto 3007.
 3. Se refinó el mensaje de error para clarificar que el fallo se debió a un timeout de entrega al número particular y no a una desconexión del servicio.
 **Estado:** ✅ FIXED
+
+## ERR-42: Recorte Lateral Derecho y Desborde en Modal de Detalle de Turno en iPhone Móvil (2026-10-05)
+**Síntoma:** Gonzalo Siri reportó con captura de pantalla (`media_1791240587728.png`): *"Veo la pantalla cortada"*. En el modal de detalle del turno de la agenda en iPhone, todos los elementos del margen derecho aparecían recortados/truncados contra el borde de la pantalla: el saldo pendiente `$57.000` se leía `$5`, el selector de método de pago se cortaba al medio, los botones de reenvío de WhatsApp y Email estaban cercenados, los selectores de fecha de primer turno y cumpleaños salían del viewport, y el botón de cerrar `✕` quedaba completamente fuera de pantalla.
+**Root Cause:**
+1. Falta de configuración explícita de `viewport` en `src/app/layout.js`: iOS Safari/WebKit activa zoom automático agresivo (~1.25x) cuando el usuario interactúa con inputs o selectores con tipografías menores a 16px (como selectores clínicos a 12px), desplazando el viewport visual y desbordando el modal hacia la derecha.
+2. Ancho forzado con `width: calc(100vw - 0.7rem)` y `padding` en `.modalOverlay`: En WebKit iOS, `100vw` incluye el scrollbar invisible del layout viewport y no descuenta las safe-areas, empujando los contenedores fuera de la pantalla.
+3. Regla rígida `min-width: fit-content !important` en `.detailRowBetween .detailLabel`: Impedía que las etiquetas financieras flexibilizaran su ancho, empujando los valores con `white-space: nowrap` más allá del margen visible.
+4. Falta de envoltura flexible (`flex-wrap: wrap`) y recorte defensivo (`word-break: break-all`) en filas de WhatsApp y Email para direcciones largas (`federico.villalba997@gmail.com`).
+**Solución:**
+1. Se declaró el objeto `viewport` en `src/app/layout.js` con `width: 'device-width'`, `initialScale: 1`, `maximumScale: 1`, `userScalable: false`, `viewportFit: 'cover'`, erradicando el auto-zoom de iOS.
+2. En `src/app/admin/agenda/agenda.module.css`, se actualizó `.modalOverlay` con `width: 100% !important`, `height: 100% !important`, `height: 100dvh !important` y `.modalContent` con `width: 100% !important`, `max-width: calc(100vw - 0.7rem) !important`, `overflow-x: hidden !important`.
+3. En `.detailRowBetween`, se eliminó `min-width: fit-content` reemplazándolo por `min-width: 0 !important; flex: 1 1 auto !important; word-break: break-word !important;`, y `.detailValue` con `max-width: 50% !important`.
+4. En `src/app/admin/agenda/page.js`, se flexibilizaron las filas de WhatsApp, Email y la tarjeta clínica con `min-width: 0`, `wordBreak: 'break-all'`, `flexShrink: 0` y fuentes de 13-14px para selectors e inputs nativos.
+**Commit:** `d9c0e21`
+**Estado:** ✅ FIXED
