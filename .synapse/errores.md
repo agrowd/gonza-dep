@@ -347,3 +347,16 @@
 
 
 
+
+## ERR-38: Discrepancia en Comentarios de Cancelación de Turnos (Omisión de Fórmula Clásica de Seña Guardada / Retenida) (2026-10-05)
+**Síntoma:** Luciano Gómez reportó (`media_1791233226570.png`): *"Y en los comentarios del turno del día, nosé si se perdió en alguna actualizacion pero al cancelar el turno, ya no dice si se retuvo la seña o si se guardo. Antes decía [Cancelado - Seña de $... Guardada para siguiente turno]. Ahora debería tener esa info (más lo que ya sumaste de que si se hizo por autogestion o por administración)"*.
+**Root Cause:** En la actualización previa del 2 de octubre, las etiquetas de cancelación se habían reformulado como `[Seña a favor: $... (Guardada por cancelación ...) - Administrador]` y `[Pierde seña: $... - Autogestión]`. Al no incluir la redacción clásica `[Cancelado - Seña de $... Guardada para siguiente turno]`, generaba confusión visual en los operadores sobre el destino de la seña.
+**Solución:**
+1. En `src/app/api/admin/turnos/[id]/route.js` y `src/app/api/reservas/cancelar/route.js`, se unificaron las etiquetas exactas requeridas:
+   - Seña conservada: `[Cancelado - Seña de $... Guardada para siguiente turno - {Actor}]`.
+   - Seña retenida / perdida: `[Cancelado - Pierde seña de $... - {Actor}]`.
+   - Sin seña: `[Cancelado - {Actor}]`.
+   Donde `{Actor}` es `Administrador` o `Autogestión`.
+2. Compilado con Next.js Turbopack y desplegado en el VPS (`gonzalo-agenda`, puerto 3006).
+**Commit:** `65a6120`
+**Estado:** ✅ FIXED

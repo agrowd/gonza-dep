@@ -98,3 +98,4 @@
 
 
 
+| D-96 | **Restauración y Unificación de Comentarios de Cancelación con Seña Guardada o Retenida y Rol (`[Cancelado - ...]`)** | Pedido expreso de Luciano Gómez (`media_1791233226570.png` - 05/10/2026): En los comentarios del turno del día (`Turno.observaciones`), se restauró la redacción tradicional solicitada por los operadores: 1) Si la seña se conserva a favor del cliente: `[Cancelado - Seña de $... Guardada para siguiente turno - {Actor}]`; 2) Si la seña se pierde/retiene: `[Cancelado - Pierde seña de $... - {Actor}]`; 3) Sin seña: `[Cancelado - {Actor}]`. Donde `{Actor}` es `Administrador` (cuando se ejecuta desde la agenda administrativa) o `Autogestión` (cuando la realiza el paciente por la web). Sincronizado en `PUT /api/admin/turnos/[id]` y `POST /api/reservas/cancelar`. | 🔒 LOCKED |

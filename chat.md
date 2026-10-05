@@ -120,3 +120,21 @@
 
 
 
+
+
+## Sesión: 5 de Octubre de 2026 - Restauración y Unificación de Comentarios de Cancelación (`[Cancelado - ...]`) (Luciano Gómez)
+
+### Requerimiento:
+- *"Y en los comentarios del turno del día, nosé si se perdió en alguna actualizacion pero al cancelar el turno, ya no dice si se retuvo la seña o si se guardo. Antes decía [Cancelado - Seña de $... Guardada para siguiente turno]. Ahora debería tener esa info (más lo que ya sumaste de que si se hizo por autogestion o por administración)"*.
+
+### Implementación y Despliegue:
+1. En `src/app/api/admin/turnos/[id]/route.js`:
+   - Seña guardada: `[Cancelado - Seña de $... Guardada para siguiente turno - Administrador]`
+   - Seña retenida: `[Cancelado - Pierde seña de $... - Administrador]`
+   - Sin seña: `[Cancelado - Administrador]`
+2. En `src/app/api/reservas/cancelar/route.js`:
+   - Con seña: `[Cancelado - Pierde seña de $... - Autogestión]`
+   - Si conserva seña: `[Cancelado - Seña de $... Guardada para siguiente turno - Autogestión]`
+   - Sin seña: `[Cancelado - Autogestión]`
+3. Compilado con Next.js Turbopack (`npm run build`, 41/41 páginas con 0 errores).
+4. Desplegado y verificado en VPS (`187.127.9.216`, puerto 3006), PM2 `gonzalo-agenda` recargado y respondiendo HTTP 200 OK. Commit `65a6120` pusheado a GitHub.

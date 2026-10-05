@@ -1505,3 +1505,20 @@
   4. Registro de Decisión `D-95` en `.synapse/decisions.md` y Errores `ERR-36` y `ERR-37` en `.synapse/errores.md`.
 
 
+
+## 📅 Sesión: 5 de Octubre de 2026
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender requerimiento con captura de WhatsApp de Luciano Gómez (`media_1791233226570.png`): *"Y en los comentarios del turno del día, nosé si se perdió en alguna actualizacion pero al cancelar el turno, ya no dice si se retuvo la seña o si se guardo. Antes decía [Cancelado - Seña de $... Guardada para siguiente turno]. Ahora debería tener esa info (más lo que ya sumaste de que si se hizo por autogestion o por administración)"*.
+- [x] Restaurar plantilla exacta en `src/app/api/admin/turnos/[id]/route.js`:
+  - `[Cancelado - Seña de $... Guardada para siguiente turno - Administrador]` (si conserva seña).
+  - `[Cancelado - Pierde seña de $... - Administrador]` (si pierde seña).
+  - `[Cancelado - Administrador]` (sin seña).
+- [x] Restaurar plantilla exacta en `src/app/api/reservas/cancelar/route.js`:
+  - `[Cancelado - Pierde seña de $... - Autogestión]` (al cancelar por autogestión con seña).
+  - `[Cancelado - Seña de $... Guardada para siguiente turno - Autogestión]` (si se conserva seña).
+  - `[Cancelado - Autogestión]` (sin seña).
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores).
+- [x] Desplegar en VPS Producción (`agenda.depilacionparahombres.com`, puerto 3006), reiniciar PM2 `gonzalo-agenda` y verificar respuesta HTTP 200 OK.
+- [x] Pushear commit a `main` en GitHub (`65a6120`).
+- [x] Registrar Decisión `D-96` en `.synapse/decisions.md` y Error `ERR-38` en `.synapse/errores.md`.
