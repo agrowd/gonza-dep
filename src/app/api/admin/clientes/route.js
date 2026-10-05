@@ -67,6 +67,14 @@ export async function GET(request) {
             return hasCanceled;
           case 'no_show':
             return hasNoShow;
+          case 'notif_activas':
+            return c.enviarNotificaciones === true;
+          case 'notif_pausadas':
+            return c.enviarNotificaciones === false;
+          case 'resena_con':
+            return c.recibioResena === true;
+          case 'resena_sin':
+            return !c.recibioResena;
           default:
             return true;
         }

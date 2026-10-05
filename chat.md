@@ -183,3 +183,30 @@
    - Sin seña: `[Cancelado - Autogestión]`
 3. Compilado con Next.js Turbopack (`npm run build`, 41/41 páginas con 0 errores).
 4. Desplegado y verificado en VPS (`187.127.9.216`, puerto 3006), PM2 `gonzalo-agenda` recargado y respondiendo HTTP 200 OK. Commit `65a6120` pusheado a GitHub.
+
+## Sesión: 5 de Octubre de 2026 (Seguimiento) - Fusión Staging a Main y Resolución de 6 Puntos de Feedback (Luciano Gómez y Gonzalo Siri)
+
+### Requerimiento del Usuario:
+1. "Despliega ese cambio en el main" (Fusión y despliegue integral de Staging a Producción/Main).
+2. "Analiza bien las imágenes que te dejo para saber el contexto" (9 capturas de WhatsApp con feedback del 2 y 5 de octubre).
+
+### Puntos Implementados:
+1. **Filtro Unificado de Clientes (`/admin/clientes`)**:
+   - Reemplazo de los 3 selectores aislados por un único `<select>` estructurado con `<optgroup>` ("Tipo de Cliente", "Notificaciones WhatsApp / Email", "Reseñas de Google").
+2. **Bloqueo de Navegación de Mes para Clientes Bloqueados**:
+   - Ocultamiento de flechas `←` y `→` cuando `isClientBlocked === true` en autogestión, impidiendo que el cliente navegue a meses futuros donde vería días en gris.
+3. **Tope de Reserva Online de 1 Mes y Medio (45 días)**:
+   - Configurado en `src/app/page.js` y `src/app/api/disponibilidad/route.js`. Días posteriores a 45 días se marcan no disponibles/cerrados (`LIMITE_ANTICIPACION`) y no se permite avanzar a meses posteriores.
+4. **Fix Bug de Año en Calendario (`handleNextMonth`)**:
+   - Corregido `setCalendarYear(prev => prev + 1)` (estaba restando 1 año al pasar de diciembre a enero).
+5. **Persistencia de Seña y Bonificación al Editar Turno**:
+   - Inyección en `PUT /api/admin/turnos/[id]` de `valorTotal`, `valorSeña`, `bonificacion`, `descuentoTipo`, `descuentoValor` en `updateData`.
+   - En `src/app/admin/agenda/page.js`, actualización en caliente de `selectedTurno` al confirmar la edición.
+6. **Optimización de Despacho de WhatsApp Manual**:
+   - Normalización con `normalizeWhatsApp` en el payload de relay (`http://localhost:3007/api/whatsapp/send`).
+   - Timeout de 4s en `getNumberId` para evitar congelamiento de Puppeteer.
+   - Diagnóstico claro de errores que distingue entre desconexión del servicio vs timeout de entrega al destinatario.
+
+### Validación:
+- `npm run build` ejecutado exitosamente (41/41 rutas válidas, 0 errores en 108s).
+- Decisiones `D-97`, `D-98` y Errores `ERR-39`, `ERR-40`, `ERR-41` documentados en `.synapse/`.

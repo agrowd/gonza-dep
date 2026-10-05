@@ -27,6 +27,8 @@ export async function GET(request) {
     const utcNow = now.getTime() + (now.getTimezoneOffset() * 60000);
     const nowLocal = new Date(utcNow + (3600000 * offsetBA));
     const todayStr = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
+    const maxBookingDateObj = new Date(nowLocal.getTime() + 45 * 24 * 60 * 60 * 1000);
+    const maxBookingDateStr = `${maxBookingDateObj.getFullYear()}-${String(maxBookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(maxBookingDateObj.getDate()).padStart(2, '0')}`;
 
     const fechaStr = searchParams.get('fecha'); // e.g. "2026-06-20"
     const yearParam = searchParams.get('year');
@@ -153,6 +155,9 @@ export async function GET(request) {
     // CASE 1: Single Date query (legacy/direct)
     // ==========================================
     if (fechaStr && !yearParam) {
+      if (fechaStr > maxBookingDateStr) {
+        return NextResponse.json({ disponible: false, lleno: false, motivo: 'LIMITE_ANTICIPACION', slots: [] });
+      }
       const targetDate = new Date(fechaStr + 'T00:00:00');
       const nextDate = new Date(targetDate);
       nextDate.setDate(targetDate.getDate() + 1);
@@ -275,6 +280,20 @@ export async function GET(request) {
         continue;
       }
 
+      // Días más allá del límite de anticipación (máximo 45 días / 1.5 meses)
+      if (dateStr > maxBookingDateStr) {
+        daysResult[dateStr] = {
+          date: dateStr,
+          day,
+          dayOfWeek,
+          disponible: false,
+          lleno: false,
+          motivo: 'LIMITE_ANTICIPACION',
+          slots: []
+        };
+        continue;
+      }
+
       const dayTurnos = turnosByDate[dateStr] || [];
       const dayBloqueos = bloqueosByDate[dateStr] || [];
       const dayBusy = [...dayTurnos, ...dayBloqueos];
@@ -296,6 +315,7 @@ export async function GET(request) {
       month,
       montoTotal,
       duracion,
+      maxBookingDate: maxBookingDateStr,
       config: {
         work_start: workStartStr,
         work_end: workEndStr

@@ -427,8 +427,34 @@ export default function Home() {
     }
   }, [step, calendarYear, calendarMonth, duracionMinutos, valorTotal, fetchMonthAvailability]);
 
+  // 45 days max booking window (~1.5 months)
+  const maxBookingLimit = useMemo(() => {
+    const today = new Date();
+    // UTC-3 Argentina
+    const offsetBA = -3;
+    const utc = today.getTime() + (today.getTimezoneOffset() * 60000);
+    const todayBA = new Date(utc + (3600000 * offsetBA));
+    const maxDate = new Date(todayBA.getTime() + 45 * 24 * 60 * 60 * 1000);
+    const currentYear = todayBA.getFullYear();
+    const currentMonth = todayBA.getMonth() + 1;
+    const maxYear = maxDate.getFullYear();
+    const maxMonth = maxDate.getMonth() + 1;
+    const maxDateStr = `${maxYear}-${String(maxMonth).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`;
+    return {
+      currentYear,
+      currentMonth,
+      maxYear,
+      maxMonth,
+      maxDateStr
+    };
+  }, []);
+
+  const isCurrentMonth = calendarYear < maxBookingLimit.currentYear || (calendarYear === maxBookingLimit.currentYear && calendarMonth <= maxBookingLimit.currentMonth);
+  const isMaxMonth = calendarYear > maxBookingLimit.maxYear || (calendarYear === maxBookingLimit.maxYear && calendarMonth >= maxBookingLimit.maxMonth);
+
   // Calendar Navigation
   const handlePrevMonth = () => {
+    if (isCurrentMonth) return;
     if (calendarMonth === 1) {
       setCalendarYear(prev => prev - 1);
       setCalendarMonth(12);
@@ -440,8 +466,9 @@ export default function Home() {
   };
 
   const handleNextMonth = () => {
+    if (isMaxMonth) return;
     if (calendarMonth === 12) {
-      setCalendarYear(prev => prev - 1);
+      setCalendarYear(prev => prev + 1);
       setCalendarMonth(1);
     } else {
       setCalendarMonth(prev => prev + 1);
@@ -1097,27 +1124,31 @@ Duración: ${duracionMinutos} min`;
                 <div className={styles.calendarContainer}>
                   {/* Month Navigation */}
                   <div className={styles.calendarNav}>
-                    <button
-                      type="button"
-                      onClick={handlePrevMonth}
-                      className={styles.navBtn}
-                      aria-label="Mes anterior"
-                    >
-                      <span className={styles.navBtnIcon}>←</span>
-                      <span className={styles.navBtnText}> Anterior</span>
-                    </button>
+                    {!isClientBlocked && !isCurrentMonth ? (
+                      <button
+                        type="button"
+                        onClick={handlePrevMonth}
+                        className={styles.navBtn}
+                        aria-label="Mes anterior"
+                      >
+                        <span className={styles.navBtnIcon}>←</span>
+                        <span className={styles.navBtnText}> Anterior</span>
+                      </button>
+                    ) : <div style={{ width: '80px' }} />}
                     <span className={styles.monthLabel}>
                       {MONTH_NAMES[calendarMonth - 1]} {calendarYear}
                     </span>
-                    <button
-                      type="button"
-                      onClick={handleNextMonth}
-                      className={styles.navBtn}
-                      aria-label="Mes siguiente"
-                    >
-                      <span className={styles.navBtnText}>Siguiente </span>
-                      <span className={styles.navBtnIcon}>→</span>
-                    </button>
+                    {!isClientBlocked && !isMaxMonth ? (
+                      <button
+                        type="button"
+                        onClick={handleNextMonth}
+                        className={styles.navBtn}
+                        aria-label="Mes siguiente"
+                      >
+                        <span className={styles.navBtnText}>Siguiente </span>
+                        <span className={styles.navBtnIcon}>→</span>
+                      </button>
+                    ) : <div style={{ width: '80px' }} />}
                   </div>
 
                   {/* Weekday Headers */}
@@ -1142,6 +1173,9 @@ Duración: ${duracionMinutos} min`;
 
                       if (isClientBlocked) {
                         cellClass = `${styles.dayCell} ${styles.dayCellFull}`;
+                        isClickable = false;
+                      } else if (dateStr > maxBookingLimit.maxDateStr || dayInfo.motivo === 'LIMITE_ANTICIPACION') {
+                        cellClass = `${styles.dayCell} ${styles.dayCellClosed}`;
                         isClickable = false;
                       } else if (dayInfo.disponible) {
                         cellClass = isSelected ? `${styles.dayCell} ${styles.dayCellSelected}` : `${styles.dayCell} ${styles.dayCellAvailable}`;
@@ -1172,9 +1206,11 @@ Duración: ${duracionMinutos} min`;
                           title={
                             isClientBlocked
                               ? 'No hay turnos disponibles proximamente'
-                              : (dayInfo.disponible
-                                ? `${dayInfo.slots?.length || 0} horarios disponibles`
-                                : (dayInfo.lleno ? 'Día completo sin huecos disponibles' : (dayInfo.motivo === 'DIA_CERRADO' ? 'Día aún no abierto para este importe' : 'No disponible')))
+                              : (dateStr > maxBookingLimit.maxDateStr || dayInfo.motivo === 'LIMITE_ANTICIPACION'
+                                ? 'Fuera del límite de anticipación permitido (máximo 1 mes y medio)'
+                                : (dayInfo.disponible
+                                  ? `${dayInfo.slots?.length || 0} horarios disponibles`
+                                  : (dayInfo.lleno ? 'Día completo sin huecos disponibles' : (dayInfo.motivo === 'DIA_CERRADO' ? 'Día aún no abierto para este importe' : 'No disponible'))))
                           }
                         >
                           <span>{dayNumber}</span>

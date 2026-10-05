@@ -388,9 +388,16 @@ export async function PUT(request, { params }) {
       updateData.zonas = JSON.stringify(parsedZones);
     }
 
+    // Persist updated price and deposit amounts if provided
+    if (valorTotal !== undefined) updateData.valorTotal = Number(valorTotal);
+    if (valorSeña !== undefined) updateData.valorSeña = Number(valorSeña);
+    if (bonificacion !== undefined) updateData.bonificacion = Number(bonificacion);
+    if (descuentoTipo !== undefined) updateData.descuentoTipo = String(descuentoTipo);
+    if (descuentoValor !== undefined) updateData.descuentoValor = Number(descuentoValor);
+
     // Recalculate remaining balance
-    const finalTotal = valorTotal !== undefined ? valorTotal : oldTurn.valorTotal;
-    const finalSeña = valorSeña !== undefined ? valorSeña : oldTurn.valorSeña;
+    const finalTotal = valorTotal !== undefined ? Number(valorTotal) : oldTurn.valorTotal;
+    const finalSeña = valorSeña !== undefined ? Number(valorSeña) : oldTurn.valorSeña;
     updateData.saldoPendiente = Math.max(0, finalTotal - finalSeña);
 
     // Recalculate duration if hours are updated

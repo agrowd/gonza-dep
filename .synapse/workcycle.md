@@ -1545,3 +1545,17 @@
 - [x] Desplegar en VPS Producción (`agenda.depilacionparahombres.com`, puerto 3006), reiniciar PM2 `gonzalo-agenda` y verificar respuesta HTTP 200 OK.
 - [x] Pushear commit a `main` en GitHub (`65a6120`).
 - [x] Registrar Decisión `D-96` en `.synapse/decisions.md` y Error `ERR-38` en `.synapse/errores.md`.
+
+## 📅 Sesión: 5 de Octubre de 2026 (Seguimiento - Fusión Staging a Main y Resolución de 6 Puntos de Feedback)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Fusión limpia de la rama `staging` en `main` sin pérdida de código ni conflictos en archivos de memoria.
+- [x] Atender los requerimientos de las 9 capturas de WhatsApp enviadas por Luciano Gómez y Gonzalo Siri:
+  1. Unificar filtros desplegables de `/admin/clientes` en un único `<select>` principal categorizado con `<optgroup>`.
+  2. Ocultar flechas de navegación de mes (`←` y `→`) para clientes bloqueados (`isClientBlocked`).
+  3. Establecer tope máximo de reserva online a 45 días (~1.5 meses) desde hoy en `page.js` y `/api/disponibilidad`.
+  4. Corregir salto erróneo de año en `handleNextMonth` (de Dic a Ene pasaba a 2025 en vez de 2027).
+  5. Solucionar bug crítico al editar turno en `/admin/agenda` donde seña ($10.000) y bonificación ($1.000) no persistían en PostgreSQL al guardar.
+  6. Robustecer despacho de WhatsApp manual normalizando el target telefónico en el relay (`port 3007`), agregando timeout a `getNumberId` y clarificando errores de timeout vs desconexión.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`) verificando 41/41 rutas y 0 errores en 108s.
+- [x] Registrar Decisiones `D-97` y `D-98` en `.synapse/decisions.md` y Errores `ERR-39`, `ERR-40`, `ERR-41` en `.synapse/errores.md`.

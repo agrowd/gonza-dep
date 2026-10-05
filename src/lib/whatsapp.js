@@ -323,21 +323,26 @@ export async function sendWhatsAppMessage(phone, text) {
 
       try {
         const cleanDigits = (phone || '').replace(/\D/g, '');
-        let numberId = await client.getNumberId(formattedPhone);
+        const getNumberIdWithTimeout = (target) => Promise.race([
+          client.getNumberId(target),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+        ]);
+
+        let numberId = await getNumberIdWithTimeout(formattedPhone).catch(() => null);
 
         if (!numberId && cleanDigits.startsWith('549')) {
           const altNumber = '54' + cleanDigits.slice(3);
-          numberId = await client.getNumberId(altNumber);
+          numberId = await getNumberIdWithTimeout(altNumber).catch(() => null);
         } else if (!numberId && cleanDigits.startsWith('54') && !cleanDigits.startsWith('549')) {
           const altNumber = '549' + cleanDigits.slice(2);
-          numberId = await client.getNumberId(altNumber);
+          numberId = await getNumberIdWithTimeout(altNumber).catch(() => null);
         }
 
         if (numberId && numberId._serialized) {
           targetChatId = numberId._serialized;
           console.log(`[WhatsApp] Resolved ${phone} to WhatsApp ID ${targetChatId}`);
         } else {
-          console.warn(`[WhatsApp] Warning: getNumberId returned null for ${phone}. Fallback to ${formattedPhone}`);
+          console.warn(`[WhatsApp] Warning: getNumberId returned null/timeout for ${phone}. Fallback to ${formattedPhone}`);
         }
       } catch (resErr) {
         console.warn(`[WhatsApp] Warning resolving numberId for ${phone}:`, resErr.message);
@@ -353,12 +358,13 @@ export async function sendWhatsAppMessage(phone, text) {
 
   // 2. Relay via ia-gonzadep (port 3007)
   try {
-    console.log(`[WhatsApp Relay] Relaying message for ${phone} to http://localhost:3007/api/whatsapp/send...`);
+    const normalizedTarget = normalizeWhatsApp(phone) || (phone || '').replace(/\D/g, '');
+    console.log(`[WhatsApp Relay] Relaying message for ${phone} (target: ${normalizedTarget}) to http://localhost:3007/api/whatsapp/send...`);
     const res = await fetch('http://localhost:3007/api/whatsapp/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target: phone, message: text }),
-      signal: AbortSignal.timeout(15000)
+      body: JSON.stringify({ target: normalizedTarget, message: text }),
+      signal: AbortSignal.timeout(20000)
     });
 
     if (!res.ok) {
@@ -372,6 +378,9 @@ export async function sendWhatsAppMessage(phone, text) {
     return data;
   } catch (relayErr) {
     console.error(`[WhatsApp Relay] Relay failed:`, relayErr.message);
+    if (globalThis.whatsappStatus === 'CONNECTED' || globalThis.whatsappRelayStatus === 'CONNECTED') {
+      throw new Error(`No se pudo entregar el mensaje al número ${phone} (${relayErr.message}). Verificá el formato del número en la ficha del cliente.`);
+    }
     throw new Error(`El servicio de WhatsApp no está conectado (Local: ${globalThis.whatsappStatus}, Relay: ${relayErr.message})`);
   }
 }

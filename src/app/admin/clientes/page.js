@@ -57,8 +57,6 @@ function ClientesPageContent() {
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [resenaFilter, setResenaFilter] = useState('all');
-  const [notifFilter, setNotifFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   // Profile modal states
@@ -402,9 +400,9 @@ function ClientesPageContent() {
   };
 
   // Fetch clients list
-  const fetchClients = (customSearch = search, customFilter = filter, customResena = resenaFilter, customNotif = notifFilter) => {
+  const fetchClients = (customSearch = search, customFilter = filter) => {
     setLoading(true);
-    fetch(`/api/admin/clientes?search=${encodeURIComponent(customSearch)}&filter=${customFilter}&resena=${customResena}&notif=${customNotif}`)
+    fetch(`/api/admin/clientes?search=${encodeURIComponent(customSearch)}&filter=${customFilter}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -509,8 +507,8 @@ function ClientesPageContent() {
   }, []);
 
   useEffect(() => {
-    fetchClients(search, filter, resenaFilter, notifFilter);
-  }, [filter, resenaFilter, notifFilter]);
+    fetchClients(search, filter);
+  }, [filter]);
 
   const router = useRouter();
   const fromPage = searchParams.get('from');
@@ -1127,34 +1125,25 @@ function ClientesPageContent() {
           className={styles.filterSelect}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
+          title="Filtro Principal de Clientes"
         >
-          <option value="all">Todos los clientes</option>
-          <option value="new">Clientes nuevos (≤ 1 sesión)</option>
-          <option value="recurrent">Clientes recurrentes (&gt; 1 sesión)</option>
-          <option value="upcoming">Con turno próximo</option>
-          <option value="no_upcoming">Sin próximo turno</option>
-          <option value="canceled">Que han cancelado</option>
-          <option value="no_show">Que no asistieron</option>
-        </select>
-        <select
-          className={styles.filterSelect}
-          value={notifFilter}
-          onChange={(e) => setNotifFilter(e.target.value)}
-          title="Filtro de Notificaciones"
-        >
-          <option value="all">Todas las Notif.</option>
-          <option value="activas">Notificaciones Activas</option>
-          <option value="pausadas">Notificaciones Pausadas</option>
-        </select>
-        <select
-          className={styles.filterSelect}
-          value={resenaFilter}
-          onChange={(e) => setResenaFilter(e.target.value)}
-          title="Filtro de Reseña de Google"
-        >
-          <option value="all">Todas las Reseñas</option>
-          <option value="con_resena">Con Reseña enviada</option>
-          <option value="sin_resena">Sin Reseña (Pendiente)</option>
+          <optgroup label="Tipo de Cliente">
+            <option value="all">Todos los clientes</option>
+            <option value="new">Clientes nuevos (≤ 1 sesión)</option>
+            <option value="recurrent">Clientes recurrentes (&gt; 1 sesión)</option>
+            <option value="upcoming">Con turno próximo</option>
+            <option value="no_upcoming">Sin próximo turno</option>
+            <option value="canceled">Que han cancelado</option>
+            <option value="no_show">Que no asistieron</option>
+          </optgroup>
+          <optgroup label="Notificaciones WhatsApp / Email">
+            <option value="notif_activas">Notificaciones Activas</option>
+            <option value="notif_pausadas">Notificaciones Pausadas</option>
+          </optgroup>
+          <optgroup label="Reseñas de Google">
+            <option value="resena_con">Con Reseña enviada</option>
+            <option value="resena_sin">Sin Reseña (Pendiente)</option>
+          </optgroup>
         </select>
       </form>
 

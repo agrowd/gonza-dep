@@ -1953,21 +1953,37 @@ export default function AgendaPage() {
         })
       });
       if (res.ok) {
+        const updatedData = await res.json().catch(() => null);
         setIsEditing(false);
         setIsDetailsOpen(false);
         showToast('Turno guardado con éxito.');
-        setSelectedTurno(prev => prev ? {
-          ...prev,
-          notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
-          observaciones: editTurno.turnoObservaciones !== undefined ? editTurno.turnoObservaciones : prev.observaciones,
-          notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
-          cliente: prev.cliente ? {
-            ...prev.cliente,
-            observaciones: editTurno.observaciones !== undefined ? editTurno.observaciones : prev.cliente.observaciones,
-            notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.cliente.notasGonzalo,
-            frecuencia: editTurno.frecuencia !== undefined ? editTurno.frecuencia : prev.cliente.frecuencia
-          } : prev.cliente
-        } : null);
+        setSelectedTurno(prev => {
+          if (!prev) return null;
+          if (updatedData && updatedData.id) {
+            return {
+              ...prev,
+              ...updatedData,
+              cliente: updatedData.cliente || prev.cliente
+            };
+          }
+          return {
+            ...prev,
+            valorTotal: Number(editTurno.valorTotal),
+            valorSeña: Number(editTurno.valorSeña),
+            bonificacion: Number(editTurno.bonificacion || 0),
+            descuentoTipo: editTurno.descuentoTipo,
+            descuentoValor: Number(editTurno.descuentoValor || 0),
+            saldoPendiente: Math.max(0, Number(editTurno.valorTotal) - Number(editTurno.valorSeña)),
+            notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.notasGonzalo,
+            observaciones: editTurno.turnoObservaciones !== undefined ? editTurno.turnoObservaciones : prev.observaciones,
+            cliente: prev.cliente ? {
+              ...prev.cliente,
+              observaciones: editTurno.observaciones !== undefined ? editTurno.observaciones : prev.cliente.observaciones,
+              notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : prev.cliente.notasGonzalo,
+              frecuencia: editTurno.frecuencia !== undefined ? editTurno.frecuencia : prev.cliente.frecuencia
+            } : prev.cliente
+          };
+        });
         fetchAppointments();
       } else if (res.status === 401) {
         pendingSaveActionRef.current = async () => {

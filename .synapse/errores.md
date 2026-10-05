@@ -391,3 +391,31 @@
 2. Compilado con Next.js Turbopack y desplegado en el VPS (`gonzalo-agenda`, puerto 3006).
 **Commit:** `65a6120`
 **Estado:** ✅ FIXED
+
+## ERR-39: Pérdida de Seña y Descuento al Editar Turno en Agenda (2026-10-05)
+**Síntoma:** Luciano Gómez reportó con capturas (`media_1791234505546.png`, `media_1791234515617.png`, `media_1791234522094.png`) que al editar un turno en `/admin/agenda` modificando la seña (ej: $10.000) o aplicando una bonificación (ej: $1.000), tras pulsar "Guardar Cambios" y reabrir el turno, la seña volvía a $0 y el valor total se restablecía al precio de lista ($25.000).
+**Root Cause:**
+1. En `PUT /api/admin/turnos/[id]/route.js`, el backend extraía `valorTotal, valorSeña, bonificacion, descuentoTipo, descuentoValor` del `body`, y calculaba `updateData.saldoPendiente = Math.max(0, finalTotal - finalSeña)`. Sin embargo, nunca asignaba dichos campos a `updateData`. En consecuencia, Prisma actualizaba únicamente el saldo restante, pero conservaba los valores anteriores en PostgreSQL.
+2. En `src/app/admin/agenda/page.js`, `handleSaveEditTurno` no parseaba el JSON retornado por la API ni actualizaba `selectedTurno` con los valores de seña y totales, manteniendo los datos viejos en el estado de React.
+**Solución:**
+1. En `src/app/api/admin/turnos/[id]/route.js`, se inyectaron explícitamente `updateData.valorTotal`, `updateData.valorSeña`, `updateData.bonificacion`, `updateData.descuentoTipo` y `updateData.descuentoValor`.
+2. En `src/app/admin/agenda/page.js`, se sincronizó `selectedTurno` con los datos actualizados retornados por la respuesta `res.json()`.
+**Estado:** ✅ FIXED
+
+## ERR-40: Retroceso de Año al Navegar de Diciembre a Enero en Calendario de Autogestión (2026-10-05)
+**Síntoma:** Al estar en Diciembre 2026 y presionar la flecha `→ Siguiente`, el calendario saltaba a Enero 2025 en vez de Enero 2027 (`media_1791233180862.png`).
+**Root Cause:** En `src/app/page.js`, la función `handleNextMonth` tenía una errata: `if (calendarMonth === 12) setCalendarYear(prev => prev - 1)` (restaba un año en lugar de sumarlo).
+**Solución:** Se corrigió a `setCalendarYear(prev => prev + 1)` y se acotó la navegación con `isMaxMonth` respetando el límite máximo de anticipación de 45 días.
+**Estado:** ✅ FIXED
+
+## ERR-41: Timeout y Mensaje de Error Confuso en Reenvío Manual de WhatsApp (2026-10-05)
+**Síntoma:** Al reenviar un WhatsApp manual a Andres Martinez (`+54 2494482082`), la agenda mostraba: `Fallo al enviar WhatsApp: El servicio de WhatsApp no está conectado (Local: CONNECTED, Relay: The operation was aborted due to timeout)` (`media_1791234546220.png`, `media_1791234563500.png`).
+**Root Cause:**
+1. En el cliente local Puppeteer (`port 3006`), `client.getNumberId` se colgó o demoró en resolver el número de Tandil, cayendo al fallback de Relay (`ia-gonzadep`, puerto 3007).
+2. El relay enviaba el target telefónico sin normalizar (`phone` en crudo, con espacios o formato no estándar), detonando un timeout de 15s.
+3. El bloque `catch` de `sendWhatsAppMessage` lanzaba un mensaje genérico `"El servicio de WhatsApp no está conectado"`, confundiéndose con una desconexión real del servicio.
+**Solución:**
+1. Se envolvió `client.getNumberId` con un timeout preventivo de 4s para evitar demoras en Puppeteer.
+2. Se aplicó `normalizeWhatsApp(phone)` al payload enviado al servicio relay en el puerto 3007.
+3. Se refinó el mensaje de error para clarificar que el fallo se debió a un timeout de entrega al número particular y no a una desconexión del servicio.
+**Estado:** ✅ FIXED
