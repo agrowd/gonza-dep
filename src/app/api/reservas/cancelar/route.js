@@ -50,7 +50,11 @@ export async function POST(request) {
     const currentObs = turno.observaciones || '';
     let cancelTag = '';
     if (Number(turno.valorSeña) > 0) {
-      cancelTag = `[Pierde seña: $${Number(turno.valorSeña).toLocaleString('es-ES')} - Autogestión]`;
+      if (!withLossOfDeposit) {
+        cancelTag = `[Cancelado - Seña de $${Number(turno.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - Autogestión]`;
+      } else {
+        cancelTag = `[Cancelado - Pierde seña de $${Number(turno.valorSeña).toLocaleString('es-ES')} - Autogestión]`;
+      }
     } else {
       cancelTag = `[Cancelado - Autogestión]`;
     }

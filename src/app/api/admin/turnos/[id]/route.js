@@ -343,23 +343,22 @@ export async function PUT(request, { params }) {
     // Append deposit preservation / loss tag to TURNO observaciones (exclusive to this session)
     if (estado === 'CANCELADO') {
       const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
-      const dateStr = oldTurn.fecha ? new Date(oldTurn.fecha).toLocaleDateString('es-ES') : '';
       if (Number(oldTurn.valorSeña) > 0) {
         if (body.preserveDeposit) {
-          const creditTag = `[Seña a favor: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Guardada por cancelación ${dateStr}) - Administrador]`;
+          const creditTag = `[Cancelado - Seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - Administrador]`;
           if (!currentTurnoObs.includes(creditTag)) {
-            updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${creditTag}` : creditTag;
+            updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${creditTag}`.trim() : creditTag;
           }
         } else {
-          const lossTag = `[Pierde seña: $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} (Cancelación con menos de 72hs) - Administrador]`;
+          const lossTag = `[Cancelado - Pierde seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} - Administrador]`;
           if (!currentTurnoObs.includes(lossTag)) {
-            updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${lossTag}` : lossTag;
+            updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${lossTag}`.trim() : lossTag;
           }
         }
       } else {
         const cancelTag = `[Cancelado - Administrador]`;
         if (!currentTurnoObs.includes(cancelTag)) {
-          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} | ${cancelTag}` : cancelTag;
+          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${cancelTag}`.trim() : cancelTag;
         }
       }
     }
