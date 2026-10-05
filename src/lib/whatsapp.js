@@ -2,6 +2,7 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import prisma from './db.js';
 import { sendMaintenanceEmail, sendWhatsAppDisconnectAlertEmail, sendWhatsAppReconnectedAlertEmail, sendReminder7DaysEmail } from './email.js';
+import { canSendNotification } from './notifications.js';
 import fs from 'fs';
 
 // Use globalThis to cache the client across hot-reloads in development
@@ -555,8 +556,8 @@ export async function checkAndSendReminders(force = false) {
         }
       });
 
-      if (t.cliente && t.cliente.enviarNotificaciones === false) {
-        console.log(`[Reminder Cron] Notifications disabled for client ${t.cliente.nombreCompleto}. Skipping WhatsApp reminder.`);
+      if (!canSendNotification(t.cliente, 'WHATSAPP', 'RECORDATORIO')) {
+        console.log(`[Reminder Cron] WhatsApp reminder disabled for client ${t.cliente?.nombreCompleto}. Skipping.`);
         continue;
       }
 
@@ -655,8 +656,8 @@ export async function checkAndSendReminders(force = false) {
       const { sendReminder7DaysEmail } = await import('./email.js');
       
       for (const t of turnos7) {
-        if (t.cliente && t.cliente.enviarNotificaciones === false) {
-          console.log(`[Reminder Cron] Notifications disabled for client ${t.cliente.nombreCompleto}. Skipping Email reminder.`);
+        if (!canSendNotification(t.cliente, 'EMAIL', 'RECORDATORIO')) {
+          console.log(`[Reminder Cron] Email reminder disabled for client ${t.cliente?.nombreCompleto}. Skipping.`);
           continue;
         }
 
@@ -746,6 +747,10 @@ export async function checkAndSendReminders(force = false) {
 
     for (const t of finishedTurnos) {
       if (!t.cliente || !t.cliente.email || t.cliente.estado !== 'FINALIZADO') continue;
+      if (!canSendNotification(t.cliente, 'EMAIL', 'MANTENIMIENTO')) {
+        console.log(`[Reminder Cron] Maintenance email disabled for client ${t.cliente?.nombreCompleto}. Skipping.`);
+        continue;
+      }
 
       // Check if client has any newer turnos
       const newerTurno = await prisma.turno.findFirst({

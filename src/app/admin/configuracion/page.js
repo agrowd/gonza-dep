@@ -65,7 +65,10 @@ export default function ConfiguracionPage() {
     email_reprogram_subject: '',
     email_reprogram_body: '',
     email_reminder_7days_subject: '',
-    email_reminder_7days_body: ''
+    email_reminder_7days_body: '',
+    wtsp_va_a_avisar_template: '',
+    email_va_a_avisar_subject: '',
+    email_va_a_avisar_body: ''
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
@@ -617,6 +620,17 @@ export default function ConfiguracionPage() {
                 />
               </div>
 
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Mensaje de Seguimiento ("Va a Avisar") por WhatsApp</label>
+                <textarea 
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={configs.wtsp_va_a_avisar_template}
+                  onChange={(e) => setConfigs({ ...configs, wtsp_va_a_avisar_template: e.target.value })}
+                  placeholder="¡Hola [Nombre]! Te escribimos de Gonzalo Depilación Masculina para consultar sobre tu próxima sesión..."
+                  required
+                />
+              </div>
+
               {/* Variable Helper */}
               <div className={styles.variableHelper} style={{ marginBottom: '2rem' }}>
                 <div className={styles.variableTitle}>Variables Automáticas WhatsApp (Toca para copiar):</div>
@@ -785,6 +799,31 @@ export default function ConfiguracionPage() {
                     value={configs.email_reminder_7days_body}
                     onChange={(e) => setConfigs({ ...configs, email_reminder_7days_body: e.target.value })}
                     rows="6"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email 7: Seguimiento Va a Avisar */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#ba68c8' }}>📧 Correo de Seguimiento ("Va a Avisar")</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_va_a_avisar_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_va_a_avisar_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_va_a_avisar_body}
+                    onChange={(e) => setConfigs({ ...configs, email_va_a_avisar_body: e.target.value })}
+                    rows="5"
                     required
                   />
                 </div>

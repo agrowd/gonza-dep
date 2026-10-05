@@ -97,10 +97,57 @@
 }
 
 /* Ficha modal details styling */
+.profileModalContent {
+  width: 100% !important;
+  max-width: 850px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 92vh !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 768px) {
+  .profileModalContent {
+    max-width: calc(100vw - 0.5rem) !important;
+    width: calc(100vw - 0.5rem) !important;
+    max-height: calc(100dvh - 0.6rem) !important;
+    height: calc(100dvh - 0.6rem) !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+  }
+}
+
+.profileHeader {
+  padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .profileHeader {
+    padding: 0.75rem 0.75rem 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+}
+
 .ficheContainer {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .ficheHeader {
@@ -133,6 +180,10 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .cardSectionTitle {
@@ -153,9 +204,138 @@
 }
 
 .modalBody {
+  flex: 1 1 auto;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0 1.5rem 1.5rem 1.5rem;
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.inputGroup input:not([type="checkbox"]):not([type="radio"]),
+.inputGroup select,
+.inputGroup textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.inputGroup input[type="checkbox"],
+.inputGroup input[type="radio"] {
+  width: 1.15rem !important;
+  height: 1.15rem !important;
+  min-width: 1.15rem !important;
+  max-width: 1.15rem !important;
+  flex: 0 0 auto !important;
+  cursor: pointer;
+  margin: 0;
+}
+
+.inputGroup input[type="date"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  display: block;
+  -webkit-appearance: none;
+}
+
+.inputLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+}
+
+.quickActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.notifTypesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.clinicalSessionsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+  grid-column: 1 / -1;
+}
+
+.notifTypesGrid label {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  font-size: 0.85rem !important;
+  cursor: pointer;
+  width: 100%;
+}
+
+.notifTypesGrid label input[type="checkbox"] {
+  width: 1.15rem !important;
+  height: 1.15rem !important;
+  min-width: 1.15rem !important;
+  max-width: 1.15rem !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+.notifTypesGrid label span {
+  flex: 1 1 auto !important;
+  text-align: left !important;
+  white-space: normal !important;
+}
+
+.checkboxRow {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  width: 100% !important;
+  margin-top: 0.75rem;
+  grid-column: 1 / -1;
+}
+
+.checkboxRow input[type="checkbox"] {
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  min-width: 1.2rem !important;
+  max-width: 1.2rem !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  cursor: pointer;
+}
+
+.checkboxRow label {
+  flex: 1 1 auto !important;
+  margin-bottom: 0 !important;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.88rem;
 }
 
 .clientMetaList {
@@ -345,10 +525,19 @@
 
 @media (max-width: 768px) {
   .modalBody {
-    padding: 0 0.65rem 1rem 0.65rem !important;
+    padding: 0 0.5rem 2rem 0.5rem !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
   }
   .cardSection {
-    padding: 0.85rem 0.65rem !important;
+    padding: 0.85rem 0.75rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
   .cardSectionTitle {
     margin-bottom: 0.75rem !important;
@@ -376,16 +565,66 @@
 }
 
 @media (max-width: 600px) {
-  .inputRow {
-    flex-direction: column;
-    gap: 0.75rem;
+  .modalBody {
+    padding: 0 0.35rem 3.5rem 0.35rem !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
-  .inputGroup input,
+  .cardSection {
+    padding: 0.85rem 0.65rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+  .inputRow {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+  }
+  .inputRow > .inputGroup {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .inputGroup {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .inputGroup input:not([type="checkbox"]):not([type="radio"]),
   .inputGroup select,
   .inputGroup textarea {
     font-size: 16px !important;
     user-select: text !important;
     -webkit-user-select: text !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .inputGroup input[type="checkbox"],
+  .inputGroup input[type="radio"] {
+    width: 1.15rem !important;
+    height: 1.15rem !important;
+    min-width: 1.15rem !important;
+    max-width: 1.15rem !important;
+    flex: 0 0 auto !important;
+    cursor: pointer;
+    margin: 0;
+  }
+  .inputGroup input[type="date"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    display: block;
+    -webkit-appearance: none;
   }
   .ficheTitle {
     font-size: 1.2rem;
@@ -395,8 +634,8 @@
     display: grid !important;
     grid-template-columns: 1fr 1fr 1fr !important;
     gap: 0.25rem !important;
-    padding: 0 0.5rem !important;
-    margin-bottom: 0.75rem !important;
+    padding: 0 0.35rem !important;
+    margin-bottom: 0.5rem !important;
     flex-shrink: 0 !important;
     overflow: visible !important;
     width: 100% !important;
@@ -420,6 +659,18 @@
   }
   .tabMobileText {
     display: inline !important;
+  }
+  .clinicalSessionsGrid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+  .notifTypesGrid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+  .quickActionsGrid {
+    grid-template-columns: 1fr !important;
+    gap: 0.6rem !important;
   }
 }
 

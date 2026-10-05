@@ -150,7 +150,8 @@ export async function POST(request) {
       hasOtros,
       otrosTexto,
       otrosPrecio,
-      prevTurnoId
+      prevTurnoId,
+      enviarNotificaciones
     } = body;
 
     if (estado !== 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin || ((!selectedZoneIds || selectedZoneIds.length === 0) && !hasOtros))) {
@@ -232,10 +233,17 @@ export async function POST(request) {
             whatsapp: finalWhatsapp || normalizeWhatsApp(whatsapp),
             email,
             canalAdquisicion: 'ORGANICO',
-            estado: 'ACTIVO'
+            estado: 'ACTIVO',
+            ...(enviarNotificaciones !== undefined ? { enviarNotificaciones: Boolean(enviarNotificaciones) } : {})
           },
           include: { turnos: true }
         });
+      } else if (enviarNotificaciones !== undefined && clientRecord.enviarNotificaciones !== Boolean(enviarNotificaciones)) {
+        await prisma.cliente.update({
+          where: { id: clientRecord.id },
+          data: { enviarNotificaciones: Boolean(enviarNotificaciones) }
+        });
+        clientRecord.enviarNotificaciones = Boolean(enviarNotificaciones);
       }
       finalClienteId = clientRecord.id;
     }

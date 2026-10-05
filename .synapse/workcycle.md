@@ -1482,27 +1482,50 @@
 - [x] Desplegar en servidor VPS en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
 - [x] Registrar Decisión `D-90` en `.synapse/decisions.md` y Error `ERR-35` en `.synapse/errores.md`.
 
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Módulos Prioritarios Mejoras AppWeb)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Implementar Módulo 1 (Ficha: Bloqueo de Clientes): botón de bloqueo/desbloqueo, badge `🚫 (Bloqueado)`, ocultamiento de turnos activos y calendario con días rojos (`dayCellFull`) no clickeables en Autogestión con texto *"No hay turnos disponibles proximamente, volverse a contactar mas adelante para consultar disponibilidad de fechas"* y botón 'Salir'.
+- [x] Implementar Módulo 2 (Clientes: Reseñas de Google y Notificaciones): Checkbox de reseñas en tabla de clientes y modal de turno, filtros (`con_resena`, `sin_resena`), sincronización reactiva con botón `⭐ Mandar Reseña` (ocultamiento al enviar y reaparición al desmarcar).
+- [x] Implementar Módulo 3 (Notificaciones: Matriz Granular de Notificaciones & Plantilla "Va a Avisar"): Interruptor maestro y permisos detallados por canal (WhatsApp, Email) y evento (Alta, Cancelación, Reprogramación, Mantenimiento) mediante helper `canSendNotification`.
+- [x] Integrar plantillas de "Va a Avisar" en `/api/admin/configuracion` y panel de Configuración para WhatsApp y Correo.
+- [x] Verificar compilación local Next.js limpia (`npm run build` 41/41 rutas).
+- [x] Desplegar en servidor Staging VPS (`http://187.127.9.216:3008`).
+- [x] Registrar Decisión `D-91` en `.synapse/decisions.md`.
+
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Alertas Emergentes de Autogestión en Agenda)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver feedback urgente de Gonzalo Siri y Luciano Gómez (`media_1790953830917.png` y `media_1790953845208.png`):
+  1. Reaparición permanente de popups al abrir o recargar la agenda ("Cada vez que abro la agenda me vuelve a mostrar los mensajes emergentes").
+  2. Notificaciones de turnos viejos de agosto ("Y nos aparecen notificaciones de cambios que se hicieron en agosto incluso").
+  3. Formato de fecha en popups en `DD/MM/YYYY` ("La fecha de las notificaciones está como año-mes-dia, ponelo como dia-mes-año").
+  4. Restricción estricta a cambios exclusivos de Autogestión ("Y esas notificaciones solo aparecen con cambios que se hacen por autogestion no? - Sei, exactamente").
+- [x] Persistir IDs de alertas descartadas en `localStorage` (`dismissed_autogestion_alerts`) al presionar "Entendido", "✕" o "Ver Turno ↗".
+- [x] Refactorizar consulta Prisma en `/api/admin/autogestion-alertas` eliminando `{ estado: 'CANCELADO' }` y `{ estado: 'REPROGRAMADO' }` genéricos, filtrando exclusivamente por tags de autogestión (`[CANCELADO_AUTOGESTION]`, `[REPROGRAMADO_AUTOGESTION]`, `- Autogestión]`), excluyendo cambios de administradores (`NOT: { observaciones: { contains: 'Administrador' } }`) y descartando turnos pasados (`fecha >= minTurnoDate`).
+- [x] Formatear fecha a `DD/MM/YYYY` en endpoint (`fechaFormateada`) y en frontend con helper defensivo `formatAlertDate`.
+- [x] Validar compilación local (`npm run build`) con Next.js Turbopack: 41/41 rutas con 0 errores.
+- [x] Desplegar a Staging VPS (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+- [x] Registrar Decisión `D-92` en `.synapse/decisions.md` y Error `ERR-36` en `.synapse/errores.md`.
+
+## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Blindaje Móvil de Ficha de Cliente ABM)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver reporte con capturas (`media_1790956635053.png` a `media_1790956682611.png`): "Arregla este error por el cual esto en vez de adaptarse se hace pequeño y añade scrolls laterales y horizontales".
+- [x] Diagnosticar las causas del encogimiento y doble scroll en la ficha de cliente en móviles.
+- [x] Implementar reglas CSS modulares `.profileModalContent`, `.profileHeader`, `.modalBody` y `.cardSection` para ancho al 94% de pantalla y scroll suave único sin desborde.
+- [x] Registrar Decisión `D-93` en `.synapse/decisions.md` y Error `ERR-37` en `.synapse/errores.md`.
+
 ## 📅 Sesión: 2 de Octubre de 2026 (Seguimiento - Espacio Libre en Vista Diaria Neocita)
 
 ### 🎯 Tareas en curso / Objetivos
 - [x] Atender requerimiento con captura de WhatsApp de Gonzalo Siri (`media_1790959948860.png`): *"Podes hacer que el espacio que dejas para un turno libre sea de dos renglones en lugar de 1 como se ve aca, asi esta mas legible y destacado"*.
 - [x] Diseñar e implementar tarjeta de espacio libre de dos renglones (`.neocitaFreeSlot`) en `agenda.module.css`:
-  - Renglón 1: Horario libre destacado (`🟢 Libre: {startTimeStr} a {endTimeStr} hs`) en verde `#15803d` (0.96rem, peso 800) + Badge de duración estilizado con cronómetro (`⏱️ {durationText}`).
-  - Renglón 2: Leyenda descriptiva (`Disponible para agendar`) en slate `#475569` + Botón de acción directo `+ Agendar` con estilo de píldora interactiva con hover en tono vino/oro de la marca.
-  - Borde izquierdo grueso de 6px sólido verde (`#16a34a`), fondo suave `#f0fdf4`, borde punteado `#86efac`, sombra suave y altura aumentada de ~32px a ~76px para máxima ergonomía táctil en celulares.
-- [x] Reemplazar estilo inline de `free_slot` en `src/app/admin/agenda/page.js` por las clases modulares `.neocitaFreeSlotRowTop`, `.neocitaFreeSlotTime`, `.neocitaFreeSlotDuration`, `.neocitaFreeSlotRowBottom`, `.neocitaFreeSlotLabel`, `.neocitaFreeSlotAction`.
-- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 páginas con 0 errores).
-- [x] Desplegar en Producción (`agenda.depilacionparahombres.com`, puerto 3006) y Staging (`http://187.127.9.216:3008`, puerto 3008).
-- [x] Registrar Decisión `D-94` en `.synapse/decisions.md`.
-- [x] Resolver feedback de Gonzalo Siri (`media_1790963963058.png`): "Además, cada vez que abro la agenda me repite una y otra vez los mismos mensajes emergentes".
-  - Saneamiento en base de datos PostgreSQL (`agenda_db` y `agenda_db_staging`): actualización de `updatedAt = createdAt` para 641 turnos históricos creados antes del 1 de octubre que habían adquirido `updatedAt = hoy` por la migración SQL, descartando falsas alertas de turnos de agosto y septiembre.
-  - Despliegue en `main` de persistencia en `localStorage` (`dismissed_autogestion_alerts`) y filtro estricto por tags de autogestión con exclusión de administradores y formato `DD/MM/YYYY`.
-  - Verificado en Producción real: 0 alertas recurrentes parásitas (`count: 0`), pantalla despejada.
-- [x] Atender feedback de Gonzalo Siri (`media_1790965759459.png`, `media_1790965787650.png`, `media_1790965811260.png`):
-  1. *"El turno libre se lee con doble renglón está perfecto. Lo podrías poner al espacio libre con un color diferente para que se note simple vista"*: Rediseñado `.neocitaFreeSlot` en `agenda.module.css` con paleta ámbar/oro de la marca (`#fffbeb`, `#d97706`, `#f59e0b`, `🟡`, `#92400e`, botón vino `#7a1e1e` con sombra), logrando alto contraste frente al verde de los turnos `SEÑADO`.
-  2. *"Otro error que tira, ahora es que al abrir la agenda me muestra la fecha 23 de julio, en lugar de la fecha del día de hoy"*: Diagnóstico forense en logs de Nginx detectó petición `GET /admin/agenda?date=2026-07-23&view=week` desde el iPhone de Gonzalo (acceso directo guardado en pantalla de inicio desde julio). Se implementó sanitización en el montaje: si `dateParam` es anterior a hoy y no tiene contexto explícito (`turnoId`, `reprogramarTurnoId`, `newTurno`, etc.), se descarta y abre en HOY (`new Date()`, GMT-3) en vista diaria (`'day'`) en móviles, limpiando los parámetros con `window.history.replaceState`.
-  3. Compilación exitosa con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores).
-  4. Registro de Decisión `D-95` en `.synapse/decisions.md` y Errores `ERR-36` y `ERR-37` en `.synapse/errores.md`.
+  - Renglón 1: Horario libre destacado (`🟡 Libre: {startTimeStr} a {endTimeStr} hs`) en ámbar profundo de alto contraste + Badge de duración estilizado con cronómetro (`⏱️ {durationText}`).
+  - Renglón 2: Leyenda descriptiva (`Disponible para agendar`) en `#78350f` + Botón de acción directo `+ Agendar` con estilo de píldora interactiva con hover en tono vino/oro de la marca.
+  - Borde izquierdo grueso de 6px sólido ámbar (`#d97706`), fondo suave `#fffbeb`, borde punteado `#f59e0b`, sombra suave y altura aumentada a ~76px para máxima ergonomía táctil en celulares.
+- [x] Sanitización estricta de fecha al abrir la agenda para descartar accesos directos obsoletos (ej. 23 de julio) y abrir siempre en HOY.
+- [x] Registrar Decisión `D-94` y `D-95` en `.synapse/decisions.md`.
 
 
 

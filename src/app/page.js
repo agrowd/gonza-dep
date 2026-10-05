@@ -64,6 +64,7 @@ export default function Home() {
 
   // Step 2: Selected Zones State
   const [selectedZoneIds, setSelectedZoneIds] = useState([]);
+  const [isClientBlocked, setIsClientBlocked] = useState(false);
 
   // Step 3: Calendar & Availability State (Alta de Turno model)
   const now = new Date();
@@ -134,30 +135,39 @@ export default function Home() {
       setClientChecked(true);
 
       if (data.exists && data.client) {
-        setExistingClient(data.client);
-        // Split name if possible
-        const parts = (data.client.nombreCompleto || '').split(' ');
-        const nom = parts[0] || '';
-        const ape = parts.slice(1).join(' ') || '';
-        const parsedPhone = parsePhoneCountryAndNumber(data.client.whatsapp);
-        setFormData(prev => ({
-          ...prev,
-          nombre: nom,
-          apellido: ape,
-          whatsapp: parsedPhone.number || data.client.whatsapp || '',
-          whatsappCountry: parsedPhone.countryCode || '54',
-          whatsappCustomCode: parsedPhone.customCode || '',
-          dni: data.client.dni || ''
-        }));
-
-        if (data.hasActiveTurno && data.activeTurno) {
-          setActiveTurno(data.activeTurno);
-          setActiveTurnos(data.activeTurnos || [data.activeTurno]);
-        } else {
+        if (data.bloqueado || data.client.bloqueado) {
+          setIsClientBlocked(true);
+          setExistingClient(data.client);
           setActiveTurno(null);
           setActiveTurnos([]);
+        } else {
+          setIsClientBlocked(false);
+          setExistingClient(data.client);
+          // Split name if possible
+          const parts = (data.client.nombreCompleto || '').split(' ');
+          const nom = parts[0] || '';
+          const ape = parts.slice(1).join(' ') || '';
+          const parsedPhone = parsePhoneCountryAndNumber(data.client.whatsapp);
+          setFormData(prev => ({
+            ...prev,
+            nombre: nom,
+            apellido: ape,
+            whatsapp: parsedPhone.number || data.client.whatsapp || '',
+            whatsappCountry: parsedPhone.countryCode || '54',
+            whatsappCustomCode: parsedPhone.customCode || '',
+            dni: data.client.dni || ''
+          }));
+
+          if (data.hasActiveTurno && data.activeTurno) {
+            setActiveTurno(data.activeTurno);
+            setActiveTurnos(data.activeTurnos || [data.activeTurno]);
+          } else {
+            setActiveTurno(null);
+            setActiveTurnos([]);
+          }
         }
       } else {
+        setIsClientBlocked(false);
         // Deferred client: does not exist yet
         setExistingClient(null);
         setActiveTurno(null);
@@ -169,6 +179,20 @@ export default function Home() {
     } finally {
       setSearchingClient(false);
     }
+  };
+
+  const handleSalir = () => {
+    setEmailInput('');
+    setClientChecked(false);
+    setIsClientBlocked(false);
+    setExistingClient(null);
+    setActiveTurno(null);
+    setActiveTurnos([]);
+    setSelectedZoneIds([]);
+    setSelectedDateStr(null);
+    setSelectedSlot(null);
+    setErrorMessage('');
+    setStep(1);
   };
 
   // 4. Handle "Reagendar Turno" with 72hs policy check
@@ -714,8 +738,36 @@ Duración: ${duracionMinutos} min`;
                   </div>
                 </form>
 
+                {/* Blocked Client View in Step 1 */}
+                {clientChecked && existingClient && isClientBlocked && (
+                  <div style={{ background: '#fef2f2', border: '2px solid #ef4444', borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px', boxShadow: '0 4px 16px rgba(239, 68, 68, 0.1)' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#991b1b', marginBottom: '12px' }}>
+                      Consulta de Disponibilidad
+                    </h3>
+                    <div style={{ background: '#fee2e2', border: '1px solid #f87171', color: '#991b1b', padding: '16px 20px', borderRadius: '12px', fontWeight: '700', fontSize: '1rem', lineHeight: '1.5', marginBottom: '20px' }}>
+                      No hay turnos disponibles proximamente, volverse a contactar mas adelante para consultar disponibilidad de fechas
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={handleSalir}
+                        style={{ background: '#64748b', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 28px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Salir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStep(3)}
+                        style={{ background: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Ver Calendario de Agenda →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Active Turnos List */}
-                {clientChecked && existingClient && activeTurnos && activeTurnos.length > 0 && (
+                {clientChecked && existingClient && !isClientBlocked && activeTurnos && activeTurnos.length > 0 && (
                   <div style={{ marginBottom: '24px' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px' }}>
                       {activeTurnos.length === 1 ? '¡Tenés un turno activo agendado!' : `¡Tenés ${activeTurnos.length} turnos activos agendados!`}
@@ -826,7 +878,7 @@ Duración: ${duracionMinutos} min`;
                 )}
 
                 {/* Client Exists but NO Active Turno */}
-                {clientChecked && existingClient && (!activeTurnos || activeTurnos.length === 0) && (
+                {clientChecked && existingClient && !isClientBlocked && (!activeTurnos || activeTurnos.length === 0) && (
                   <div style={{ background: '#ffffff', border: '1.5px solid #86efac', borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#166534', marginBottom: '8px' }}>
                       ¡Hola {existingClient.nombreCompleto}!
@@ -1034,6 +1086,13 @@ Duración: ${duracionMinutos} min`;
                   </p>
                 </div>
 
+                {/* Blocked Client Warning above Calendar */}
+                {isClientBlocked && (
+                  <div style={{ background: '#fee2e2', border: '2px solid #ef4444', color: '#991b1b', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', fontWeight: '800', fontSize: '1.05rem', lineHeight: '1.5', textAlign: 'center', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.15)' }}>
+                    No hay turnos disponibles proximamente, volverse a contactar mas adelante para consultar disponibilidad de fechas
+                  </div>
+                )}
+
                 {/* Calendar Card */}
                 <div className={styles.calendarContainer}>
                   {/* Month Navigation */}
@@ -1081,7 +1140,10 @@ Duración: ${duracionMinutos} min`;
                       let cellClass = styles.dayCellDisabled;
                       let isClickable = false;
 
-                      if (dayInfo.disponible) {
+                      if (isClientBlocked) {
+                        cellClass = `${styles.dayCell} ${styles.dayCellFull}`;
+                        isClickable = false;
+                      } else if (dayInfo.disponible) {
                         cellClass = isSelected ? `${styles.dayCell} ${styles.dayCellSelected}` : `${styles.dayCell} ${styles.dayCellAvailable}`;
                         isClickable = true;
                       } else if (dayInfo.lleno || dayInfo.motivo === 'DIA_LLENO') {
@@ -1096,7 +1158,7 @@ Duración: ${duracionMinutos} min`;
                           key={dateStr}
                           className={cellClass}
                           onClick={() => {
-                            if (isClickable) {
+                            if (!isClientBlocked && isClickable) {
                               setSelectedDateStr(dateStr);
                               setSelectedSlot(null);
                               setTimeout(() => {
@@ -1108,21 +1170,31 @@ Duración: ${duracionMinutos} min`;
                             }
                           }}
                           title={
-                            dayInfo.disponible
-                              ? `${dayInfo.slots?.length || 0} horarios disponibles`
-                              : (dayInfo.lleno ? 'Día completo sin huecos disponibles' : (dayInfo.motivo === 'DIA_CERRADO' ? 'Día aún no abierto para este importe' : 'No disponible'))
+                            isClientBlocked
+                              ? 'No hay turnos disponibles proximamente'
+                              : (dayInfo.disponible
+                                ? `${dayInfo.slots?.length || 0} horarios disponibles`
+                                : (dayInfo.lleno ? 'Día completo sin huecos disponibles' : (dayInfo.motivo === 'DIA_CERRADO' ? 'Día aún no abierto para este importe' : 'No disponible')))
                           }
                         >
                           <span>{dayNumber}</span>
-                          {dayInfo.disponible && (
-                            <span className={styles.daySlotCount}>
-                              {dayInfo.slots?.length || 0}hs
-                            </span>
-                          )}
-                          {dayInfo.lleno && (
+                          {isClientBlocked ? (
                             <span style={{ fontSize: '0.62rem', fontWeight: '800', marginTop: '2px' }}>
                               Lleno
                             </span>
+                          ) : (
+                            <>
+                              {dayInfo.disponible && (
+                                <span className={styles.daySlotCount}>
+                                  {dayInfo.slots?.length || 0}hs
+                                </span>
+                              )}
+                              {dayInfo.lleno && (
+                                <span style={{ fontSize: '0.62rem', fontWeight: '800', marginTop: '2px' }}>
+                                  Lleno
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
                       );
@@ -1147,7 +1219,7 @@ Duración: ${duracionMinutos} min`;
                 </div>
 
                 {/* Available Slots Section for Selected Day */}
-                {selectedDateStr && (
+                {!isClientBlocked && selectedDateStr && (
                   <div className={styles.slotsContainer} id="slots-section">
                     <div className={styles.slotsHeader}>
                       <div className={styles.slotsTitle}>
@@ -1184,39 +1256,51 @@ Duración: ${duracionMinutos} min`;
                 )}
 
                 {/* Actions Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (rescheduleMode) {
-                        setStep(1);
-                        setRescheduleMode(false);
-                      } else {
-                        setStep(2);
-                      }
-                    }}
-                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer' }}
-                  >
-                    ← Volver
-                  </button>
+                {isClientBlocked ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px' }}>
+                    <button
+                      type="button"
+                      onClick={handleSalir}
+                      style={{ background: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 40px', fontSize: '1.05rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.25)' }}
+                    >
+                      Salir
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (rescheduleMode) {
+                          setStep(1);
+                          setRescheduleMode(false);
+                        } else {
+                          setStep(2);
+                        }
+                      }}
+                      style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      ← Volver
+                    </button>
 
-                  <button
-                    type="button"
-                    disabled={!selectedSlot}
-                    onClick={() => setStep(4)}
-                    style={{
-                      background: !selectedSlot ? '#cbd5e1' : 'var(--color-gold)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '12px 24px',
-                      fontWeight: '800',
-                      cursor: !selectedSlot ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    Continuar a Confirmación →
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      disabled={!selectedSlot}
+                      onClick={() => setStep(4)}
+                      style={{
+                        background: !selectedSlot ? '#cbd5e1' : 'var(--color-gold)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '12px 24px',
+                        fontWeight: '800',
+                        cursor: !selectedSlot ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Continuar a Confirmación →
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

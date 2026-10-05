@@ -34,6 +34,14 @@ model Cliente {
   fechaNacimiento  DateTime?
   sesionesPrevias  Int            @default(0)
   enviarNotificaciones Boolean @default(true)
+  bloqueado            Boolean        @default(false)
+  recibioResena        Boolean        @default(false)
+  notifWhatsapp        Boolean        @default(true)
+  notifEmail           Boolean        @default(true)
+  notifAltaTurno       Boolean        @default(true)
+  notifCancelacion     Boolean        @default(true)
+  notifReprogramacion  Boolean        @default(true)
+  notifMantenimiento   Boolean        @default(true)
   turnos           Turno[]
   notificaciones   Notificacion[]
   conversaciones   ConversacionWsp[]
