@@ -258,3 +258,21 @@
 4. Compilación con Next.js Turbopack (`npm run build`): 41/41 rutas con 0 errores en 57s.
 5. Decisiones `D-100` y Errores `ERR-42` registrados en `.synapse/decisions.md` y `.synapse/errores.md`.
 
+## Sesión: 6 de Octubre de 2026 - Actualización de Enlace Oficial de Google Maps en Autogestión
+
+### Requerimiento del Usuario:
+- Mensaje y captura de WhatsApp (`media_1791287435273.png`): Gonzalo/Luciano indica *"Me parece que no lo dirije correctamente"* y comparte el enlace acortado exacto: `https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb`.
+- Solicitud: *"Cambia la url de google maps por esta que es la real https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb"*.
+
+### Implementación Realizada:
+1. En `src/app/page.js`:
+   - Enlace de Google Maps en el pie de página de autogestión actualizado de la búsqueda genérica `https://maps.google.com/?q=Parana+597+Buenos+Aires` a la URL directa y canónica oficial de la ficha comercial: `https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb`.
+   - Mantenimiento intacto de atributos de seguridad y apertura en pestaña nueva (`target="_blank" rel="noopener noreferrer"`).
+2. Validación técnica:
+   - Compilación exitosa en local con Turbopack (`npm run build`, 41/41 rutas con 0 errores).
+3. Memoria persistente:
+   - Decisión `D-101` documentada y fijada con estado `🔒 LOCKED` en `.synapse/decisions.md`.
+4. Despliegue:
+   - Empujado a ramas `main` y `staging`.
+   - Despliegue automatizado en VPS Hostinger (`187.127.9.216`) para Producción (puerto 3006) y Staging (puerto 3008).
+

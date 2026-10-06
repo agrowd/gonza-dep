@@ -1532,7 +1532,7 @@ Duración: ${duracionMinutos} min`;
                 <span>🌐</span> Sitio Web
               </a>
               <a
-                href="https://maps.google.com/?q=Parana+597+Buenos+Aires"
+                href="https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.footerLink}

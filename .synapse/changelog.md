@@ -302,4 +302,8 @@
 - Protección en la búsqueda de notificaciones previas para turnos reprogramados (`fechaEnvio >= now - 3 días`).
 - Incorporación de parámetro `force = true` para ejecución manual forzada de recordatorios fuera de la ventana horaria.
 
+## [1.2.4] - 2026-10-06
+### Changed
+- Actualización de enlace de Google Maps en el pie de página de autogestión (`src/app/page.js`) a la URL canónica oficial `https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb` para apertura directa de la ficha comercial de Paraná 597 (D-101).
+
 

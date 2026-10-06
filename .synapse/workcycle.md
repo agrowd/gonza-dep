@@ -1575,3 +1575,14 @@
 - [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 57s).
 - [x] Registrar Decisión `D-100` en `.synapse/decisions.md` y Error `ERR-42` en `.synapse/errores.md`.
 
+## 📅 Sesión: 6 de Octubre de 2026 - Actualización de Enlace Oficial de Google Maps en Autogestión
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Recibir requerimiento del usuario y captura de WhatsApp (`media_1791287435273.png`): "Cambia la url de google maps por esta que es la real https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb" ("Me parece que no lo dirije correctamente").
+- [x] Reemplazar la URL de búsqueda genérica `https://maps.google.com/?q=Parana+597+Buenos+Aires` en el pie de página de autogestión (`src/app/page.js`) por el enlace acortado canónico oficial de Google Maps (`https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb`).
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores).
+- [x] Registrar Decisión `D-101` en `.synapse/decisions.md`.
+- [x] Empujar cambios a GitHub en ramas `main` y `staging`.
+- [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) en Producción (puerto 3006) y Staging (puerto 3008) mediante `scratch/deploy_both.mjs`.
+- [x] Verificar disponibilidad HTTP 200 OK en ambos entornos.
+
