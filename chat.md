@@ -276,3 +276,38 @@
    - Empujado a ramas `main` y `staging`.
    - Despliegue automatizado en VPS Hostinger (`187.127.9.216`) para Producción (puerto 3006) y Staging (puerto 3008).
 
+## Sesión: 6 de Octubre de 2026 - Corrección del Enlace Oficial de Reseña de Google Maps en Agenda
+
+### Requerimiento del Usuario:
+- Reporte de Luciano Gómez (`media_1791292895762.png`): *"Y el mensaje de la reseña sigue llevando a un link incorrecto"*.
+- El mensaje predeterminado de WhatsApp al hacer clic en "⭐ Mandar Reseña" en el modal de detalle del turno de `/admin/agenda` tenía la URL obsoleta `https://g.page/r/gonzalo-depilacion/review`.
+
+### Implementación Realizada:
+1. En `src/app/admin/agenda/page.js`:
+   - Reemplazada la URL por el enlace canónico de Google Maps provisto: `https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb`.
+2. Validación y despliegue:
+   - Sincronizado y compilado en el servidor VPS con Turbopack tanto en Producción como en Staging.
+   - Decisión `D-102` y Error `ERR-43` registrados en `.synapse/`.
+
+## Sesión: 6 de Octubre de 2026 - Erradicación de Letras y Enlaces Azules en Correos Transaccionales (Dorado Ámbar #d4a54d)
+
+### Requerimiento del Usuario:
+- Gonzalo Siri envió 3 capturas de correos recibidos en iOS (`media_1791315239420.png`, `media_1791315253717.png`, `media_1791315270876.png`) indicando:
+  - *"Puedes sacarle las letras azules y ponerlas con otro color para que haga contraste"*
+  - *"En confirmación de retorno, pasa lo mismo. Fíjate que debe estar pasando con todos los mails antes, estaba resuelto con un kolor que se leía"*
+  - *"Pero hasta hace una semana atrás lo tomaba perfecto, creo que era un color naranja que ponía. Te busco los mails viejos que ahí tiene que figurar"*
+
+### Implementación Realizada:
+1. En `src/lib/email.js`:
+   - Incorporado el generador base `buildDarkTemplateEmailHtml` con directivas anti-detección:
+     - `<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">`.
+     - Reglas CSS globales para `x-apple-data-detectors`, `a[href^="calendar:"]`, `u + #body a` y `#MessageViewBody a` con `color: #d4a54d !important; text-decoration: none !important;`.
+   - En `applyEmailTemplatePlaceholders`: `{fecha}`, `{día}` y `{horario}` envueltos en dummy-links `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;">` para impedir que Safari Mail inyecte detectores nativos azules de calendario.
+   - En `formatEmailParagraphs`: Detección regex de URLs planas (ej: `https://agenda.depilacionparahombres.com/`) convirtiéndolas a enlaces estilizados con `color: #d4a54d !important; text-decoration: underline !important; font-weight: bold;`.
+   - Migración completa de todas las plantillas de correo transaccional (`sendNoShowEmail`, `sendConfirmationEmail`, `sendCancellationEmail`, `sendMaintenanceEmail`, `sendRescheduleEmail`, `sendReminder7DaysEmail`) para utilizar `buildDarkTemplateEmailHtml`.
+2. Validación técnica:
+   - Compilación con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 53s).
+3. Memoria persistente:
+   - Decisión `D-103` registrada en `.synapse/decisions.md` y Error `ERR-44` en `.synapse/errores.md`.
+
+

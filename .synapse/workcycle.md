@@ -1599,3 +1599,15 @@
 - [x] Verificar disponibilidad HTTP y confirmación de la cadena canónica en el bundle JS compilado.
 - [x] Documentar Decisión `D-102` y Error `ERR-43` en `.synapse/`.
 
+## 📅 Sesión: 6 de Octubre de 2026 - Erradicación de Letras y Enlaces Azules en Correos Transaccionales (Dorado Ámbar #d4a54d)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender reporte urgente de Gonzalo Siri con 3 capturas (`media_1791315239420.png`, `media_1791315253717.png`, `media_1791315270876.png`) sobre letras azules ilegibles en correos de inasistencia, confirmación, etc. contra fondo oscuro.
+- [x] Implementar directivas anti-detección en `src/lib/email.js`: `<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">`, selectores `x-apple-data-detectors`, `a[href^="calendar:"]`, `u + #body a`, `#MessageViewBody a` forzando `#d4a54d !important;`.
+- [x] Envolver `{fecha}`, `{día}`, `{horario}` en dummy-links inalterables `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;">` en `applyEmailTemplatePlaceholders`.
+- [x] Convertir URLs planas a enlaces estilizados dorados en `formatEmailParagraphs`.
+- [x] Migrar `sendNoShowEmail`, `sendConfirmationEmail`, `sendCancellationEmail`, `sendMaintenanceEmail`, `sendRescheduleEmail` y `sendReminder7DaysEmail` a la función base `buildDarkTemplateEmailHtml`.
+- [x] Verificar compilación local con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 53s).
+- [x] Registrar Decisión `D-103` en `.synapse/decisions.md` y Error `ERR-44` en `.synapse/errores.md`.
+
+

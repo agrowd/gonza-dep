@@ -440,3 +440,19 @@
 **Root Cause:** Google Business discontinuó el dominio abreviado `g.page/r/...`. En `src/app/admin/agenda/page.js` (línea 4554), el botón interactivo de pedir reseña seguía usando la URL estática antigua en la plantilla del mensaje de WhatsApp.
 **Solución:** Se reemplazó por la URL oficial de la ficha de Google Maps provista por Gonzalo y Luciano: `https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb`. Se compiló con Turbopack y desplegó en producción (`gonzalo-agenda`, puerto 3006) y staging (`gonzalo-agenda-staging`, puerto 3008).
 **Estado:** ✅ FIXED
+
+## ERR-44: Letras y enlaces azules oscuros ilegibles en correos transaccionales por detectores de Apple Mail y estilos por defecto (2026-10-06)
+**Síntoma:** Gonzalo Siri envió 3 capturas de correos en modo oscuro recibidos en su iPhone (`media_1791315239420.png`, `media_1791315253717.png`, `media_1791315270876.png`) reportando: *"Puedes sacarle las letras azules y ponerlas con otro color para que haga contraste"*, *"En confirmación de retorno, pasa lo mismo. Fíjate que debe estar pasando con todos los mails antes, estaba resuelto con un kolor que se leía"*, *"Pero hasta hace una semana atrás lo tomaba perfecto, creo que era un color naranja que ponía"*. En los correos de inasistencia, confirmación, etc., las fechas (ej: `Martes, 24 De Noviembre De 2026`), horarios (`14:00 hs`) y URLs de autogestión aparecían en azul oscuro, volviéndose completamente invisibles contra el fondo `#1d1d1d`.
+**Root Cause:**
+1. Al refactorizar las plantillas de email a dinámicas desde BD (`prisma.configuracion`, decisión D-85), se habían simplificado los wrappers de marcado HTML, perdiéndose los dummy-links (`<a href="#" class="dummy-link">`) que blindaban fechas y horas.
+2. Los clientes de correo WebKit / iOS Mail analizan el texto con heurísticas de "Data Detectors", convirtiendo automáticamente cualquier fecha u hora en un enlace `calendar:` nativo y asignándole el color azul del sistema (`#007aff` o azul oscuro).
+3. En `sendNoShowEmail`, la URL del portal de autogestión `https://agenda.depilacionparahombres.com/` se incluía como texto plano; los clientes de correo la autolinkeaban con el azul por defecto de HTML (`#0000ee`), casi invisible sobre `#1d1d1d`.
+4. El encabezado de los correos carecía de la etiqueta `<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">` y reglas CSS específicas para `x-apple-data-detectors` y clientes de Gmail/Outlook.
+**Solución:**
+1. En `src/lib/email.js`, se creó el helper unificado `buildDarkTemplateEmailHtml` con directivas anti-detección: meta tag `format-detection`, estilos CSS específicos para `x-apple-data-detectors`, `a[href^="calendar:"]`, `u + #body a` y `#MessageViewBody a` forzando `#d4a54d !important;`.
+2. En `applyEmailTemplatePlaceholders`, se envolvieron `{fecha}`, `{día}` y `{horario}` en dummy-links con `style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"` impidiendo que WebKit inyecte etiquetas con estilos propios.
+3. En `formatEmailParagraphs`, se agregó detección por regex de URLs planas transformándolas en enlaces explícitos con `color: #d4a54d !important; font-weight: bold;`.
+4. Se migraron todos los correos transaccionales a `buildDarkTemplateEmailHtml`.
+**Commit:** `próximo commit`
+**Estado:** ✅ FIXED
+

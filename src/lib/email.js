@@ -42,7 +42,14 @@ export function formatEmailParagraphs(rawText) {
     .filter(Boolean);
     
   return lines
-    .map(line => `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">${line}</p>`)
+    .map(line => {
+      // Auto-detectar URLs planas y convertirlas a enlaces estilizados con dorado de marca #d4a54d
+      const withLinks = line.replace(/(<a\b[^>]*>.*?<\/a>)|(https?:\/\/[^\s<"']+)/gi, (match, anchor, url) => {
+        if (anchor) return anchor;
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #d4a54d !important; text-decoration: underline !important; font-weight: bold; word-break: break-all;">${url}</a>`;
+      });
+      return `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">${withLinks}</p>`;
+    })
     .join('');
 }
 
@@ -55,13 +62,14 @@ export function applyEmailTemplatePlaceholdersPlain(templateText, clientName = '
   const { fecha, horaInicio, horaFin, zonas, valorSeña, valorTotal } = turnDetails || {};
 
   const dateObj = fecha ? new Date(fecha) : new Date();
-  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
+  const rawDateStr = dateObj.toLocaleDateString('es-ES', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC'
   });
+  const dateFormatted = rawDateStr ? (rawDateStr.charAt(0).toUpperCase() + rawDateStr.slice(1)) : '';
 
   const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
   const diaFormatted = rawWeekday ? (rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1)) : '';
@@ -94,6 +102,8 @@ export function applyEmailTemplatePlaceholdersPlain(templateText, clientName = '
 
 /**
  * Replaces placeholders in HTML body strings with styled elements.
+ * Envuelve fechas, días y horarios en dummy-links en color dorado corporativo #d4a54d
+ * para blindarlos contra los detectores automáticos de Safari/iOS Mail y Gmail que los pintan de azul.
  */
 export function applyEmailTemplatePlaceholders(templateText, clientName = '', turnDetails = {}, address = '') {
   if (!templateText) return '';
@@ -101,13 +111,14 @@ export function applyEmailTemplatePlaceholders(templateText, clientName = '', tu
   const { fecha, horaInicio, horaFin, zonas, valorSeña, valorTotal } = turnDetails || {};
 
   const dateObj = fecha ? new Date(fecha) : new Date();
-  const dateFormatted = dateObj.toLocaleDateString('es-ES', {
+  const rawDateStr = dateObj.toLocaleDateString('es-ES', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC'
   });
+  const dateFormatted = rawDateStr ? (rawDateStr.charAt(0).toUpperCase() + rawDateStr.slice(1)) : '';
 
   const rawWeekday = dateObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
   const diaFormatted = rawWeekday ? (rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1)) : '';
@@ -128,14 +139,141 @@ export function applyEmailTemplatePlaceholders(templateText, clientName = '', tu
 
   return templateText
     .replace(/(\{|\[)(cliente|nombre|Nombre|Cliente)(\}|\])/gi, `<strong style="color: #ffffff !important;">${clientName || 'Cliente'}</strong>`)
-    .replace(/(\{|\[)(día|dia|Día|Dia)(\}|\])/gi, `<strong style="color: #d4a54d !important; text-transform: capitalize;">${diaFormatted}</strong>`)
-    .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, `<strong style="color: #ffffff !important; text-transform: capitalize;">${dateFormatted}</strong>`)
-    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])/gi, `<strong style="color: #d4a54d !important;">${horaStr} hs</strong>`)
+    .replace(/(\{|\[)(día|dia|Día|Dia)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; text-transform: capitalize; font-weight: bold;">${diaFormatted}</strong></a>`)
+    .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; text-transform: capitalize; font-weight: bold;">${dateFormatted}</strong></a>`)
+    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaStr} hs</strong></a>`)
     .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
     .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, `<strong style="color: #a5d6a7 !important;">$${señaNum.toLocaleString('es-AR')}</strong>`)
     .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, `<strong style="color: #ffb74d !important;">$${saldoNum.toLocaleString('es-AR')}</strong>`)
     .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, `<strong style="color: #ffffff !important;">$${totalNum.toLocaleString('es-AR')}</strong>`)
-    .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, `<strong style="color: #ffffff !important;">${addrStr}</strong>`);
+    .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #ffffff !important;">${addrStr}</strong></a>`);
+}
+
+/**
+ * Construye la plantilla HTML base responsiva para correos en tema oscuro, con detalles dorados corporativos (#d4a54d),
+ * supresión explícita de detectores automáticos azules en WebKit/iOS Mail y alto contraste.
+ */
+export function buildDarkTemplateEmailHtml({ subject, clientName = '', formattedBodyHtml = '', includeGreeting = true }) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <meta name="color-scheme" content="dark light">
+  <meta name="supported-color-schemes" content="dark light">
+  <title>${subject}</title>
+  <style>
+    body {
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #121212;
+      color: #f0ede6;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Enlaces generales y autolinks en dorado/ámbar #d4a54d */
+    a, a:link, a:visited, a:hover, a:active {
+      color: #d4a54d !important;
+      text-decoration: underline !important;
+    }
+
+    /* Enlaces inertes de fecha/hora/dirección sin subrayado */
+    a.dummy-link,
+    a.dummy-link:link,
+    a.dummy-link:visited,
+    a.dummy-link:hover,
+    a.dummy-link:active {
+      color: #d4a54d !important;
+      text-decoration: none !important;
+      cursor: default !important;
+      pointer-events: none !important;
+      border: none !important;
+    }
+
+    /* Supresión estricta de letras azules de detectores automáticos de iOS / Apple Mail */
+    x-apple-data-detectors,
+    x-apple-data-detectors a,
+    .x-apple-data-detectors a,
+    a[x-apple-data-detectors],
+    a[href^="x-apple-data-detectors"],
+    a[href^="calendar:"],
+    a[href^="tel:"],
+    a[href^="sms:"] {
+      color: #d4a54d !important;
+      text-decoration: none !important;
+      font-size: inherit !important;
+      font-family: inherit !important;
+      font-weight: inherit !important;
+      line-height: inherit !important;
+    }
+
+    /* Supresión de color azul en Gmail, Outlook y Samsung Mail */
+    u + #body a,
+    #MessageViewBody a {
+      color: #d4a54d !important;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background-color: #1d1d1d;
+      border: 1px solid #d4a54d;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .header {
+      background-color: #282a2b;
+      border-bottom: 2px solid #d4a54d;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      color: #d4a54d;
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .content {
+      padding: 40px 30px;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: bold;
+      color: #ffffff;
+      margin-bottom: 20px;
+    }
+    .footer {
+      background-color: #121212;
+      padding: 20px 30px;
+      text-align: center;
+      font-size: 12px;
+      color: #777777;
+      border-top: 1px solid #282a2b;
+    }
+  </style>
+</head>
+<body id="body">
+  <div class="container">
+    <div class="header">
+      <h1>GONZALO DEPILACIÓN LÁSER</h1>
+    </div>
+    <div class="content">
+      ${includeGreeting && clientName ? `<div class="greeting">Hola ${clientName},</div>` : ''}
+      ${formattedBodyHtml}
+    </div>
+    <div class="footer">
+      &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
+      Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
 /**
@@ -168,39 +306,12 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${subject}</title>
-      <style>
-        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
-        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
-        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
-        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
-        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>GONZALO DEPILACIÓN LÁSER</h1>
-        </div>
-        <div class="content">
-          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
-          ${formattedBodyHtml}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = buildDarkTemplateEmailHtml({
+    subject,
+    clientName: clientName || 'Cliente',
+    formattedBodyHtml,
+    includeGreeting: true
+  });
 
   await transporter.sendMail({
     from,
@@ -244,40 +355,12 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${subject}</title>
-      <style>
-        body { font-family: 'Outfit', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-        a, a:link, a:visited, a:hover, a:active { color: #ffffff !important; text-decoration: none !important; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
-        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
-        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
-        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
-        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>GONZALO DEPILACIÓN LÁSER</h1>
-        </div>
-        <div class="content">
-          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
-          ${formattedBodyHtml}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = buildDarkTemplateEmailHtml({
+    subject,
+    clientName: clientName || 'Cliente',
+    formattedBodyHtml,
+    includeGreeting: true
+  });
 
   await transporter.sendMail({
     from,
@@ -323,39 +406,12 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${subject}</title>
-      <style>
-        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
-        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
-        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
-        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
-        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>GONZALO DEPILACIÓN LÁSER</h1>
-        </div>
-        <div class="content">
-          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
-          ${formattedBodyHtml}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = buildDarkTemplateEmailHtml({
+    subject,
+    clientName: clientName || 'Cliente',
+    formattedBodyHtml,
+    includeGreeting: true
+  });
 
   await transporter.sendMail({
     from,
@@ -422,12 +478,16 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
 
   const htmlContent = `
     <!DOCTYPE html>
-    <html>
+    <html lang="es">
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
       <title>Recibo Comercial - Gonzalo Depilación</title>
       <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; color: #111111; margin: 0; padding: 20px; }
+        a, a:link, a:visited { color: #111111 !important; text-decoration: none !important; }
+        x-apple-data-detectors, x-apple-data-detectors a { color: #111111 !important; text-decoration: none !important; }
         .receipt-container { max-width: 620px; margin: 0 auto; background-color: #ffffff; border: 2px solid #333333; padding: 20px; box-sizing: border-box; }
         .header-box { border: 1px solid #777777; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .header-left { width: 42%; font-size: 12px; line-height: 1.4; }
@@ -533,37 +593,12 @@ export async function sendMaintenanceEmail(clientEmail, customSubject, customBod
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, 'Cliente', {});
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${subject}</title>
-      <style>
-        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; }
-        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
-        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
-        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
-        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>GONZALO DEPILACIÓN LÁSER</h1>
-        </div>
-        <div class="content">
-          ${formattedBodyHtml}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = buildDarkTemplateEmailHtml({
+    subject,
+    clientName: '',
+    formattedBodyHtml,
+    includeGreeting: false
+  });
 
   await transporter.sendMail({
     from,
@@ -604,39 +639,12 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${subject}</title>
-      <style>
-        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; }
-        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
-        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
-        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
-        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
-        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>GONZALO DEPILACIÓN LÁSER</h1>
-        </div>
-        <div class="content">
-          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
-          ${formattedBodyHtml}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = buildDarkTemplateEmailHtml({
+    subject,
+    clientName: clientName || 'Cliente',
+    formattedBodyHtml,
+    includeGreeting: true
+  });
 
   await transporter.sendMail({
     from,
@@ -677,39 +685,12 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails, address);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${subject}</title>
-      <style>
-        body { font-family: 'Outfit', 'Inter', sans-serif; background-color: #121212; color: #f0ede6; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: #1d1d1d; border: 1px solid #d4a54d; border-radius: 8px; overflow: hidden; }
-        .header { background-color: #282a2b; border-bottom: 2px solid #d4a54d; padding: 30px; text-align: center; }
-        .header h1 { color: #d4a54d; margin: 0; font-size: 24px; font-weight: 700; }
-        .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
-        .greeting { font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 20px; }
-        .footer { background-color: #121212; padding: 20px 30px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #282a2b; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>GONZALO DEPILACIÓN LÁSER</h1>
-        </div>
-        <div class="content">
-          <div class="greeting">Hola ${clientName || 'Cliente'},</div>
-          ${formattedBodyHtml}
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br>
-          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = buildDarkTemplateEmailHtml({
+    subject,
+    clientName: clientName || 'Cliente',
+    formattedBodyHtml,
+    includeGreeting: true
+  });
 
   await transporter.sendMail({
     from,
