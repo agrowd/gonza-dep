@@ -1585,4 +1585,17 @@
 - [x] Empujar cambios a GitHub en ramas `main` y `staging`.
 - [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) en Producción (puerto 3006) y Staging (puerto 3008) mediante `scratch/deploy_both.mjs`.
 - [x] Verificar disponibilidad HTTP 200 OK en ambos entornos.
+- [x] Auditoría de estado y avance de módulos según la jerarquía oficial del documento maestro `Mejoras AppWeb.docx` (`.synapse/mejoras_appweb.md`): 5 módulos principales completados al 100%, 1 módulo parcialmente avanzado (Notificaciones), y 4 módulos pendientes (Gastos, Configuración Avanzada, Roles/Accesos y Multioperador/Agendas Paralelas).
+
+## 📅 Sesión: 6 de Octubre de 2026 - Corrección del Enlace Oficial de Reseña de Google Maps en Agenda
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender reporte de Luciano Gómez (`media_1791292895762.png`): *"Y el mensaje de la reseña sigue llevando a un link incorrecto"*.
+- [x] Identificar la plantilla del mensaje de WhatsApp generado al hacer clic en el botón ⭐ "Mandar Reseña" en el modal de detalle del turno de `/admin/agenda`.
+- [x] Reemplazar la URL obsoleta `https://g.page/r/gonzalo-depilacion/review` por la URL oficial provista: `https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb` en `src/app/admin/agenda/page.js` (línea 4554).
+- [x] Sincronizar archivo con el servidor VPS (`187.127.9.216`) en Producción (`/srv/gonzalo-dep`) y Staging (`/srv/gonzalo-dep-staging`).
+- [x] Compilar exitosamente con Turbopack en Producción (`npm run build`, 41/41 rutas en 27.6s) y Staging (12.0s).
+- [x] Reiniciar servicios PM2: `gonzalo-agenda` (PID 1533780) y `gonzalo-agenda-staging` (PID 1534184).
+- [x] Verificar disponibilidad HTTP y confirmación de la cadena canónica en el bundle JS compilado.
+- [x] Documentar Decisión `D-102` y Error `ERR-43` en `.synapse/`.
 

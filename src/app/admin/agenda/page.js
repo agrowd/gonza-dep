@@ -4551,7 +4551,7 @@ export default function AgendaPage() {
                         type="button"
                         onClick={async () => {
                           const clientName = selectedTurno.cliente?.nombreCompleto?.split(' ')[0] || 'Hola';
-                          const reviewMsg = `¡Hola ${clientName}! Esperamos que hayas tenido una excelente sesión en Gonzalo Depilación Masculina ✨ Nos ayudaría muchísimo que nos dejes tu opinión y reseña en Google: https://g.page/r/gonzalo-depilacion/review ¡Muchas gracias!`;
+                          const reviewMsg = `¡Hola ${clientName}! Esperamos que hayas tenido una excelente sesión en Gonzalo Depilación Masculina ✨ Nos ayudaría muchísimo que nos dejes tu opinión y reseña en Google: https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb ¡Muchas gracias!`;
                           const cleanPhone = selectedTurno.cliente?.whatsapp?.replace(/\D/g, '');
                           const link = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(reviewMsg)}`;
                           window.open(link, '_blank');

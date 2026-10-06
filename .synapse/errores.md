@@ -434,3 +434,9 @@
 4. En `src/app/admin/agenda/page.js`, se flexibilizaron las filas de WhatsApp, Email y la tarjeta clínica con `min-width: 0`, `wordBreak: 'break-all'`, `flexShrink: 0` y fuentes de 13-14px para selectors e inputs nativos.
 **Commit:** `d9c0e21`
 **Estado:** ✅ FIXED
+
+## ERR-43: Enlace Obsoleto de Google Maps / Reseña en Botón "⭐ Mandar Reseña" de la Agenda (06/10/2026)
+**Síntoma:** Luciano Gómez reportó (`media_1791292895762.png`): *"Y el mensaje de la reseña sigue llevando a un link incorrecto"*. En el mensaje enviado por WhatsApp figuraba `https://g.page/r/gonzalo-depilacion/review`, el cual no abría la ficha de reseñas.
+**Root Cause:** Google Business discontinuó el dominio abreviado `g.page/r/...`. En `src/app/admin/agenda/page.js` (línea 4554), el botón interactivo de pedir reseña seguía usando la URL estática antigua en la plantilla del mensaje de WhatsApp.
+**Solución:** Se reemplazó por la URL oficial de la ficha de Google Maps provista por Gonzalo y Luciano: `https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb`. Se compiló con Turbopack y desplegó en producción (`gonzalo-agenda`, puerto 3006) y staging (`gonzalo-agenda-staging`, puerto 3008).
+**Estado:** ✅ FIXED
