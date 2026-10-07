@@ -4,6 +4,14 @@ import { verifySessionToken } from '@/lib/auth.js';
 import SidebarNav from './SidebarNav.js';
 import styles from './layout.module.css';
 
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
+};
+
 export default async function AdminLayout({ children }) {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('session');

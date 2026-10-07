@@ -1610,4 +1610,19 @@
 - [x] Verificar compilación local con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 53s).
 - [x] Registrar Decisión `D-103` en `.synapse/decisions.md` y Error `ERR-44` en `.synapse/errores.md`.
 
+## 📅 Sesión: 7 de Octubre de 2026 - Blindaje de Privacidad y Noindex en Subdominios Administrativos (Google Search Console)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender reporte de Google Search Console: Google rastreó `https://admin.depilacionparahombres.com/conocimiento`.
+- [x] Diagnóstico: en `/srv/ia-gonzadep`, el middleware auto-asignaba la cookie `session='admin.authenticated'` a cualquier visitante, permitiendo acceso público a todas las páginas sin requerir login ni proteger con `robots.txt` ni `noindex`.
+- [x] Crear `public/robots.txt` en `/srv/ia-gonzadep` (`Disallow: /`) y configurar bloque directo en Nginx `/etc/nginx/sites-available/ia-gonzadep`.
+- [x] Añadir cabecera `add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet" always;` en Nginx para todo el tráfico de `admin.depilacionparahombres.com`.
+- [x] Añadir metadata y etiquetas `<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">` y `<meta name="googlebot" ...>` en `src/app/layout.js` de `ia-gonzadep`.
+- [x] Implementar middleware estricto en `ia-gonzadep` con verificación HMAC-SHA256 nativa Edge (`crypto.subtle`) que bloquea todo el subdominio: redirige a `/login` (307) para páginas web sin sesión y retorna 401 a APIs, preservando llamadas internas de relay a `/api/whatsapp/*`.
+- [x] Proteger `agenda.depilacionparahombres.com`: crear `public/robots.txt` deshabilitando `/admin/` y `/api/`, y agregar `robots: { index: false, follow: false, nocache: true }` en `src/app/admin/layout.js`.
+- [x] Verificar con pruebas reales de `curl` y scripts de fetch: `/conocimiento` sin sesión redirige a `/login` (307) sin fugar contenido, con sesión válida responde 200, y `/robots.txt` responde 200 con `Disallow: /` y `X-Robots-Tag`.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 46s).
+- [x] Registrar Decisión `D-104` en `.synapse/decisions.md`.
+
+
 

@@ -310,4 +310,37 @@
 3. Memoria persistente:
    - Decisión `D-103` registrada en `.synapse/decisions.md` y Error `ERR-44` en `.synapse/errores.md`.
 
+## Sesión: 7 de Octubre de 2026 - Blindaje de Privacidad y Noindex en Subdominios Administrativos (Google Search Console)
+
+### Requerimiento del Usuario:
+- "Fede, una cosa más. En Search Console vi que Google rastreó una página del panel de la IA: `https://admin.depilacionparahombres.com/conocimiento`. ¿Podés revisar que todo el subdominio admin. pida usuario y contraseña antes de mostrar cualquier contenido, y que no sea visible para Google? Lo ideal sería un robots.txt que bloquee todo y una etiqueta noindex."
+
+### Diagnóstico de Causa Raíz:
+1. En `/srv/ia-gonzadep` (`admin.depilacionparahombres.com`), el archivo `src/middleware.js` auto-asignaba la cookie de sesión `session='admin.authenticated'` a cualquier visitante o bot de rastreo que no tuviera cookie previa.
+2. Como resultado, cualquier usuario o crawler (incluyendo Googlebot) que visitara `https://admin.depilacionparahombres.com/conocimiento` o cualquier otra página del panel recibía acceso directo con renderizado de contenido completo (HTTP 200).
+3. No existía archivo `robots.txt` ni directivas `noindex` en los metadatos o cabeceras HTTP de Nginx.
+
+### Implementación Realizada:
+1. **Subdominio Admin IA (`admin.depilacionparahombres.com` / `/srv/ia-gonzadep`)**:
+   - **Eliminación de auto-asignación de sesión**: Se reescribió `src/middleware.js` implementando verificación criptográfica nativa HMAC-SHA256 con Web Crypto (`crypto.subtle`).
+   - **Autenticación obligatoria**: Cualquier intento de acceso sin cookie válida a páginas privadas (como `/conocimiento`, `/`, `/chats`, etc.) es redirigido de inmediato con HTTP 307 a `/login` sin renderizar ni fugar contenido. Las llamadas a APIs privadas retornan HTTP 401 Unauthorized.
+   - **Excepciones controladas**: Únicamente se permiten activos estáticos, `/robots.txt`, endpoints de autenticación (`/login`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/session`) y llamadas internas de relay desde localhost para el servicio de WhatsApp.
+   - **Robots.txt & Noindex**:
+     - Creado `public/robots.txt` con `User-agent: * \n Disallow: /`.
+     - Inyectadas directivas `metadata.robots` y etiquetas `<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />` y `<meta name="googlebot" ...>` en `src/app/layout.js`.
+     - En Nginx (`/etc/nginx/sites-available/ia-gonzadep`), agregada la cabecera `add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet" always;` y bloque `location = /robots.txt` directo.
+2. **Subdominio Agenda (`agenda.depilacionparahombres.com` / `gonzalo-dep`)**:
+   - Creado `public/robots.txt` bloqueando el rastreo de `/admin/` y `/api/`.
+   - En `src/app/admin/layout.js`, agregado `metadata.robots: { index: false, follow: false, nocache: true }`.
+3. **Validación Técnica y Pruebas Reales**:
+   - `curl -i https://admin.depilacionparahombres.com/robots.txt` -> HTTP 200 con `Disallow: /` y `X-Robots-Tag`.
+   - `curl -i https://admin.depilacionparahombres.com/conocimiento` -> HTTP 307 Temporary Redirect a `/login` con `X-Robots-Tag`.
+   - `curl -i https://admin.depilacionparahombres.com/api/conocimiento` -> HTTP 401 Unauthorized.
+   - Flujo de login con credenciales válidas verificado: emite cookie y permite acceso 200 OK a `/conocimiento`.
+   - Relay interno a `/api/whatsapp/status` verificado respondiendo 200 OK.
+   - Compilación con Next.js Turbopack probada en ambos proyectos con 0 errores.
+4. **Memoria Persistente**:
+   - Registrada Decisión `D-104` en `.synapse/decisions.md`.
+
+
 
