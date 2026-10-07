@@ -342,5 +342,32 @@
 4. **Memoria Persistente**:
    - Registrada Decisión `D-104` en `.synapse/decisions.md`.
 
+## Sesión: 7 de Octubre de 2026 (Seguimiento) - Implementación de 5 Requerimientos Clave (Gonzalo Siri & Luciano Gómez)
+
+### Requerimientos Atendidos:
+1. **Bug Checkbox Reseñas en Ficha/Modal de Agenda (`media_1791402558842.png`)**:
+   - Síntoma: Al prender el check de reseñas o enviarla por WhatsApp, al salir y volver a entrar volvía a estar apagado.
+   - Causa Raíz: En `src/app/admin/agenda/page.js` líneas 4198 y 4572 se llamaba a `setTurnos(...)` en vez de `setAppointments(...)`. El `ReferenceError` abortaba la ejecución antes del `fetch` a `/api/admin/clientes/${id}`, por lo que nunca persistía en PostgreSQL.
+   - Solución: Corregido a `setAppointments` en ambos puntos. Verificado que persiste en caliente y en base de datos.
+2. **Nueva Fórmula de Duración de Turnos (`media_1791402580565.png`)**:
+   - Reemplazada la fórmula anterior por: **Zona más larga + 10 minutos por cada zona adicional, con excepción de Axilas, Hombros y Genitales que suman 0 min adicionales**.
+   - En caso de empate en la duración máxima, se prioriza una zona que no sea excepción como base.
+   - Testeado exhaustivamente con casos unitarios (Piernas + Axilas = 40 min; Piernas + Espalda = 50 min; Genitales + Glúteos = 20 min; Axilas + Hombros = 10 min).
+3. **Selector Método de Pago al Agendar Turno Nuevo o Siguiente (`media_1791402603634.png`)**:
+   - En el modal de creación de turno (`newTurno`) se añadió el selector `<select>` para `metodoPago` (Transferencia o Efectivo, predeterminado `TRANSFERENCIA`), conectándolo con el payload de creación hacia el backend.
+4. **Mensaje de Seña Previa (Guardada en verde / Perdida en rojo) (`media_1791402603634.png`)**:
+   - Al seleccionar o agendar a un cliente cuyo último turno fue cancelado, se muestra bajo el campo de "Seña Recibida ($)" el badge informativo:
+     - `✅ Seña guardada de $... para este turno` en verde (si conservó la seña).
+     - `⚠️ Seña perdida de $... en cancelación anterior` en rojo (si la seña fue retenida).
+   - Backend en `/api/admin/turnos/ultimo-cliente` calcula automáticamente `señaEstado` y monto.
+5. **Mejoras en Autogestión (`src/app/page.js` - `media_1791402623099.png`)**:
+   - Agregado botón directo estilizado `💬 WhatsApp` hacia `https://wa.me/5491176735678` en la cabecera superior.
+   - En el formulario de cliente nuevo (Paso 1), añadido selector de Cumpleaños (Día y Mes) con días del 1 al 31 y meses de Enero a Diciembre, enviándose y guardándose en `/api/reservas/crear`.
+
+### Estado de Compilación:
+- Next.js Turbopack (`npm run build`) validado con 41/41 rutas y 0 errores.
+- Decisión `D-105` y Error `ERR-45` registrados en `.synapse/`.
+
+
 
 

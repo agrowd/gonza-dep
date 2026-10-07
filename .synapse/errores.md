@@ -453,6 +453,14 @@
 2. En `applyEmailTemplatePlaceholders`, se envolvieron `{fecha}`, `{día}` y `{horario}` en dummy-links con `style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none;"` impidiendo que WebKit inyecte etiquetas con estilos propios.
 3. En `formatEmailParagraphs`, se agregó detección por regex de URLs planas transformándolas en enlaces explícitos con `color: #d4a54d !important; font-weight: bold;`.
 4. Se migraron todos los correos transaccionales a `buildDarkTemplateEmailHtml`.
+## ERR-45: Checkbox de Reseña en Agenda Modal no persitía por ReferenceError: setTurnos is not defined (2026-10-07)
+**Síntoma:** Gonzalo Siri reportó con captura de pantalla (`media_1791402558842.png`): *"cuando prendo el check de las reseñas, o se prende automático al mandar la seña [reseña], al salir de la ficha y volver a entrar, vuelve a estar apagado como si no se hubiera mandado, no mantiene el check"*.
+**Root Cause:**
+En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 4198) y en el callback del botón "⭐ Mandar Reseña" (línea 4572), el código intentaba invocar `setTurnos(prevList => ...)` para actualizar el listado en caliente. Sin embargo, en `AgendaPage` el estado de React para las citas se llama `appointments, setAppointments`. La invocación de `setTurnos` arrojaba una excepción no capturada `ReferenceError: setTurnos is not defined`, abortando inmediatamente el hilo de ejecución antes de alcanzar la llamada asíncrona `fetch(/api/admin/clientes/${id}, { method: 'PUT', body: JSON.stringify({ recibioResena }) })`. En consecuencia, la actualización nunca se enviaba al servidor ni persistía en PostgreSQL.
+**Solución:**
+1. En `src/app/admin/agenda/page.js`, se reemplazó `setTurnos` por `setAppointments` tanto en el manejador del checkbox (línea 4198) como en el botón "⭐ Mandar Reseña" (línea 4572).
+2. Se verificó que `PUT /api/admin/clientes/[id]` actualice y persista el campo booleano `recibioResena` en la tabla `Cliente` de la base de datos PostgreSQL.
 **Commit:** `próximo commit`
 **Estado:** ✅ FIXED
+
 

@@ -75,7 +75,7 @@ export async function POST(request) {
   try {
     await cleanupExpiredPendingPayments();
     const body = await request.json();
-    const { nombreCompleto, whatsapp, email, dni, fechaStr, horaInicio, selectedZoneIds, observaciones } = body;
+    const { nombreCompleto, whatsapp, email, dni, fechaStr, horaInicio, selectedZoneIds, observaciones, fechaNacimiento } = body;
 
     if (!nombreCompleto || !whatsapp || !email || !fechaStr || !horaInicio || !selectedZoneIds || selectedZoneIds.length === 0) {
       return NextResponse.json(
@@ -135,6 +135,9 @@ export async function POST(request) {
       if (client.nombreCompleto !== nombreCompleto.trim()) updateData.nombreCompleto = nombreCompleto.trim();
       if (client.whatsapp !== finalWhatsapp) updateData.whatsapp = finalWhatsapp;
       if (client.email.toLowerCase() !== email.trim().toLowerCase()) updateData.email = email.trim().toLowerCase();
+      if (!client.fechaNacimiento && fechaNacimiento) {
+        updateData.fechaNacimiento = new Date(fechaNacimiento);
+      }
 
       if (Object.keys(updateData).length > 0) {
         client = await prisma.cliente.update({
@@ -150,7 +153,8 @@ export async function POST(request) {
           whatsapp: finalWhatsapp,
           email: email.trim().toLowerCase(),
           canalAdquisicion: 'ORGANICO',
-          estado: 'ACTIVO'
+          estado: 'ACTIVO',
+          fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null
         }
       });
     }

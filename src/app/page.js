@@ -54,6 +54,8 @@ export default function Home() {
     whatsappCountry: '54',
     whatsappCustomCode: '',
     dni: '',
+    bdayDay: '',
+    bdayMonth: '',
     observaciones: ''
   });
 
@@ -553,6 +555,11 @@ Duración: ${duracionMinutos} min`;
         window.location.href = waUrl;
       } else {
         // New Reservation endpoint (Deferred client created here, Turno not booked until deposit paid)
+        let calculatedFechaNacimiento = undefined;
+        if (formData.bdayDay && formData.bdayMonth) {
+          calculatedFechaNacimiento = `2000-${String(formData.bdayMonth).padStart(2, '0')}-${String(formData.bdayDay).padStart(2, '0')}`;
+        }
+
         const res = await fetch('/api/reservas/crear', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -564,7 +571,8 @@ Duración: ${duracionMinutos} min`;
             fechaStr: selectedDateStr,
             horaInicio: selectedSlot.horaInicio,
             selectedZoneIds,
-            observaciones: formData.observaciones.trim() || undefined
+            observaciones: formData.observaciones.trim() || undefined,
+            fechaNacimiento: calculatedFechaNacimiento
           })
         });
         const data = await res.json();
@@ -630,6 +638,15 @@ Duración: ${duracionMinutos} min`;
               title="Volver al sitio web principal"
             >
               ← Volver a la web
+            </a>
+            <a
+              href="https://wa.me/5491176735678"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.btnWhatsappHeader}
+              title="Contactar a Gonzalo por WhatsApp"
+            >
+              💬 WhatsApp
             </a>
             <a
               href="/login"
@@ -986,7 +1003,7 @@ Duración: ${duracionMinutos} min`;
                       />
                     </div>
 
-                    <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: '16px' }}>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px' }}>
                         DNI (Opcional)
                       </label>
@@ -997,6 +1014,54 @@ Duración: ${duracionMinutos} min`;
                         placeholder="Tu documento"
                         style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border-color)', borderRadius: '8px' }}
                       />
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px' }}>
+                        🎂 Cumpleaños (Día y Mes)
+                      </label>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <select
+                          value={formData.bdayDay}
+                          onChange={e => setFormData(prev => ({ ...prev, bdayDay: e.target.value }))}
+                          style={{
+                            flex: 1,
+                            padding: '10px 12px',
+                            border: '1.5px solid var(--border-color)',
+                            borderRadius: '8px',
+                            backgroundColor: '#ffffff',
+                            color: formData.bdayDay ? 'var(--text-primary)' : '#94a3b8',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="" style={{ color: '#94a3b8' }}>Día</option>
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                            <option key={d} value={String(d)} style={{ color: '#000000' }}>{d}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={formData.bdayMonth}
+                          onChange={e => setFormData(prev => ({ ...prev, bdayMonth: e.target.value }))}
+                          style={{
+                            flex: 1.5,
+                            padding: '10px 12px',
+                            border: '1.5px solid var(--border-color)',
+                            borderRadius: '8px',
+                            backgroundColor: '#ffffff',
+                            color: formData.bdayMonth ? 'var(--text-primary)' : '#94a3b8',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="" style={{ color: '#94a3b8' }}>Mes</option>
+                          {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((mes, idx) => (
+                            <option key={idx + 1} value={String(idx + 1)} style={{ color: '#000000' }}>{mes}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <button

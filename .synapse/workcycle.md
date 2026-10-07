@@ -1624,5 +1624,18 @@
 - [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 46s).
 - [x] Registrar Decisión `D-104` en `.synapse/decisions.md`.
 
+## 📅 Sesión: 7 de Octubre de 2026 (Seguimiento - 5 Requerimientos Clave de Gonzalo y Luciano)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Corregir bug del checkbox de Reseñas en modal de `/admin/agenda` (`media_1791402558842.png`): reemplace de `setTurnos` por `setAppointments` erradicando `ReferenceError` y permitiendo el guardado persistente en PostgreSQL vía `PUT /api/admin/clientes/[id]`.
+- [x] Implementar nueva fórmula de duración en `src/lib/calculations.js` (`media_1791402580565.png`): duración base (zona más larga) + 10 min por zona adicional, con excepción de Axilas, Hombros y Genitales (0 min adicionales).
+- [x] Añadir selector de Método de Pago (`Transferencia` o `Efectivo`, default `TRANSFERENCIA`) en el modal de nuevo/siguiente turno de `/admin/agenda` (`media_1791402603634.png`).
+- [x] Añadir mensaje de estado de seña previa (Guardada en verde / Perdida en rojo) en `/admin/agenda` bajo el input de Seña Recibida (`media_1791402603634.png`), resolviendo `señaEstado` y montos desde `/api/admin/turnos/ultimo-cliente`.
+- [x] Incorporar botón directo de WhatsApp (`https://wa.me/5491176735678`) en la cabecera superior de autogestión (`src/app/page.js` y `page.module.css`).
+- [x] Añadir selector de Cumpleaños (Día y Mes) en el formulario de alta de nuevo cliente de autogestión (`src/app/page.js`) y guardar en la base de datos vía `/api/reservas/crear`.
+- [x] Verificar compilación local Next.js Turbopack (`npm run build`, 41/41 rutas y 0 errores).
+- [x] Registrar Decisión `D-105` en `.synapse/decisions.md` y Error `ERR-45` en `.synapse/errores.md`.
+
+
 
 

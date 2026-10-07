@@ -339,7 +339,8 @@ export default function AgendaPage() {
     otrosTexto: '',
     otrosPrecio: '',
     prevTurnoId: null,
-    enviarNotificaciones: true
+    enviarNotificaciones: true,
+    metodoPago: 'TRANSFERENCIA'
   });
   const [tempClientObservaciones, setTempClientObservaciones] = useState('');
   const [tempClientNotasGonzalo, setTempClientNotasGonzalo] = useState('');
@@ -1183,7 +1184,8 @@ export default function AgendaPage() {
           descuentoValor: descuentoValorParam !== null && descuentoValorParam !== undefined && descuentoValorParam !== '' ? descuentoValorParam : prev.descuentoValor,
           valorSeña: initialSeña !== undefined ? initialSeña : prev.valorSeña,
           manualSeñaOverride: initialSeña !== undefined ? initialSeña : prev.manualSeñaOverride,
-          prevTurnoId: prevTurnoIdParam || null
+          prevTurnoId: prevTurnoIdParam || null,
+          metodoPago: searchParams.get('metodoPago') || prev.metodoPago || 'TRANSFERENCIA'
         }));
         setIsNewOpen(true);
       }
@@ -2068,7 +2070,8 @@ export default function AgendaPage() {
         hasOtros: false,
         otrosTexto: '',
         otrosPrecio: '',
-        prevTurnoId: null
+        prevTurnoId: null,
+        metodoPago: 'TRANSFERENCIA'
       });
     }
     setIsNewOpen(true);
@@ -2290,6 +2293,24 @@ export default function AgendaPage() {
     const delayDebounce = setTimeout(checkNewTurnoOverlap, 300);
     return () => clearTimeout(delayDebounce);
   }, [newTurno.fechaStr, newTurno.horaInicio, newTurno.horaFin, newTurno.estado, isNewOpen, config.work_start, config.work_end]);
+
+  // Load last client turno info if client is selected or arrives via URL
+  useEffect(() => {
+    if (newTurno.clienteId && isNewOpen) {
+      fetch(`/api/admin/turnos/ultimo-cliente?clienteId=${newTurno.clienteId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.found) {
+            setLastClientTurnoInfo(data);
+          } else {
+            setLastClientTurnoInfo(null);
+          }
+        })
+        .catch(err => console.error('Error fetching last client info:', err));
+    } else if (!isNewOpen) {
+      setLastClientTurnoInfo(null);
+    }
+  }, [newTurno.clienteId, isNewOpen]);
 
   // Check overlap/availability for editTurno in real-time
   useEffect(() => {
@@ -2738,7 +2759,8 @@ export default function AgendaPage() {
               bonificacion: 0,
               estado: 'SEÑADO',
               observaciones: '',
-              clienteId: null
+              clienteId: null,
+              metodoPago: 'TRANSFERENCIA'
             });
             setIsNewOpen(true);
           }} className="btn btn-primary">+ Nuevo Turno</button>
@@ -2924,7 +2946,7 @@ export default function AgendaPage() {
                               nombreCompleto: '', nombre: '', apellido: '', whatsapp: '', email: '', dni: '',
                               fechaStr: dateStr, horaInicio: config.work_start, horaFin: addMinutesToTime(config.work_start, 30),
                               selectedZoneIds: [], valorTotal: '', valorSeña: '', descuentoTipo: 'NINGUNO', descuentoValor: '',
-                              bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null
+                              bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null, metodoPago: 'TRANSFERENCIA'
                             });
                             setIsNewOpen(true);
                           }}
@@ -3019,7 +3041,8 @@ export default function AgendaPage() {
                                     bonificacion: 0,
                                     estado: 'SEÑADO',
                                     observaciones: '',
-                                    clienteId: null
+                                    clienteId: null,
+                                    metodoPago: 'TRANSFERENCIA'
                                   });
                                   setIsNewOpen(true);
                                 }}
@@ -4195,7 +4218,7 @@ export default function AgendaPage() {
                                 ...prev,
                                 cliente: { ...prev.cliente, recibioResena: nextVal }
                               }));
-                              setTurnos(prevList => prevList.map(t => {
+                              setAppointments(prevList => prevList.map(t => {
                                 if (t.cliente?.id === selectedTurno.cliente?.id) {
                                   return { ...t, cliente: { ...t.cliente, recibioResena: nextVal } };
                                 }
@@ -4569,7 +4592,7 @@ export default function AgendaPage() {
                                 ...prev,
                                 cliente: { ...prev.cliente, recibioResena: true }
                               }));
-                              setTurnos(prevList => prevList.map(t => {
+                              setAppointments(prevList => prevList.map(t => {
                                 if (t.cliente?.id === selectedTurno.cliente?.id) {
                                   return { ...t, cliente: { ...t.cliente, recibioResena: true } };
                                 }
@@ -5073,6 +5096,19 @@ export default function AgendaPage() {
                         required
                         placeholder="Auto-calculado al elegir zona"
                       />
+                      {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.señaEstado) && (
+                        (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span>✅</span>
+                            <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} para este turno</span>
+                          </div>
+                        ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña')) ? (
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span>⚠️</span>
+                            <span>Seña perdida de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior</span>
+                          </div>
+                        ) : null
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -5110,6 +5146,19 @@ export default function AgendaPage() {
                         required
                         placeholder="Auto-calculado al elegir zona"
                       />
+                      {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.señaEstado) && (
+                        (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span>✅</span>
+                            <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} para este turno</span>
+                          </div>
+                        ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña')) ? (
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <span>⚠️</span>
+                            <span>Seña perdida de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior</span>
+                          </div>
+                        ) : null
+                      )}
                     </div>
                   </div>
                 )}
@@ -5136,6 +5185,18 @@ export default function AgendaPage() {
                     disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />
                 </div>
+
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>Método de Pago</label>
+                  <select
+                    value={newTurno.metodoPago || 'TRANSFERENCIA'}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, metodoPago: e.target.value }))}
+                  >
+                    <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                    <option value="EFECTIVO">💵 Efectivo</option>
+                  </select>
+                </div>
+
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Estado Inicial</label>
                   <select

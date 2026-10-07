@@ -50,14 +50,36 @@ export async function GET(request) {
       parsedZones = [];
     }
 
+    let computedSeñaEstado = ultimoTurno.señaEstado;
+    let computedValorSeña = ultimoTurno.valorSeña;
+
+    if (!computedSeñaEstado && ultimoTurno.estado === 'CANCELADO') {
+      const obs = ultimoTurno.observaciones || '';
+      if (obs.includes('Guardada') || obs.includes('guardada') || obs.includes('CONSERVADA')) {
+        computedSeñaEstado = 'CONSERVADA';
+      } else if (obs.includes('Pierde seña') || obs.includes('pierde seña') || obs.includes('PERDIDA')) {
+        computedSeñaEstado = 'PERDIDA';
+      }
+    }
+
+    if ((!computedValorSeña || computedValorSeña === 0) && ultimoTurno.observaciones) {
+      const match = ultimoTurno.observaciones.match(/seña(?: de)?\s*\$?([\d.]+)/i);
+      if (match && match[1]) {
+        const parsed = Number(match[1].replace(/\./g, ''));
+        if (!isNaN(parsed) && parsed > 0) {
+          computedValorSeña = parsed;
+        }
+      }
+    }
+
     return NextResponse.json({
       found: true,
       turnoId: ultimoTurno.id,
       fecha: ultimoTurno.fecha,
       estado: ultimoTurno.estado,
-      señaEstado: ultimoTurno.señaEstado, // 'CONSERVADA' | 'PERDIDA' | null
+      señaEstado: computedSeñaEstado, // 'CONSERVADA' | 'PERDIDA' | null
       valorTotal: ultimoTurno.valorTotal,
-      valorSeña: ultimoTurno.valorSeña,
+      valorSeña: computedValorSeña,
       zonas: parsedZones,
       zonasRaw: ultimoTurno.zonas,
       duracionMinutos: ultimoTurno.duracionMinutos,

@@ -346,11 +346,13 @@ export async function PUT(request, { params }) {
       const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
       if (Number(oldTurn.valorSeña) > 0) {
         if (body.preserveDeposit) {
+          updateData.señaEstado = 'CONSERVADA';
           const creditTag = `[Cancelado - Seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - Administrador]`;
           if (!currentTurnoObs.includes(creditTag)) {
             updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${creditTag}`.trim() : creditTag;
           }
         } else {
+          updateData.señaEstado = 'PERDIDA';
           const lossTag = `[Cancelado - Pierde seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} - Administrador]`;
           if (!currentTurnoObs.includes(lossTag)) {
             updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${lossTag}`.trim() : lossTag;
@@ -362,6 +364,12 @@ export async function PUT(request, { params }) {
           updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${cancelTag}`.trim() : cancelTag;
         }
       }
+    } else if (body.señaEstado !== undefined) {
+      updateData.señaEstado = body.señaEstado;
+    }
+
+    if (body.metodoPago !== undefined) {
+      updateData.metodoPago = String(body.metodoPago);
     }
 
     if (selectedZoneIds !== undefined) {
