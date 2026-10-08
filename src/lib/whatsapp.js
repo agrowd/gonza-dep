@@ -466,8 +466,8 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
     .replace(/(\[|\{)HoraInicio(\]|\})/gi, turno.horaInicio || '')
     .replace(/(\[|\{)HoraFin(\]|\})/gi, turno.horaFin || '')
     .replace(/(\[|\{)Zonas(\]|\})/gi, zonesStr)
-    .replace(/(\[|\{)ValorTotal(\]|\})/gi, (turno.valorTotal || 0).toString())
-    .replace(/(\[|\{)Seña(\]|\})/gi, (turno.valorSeña || 0).toString())
+    .replace(/(\[|\{)ValorTotal(\]|\})/gi, () => (turno.valorTotal || 0).toString())
+    .replace(/(\[|\{)Seña(\]|\})/gi, () => (turno.valorSeña || 0).toString())
     .replace(/(\[|\{)Direccion(\]|\})/gi, address || '')
     .replace(/(\[|\{)Dirección(\]|\})/gi, address || '');
 }
