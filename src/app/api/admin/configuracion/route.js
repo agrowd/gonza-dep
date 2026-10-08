@@ -31,7 +31,7 @@ export async function GET() {
       booking_work_start: configs.booking_work_start || "14:00",
       booking_work_end: configs.booking_work_end || "22:00",
       email_confirmation_subject: configs.email_confirmation_subject || "Confirmación de turno - Gonzalo Depilación",
-      email_confirmation_body: configs.email_confirmation_body || "¡Tu reserva ha sido confirmada con éxito!\n\nA continuación te detallamos los datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras de la noche anterior. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.\n\n¡Te esperamos!",
+      email_confirmation_body: configs.email_confirmation_body || "¡Tu reserva ha sido confirmada con éxito!\n\nA continuación te detallamos los datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.\n\n¡Te esperamos!",
       email_cancellation_subject: configs.email_cancellation_subject || "Cancelación de turno - Gonzalo Depilación",
       email_cancellation_body: configs.email_cancellation_body || "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n\nLamentamos que no puedas asistir. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.",
       email_noshow_subject: configs.email_noshow_subject || "Aviso de turno no asistido - Gonzalo Depilación",

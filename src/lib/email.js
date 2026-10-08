@@ -55,6 +55,12 @@ export function formatEmailParagraphs(rawText) {
         return `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">${timeExpr}</strong></a>`;
       });
 
+      // 3. Proteger expresiones horarias/diarias (ej: "de la noche", "de la tarde", "de la mañana", "la noche anterior") contra detectores de Apple Mail / iOS
+      processed = processed.replace(/(<a\b[^>]*>.*?<\/a>)|(\b(?:(?:de|a|por)\s+la\s+(?:noche|tarde|mañana)|la\s+noche\s+anterior)\b)/gi, (match, anchor, expr) => {
+        if (anchor) return anchor;
+        return `<a href="#" class="dummy-link" style="color: inherit !important; text-decoration: none !important; pointer-events: none; cursor: default;"><span style="color: inherit !important;">${expr}</span></a>`;
+      });
+
       return `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">${processed}</p>`;
     })
     .join('');
@@ -101,9 +107,9 @@ export function applyEmailTemplatePlaceholdersPlain(templateText, clientName = '
     .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, dateFormatted)
     .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])(\s*hs\b)?/gi, `${horaStr} hs`)
     .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, zonesText)
-    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, `$${señaNum.toLocaleString('es-AR')}`)
-    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, `$${saldoNum.toLocaleString('es-AR')}`)
-    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, `$${totalNum.toLocaleString('es-AR')}`)
+    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, () => `$${señaNum.toLocaleString('es-AR')}`)
+    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, () => `$${saldoNum.toLocaleString('es-AR')}`)
+    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, () => `$${totalNum.toLocaleString('es-AR')}`)
     .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, addrStr);
 }
 
@@ -150,9 +156,9 @@ export function applyEmailTemplatePlaceholders(templateText, clientName = '', tu
     .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; text-transform: capitalize; font-weight: bold;">${dateFormatted}</strong></a>`)
     .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])(\s*hs\b)?/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaStr} hs</strong></a>`)
     .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
-    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, `<strong style="color: #a5d6a7 !important;">$${señaNum.toLocaleString('es-AR')}</strong>`)
-    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, `<strong style="color: #ffb74d !important;">$${saldoNum.toLocaleString('es-AR')}</strong>`)
-    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, `<strong style="color: #ffffff !important;">$${totalNum.toLocaleString('es-AR')}</strong>`)
+    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, () => `<strong style="color: #a5d6a7 !important;">$${señaNum.toLocaleString('es-AR')}</strong>`)
+    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, () => `<strong style="color: #ffb74d !important;">$${saldoNum.toLocaleString('es-AR')}</strong>`)
+    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, () => `<strong style="color: #ffffff !important;">$${totalNum.toLocaleString('es-AR')}</strong>`)
     .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #ffffff !important;">${addrStr}</strong></a>`);
 }
 
@@ -364,7 +370,7 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
   }
 
   const defaultSubject = 'Confirmación de turno - Gonzalo Depilación';
-  const defaultBody = "¡Tu reserva ha sido confirmada con éxito!\n\nA continuación te detallamos los datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras de la noche anterior. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.\n\n¡Te esperamos!";
+  const defaultBody = "¡Tu reserva ha sido confirmada con éxito!\n\nA continuación te detallamos los datos de tu turno:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n- Seña abonada: {seña}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.\n\n¡Te esperamos!";
 
   const rawSubject = subjectTemplate || defaultSubject;
   const rawBody = bodyTemplate || defaultBody;
