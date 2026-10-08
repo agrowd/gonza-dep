@@ -658,7 +658,7 @@ export async function checkAndSendReminders(force = false) {
     const email7SubjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_subject' } });
     const email7BodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_reminder_7days_body' } });
     const email7SubjectTemplate = email7SubjectConfig?.value || "Recordatorio de tu turno en 7 días - Gonzalo Depilación";
-    const default7Body = "¡Hola {cliente}!\n\nTe recordamos que tenés un turno programado para dentro de 7 días:\n\n- Fecha: {fecha}\n- Horario: {horario} hs\n- Zonas: {zonas}\n- Seña abonada: {seña}\n- Saldo pendiente de cobro: {saldo}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. Si necesitás reprogramar o cancelar, recordá hacerlo con un mínimo de 72 hs de anticipación para conservar tu seña.\n\n¡Te esperamos!";
+    const default7Body = "¡Hola {cliente}!\n\nTe recordamos que tenés un turno programado para dentro de 7 días:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n- Seña abonada: {seña}\n- Saldo pendiente de cobro: {saldo}\n\nDirección: {direccion}\n\nRecordá que tenés que venir afeitado al ras. Si necesitás reprogramar o cancelar, recordá hacerlo con un mínimo de 72 hs de anticipación para conservar tu seña.\n\n¡Te esperamos!";
     const email7BodyTemplate = email7BodyConfig?.value || default7Body;
 
     if (email7BodyTemplate && turnos7.length > 0) {

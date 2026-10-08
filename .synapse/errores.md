@@ -460,7 +460,21 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 **Solución:**
 1. En `src/app/admin/agenda/page.js`, se reemplazó `setTurnos` por `setAppointments` tanto en el manejador del checkbox (línea 4198) como en el botón "⭐ Mandar Reseña" (línea 4572).
 2. Se verificó que `PUT /api/admin/clientes/[id]` actualice y persista el campo booleano `recibioResena` en la tabla `Cliente` de la base de datos PostgreSQL.
-**Commit:** `próximo commit`
+**Commit:** `b96cbab`
 **Estado:** ✅ FIXED
+
+## ERR-46: Enlace Azul de Calendario de Gmail en "dentro de 7 días", "hs hs" Duplicado y Saludo Redundante en Correos de Recordatorio (2026-10-08)
+**Síntoma:** Gonzalo Siri envió captura de WhatsApp (`media_1791462375107.png`) de un correo de recordatorio a 7 días recibido por un cliente (`deanrinaldi1973@gmail.com`), donde la frase `"dentro de 7 días"` aparecía en azul subrayado `#1a73e8` contra el fondo oscuro, consultando: *"¿Podemos pasar esto a naranja también?"*. Adicionalmente, se apreciaba `"Horario: 13:40 a 14:00 hs hs"` con doble "hs" y un doble saludo al inicio ("Hola Dean Rinaldi," + "¡Hola Dean Rinaldi!").
+**Root Cause:**
+1. Gmail (web y móvil) cuenta con algoritmos client-side de análisis heurístico de fechas que buscan frases temporales relativas en texto plano (como `"dentro de 7 días"` o `"en 7 días"`) y las convierte automáticamente en un elemento `<a href="https://calendar.google.com/..." class="...">dentro de 7 días</a>` para añadir el evento a Google Calendar. Al no estar envuelto en un tag `<a>` en el HTML de origen y al carecer de estilos en línea forzados, Gmail aplicaba su color azul de enlace predeterminado `#1a73e8`.
+2. En `applyEmailTemplatePlaceholders`, el marcador `{horario}` inyectaba `${horaStr} hs`. Sin embargo, la plantilla predeterminada en base de datos (`email_reminder_7days_body`) contenía `- Horario: {horario} hs`. Al concatenar, se generaba el sufijo redundante `hs hs`.
+3. En `buildDarkTemplateEmailHtml`, se renderizaba `<div class="greeting">Hola ${clientName},</div>` de forma incondicional (`includeGreeting: true`), mientras que el cuerpo del mensaje configurado en `email_reminder_7days_body` ya comenzaba con `¡Hola {cliente}!`, mostrando dos saludos sucesivos.
+**Solución:**
+1. En `src/lib/email.js`, `formatEmailParagraphs` detecta automáticamente expresiones temporales relativas (`\b(?:dentro\s+de|en)\s+\d+\s+(?:d[ií]as?|horas?|hs)\b`) y las envuelve en un dummy-link inerte con estilo inline `style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"` y `<strong>` en dorado cálido (`#d4a54d`). Al ser ya un tag `<a>`, el detector de Gmail descarta la inyección de enlaces y respeta el color de la marca.
+2. Se reforzó `buildDarkTemplateEmailHtml` con selectores específicos de Gmail (`.a3s a`, `div.a3s a`, `a[href*="calendar.google.com"]`, `a[data-date]`) forzando `#d4a54d !important`.
+3. En `applyEmailTemplatePlaceholders` y `applyEmailTemplatePlaceholdersPlain`, la expresión regular `(\{|\[)(horario|...)\}(\s*hs\b)?` ahora consume cualquier sufijo `hs` adyacente, impidiendo el duplicado `"hs hs"`.
+4. En todos los despachadores de correos (`sendReminder7DaysEmail`, `sendConfirmationEmail`, etc.), se condicionó `includeGreeting: !hasGreetingInBody` suprimiendo el saludo doble si el texto ya contiene "Hola".
+**Estado:** ✅ FIXED
+
 
 

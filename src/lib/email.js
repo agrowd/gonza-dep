@@ -43,12 +43,19 @@ export function formatEmailParagraphs(rawText) {
     
   return lines
     .map(line => {
-      // Auto-detectar URLs planas y convertirlas a enlaces estilizados con dorado de marca #d4a54d
-      const withLinks = line.replace(/(<a\b[^>]*>.*?<\/a>)|(https?:\/\/[^\s<"']+)/gi, (match, anchor, url) => {
+      // 1. Auto-detectar URLs planas y convertirlas a enlaces estilizados con dorado de marca #d4a54d
+      let processed = line.replace(/(<a\b[^>]*>.*?<\/a>)|(https?:\/\/[^\s<"']+)/gi, (match, anchor, url) => {
         if (anchor) return anchor;
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #d4a54d !important; text-decoration: underline !important; font-weight: bold; word-break: break-all;">${url}</a>`;
       });
-      return `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">${withLinks}</p>`;
+
+      // 2. Auto-detectar expresiones temporales relativas (ej: "dentro de 7 días", "en 7 días") que Gmail/iOS linkean en azul y convertirlas a naranja/dorado #d4a54d
+      processed = processed.replace(/(<a\b[^>]*>.*?<\/a>)|(\b(?:dentro\s+de|en)\s+\d+\s+(?:d[ií]as?|horas?|hs)\b)/gi, (match, anchor, timeExpr) => {
+        if (anchor) return anchor;
+        return `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">${timeExpr}</strong></a>`;
+      });
+
+      return `<p style="margin: 0 0 16px 0; line-height: 1.65; font-size: 15px; color: #f0ede6;">${processed}</p>`;
     })
     .join('');
 }
@@ -92,7 +99,7 @@ export function applyEmailTemplatePlaceholdersPlain(templateText, clientName = '
     .replace(/(\{|\[)(cliente|nombre|Nombre|Cliente)(\}|\])/gi, clientName || 'Cliente')
     .replace(/(\{|\[)(día|dia|Día|Dia)(\}|\])/gi, diaFormatted)
     .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, dateFormatted)
-    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])/gi, `${horaStr} hs`)
+    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])(\s*hs\b)?/gi, `${horaStr} hs`)
     .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, zonesText)
     .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, `$${señaNum.toLocaleString('es-AR')}`)
     .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, `$${saldoNum.toLocaleString('es-AR')}`)
@@ -141,7 +148,7 @@ export function applyEmailTemplatePlaceholders(templateText, clientName = '', tu
     .replace(/(\{|\[)(cliente|nombre|Nombre|Cliente)(\}|\])/gi, `<strong style="color: #ffffff !important;">${clientName || 'Cliente'}</strong>`)
     .replace(/(\{|\[)(día|dia|Día|Dia)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; text-transform: capitalize; font-weight: bold;">${diaFormatted}</strong></a>`)
     .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; text-transform: capitalize; font-weight: bold;">${dateFormatted}</strong></a>`)
-    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaStr} hs</strong></a>`)
+    .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])(\s*hs\b)?/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaStr} hs</strong></a>`)
     .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
     .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, `<strong style="color: #a5d6a7 !important;">$${señaNum.toLocaleString('es-AR')}</strong>`)
     .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, `<strong style="color: #ffb74d !important;">$${saldoNum.toLocaleString('es-AR')}</strong>`)
@@ -209,9 +216,19 @@ export function buildDarkTemplateEmailHtml({ subject, clientName = '', formatted
       line-height: inherit !important;
     }
 
-    /* Supresión de color azul en Gmail, Outlook y Samsung Mail */
+    /* Supresión de color azul en Gmail (web y app), Outlook y Samsung Mail */
     u + #body a,
-    #MessageViewBody a {
+    #MessageViewBody a,
+    .a3s a,
+    div.a3s a,
+    a[href*="calendar.google.com"],
+    a[data-date],
+    a[data-event] {
+      color: #d4a54d !important;
+      text-decoration: none !important;
+    }
+
+    a.dummy-link strong {
       color: #d4a54d !important;
     }
 
@@ -306,11 +323,12 @@ export async function sendNoShowEmail(clientEmail, clientName, turnDetails, cust
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
+  const hasGreetingInBody = /^\s*¡?\s*Hola\b/i.test(rawBody);
   const htmlContent = buildDarkTemplateEmailHtml({
     subject,
     clientName: clientName || 'Cliente',
     formattedBodyHtml,
-    includeGreeting: true
+    includeGreeting: !hasGreetingInBody
   });
 
   await transporter.sendMail({
@@ -355,11 +373,12 @@ export async function sendConfirmationEmail(clientEmail, clientName, turnDetails
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
+  const hasGreetingInConfirm = /^\s*¡?\s*Hola\b/i.test(rawBody);
   const htmlContent = buildDarkTemplateEmailHtml({
     subject,
     clientName: clientName || 'Cliente',
     formattedBodyHtml,
-    includeGreeting: true
+    includeGreeting: !hasGreetingInConfirm
   });
 
   await transporter.sendMail({
@@ -406,11 +425,12 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
+  const hasGreetingInCancel = /^\s*¡?\s*Hola\b/i.test(rawBody);
   const htmlContent = buildDarkTemplateEmailHtml({
     subject,
     clientName: clientName || 'Cliente',
     formattedBodyHtml,
-    includeGreeting: true
+    includeGreeting: !hasGreetingInCancel
   });
 
   await transporter.sendMail({
@@ -639,11 +659,12 @@ export async function sendRescheduleEmail(clientEmail, clientName, turnDetails, 
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
+  const hasGreetingInReschedule = /^\s*¡?\s*Hola\b/i.test(rawBody);
   const htmlContent = buildDarkTemplateEmailHtml({
     subject,
     clientName: clientName || 'Cliente',
     formattedBodyHtml,
-    includeGreeting: true
+    includeGreeting: !hasGreetingInReschedule
   });
 
   await transporter.sendMail({
@@ -685,11 +706,12 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails, address);
   const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
 
+  const hasGreetingInReminder = /^\s*¡?\s*Hola\b/i.test(rawBody);
   const htmlContent = buildDarkTemplateEmailHtml({
     subject,
     clientName: clientName || 'Cliente',
     formattedBodyHtml,
-    includeGreeting: true
+    includeGreeting: !hasGreetingInReminder
   });
 
   await transporter.sendMail({

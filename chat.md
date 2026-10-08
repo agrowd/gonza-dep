@@ -368,6 +368,21 @@
 - Next.js Turbopack (`npm run build`) validado con 41/41 rutas y 0 errores.
 - Decisión `D-105` y Error `ERR-45` registrados en `.synapse/`.
 
+## Sesión: 7 de Octubre de 2026 (Seguimiento 2) - Mensaje de Novedades para WhatsApp
+- Redacción y entrega del mensaje ejecutivo y operativo listo para enviar a Gonzalo Siri y Luciano Gómez vía WhatsApp.
+- Detalle integral de los 6 puntos clave: blindaje de privacidad y Google Search Console (noindex/robots), fix persistencia checkbox reseñas, nueva fórmula de tiempos de turno (zonas con 0 min extra), método de pago al agendar, aviso visual de seña previa (guardada/perdida) y mejoras de autogestión (WhatsApp directo y cumpleaños día/mes).
+
+## Sesión: 8 de Octubre de 2026 - Blindaje Naranja/Dorado (#d4a54d) en Expresiones Temporales ("dentro de 7 días") y Erradicación de Enlaces Azules de Gmail
+- Requerimiento de Gonzalo Siri (`media_1791462375107.png`): "¿Podemos pasar esto a naranja también?" (señalando "dentro de 7 días" en azul en un correo de recordatorio recibido por un cliente en Gmail).
+- Solución implementada:
+  1. Detección automática en `formatEmailParagraphs` de expresiones temporales relativas (`dentro de X días`, `en X días`, etc.) y envoltura en dummy-links inalterables `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">...</strong></a>`, impidiendo que los detectores de fecha de Google Calendar y Apple Mail los linkeen en azul.
+  2. Inyección de reglas CSS específicas en `buildDarkTemplateEmailHtml` para Gmail web y móvil (`.a3s a`, `div.a3s a`, `a[href*="calendar.google.com"]`, `a[data-date]`) forzando el color de marca `#d4a54d !important;`.
+  3. Consumo del sufijo `hs` opcional en la regex de horarios de `applyEmailTemplatePlaceholders` y `applyEmailTemplatePlaceholdersPlain`, eliminando la duplicación "13:40 a 14:00 hs hs".
+  4. Supresión del saludo repetido ("Hola Dean Rinaldi," + "¡Hola Dean Rinaldi!") mediante condición `includeGreeting: !hasGreetingInBody`.
+- Validación técnica: Script de renderizado probado y compilación Next.js Turbopack limpia (41/41 rutas con 0 errores).
+
+
+
 
 
 

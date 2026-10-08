@@ -1633,8 +1633,20 @@
 - [x] Añadir mensaje de estado de seña previa (Guardada en verde / Perdida en rojo) en `/admin/agenda` bajo el input de Seña Recibida (`media_1791402603634.png`), resolviendo `señaEstado` y montos desde `/api/admin/turnos/ultimo-cliente`.
 - [x] Incorporar botón directo de WhatsApp (`https://wa.me/5491176735678`) en la cabecera superior de autogestión (`src/app/page.js` y `page.module.css`).
 - [x] Añadir selector de Cumpleaños (Día y Mes) en el formulario de alta de nuevo cliente de autogestión (`src/app/page.js`) y guardar en la base de datos vía `/api/reservas/crear`.
-- [x] Verificar compilación local Next.js Turbopack (`npm run build`, 41/41 rutas y 0 errores).
 - [x] Registrar Decisión `D-105` en `.synapse/decisions.md` y Error `ERR-45` en `.synapse/errores.md`.
+
+## 📅 Sesión: 8 de Octubre de 2026 - Blindaje Naranja/Dorado (#d4a54d) en Expresiones Temporales de Correos (Gmail/iOS) y Fix de "hs hs" / Saludo Duplicado
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender requerimiento con captura de WhatsApp de Gonzalo Siri (`media_1791462375107.png`): *"¿Podemos pasar esto a naranja también?"*, señalando `"dentro de 7 días"` en azul en un correo recibido en Gmail.
+- [x] Detectar automáticamente frases temporales relativas (`dentro de X días`, `en X días`, etc.) en `formatEmailParagraphs` de `src/lib/email.js` y envolverlas en dummy-links con estilo inline `#d4a54d !important; font-weight: bold;`, evitando que Gmail las convierta en enlaces de Google Calendar en azul.
+- [x] Reforzar reglas CSS en `buildDarkTemplateEmailHtml` con selectores `.a3s a`, `div.a3s a`, `a[href*="calendar.google.com"]`, `a[data-date]` en dorado `#d4a54d !important;`.
+- [x] Consumir sufijo redundante `hs` en `applyEmailTemplatePlaceholders` y `applyEmailTemplatePlaceholdersPlain` mediante regex `(\{|\[)(horario|...)\}(\s*hs\b)?` para erradicar el bug `"13:40 a 14:00 hs hs"`.
+- [x] Condicionar `includeGreeting: !hasGreetingInBody` en todos los remitentes de correos para evitar saludos duplicados ("Hola Dean Rinaldi," + "¡Hola Dean Rinaldi!").
+- [x] Validar generación de HTML con script de prueba exhaustivo (`scratch/test_full_email.mjs`).
+- [x] Compilar exitosamente en local con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 51s).
+- [x] Registrar Decisión `D-106` en `.synapse/decisions.md` y Error `ERR-46` en `.synapse/errores.md`.
+
 
 
 
