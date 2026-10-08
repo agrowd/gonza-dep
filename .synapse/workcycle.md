@@ -1647,6 +1647,22 @@
 - [x] Compilar exitosamente en local con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 51s).
 - [x] Registrar Decisión `D-106` en `.synapse/decisions.md` y Error `ERR-46` en `.synapse/errores.md`.
 
+## 📅 Sesión: 8 de Octubre de 2026 (Seguimiento - Eliminación de "de la noche anterior", Blindaje Anti-Azul WebKit/iOS y Fix de "seña5.000")
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender requerimiento con captura de WhatsApp de Gonzalo Siri (`media_1791480481369.png`): *"En el Mail de confirmacion de turno, le podés sacar este texto que está en azul por favor"*, señalando `"de la noche"` dentro de `"Recordá que tenés que venir afeitado al ras de la noche anterior."`.
+- [x] Eliminar `"de la noche anterior."` en todas las plantillas y bases de datos (`src/lib/email.js`, `src/app/api/admin/configuracion/route.js`, `prisma/seed.js`, y PostgreSQL en VPS `agenda_db` y `agenda_db_staging`), unificando el texto a `"Recordá que tenés que venir afeitado al ras."`.
+- [x] Blindar `formatEmailParagraphs` en `src/lib/email.js` con regex protectora para expresiones horarias/diarias (`de la noche`, `de la tarde`, `a la mañana`, `la noche anterior`) envolviéndolas en dummy-links inertes (`<a href="#" class="dummy-link" style="color: inherit !important; ...">`) para erradicar cualquier enlace azul autogenerado por detectores de Apple Mail / iOS.
+- [x] Subsanar el bug crítico de regex replacement trap con símbolo dólar `$`: `string.replace(/.../, "$25.000")` interpretaba `$2` como el grupo de captura 2 `(seña|Seña)`, produciendo `"- Seña abonada: seña5.000"`. Reemplazado por funciones de retorno `() => ...` en `applyEmailTemplatePlaceholders` y `applyEmailTemplatePlaceholdersPlain` para seña, saldo y total.
+- [x] Validar lógica con test unitario en local comprobando salida literal `$25.000`.
+- [x] Ejecutar `UPDATE` en PostgreSQL en VPS Hostinger para `email_confirmation_body` en `agenda_db` y `agenda_db_staging`.
+- [x] Compilar exitosamente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 52s).
+- [x] Commit y push a GitHub en ramas `main` y `staging` (`4980bdd`).
+- [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) en Producción (puerto 3006) y Staging (puerto 3008) mediante `scratch/deploy_both.mjs`.
+- [x] Verificar disponibilidad HTTP 200 OK en Producción y Staging.
+- [x] Registrar Decisión `D-107` en `.synapse/decisions.md` y Error `ERR-47` en `.synapse/errores.md`.
+
+
 
 
 

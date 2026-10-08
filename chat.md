@@ -386,3 +386,15 @@
 
 
 
+
+## Sesión: 8 de Octubre de 2026 (Seguimiento) - Eliminación de 'de la noche anterior', Blindaje Anti-Azul WebKit/iOS y Fix de 'seña5.000'
+- Solicitud de Gonzalo Siri (`media_1791480481369.png`): *"En el Mail de confirmacion de turno, le podés sacar este texto que está en azul por favor"* (señalando 'de la noche' en azul en iOS Mail dentro de 'Recordá que tenés que venir afeitado al ras de la noche anterior.'). Además, se detectó el bug `- Seña abonada: seña5.000`.
+- Solución implementada:
+  1. **Remoción de texto**: Se eliminó 'de la noche anterior.' de todas las plantillas del sistema (`src/lib/email.js`, `src/app/api/admin/configuracion/route.js`, `prisma/seed.js`) y se actualizó directamente en PostgreSQL en VPS (`agenda_db` y `agenda_db_staging`), dejando la redacción concisa y uniforme: "Recordá que tenés que venir afeitado al ras.".
+  2. **Blindaje anti-azul WebKit/Apple Mail**: En `formatEmailParagraphs`, se interceptan expresiones horarias/diarias ('de la noche', 'de la tarde', 'a la mañana', 'la noche anterior') y se blindan con dummy-links inertes (`color: inherit !important;`) para que Apple Mail nunca más las convierta en enlaces azules.
+  3. **Solución del bug de seña ('seña5.000' -> '$25.000')**: Se erradicó el trap de JavaScript en `.replace()` donde `$25.000` reemplazaba `$2` por el capture group 2 (`seña`). Se implementaron funciones replacer `() => ...` para `seña`, `saldo` y `total`, garantizando formato numérico impecable.
+- Compilación y Despliegue:
+  - Compilación local Next.js Turbopack: 41/41 rutas con 0 errores.
+  - Commits y push a ramas `main` y `staging` (`4980bdd`).
+  - Despliegue en VPS en Producción (puerto 3006) y Staging (puerto 3008) vía `scratch/deploy_both.mjs` con verificación HTTP 200 OK en ambos.
+  - Registrado en `.synapse/decisions.md` (D-107) y `.synapse/errores.md` (ERR-47).
