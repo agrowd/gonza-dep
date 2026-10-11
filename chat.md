@@ -398,3 +398,11 @@
   - Commits y push a ramas `main` y `staging` (`4980bdd`).
   - Despliegue en VPS en Producción (puerto 3006) y Staging (puerto 3008) vía `scratch/deploy_both.mjs` con verificación HTTP 200 OK en ambos.
   - Registrado en `.synapse/decisions.md` (D-107) y `.synapse/errores.md` (ERR-47).
+
+## Sesión: 11 de Octubre de 2026 - Consulta de Estado de Módulos (Gonzalo Siri)
+- Consulta recibida (`media_1791758859681_bb1b8c19.png`): *"Hola Fede como estas? En que módulo de desarrollo de la agenda estas?"*.
+- Auditoría contra el documento oficial `Mejoras AppWeb.docx`:
+  1. **Completados al 100% (5)**: Alta Rápida de Turno, Agenda Neocita con huecos/bloqueos, Ficha de Clientes con recibos/historial, Estadísticas avanzadas con caja, y Autogestión Online.
+  2. **En curso / Parcial (1)**: Notificaciones (cron, recordatorios 48h, correos transaccionales y matriz granular listos; ajustes de plantillas y cumpleaños).
+  3. **Pendientes (4)**: Gastos (siguiente a implementar), Configuración Avanzada, Roles/Niveles de acceso, y Multioperador/Agendas paralelas (para el final).
+- Se redactó respuesta clara, ejecutiva y amigable para WhatsApp.

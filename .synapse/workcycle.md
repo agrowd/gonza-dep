@@ -1662,6 +1662,17 @@
 - [x] Verificar disponibilidad HTTP 200 OK en Producción y Staging.
 - [x] Registrar Decisión `D-107` en `.synapse/decisions.md` y Error `ERR-47` en `.synapse/errores.md`.
 
+## 📅 Sesión: 11 de Octubre de 2026 - Auditoría y Respuesta de Estado de Módulos (Consulta de Gonzalo)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender consulta de WhatsApp de Gonzalo Siri (`media_1791758859681_bb1b8c19.png`): *"Hola Fede como estas? En que módulo de desarrollo de la agenda estas?"*.
+- [x] Contrastar el estado de desarrollo del sistema contra la jerarquía oficial del documento maestro `Mejoras AppWeb.docx`:
+  1. **5 Módulos Troncales 100% Completados**: Alta Rápida de Turnos (`/admin/alta-turno`), Agenda Neocita con huecos y bloqueos (`/admin/agenda`), Ficha de Clientes con recibos oficiales e historial (`/admin/clientes`), Estadísticas avanzadas con caja y desglose (`/admin/estadisticas`), y Autogestión Online con proximidad 2x y bypass WhatsApp (`src/app/page.js`).
+  2. **1 Módulo Parcialmente Avanzado**: Notificaciones (matriz granular por cliente y cron activos; pendientes automatización de cumpleaños e imágenes).
+  3. **4 Módulos Pendientes**: Gastos (siguiente según jerarquía), Configuración Avanzada (promos/cupones/servicios), Roles y Accesos (operador/recepción), y Multioperador/Boxes con agendas paralelas (dejado al final por indicación del cliente).
+- [x] Redactar respuesta ejecutiva y detallada lista para que Federico le envíe a Gonzalo por WhatsApp.
+
+
 
 
 
