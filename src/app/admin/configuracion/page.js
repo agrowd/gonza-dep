@@ -68,10 +68,42 @@ export default function ConfiguracionPage() {
     email_reminder_7days_body: '',
     wtsp_va_a_avisar_template: '',
     email_va_a_avisar_subject: '',
-    email_va_a_avisar_body: ''
+    email_va_a_avisar_body: '',
+    wtsp_birthday_template: '',
+    email_birthday_subject: '',
+    email_birthday_body: ''
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
+
+  // Promociones State
+  const [promociones, setPromociones] = useState([]);
+  const [loadingPromociones, setLoadingPromociones] = useState(false);
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState(null);
+  const [promoForm, setPromoForm] = useState({
+    nombre: '',
+    zonas: [],
+    descuentoTipo: 'PORCENTAJE',
+    descuentoValor: '',
+    fechaInicio: '',
+    fechaFin: '',
+    activo: true
+  });
+
+  // Cupones State
+  const [cupones, setCupones] = useState([]);
+  const [loadingCupones, setLoadingCupones] = useState(false);
+  const [isCuponModalOpen, setIsCuponModalOpen] = useState(false);
+  const [editingCupon, setEditingCupon] = useState(null);
+  const [cuponForm, setCuponForm] = useState({
+    codigo: '',
+    descuentoTipo: 'PORCENTAJE',
+    descuentoValor: '',
+    usosPermitidos: 1,
+    fechaVencimiento: '',
+    activo: true
+  });
 
   // 1. Fetch zones
   const fetchZones = () => {
@@ -117,7 +149,13 @@ export default function ConfiguracionPage() {
             email_reprogram_subject: data.email_reprogram_subject || '',
             email_reprogram_body: data.email_reprogram_body || '',
             email_reminder_7days_subject: data.email_reminder_7days_subject || '',
-            email_reminder_7days_body: data.email_reminder_7days_body || ''
+            email_reminder_7days_body: data.email_reminder_7days_body || '',
+            wtsp_va_a_avisar_template: data.wtsp_va_a_avisar_template || '',
+            email_va_a_avisar_subject: data.email_va_a_avisar_subject || '',
+            email_va_a_avisar_body: data.email_va_a_avisar_body || '',
+            wtsp_birthday_template: data.wtsp_birthday_template || '',
+            email_birthday_subject: data.email_birthday_subject || '',
+            email_birthday_body: data.email_birthday_body || ''
           });
         }
       })
@@ -125,9 +163,35 @@ export default function ConfiguracionPage() {
       .finally(() => setLoadingConfigs(false));
   };
 
+  // 3. Fetch Promociones
+  const fetchPromociones = () => {
+    setLoadingPromociones(true);
+    fetch('/api/admin/promociones')
+      .then(res => res.json())
+      .then(data => {
+        if (data.promociones) setPromociones(data.promociones);
+      })
+      .catch(err => console.error('Error fetching promociones:', err))
+      .finally(() => setLoadingPromociones(false));
+  };
+
+  // 4. Fetch Cupones
+  const fetchCupones = () => {
+    setLoadingCupones(true);
+    fetch('/api/admin/cupones')
+      .then(res => res.json())
+      .then(data => {
+        if (data.cupones) setCupones(data.cupones);
+      })
+      .catch(err => console.error('Error fetching cupones:', err))
+      .finally(() => setLoadingCupones(false));
+  };
+
   useEffect(() => {
     fetchZones();
     fetchConfigs();
+    fetchPromociones();
+    fetchCupones();
   }, []);
 
   // 3. Save configurations in bulk
@@ -285,6 +349,214 @@ export default function ConfiguracionPage() {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount);
   };
 
+  // --- PROMOCIONES HANDLERS ---
+  const handleOpenNewPromo = () => {
+    setEditingPromo(null);
+    setPromoForm({
+      nombre: '',
+      zonas: [],
+      descuentoTipo: 'PORCENTAJE',
+      descuentoValor: '',
+      fechaInicio: '',
+      fechaFin: '',
+      activo: true
+    });
+    setIsPromoModalOpen(true);
+  };
+
+  const handleOpenEditPromo = (promo) => {
+    setEditingPromo(promo);
+    let parsedZonas = [];
+    try {
+      parsedZonas = typeof promo.zonas === 'string' ? JSON.parse(promo.zonas) : (promo.zonas || []);
+    } catch {
+      parsedZonas = [];
+    }
+    setPromoForm({
+      nombre: promo.nombre || '',
+      zonas: parsedZonas,
+      descuentoTipo: promo.descuentoTipo || 'PORCENTAJE',
+      descuentoValor: promo.descuentoValor !== undefined ? promo.descuentoValor : '',
+      fechaInicio: promo.fechaInicio ? promo.fechaInicio.slice(0, 10) : '',
+      fechaFin: promo.fechaFin ? promo.fechaFin.slice(0, 10) : '',
+      activo: promo.activo !== undefined ? promo.activo : true
+    });
+    setIsPromoModalOpen(true);
+  };
+
+  const togglePromoZone = (zoneName) => {
+    setPromoForm(prev => {
+      const exists = prev.zonas.includes(zoneName);
+      return {
+        ...prev,
+        zonas: exists ? prev.zonas.filter(z => z !== zoneName) : [...prev.zonas, zoneName]
+      };
+    });
+  };
+
+  const handleSavePromo = async (e) => {
+    e.preventDefault();
+    if (!promoForm.nombre.trim()) {
+      showToast('Ingresa un nombre para la promoción.', 'error');
+      return;
+    }
+    if (promoForm.zonas.length === 0) {
+      showToast('Selecciona al menos una zona para la promoción.', 'error');
+      return;
+    }
+    if (!promoForm.descuentoValor || Number(promoForm.descuentoValor) <= 0) {
+      showToast('Ingresa un descuento válido mayor a 0.', 'error');
+      return;
+    }
+
+    try {
+      const url = editingPromo ? `/api/admin/promociones/${editingPromo.id}` : '/api/admin/promociones';
+      const method = editingPromo ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(promoForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(editingPromo ? 'Promoción modificada con éxito.' : 'Promoción creada con éxito.');
+        setIsPromoModalOpen(false);
+        fetchPromociones();
+      } else {
+        showToast(data.error || 'Error al guardar la promoción.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving promo:', err);
+      showToast('Error de conexión al guardar promoción.', 'error');
+    }
+  };
+
+  const handleTogglePromoActivo = async (promo) => {
+    try {
+      const res = await fetch(`/api/admin/promociones/${promo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !promo.activo })
+      });
+      if (res.ok) {
+        showToast(`Promoción ${!promo.activo ? 'activada' : 'pausada'}.`);
+        fetchPromociones();
+      } else {
+        showToast('Error al cambiar estado.', 'error');
+      }
+    } catch {
+      showToast('Error de red al actualizar estado.', 'error');
+    }
+  };
+
+  const handleDeletePromo = async (id) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta promoción?')) return;
+    try {
+      const res = await fetch(`/api/admin/promociones/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Promoción eliminada con éxito.');
+        fetchPromociones();
+      } else {
+        showToast('Error al eliminar promoción.', 'error');
+      }
+    } catch {
+      showToast('Error al eliminar promoción.', 'error');
+    }
+  };
+
+  // --- CUPONES HANDLERS ---
+  const handleOpenNewCupon = () => {
+    setEditingCupon(null);
+    setCuponForm({
+      codigo: '',
+      descuentoTipo: 'PORCENTAJE',
+      descuentoValor: '',
+      usosPermitidos: 1,
+      fechaVencimiento: '',
+      activo: true
+    });
+    setIsCuponModalOpen(true);
+  };
+
+  const handleOpenEditCupon = (cupon) => {
+    setEditingCupon(cupon);
+    setCuponForm({
+      codigo: cupon.codigo || '',
+      descuentoTipo: cupon.descuentoTipo || 'PORCENTAJE',
+      descuentoValor: cupon.descuentoValor !== undefined ? cupon.descuentoValor : '',
+      usosPermitidos: cupon.usosPermitidos !== undefined ? cupon.usosPermitidos : 1,
+      fechaVencimiento: cupon.fechaVencimiento ? cupon.fechaVencimiento.slice(0, 10) : '',
+      activo: cupon.activo !== undefined ? cupon.activo : true
+    });
+    setIsCuponModalOpen(true);
+  };
+
+  const handleSaveCupon = async (e) => {
+    e.preventDefault();
+    if (!cuponForm.codigo.trim()) {
+      showToast('Ingresa un código de cupón.', 'error');
+      return;
+    }
+    if (!cuponForm.descuentoValor || Number(cuponForm.descuentoValor) <= 0) {
+      showToast('Ingresa un descuento válido mayor a 0.', 'error');
+      return;
+    }
+
+    try {
+      const url = editingCupon ? `/api/admin/cupones/${editingCupon.id}` : '/api/admin/cupones';
+      const method = editingCupon ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuponForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(editingCupon ? 'Cupón modificado con éxito.' : 'Cupón creado con éxito.');
+        setIsCuponModalOpen(false);
+        fetchCupones();
+      } else {
+        showToast(data.error || 'Error al guardar cupón.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving cupon:', err);
+      showToast('Error de conexión al guardar cupón.', 'error');
+    }
+  };
+
+  const handleToggleCuponActivo = async (cupon) => {
+    try {
+      const res = await fetch(`/api/admin/cupones/${cupon.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !cupon.activo })
+      });
+      if (res.ok) {
+        showToast(`Cupón ${!cupon.activo ? 'activado' : 'pausado'}.`);
+        fetchCupones();
+      } else {
+        showToast('Error al cambiar estado.', 'error');
+      }
+    } catch {
+      showToast('Error de red al actualizar estado.', 'error');
+    }
+  };
+
+  const handleDeleteCupon = async (id) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este cupón?')) return;
+    try {
+      const res = await fetch(`/api/admin/cupones/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Cupón eliminado con éxito.');
+        fetchCupones();
+      } else {
+        showToast('Error al eliminar cupón.', 'error');
+      }
+    } catch {
+      showToast('Error al eliminar cupón.', 'error');
+    }
+  };
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -312,6 +584,12 @@ export default function ConfiguracionPage() {
           onClick={() => setActiveTab('templates')}
         >
           Mensajes y Plantillas
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'promos' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('promos')}
+        >
+          🎁 Promociones y Cupones
         </button>
       </div>
 
@@ -631,6 +909,18 @@ export default function ConfiguracionPage() {
                 />
               </div>
 
+              <div className={styles.formGroup}>
+                <label className={styles.label}>🎂 Saludo de Cumpleaños por WhatsApp (Enviado automáticamente a las 10:00 AM)</label>
+                <textarea 
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={configs.wtsp_birthday_template}
+                  onChange={(e) => setConfigs({ ...configs, wtsp_birthday_template: e.target.value })}
+                  placeholder="¡Feliz cumpleaños [Nombre]! 🎉🎂 Desde Gonzalo Depilación te deseamos que pases un excelente día..."
+                  rows="4"
+                  required
+                />
+              </div>
+
               {/* Variable Helper */}
               <div className={styles.variableHelper} style={{ marginBottom: '2rem' }}>
                 <div className={styles.variableTitle}>Variables Automáticas WhatsApp (Toca para copiar):</div>
@@ -829,6 +1119,31 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
+              {/* Email 8: Saludo de Cumpleaños */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#ff7043' }}>🎂 Correo de Saludo de Cumpleaños (Enviado automáticamente a las 10:00 AM)</div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Asunto del Correo</label>
+                  <input 
+                    type="text"
+                    className={styles.input}
+                    value={configs.email_birthday_subject}
+                    onChange={(e) => setConfigs({ ...configs, email_birthday_subject: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Cuerpo del Mensaje</label>
+                  <textarea 
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.email_birthday_body}
+                    onChange={(e) => setConfigs({ ...configs, email_birthday_body: e.target.value })}
+                    rows="5"
+                    required
+                  />
+                </div>
+              </div>
+
               {/* Variable Helper for Emails */}
               <div className={styles.variableHelper} style={{ marginBottom: '1.5rem' }}>
                 <div className={styles.variableTitle}>Variables Automáticas Email (Toca para copiar):</div>
@@ -855,6 +1170,210 @@ export default function ConfiguracionPage() {
               </button>
             </form>
           )}
+        </div>
+      )}
+
+      {/* Tab Content 4: Promociones y Cupones Management */}
+      {activeTab === 'promos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Promociones por Combinación de Zonas */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionTitle}>
+              <div>
+                <span>🎁 Promociones por Combinación de Zonas</span>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'normal', margin: '0.25rem 0 0 0' }}>
+                  Aplica descuentos automáticos cuando un turno incluye una combinación específica de zonas (ej: Espalda + Pecho).
+                </p>
+              </div>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleOpenNewPromo} 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem', flexShrink: 0 }}
+              >
+                <PlusIcon /> Nueva Promoción
+              </button>
+            </div>
+
+            {loadingPromociones ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando promociones...</div>
+            ) : promociones.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                No hay promociones configuradas aún. Crea combos de zonas para incentivar la venta.
+              </div>
+            ) : (
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.th}>Promoción</th>
+                      <th className={styles.th}>Zonas Incluidas</th>
+                      <th className={styles.th}>Descuento</th>
+                      <th className={styles.th}>Vigencia</th>
+                      <th className={styles.th}>Estado</th>
+                      <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {promociones.map(promo => {
+                      let promoZonas = [];
+                      try {
+                        promoZonas = typeof promo.zonas === 'string' ? JSON.parse(promo.zonas) : (promo.zonas || []);
+                      } catch {
+                        promoZonas = [];
+                      }
+                      return (
+                        <tr key={promo.id} className={styles.tr}>
+                          <td className={styles.td} data-label="Promoción" style={{ fontWeight: 600 }}>
+                            {promo.nombre}
+                          </td>
+                          <td className={styles.td} data-label="Zonas">
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                              {promoZonas.map((z, idx) => (
+                                <span key={idx} className={styles.zoneChip}>{z}</span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className={styles.td} data-label="Descuento">
+                            <span className={styles.promoBadge}>
+                              {promo.descuentoTipo === 'PORCENTAJE' ? `${promo.descuentoValor}% OFF` : `${formatMoney(promo.descuentoValor)} OFF`}
+                            </span>
+                          </td>
+                          <td className={styles.td} data-label="Vigencia" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            {promo.fechaInicio || promo.fechaFin ? (
+                              `${promo.fechaInicio ? new Date(promo.fechaInicio).toLocaleDateString('es-AR') : 'Inicio'} al ${promo.fechaFin ? new Date(promo.fechaFin).toLocaleDateString('es-AR') : 'Fin'}`
+                            ) : (
+                              'Permanente'
+                            )}
+                          </td>
+                          <td className={styles.td} data-label="Estado">
+                            <span 
+                              className={promo.activo ? styles.statusActive : styles.statusInactive}
+                              onClick={() => handleTogglePromoActivo(promo)}
+                              title="Haz clic para activar/pausar"
+                            >
+                              {promo.activo ? '🟢 Activa' : '⚪ Pausada'}
+                            </span>
+                          </td>
+                          <td className={styles.td} data-label="Acciones" style={{ textAlign: 'right' }}>
+                            <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.35rem 0.65rem' }} 
+                                onClick={() => handleOpenEditPromo(promo)}
+                                title="Editar promoción"
+                              >
+                                <EditIcon />
+                              </button>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
+                                onClick={() => handleDeletePromo(promo.id)}
+                                title="Eliminar promoción"
+                              >
+                                <TrashIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Cupones de Descuento */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionTitle}>
+              <div>
+                <span>🏷️ Cupones de Descuento Alfanuméricos</span>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'normal', margin: '0.25rem 0 0 0' }}>
+                  Códigos para campañas publicitarias o fidelización con límite de canjes y fecha de vencimiento.
+                </p>
+              </div>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleOpenNewCupon} 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem', flexShrink: 0 }}
+              >
+                <PlusIcon /> Nuevo Cupón
+              </button>
+            </div>
+
+            {loadingCupones ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando cupones...</div>
+            ) : cupones.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                No hay cupones registrados. Crea códigos promocionales para tus clientes.
+              </div>
+            ) : (
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.th}>Código</th>
+                      <th className={styles.th}>Beneficio</th>
+                      <th className={styles.th}>Usos / Límite</th>
+                      <th className={styles.th}>Vencimiento</th>
+                      <th className={styles.th}>Estado</th>
+                      <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cupones.map(cupon => (
+                      <tr key={cupon.id} className={styles.tr}>
+                        <td className={styles.td} data-label="Código">
+                          <span className={styles.cuponCode}>{cupon.codigo}</span>
+                        </td>
+                        <td className={styles.td} data-label="Beneficio">
+                          <span className={styles.promoBadge}>
+                            {cupon.descuentoTipo === 'PORCENTAJE' ? `${cupon.descuentoValor}% OFF` : `${formatMoney(cupon.descuentoValor)} OFF`}
+                          </span>
+                        </td>
+                        <td className={styles.td} data-label="Usos">
+                          <span style={{ fontWeight: 600 }}>{cupon.usosActuales || 0}</span>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}> / {cupon.usosPermitidos ? cupon.usosPermitidos : '∞'} usos</span>
+                        </td>
+                        <td className={styles.td} data-label="Vencimiento" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          {cupon.fechaVencimiento ? new Date(cupon.fechaVencimiento).toLocaleDateString('es-AR') : 'Sin vencimiento'}
+                        </td>
+                        <td className={styles.td} data-label="Estado">
+                          <span 
+                            className={cupon.activo ? styles.statusActive : styles.statusInactive}
+                            onClick={() => handleToggleCuponActivo(cupon)}
+                            title="Haz clic para activar/pausar"
+                          >
+                            {cupon.activo ? '🟢 Activo' : '⚪ Pausado'}
+                          </span>
+                        </td>
+                        <td className={styles.td} data-label="Acciones" style={{ textAlign: 'right' }}>
+                          <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.35rem 0.65rem' }} 
+                              onClick={() => handleOpenEditCupon(cupon)}
+                              title="Editar cupón"
+                            >
+                              <EditIcon />
+                            </button>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
+                              onClick={() => handleDeleteCupon(cupon.id)}
+                              title="Eliminar cupón"
+                            >
+                              <TrashIcon />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -928,6 +1447,222 @@ export default function ConfiguracionPage() {
           </div>
         </div>
       )}
+
+      {/* Promocion Create / Edit Modal */}
+      {isPromoModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsPromoModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '580px' }}>
+            <div className="modal-header">
+              <h3>{editingPromo ? 'Editar Promoción' : 'Nueva Promoción por Zonas'}</h3>
+              <button className="modal-close" onClick={() => setIsPromoModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleSavePromo}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nombre de la Promoción</label>
+                  <input 
+                    type="text" 
+                    className={styles.input} 
+                    value={promoForm.nombre}
+                    onChange={(e) => setPromoForm({ ...promoForm, nombre: e.target.value })}
+                    placeholder="Ej: Combo Espalda + Pecho 15% OFF"
+                    required
+                  />
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Tipo de Descuento</label>
+                    <select 
+                      className={styles.input}
+                      value={promoForm.descuentoTipo}
+                      onChange={(e) => setPromoForm({ ...promoForm, descuentoTipo: e.target.value })}
+                    >
+                      <option value="PORCENTAJE">Porcentaje (%)</option>
+                      <option value="MONTO_FIJO">Monto Fijo ($ ARS)</option>
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      {promoForm.descuentoTipo === 'PORCENTAJE' ? 'Porcentaje (%)' : 'Monto Descuento ($ ARS)'}
+                    </label>
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={promoForm.descuentoValor}
+                      onChange={(e) => setPromoForm({ ...promoForm, descuentoValor: e.target.value })}
+                      placeholder={promoForm.descuentoTipo === 'PORCENTAJE' ? '15' : '5000'}
+                      min="1"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>
+                    Zonas Requeridas para Aplicar el Combo ({promoForm.zonas.length} seleccionadas)
+                  </label>
+                  <div className={styles.zoneSelectorGrid}>
+                    {zones.map(z => {
+                      const isSelected = promoForm.zonas.includes(z.nombre);
+                      return (
+                        <div 
+                          key={z.id}
+                          className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
+                          onClick={() => togglePromoZone(z.nombre)}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            onChange={() => {}} 
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span>{z.nombre}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Vigencia Desde (Opcional)</label>
+                    <input 
+                      type="date" 
+                      className={styles.input} 
+                      value={promoForm.fechaInicio}
+                      onChange={(e) => setPromoForm({ ...promoForm, fechaInicio: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Vigencia Hasta (Opcional)</label>
+                    <input 
+                      type="date" 
+                      className={styles.input} 
+                      value={promoForm.fechaFin}
+                      onChange={(e) => setPromoForm({ ...promoForm, fechaFin: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <input 
+                    type="checkbox" 
+                    id="promoActivo"
+                    checked={promoForm.activo}
+                    onChange={(e) => setPromoForm({ ...promoForm, activo: e.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-gold)' }}
+                  />
+                  <label htmlFor="promoActivo" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+                    Promoción Activa
+                  </label>
+                </div>
+              </div>
+              <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsPromoModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">{editingPromo ? 'Guardar Cambios' : 'Crear Promoción'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cupon Create / Edit Modal */}
+      {isCuponModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsCuponModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>{editingCupon ? 'Editar Cupón de Descuento' : 'Nuevo Cupón de Descuento'}</h3>
+              <button className="modal-close" onClick={() => setIsCuponModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleSaveCupon}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Código Alfanumérico del Cupón</label>
+                  <input 
+                    type="text" 
+                    className={styles.input} 
+                    value={cuponForm.codigo}
+                    onChange={(e) => setCuponForm({ ...cuponForm, codigo: e.target.value.toUpperCase().replace(/\s+/g, '') })}
+                    placeholder="Ej: VERANO2026"
+                    required
+                    style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}
+                  />
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Tipo de Descuento</label>
+                    <select 
+                      className={styles.input}
+                      value={cuponForm.descuentoTipo}
+                      onChange={(e) => setCuponForm({ ...cuponForm, descuentoTipo: e.target.value })}
+                    >
+                      <option value="PORCENTAJE">Porcentaje (%)</option>
+                      <option value="MONTO_FIJO">Monto Fijo ($ ARS)</option>
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      {cuponForm.descuentoTipo === 'PORCENTAJE' ? 'Porcentaje (%)' : 'Monto Descuento ($ ARS)'}
+                    </label>
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={cuponForm.descuentoValor}
+                      onChange={(e) => setCuponForm({ ...cuponForm, descuentoValor: e.target.value })}
+                      placeholder={cuponForm.descuentoTipo === 'PORCENTAJE' ? '20' : '6000'}
+                      min="1"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Límite de Canjes / Usos</label>
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={cuponForm.usosPermitidos}
+                      onChange={(e) => setCuponForm({ ...cuponForm, usosPermitidos: e.target.value })}
+                      placeholder="Ej: 10 (Dejar vacío o 0 si es ilimitado)"
+                      min="1"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Fecha de Vencimiento (Opcional)</label>
+                    <input 
+                      type="date" 
+                      className={styles.input} 
+                      value={cuponForm.fechaVencimiento}
+                      onChange={(e) => setCuponForm({ ...cuponForm, fechaVencimiento: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <input 
+                    type="checkbox" 
+                    id="cuponActivo"
+                    checked={cuponForm.activo}
+                    onChange={(e) => setCuponForm({ ...cuponForm, activo: e.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-gold)' }}
+                  />
+                  <label htmlFor="cuponActivo" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+                    Cupón Habilitado / Activo
+                  </label>
+                </div>
+              </div>
+              <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsCuponModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">{editingCupon ? 'Guardar Cambios' : 'Crear Cupón'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toast.show && (
         <div style={{

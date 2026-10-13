@@ -226,6 +226,9 @@ export default function AgendaPage() {
     esDiaCompleto: false
   });
   const [lastClientTurnoInfo, setLastClientTurnoInfo] = useState(null);
+  const [activePromos, setActivePromos] = useState([]);
+  const [cuponCodeInput, setCuponCodeInput] = useState('');
+  const [editCuponCodeInput, setEditCuponCodeInput] = useState('');
 
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -1461,7 +1464,7 @@ export default function AgendaPage() {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  // 4. Fetch zones for the new appointment modal
+  // 4. Fetch zones and promotions for the appointment modals
   useEffect(() => {
     fetch('/api/zonas')
       .then(res => res.json())
@@ -1471,7 +1474,58 @@ export default function AgendaPage() {
         }
       })
       .catch(err => console.error('Error fetching zones:', err));
+
+    fetch('/api/admin/promociones')
+      .then(res => res.json())
+      .then(data => {
+        if (data.promociones) {
+          setActivePromos(data.promociones.filter(p => p.activo));
+        }
+      })
+      .catch(err => console.error('Error fetching promociones:', err));
   }, []);
+
+  const handleApplyCoupon = async (isEdit = false) => {
+    const rawCode = isEdit ? editCuponCodeInput : cuponCodeInput;
+    const code = (rawCode || '').trim();
+    if (!code) {
+      showToast('Ingresa un código de cupón.', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/cupones/validar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: code })
+      });
+      const data = await res.json();
+      if (res.ok && data.cupon) {
+        const c = data.cupon;
+        const discountType = c.descuentoTipo === 'PORCENTAJE' ? 'PORCENTAJE' : 'PESOS';
+        if (isEdit) {
+          setEditTurno(prev => ({
+            ...prev,
+            manualTotalOverride: undefined,
+            descuentoTipo: discountType,
+            descuentoValor: c.descuentoValor
+          }));
+        } else {
+          setNewTurno(prev => ({
+            ...prev,
+            manualTotalOverride: undefined,
+            descuentoTipo: discountType,
+            descuentoValor: c.descuentoValor
+          }));
+        }
+        showToast(`¡Cupón "${c.codigo}" aplicado con éxito!`);
+      } else {
+        showToast(data.error || 'Cupón inválido o vencido.', 'error');
+      }
+    } catch (err) {
+      console.error('Error validating coupon:', err);
+      showToast('Error de conexión al validar cupón.', 'error');
+    }
+  };
 
   // 5. Navigate weeks/days
   const handlePrev = () => {
@@ -3572,6 +3626,51 @@ export default function AgendaPage() {
                     </div>
                   )}
 
+                  {/* Matching Promotion Suggestion */}
+                  {(() => {
+                    const selectedNames = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
+                    const matching = activePromos.find(p => {
+                      let pZonas = [];
+                      try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
+                      if (pZonas.length === 0) return false;
+                      return pZonas.every(pz => selectedNames.includes(pz));
+                    });
+                    if (!matching) return null;
+                    return (
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        backgroundColor: 'rgba(212, 165, 77, 0.12)',
+                        border: '1px dashed var(--color-gold)',
+                        borderRadius: '8px',
+                        padding: '0.65rem 0.85rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                          🎁 Promo disponible: {matching.nombre} ({matching.descuentoTipo === 'PORCENTAJE' ? `${matching.descuentoValor}% OFF` : `$${matching.descuentoValor} OFF`})
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ padding: '0.25rem 0.65rem', fontSize: '0.78rem', height: 'auto', whiteSpace: 'nowrap' }}
+                          onClick={() => {
+                            setEditTurno(prev => ({
+                              ...prev,
+                              manualTotalOverride: undefined,
+                              descuentoTipo: matching.descuentoTipo === 'PORCENTAJE' ? 'PORCENTAJE' : 'PESOS',
+                              descuentoValor: matching.descuentoValor
+                            }));
+                            showToast(`¡Promoción "${matching.nombre}" aplicada!`);
+                          }}
+                        >
+                          Aplicar Promo
+                        </button>
+                      </div>
+                    );
+                  })()}
+
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Tipo de Descuento</label>
                     <select
@@ -3593,6 +3692,27 @@ export default function AgendaPage() {
                       placeholder="Ej. 10 o 500"
                       disabled={editTurno.descuentoTipo === 'NINGUNO'}
                     />
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                    <label className={styles.inputLabel}>🎟️ Cupón de Descuento</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        type="text"
+                        placeholder="Código de cupón (ej: VERANO2026)"
+                        value={editCuponCodeInput}
+                        onChange={(e) => setEditCuponCodeInput(e.target.value.toUpperCase())}
+                        style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                        onClick={() => handleApplyCoupon(true)}
+                      >
+                        Validar Cupón
+                      </button>
+                    </div>
                   </div>
 
                   {/* Resumen de Descuento y Saldo a Pagar */}
@@ -5163,6 +5283,52 @@ export default function AgendaPage() {
                   </div>
                 )}
 
+                {/* Matching Promotion Suggestion */}
+                {(() => {
+                  const selectedNames = zones.filter(z => (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
+                  const matching = activePromos.find(p => {
+                    let pZonas = [];
+                    try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
+                    if (pZonas.length === 0) return false;
+                    return pZonas.every(pz => selectedNames.includes(pz));
+                  });
+                  if (!matching) return null;
+                  return (
+                    <div style={{
+                      gridColumn: '1 / -1',
+                      backgroundColor: 'rgba(212, 165, 77, 0.12)',
+                      border: '1px dashed var(--color-gold)',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.85rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.25rem'
+                    }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                        🎁 Promo disponible: {matching.nombre} ({matching.descuentoTipo === 'PORCENTAJE' ? `${matching.descuentoValor}% OFF` : `$${matching.descuentoValor} OFF`})
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ padding: '0.25rem 0.65rem', fontSize: '0.78rem', height: 'auto', whiteSpace: 'nowrap' }}
+                        onClick={() => {
+                          setNewTurno(prev => ({
+                            ...prev,
+                            manualTotalOverride: undefined,
+                            descuentoTipo: matching.descuentoTipo === 'PORCENTAJE' ? 'PORCENTAJE' : 'PESOS',
+                            descuentoValor: matching.descuentoValor
+                          }));
+                          showToast(`¡Promoción "${matching.nombre}" aplicada!`);
+                        }}
+                      >
+                        Aplicar Promo
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Tipo de Descuento</label>
                   <select
@@ -5184,6 +5350,27 @@ export default function AgendaPage() {
                     placeholder="Ej. 10 o 500"
                     disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />
+                </div>
+
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                  <label className={styles.inputLabel}>🎟️ Cupón de Descuento</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Código de cupón (ej: VERANO2026)"
+                      value={cuponCodeInput}
+                      onChange={(e) => setCuponCodeInput(e.target.value.toUpperCase())}
+                      style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                      onClick={() => handleApplyCoupon(false)}
+                    >
+                      Validar Cupón
+                    </button>
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>

@@ -107,6 +107,50 @@ model Configuracion {
   value String
 }
 
+model CategoriaGasto {
+  id        String   @id @default(uuid())
+  nombre    String   @unique
+  color     String   @default("#64748b")
+  gastos    Gasto[]
+  createdAt DateTime @default(now())
+}
+
+model Gasto {
+  id            String         @id @default(uuid())
+  concepto      String
+  monto         Float
+  fecha         DateTime
+  categoriaId   String
+  categoria     CategoriaGasto @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  observaciones String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+}
+
+model Promocion {
+  id             String    @id @default(uuid())
+  nombre         String
+  zonas          String    // JSON stringified array de IDs o nombres de zonas requeridas
+  descuentoTipo  String    @default("PORCENTAJE") // "PORCENTAJE" o "MONTO_FIJO"
+  descuentoValor Float
+  fechaInicio    DateTime?
+  fechaFin       DateTime?
+  activo         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+}
+
+model Cupon {
+  id               String    @id @default(uuid())
+  codigo           String    @unique
+  descuentoTipo    String    @default("PORCENTAJE") // "PORCENTAJE" o "MONTO_FIJO"
+  descuentoValor   Float
+  usosPermitidos   Int       @default(1)
+  usosActuales     Int       @default(0)
+  fechaVencimiento DateTime?
+  activo           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+}
+
 // ==========================================
 // MODELOS ESPECÍFICOS DE IA & WHATSAPP (SHARED DATABASE)
 // ==========================================

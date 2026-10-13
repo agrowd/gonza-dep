@@ -49,6 +49,9 @@ export async function GET() {
       wtsp_va_a_avisar_template: configs.wtsp_va_a_avisar_template || "¡Hola [Nombre]! Te escribimos de Gonzalo Depilación Masculina ✨ Nos quedó pendiente coordinar tu próxima sesión tras tu última visita. ¿Cómo venís de tiempos esta semana o la próxima para coordinar un turno? ¡Avisanos cuando puedas!",
       email_va_a_avisar_subject: configs.email_va_a_avisar_subject || "Seguimiento de tu tratamiento - Gonzalo Depilación",
       email_va_a_avisar_body: configs.email_va_a_avisar_body || "¡Hola {cliente}!\n\nTe escribimos de Gonzalo Depilación para hacer un seguimiento de tu tratamiento. En tu última visita quedamos en que nos avisarías para coordinar la próxima fecha.\n\nCuando tengas un momento disponible, podés ingresar a nuestra web para ver los horarios o responder este mensaje para agendar tu próximo turno.\n\n¡Te esperamos!",
+      wtsp_birthday_template: configs.wtsp_birthday_template || "¡Feliz cumpleaños [Nombre]! 🎉🎂 Desde Gonzalo Depilación te deseamos que pases un excelente día. Para festejarlo, tenés un beneficio especial reservado en tu próxima sesión. ¡Que lo disfrutes mucho!",
+      email_birthday_subject: configs.email_birthday_subject || "¡Muy Feliz Cumpleaños! 🎉🎂 - Gonzalo Depilación",
+      email_birthday_body: configs.email_birthday_body || "¡Hola {cliente}!\n\nDe parte de todo el equipo de Gonzalo Depilación, queremos desearte un muy feliz cumpleaños 🎉🎂.\n\nEsperamos que disfrutes tu día al máximo. Como agradecimiento por tu confianza, tenés una bonificación especial reservada para tu próxima sesión.\n\n¡Felicidades!",
       global_notifications_enabled: configs.global_notifications_enabled || "true"
     };
 
