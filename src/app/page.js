@@ -669,7 +669,7 @@ Duración: ${duracionMinutos} min`;
               ← Volver a la web
             </a>
             <a
-              href="https://wa.me/5491176735678"
+              href="https://wa.me/5491132519008"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.btnWhatsappHeader}
@@ -1125,7 +1125,7 @@ Duración: ${duracionMinutos} min`;
                             </p>
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                               <a
-                                href={`https://wa.me/5491176735678?text=${encodeURIComponent(`Hola! Quise reservar por la web de autogestión pero mi teléfono ya está cargado con otro mail (${phoneConflict.maskedEmail}). ¿Me ayudan a actualizar mis datos?`)}`}
+                                href={`https://wa.me/5491132519008?text=${encodeURIComponent(`Hola! Quise reservar por la web de autogestión pero mi teléfono ya está cargado con otro mail (${phoneConflict.maskedEmail}). ¿Me ayudan a actualizar mis datos?`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{

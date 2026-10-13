@@ -48,7 +48,7 @@ function FailureContent() {
             <button onClick={() => router.push('/')} className="btn btn-secondary" style={{ flex: 1 }}>
               Volver a Intentar
             </button>
-            <a href="https://wa.me/5491122334455" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, backgroundColor: '#25D366', color: '#fff' }}>
+            <a href="https://wa.me/5491132519008" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, backgroundColor: '#25D366', color: '#fff' }}>
               💬 Contactar Soporte
             </a>
           </div>
