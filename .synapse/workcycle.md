@@ -1690,3 +1690,24 @@
 - [x] Commit y push a `main` y `staging` (`95f130e`).
 - [x] Desplegar en servidor VPS Hostinger en Producción y Staging y verificar estado.
 - [x] Registrar Decisión `D-109` en `.synapse/decisions.md`.
+
+## 📅 Sesión: 13 de Octubre de 2026 (Seguimiento - Implementación en Staging de Módulos Pendientes: Gastos, Promociones, Cupones y Cumpleaños)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender solicitud del usuario: *"Hace los que siguen en el staging"* para ir completando los módulos pendientes del documento maestro `Mejoras AppWeb.docx` antes del cierre del proyecto.
+- [x] Actualizar `prisma/schema.prisma` incorporando modelos `CategoriaGasto`, `Gasto`, `Promocion` y `Cupon` compatibles con PostgreSQL (`agenda_db_staging`) y SQLite local.
+- [x] Desarrollar backend de Gastos: `/api/admin/gastos/categorias` (CRUD con auto-seed de 7 categorías por defecto), `/api/admin/gastos` (cálculo de egresos mensuales, comparación vs mes anterior, desglose por categoría, flujo de caja entradas vs gastos según regla de Gonzalo y balance día a día) y `/api/admin/gastos/[id]`.
+- [x] Desarrollar interfaz de Gastos en `/admin/gastos`: selector mensual, 4 KPI cards (Gastos, Entradas, Balance Neto, Mayor Categoría), barra de distribución porcentual, tabla de historial filtrable, tabla de balance día a día y modal de administración de categorías con selector de color.
+- [x] Integrar ítem de navegación "Gastos" con icono de dólar en la barra lateral `src/app/admin/SidebarNav.js`.
+- [x] Desarrollar backend de Promociones y Cupones: CRUD `/api/admin/promociones` y `/api/admin/promociones/[id]` (soporte de combos de zonas, % o monto fijo, vigencia), CRUD `/api/admin/cupones` y `/api/admin/cupones/[id]` (código alfanumérico, límite de usos y vencimiento), y endpoint de validación pública `/api/cupones/validar`.
+- [x] Diseñar pestaña interactiva "🎁 Promociones y Cupones" en `/admin/configuracion` con ABM completo de Promociones por zonas y Cupones, badges de estado, switches de activación y modales.
+- [x] Añadir soporte de plantillas de saludo de cumpleaños (`wtsp_birthday_template`, `email_birthday_subject`, `email_birthday_body`) en `/api/admin/configuracion` y campos de edición en la pestaña *Mensajes y Plantillas* de `/admin/configuracion`.
+- [x] Programar cron diario automático a las 10:00 AM en `src/lib/whatsapp.js` para enviar saludos de cumpleaños a clientes activos que cumplen años hoy, validando idempotencia anual por notificación previa en la base de datos.
+- [x] Integrar sugerencia inteligente de promociones en `/admin/agenda`: al seleccionar zonas para un turno manual o edición, si coincide con un combo activo, renderizar banner dorado destacado con botón "Aplicar Promo" para aplicar el descuento automáticamente con un clic.
+- [x] Integrar validador de cupones con botón "Validar Cupón" en los formularios de agendamiento y edición de `/admin/agenda`.
+- [x] Verificar compilación local con Next.js Turbopack (`npm run build`, compilado exitoso en 36.7s con 0 errores).
+- [x] Commit y push a la rama `staging` en GitHub (`5d284f6`).
+- [x] Desplegar en el VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`), sincronizando Prisma y reiniciando PM2 `gonzalo-agenda-staging`.
+- [x] Validar disponibilidad de rutas y APIs en Staging mediante requests directos (`/api/zonas`, `/api/cupones/validar`, `/admin/gastos` respondiendo HTTP 200 OK).
+- [x] Registrar Decisión `D-110` en `.synapse/decisions.md`.
+

@@ -437,3 +437,27 @@
   - Push a `main` y `staging` en GitHub (`95f130e`).
   - Desplegado en VPS Hostinger en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008). Ambos servicios online en PM2.
   - Decisión `D-109` registrada en `.synapse/decisions.md`.
+
+## Sesión: 13 de Octubre de 2026 (Seguimiento) - Implementación en Staging de Módulos Pendientes: Gastos, Promociones, Cupones y Cumpleaños
+- Requerimiento del Usuario: *"Hace los que siguen en el staging"* (avanzar con los siguientes módulos de `Mejoras AppWeb.docx` en el entorno Staging).
+- Módulos Implementados y Desplegados:
+  1. **Módulo de Gastos (`/admin/gastos`)**:
+     - Modelos Prisma `CategoriaGasto` y `Gasto`.
+     - APIs `/api/admin/gastos/categorias` (CRUD con auto-seed de 7 categorías por defecto), `/api/admin/gastos` (cálculo de egresos mensuales, comparación vs mes anterior, desglose por categoría, balance entradas vs salidas según regla Gonzalo y desglose día a día) y `/api/admin/gastos/[id]`.
+     - Vista `/admin/gastos` con 4 KPI cards, barra de distribución porcentual, historial de gastos filtrable, balance detallado día a día y modal de administración de categorías con selector de color.
+     - Ítem "Gastos" con icono de dólar añadido en `src/app/admin/SidebarNav.js`.
+  2. **Promociones y Cupones (`/admin/configuracion` > Promos)**:
+     - Modelos Prisma `Promocion` y `Cupon`.
+     - APIs CRUD `/api/admin/promociones`, `/api/admin/cupones` y `/api/cupones/validar`.
+     - Pestaña "🎁 Promociones y Cupones" en `/admin/configuracion` con ABM completo, switches de activación y selector de zonas para combos.
+     - Integración en `/admin/agenda`: sugerencia automática en modal de turno al coincidir zonas seleccionadas con un combo activo ("Aplicar Promo") y validador de cupones alfanuméricos.
+  3. **Automatización de Cumpleaños**:
+     - Plantillas editables de felicitación de cumpleaños por WhatsApp y Correo en `/admin/configuracion`.
+     - Cron diario a las 10:00 AM en `src/lib/whatsapp.js` que detecta clientes activos con cumpleaños hoy, valida idempotencia anual e interactúa enviando el mensaje personalizado.
+- Validación y Despliegue:
+  - Compilación local Next.js Turbopack exitosa (compilado en 36.7s con 0 errores).
+  - Push a rama `staging` en GitHub (`5d284f6`).
+  - Despliegue completado con éxito en VPS Staging (`/srv/gonzalo-dep-staging`, puerto 3008, base de datos `agenda_db_staging`).
+  - Servicios verificados con requests directos: `/api/zonas` (200 OK), `/api/cupones/validar` (200 OK), `/admin/gastos` (200 OK).
+  - Registrado en `.synapse/decisions.md` (D-110) y `.synapse/workcycle.md`.
+
