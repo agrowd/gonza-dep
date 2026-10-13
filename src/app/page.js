@@ -59,6 +59,10 @@ export default function Home() {
     observaciones: ''
   });
 
+  // Phone conflict detection (WhatsApp registered under a different email)
+  const [phoneConflict, setPhoneConflict] = useState(null);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+
   // Reschedule & 72hs policy state
   const [rescheduleMode, setRescheduleMode] = useState(false);
   const [show72hsAlert, setShow72hsAlert] = useState(false);
@@ -194,6 +198,8 @@ export default function Home() {
     setSelectedDateStr(null);
     setSelectedSlot(null);
     setErrorMessage('');
+    setPhoneConflict(null);
+    setCheckingPhone(false);
     setStep(1);
   };
 
@@ -362,7 +368,7 @@ export default function Home() {
   };
 
   // 6. Proceed from Step 1 to Step 2 (Deferred Client)
-  const handleProceedToZones = (e) => {
+  const handleProceedToZones = async (e) => {
     if (e) e.preventDefault();
     if (!formData.nombre.trim() || !formData.apellido.trim()) {
       setErrorMessage('Por favor, ingresá tu Nombre y Apellido.');
@@ -373,7 +379,30 @@ export default function Home() {
       return;
     }
     setErrorMessage('');
-    setStep(2);
+    setPhoneConflict(null);
+    setCheckingPhone(true);
+
+    try {
+      const fullPhone = buildFullPhone(formData.whatsappCountry, formData.whatsappCustomCode, formData.whatsapp);
+      const res = await fetch(`/api/clientes/consultar?whatsapp=${encodeURIComponent(fullPhone)}&currentEmail=${encodeURIComponent(emailInput.trim())}`);
+      const data = await res.json();
+
+      if (data.phoneRegisteredUnderOtherEmail) {
+        setPhoneConflict({
+          maskedEmail: data.registeredEmailMasked || 'otro correo',
+          clientName: data.registeredClientName || ''
+        });
+        return;
+      }
+
+      setStep(2);
+    } catch (err) {
+      console.error('Error verificando teléfono:', err);
+      // Fallback: si hay fallo temporal de red en la consulta, permitir continuar
+      setStep(2);
+    } finally {
+      setCheckingPhone(false);
+    }
   };
 
   // 7. Toggle Zone Selection (Step 2)
@@ -996,9 +1025,18 @@ Duración: ${duracionMinutos} min`;
                         countryCode={formData.whatsappCountry}
                         customCode={formData.whatsappCustomCode}
                         phoneNumber={formData.whatsapp}
-                        onCountryChange={c => setFormData(prev => ({ ...prev, whatsappCountry: c }))}
-                        onCustomCodeChange={code => setFormData(prev => ({ ...prev, whatsappCustomCode: code }))}
-                        onPhoneChange={num => setFormData(prev => ({ ...prev, whatsapp: num }))}
+                        onCountryChange={c => {
+                          setFormData(prev => ({ ...prev, whatsappCountry: c }));
+                          if (phoneConflict) setPhoneConflict(null);
+                        }}
+                        onCustomCodeChange={code => {
+                          setFormData(prev => ({ ...prev, whatsappCustomCode: code }));
+                          if (phoneConflict) setPhoneConflict(null);
+                        }}
+                        onPhoneChange={num => {
+                          setFormData(prev => ({ ...prev, whatsapp: num }));
+                          if (phoneConflict) setPhoneConflict(null);
+                        }}
                         placeholder="Ej: 11 2345 6789"
                       />
                     </div>
@@ -1064,11 +1102,86 @@ Duración: ${duracionMinutos} min`;
                       </div>
                     </div>
 
+                    {/* Alerta si el teléfono ya está asociado a otra cuenta con distinto mail */}
+                    {phoneConflict && (
+                      <div style={{
+                        background: '#fffbeb',
+                        border: '1.5px solid #f59e0b',
+                        borderRadius: '12px',
+                        padding: '16px 18px',
+                        marginBottom: '20px',
+                        boxShadow: '0 4px 14px rgba(245, 158, 11, 0.12)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>⚠️</span>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ margin: '0 0 6px 0', fontSize: '0.98rem', fontWeight: '800', color: '#92400e' }}>
+                              Número de teléfono ya registrado
+                            </h4>
+                            <p style={{ margin: '0 0 12px 0', fontSize: '0.88rem', color: '#78350f', lineHeight: 1.45 }}>
+                              Este número de WhatsApp ya se encuentra asociado a otra cuenta registrada ({phoneConflict.maskedEmail}).
+                              <br />
+                              Si cambiaste de correo electrónico o necesitás actualizar tus datos, por favor comunicate con nosotros por WhatsApp.
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                              <a
+                                href={`https://wa.me/5491176735678?text=${encodeURIComponent(`Hola! Quise reservar por la web de autogestión pero mi teléfono ya está cargado con otro mail (${phoneConflict.maskedEmail}). ¿Me ayudan a actualizar mis datos?`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  background: '#25D366',
+                                  color: '#ffffff',
+                                  padding: '9px 15px',
+                                  borderRadius: '8px',
+                                  fontSize: '0.86rem',
+                                  fontWeight: '700',
+                                  textDecoration: 'none'
+                                }}
+                              >
+                                💬 Contactar por WhatsApp
+                              </a>
+                              <button
+                                type="button"
+                                onClick={handleSalir}
+                                style={{
+                                  background: '#ffffff',
+                                  color: '#78350f',
+                                  border: '1px solid #d97706',
+                                  padding: '9px 14px',
+                                  borderRadius: '8px',
+                                  fontSize: '0.86rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                ← Probar con otro correo
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       type="submit"
-                      style={{ width: '100%', background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '1.05rem', fontWeight: '800', cursor: 'pointer' }}
+                      disabled={checkingPhone}
+                      style={{
+                        width: '100%',
+                        background: checkingPhone ? '#94a3b8' : 'var(--color-gold)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        fontSize: '1.05rem',
+                        fontWeight: '800',
+                        cursor: checkingPhone ? 'not-allowed' : 'pointer',
+                        transition: 'background 0.2s ease'
+                      }}
                     >
-                      Continuar a Selección de Zonas →
+                      {checkingPhone ? 'Verificando datos...' : 'Continuar a Selección de Zonas →'}
                     </button>
                   </form>
                 )}

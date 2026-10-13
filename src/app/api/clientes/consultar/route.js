@@ -1,14 +1,80 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
+import { normalizeWhatsApp } from '@/lib/whatsapp.js';
+
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return 'otro correo';
+  const [local, domain] = email.split('@');
+  if (local.length <= 2) {
+    return `${local.charAt(0)}*@${domain}`;
+  }
+  const first = local.charAt(0);
+  const last = local.charAt(local.length - 1);
+  const maskLength = Math.min(Math.max(local.length - 2, 1), 4);
+  return `${first}${'*'.repeat(maskLength)}${last}@${domain}`;
+}
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email')?.trim().toLowerCase();
     const dni = searchParams.get('dni');
+    const whatsapp = searchParams.get('whatsapp');
+    const currentEmail = searchParams.get('currentEmail')?.trim().toLowerCase();
 
-    if (!email && !dni) {
-      return NextResponse.json({ error: 'Email o DNI es requerido' }, { status: 400 });
+    if (!email && !dni && !whatsapp) {
+      return NextResponse.json({ error: 'Email, DNI o WhatsApp es requerido' }, { status: 400 });
+    }
+
+    // 1. Phone number check (anti-collision with other registered accounts)
+    if (whatsapp) {
+      const finalWhatsapp = normalizeWhatsApp(whatsapp);
+      const cleanDigits = String(whatsapp).replace(/\D/g, '');
+      const last10 = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
+      const last8 = cleanDigits.length >= 8 ? cleanDigits.slice(-8) : cleanDigits;
+
+      const existingPhoneClient = await prisma.cliente.findFirst({
+        where: {
+          OR: [
+            ...(finalWhatsapp ? [{ whatsapp: finalWhatsapp }] : []),
+            ...(cleanDigits ? [{ whatsapp: cleanDigits }] : []),
+            ...(last10 && last10.length === 10 ? [{ whatsapp: { contains: last10 } }] : []),
+            ...(last8 && last8.length === 8 ? [{ whatsapp: { contains: last8 } }] : [])
+          ]
+        }
+      });
+
+      if (existingPhoneClient) {
+        const clientEmailLower = (existingPhoneClient.email || '').trim().toLowerCase();
+        const isConflict = currentEmail && clientEmailLower !== currentEmail;
+
+        if (isConflict) {
+          return NextResponse.json({
+            exists: true,
+            phoneRegisteredUnderOtherEmail: true,
+            registeredEmailMasked: maskEmail(existingPhoneClient.email),
+            registeredClientName: (existingPhoneClient.nombreCompleto || '').split(' ')[0] || '',
+            error: 'Este número de teléfono ya se encuentra registrado con otro correo electrónico.'
+          });
+        }
+
+        return NextResponse.json({
+          exists: true,
+          phoneRegisteredUnderOtherEmail: false,
+          client: {
+            id: existingPhoneClient.id,
+            nombreCompleto: existingPhoneClient.nombreCompleto,
+            whatsapp: existingPhoneClient.whatsapp,
+            email: existingPhoneClient.email,
+            bloqueado: existingPhoneClient.bloqueado
+          }
+        });
+      }
+
+      return NextResponse.json({
+        exists: false,
+        phoneRegisteredUnderOtherEmail: false
+      });
     }
 
     const today = new Date();
@@ -101,7 +167,7 @@ export async function GET(request) {
     });
 
   } catch (error) {
-    console.error('Error in query client by DNI:', error);
+    console.error('Error in query client:', error);
     return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
   }
 }

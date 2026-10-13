@@ -146,6 +146,29 @@ export async function POST(request) {
         });
       }
     } else {
+      // 2.1 Defense against duplicate phone under different email
+      const cleanDigits = String(whatsapp).replace(/\D/g, '');
+      const last10 = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
+      const last8 = cleanDigits.length >= 8 ? cleanDigits.slice(-8) : cleanDigits;
+
+      const existingPhoneClient = await prisma.cliente.findFirst({
+        where: {
+          OR: [
+            ...(finalWhatsapp ? [{ whatsapp: finalWhatsapp }] : []),
+            ...(cleanDigits ? [{ whatsapp: cleanDigits }] : []),
+            ...(last10 && last10.length === 10 ? [{ whatsapp: { contains: last10 } }] : []),
+            ...(last8 && last8.length === 8 ? [{ whatsapp: { contains: last8 } }] : [])
+          ]
+        }
+      });
+
+      if (existingPhoneClient && existingPhoneClient.email.trim().toLowerCase() !== email.trim().toLowerCase()) {
+        return NextResponse.json({
+          error: 'El número de teléfono ingresado ya se encuentra registrado con otro correo electrónico. Por favor, comunicate con nosotros por WhatsApp para gestionar tu turno.',
+          phoneConflict: true
+        }, { status: 400 });
+      }
+
       client = await prisma.cliente.create({
         data: {
           dni: dni ? dni.trim() : null,
