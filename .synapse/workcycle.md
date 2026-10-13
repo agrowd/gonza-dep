@@ -1685,3 +1685,8 @@
 - [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) en Producción (puerto 3006) y Staging (puerto 3008), reiniciar PM2 y verificar respuesta con `fetch` directo.
 - [x] Registrar Decisión `D-108` en `.synapse/decisions.md`.
 - [x] Redactar mensaje para enviar a Gonzalo con todo lo nuevo implementado.
+- [x] Actualizar botón de WhatsApp de la cabecera de la agenda (`src/app/page.js`), botón de alerta de conflicto telefónico y botón de soporte en `/booking/failure` al número oficial de Gonzalo `+54 9 11 3251-9008` (`https://wa.me/5491132519008`).
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 28s).
+- [x] Commit y push a `main` y `staging` (`95f130e`).
+- [x] Desplegar en servidor VPS Hostinger en Producción y Staging y verificar estado.
+- [x] Registrar Decisión `D-109` en `.synapse/decisions.md`.

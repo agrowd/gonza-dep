@@ -423,3 +423,17 @@
   - Desplegado y verificado en VPS en Producción (puerto 3006) y Staging (puerto 3008).
   - Consulta de prueba ejecutada contra la API pública de producción devolviendo respuesta esperada (código 200 con `phoneRegisteredUnderOtherEmail: true`).
   - Decisión `D-108` registrada en `.synapse/decisions.md`.
+
+## Sesión: 13 de Octubre de 2026 (Seguimiento) - Actualización de Botón de WhatsApp al Número Oficial de Gonzalo
+- Requerimiento del Usuario: *"El boton de whatsapp de la agenda tiene que ir al de gonzalo +54 9 11 3251-9008"*.
+- Modificaciones realizadas:
+  1. En `src/app/page.js`:
+     - Botón de cabecera `💬 WhatsApp` actualizado a `https://wa.me/5491132519008`.
+     - Botón de contacto en la alerta por conflicto de teléfono duplicado actualizado a `https://wa.me/5491132519008`.
+  2. En `src/app/booking/failure/page.js`:
+     - Botón `💬 Contactar Soporte` actualizado del placeholder genérico a `https://wa.me/5491132519008`.
+- Validación y Despliegue:
+  - Compilación local Turbopack exitosa (41/41 rutas, 0 errores en 28s).
+  - Push a `main` y `staging` en GitHub (`95f130e`).
+  - Desplegado en VPS Hostinger en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008). Ambos servicios online en PM2.
+  - Decisión `D-109` registrada en `.synapse/decisions.md`.
