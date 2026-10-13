@@ -1711,3 +1711,26 @@
 - [x] Validar disponibilidad de rutas y APIs en Staging mediante requests directos (`/api/zonas`, `/api/cupones/validar`, `/admin/gastos` respondiendo HTTP 200 OK).
 - [x] Registrar Decisión `D-110` en `.synapse/decisions.md`.
 
+## 📅 Sesión: 13 de Octubre de 2026 (Seguimiento - Implementación de Gestión de Usuarios y Roles de Operador en Staging)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender mensaje de Gonzalo Siri (`media_1791933437978_661895ea.png`): *"está entonces la parte de alta de usuarios y puedo crear en el módulo de pruebas? Para probar crear un operador... No veo la parte de alta de perfiles en configuración"*.
+- [x] Actualizar `prisma/schema.prisma` extendiendo el modelo `Usuario` con `email String?`, `telefono String?` y soporte de roles (`ADMIN`, `OPERADOR`, `RECEPCION`).
+- [x] Desarrollar backend administrativo de usuarios:
+  - `GET /api/admin/usuarios`: listado seguro de usuarios excluyendo passwords y validando rol `ADMIN`.
+  - `POST /api/admin/usuarios`: alta de usuario con hashing SHA-256 de contraseña, asignación de rol y validación de unicidad de username.
+  - `PUT /api/admin/usuarios/[id]`: edición de datos, actualización opcional de contraseña y cambio de rol.
+  - `DELETE /api/admin/usuarios/[id]`: borrado seguro protegiendo contra auto-eliminación y eliminación del único administrador del sistema.
+- [x] Integrar control de acceso y filtrado granular por rol en `src/app/admin/SidebarNav.js`: los usuarios con rol `OPERADOR` solo ven "Alta de Turno", "Agenda de Turnos" y "Clientes" (ocultando Estadísticas, Gastos, Notificaciones y Configuración).
+- [x] Implementar la pestaña interactiva "👥 Usuarios y Operadores" en `src/app/admin/configuracion/page.js`:
+  - Selector de pestaña agregado a la barra de tabs.
+  - Tabla completa con Nombre, `@usuario`, Badges con estilo distintivo según rol (Administrador, Operador, Recepción), Teléfono, Email y botones de acción (Editar y Eliminar).
+  - Modal interactivo de creación y edición de usuario/operador con selector de rol y campos para credenciales y contacto.
+  - Estilos de badges añadidos a `configuracion.module.css`.
+- [x] Compilar exitosamente en local con Turbopack (`npm run build`, 0 errores en 84s).
+- [x] Commit y push a la rama `staging` en GitHub (`dd050be`).
+- [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`), sincronizando Prisma y reiniciando PM2 `gonzalo-agenda-staging`.
+- [x] Validar disponibilidad HTTP 200 OK en Staging (`http://187.127.9.216:3008/login`).
+- [x] Registrar Decisión `D-111` en `.synapse/decisions.md`.
+- [x] Redactar mensaje claro y preciso para enviar a Gonzalo por WhatsApp.
+

@@ -461,3 +461,29 @@
   - Servicios verificados con requests directos: `/api/zonas` (200 OK), `/api/cupones/validar` (200 OK), `/admin/gastos` (200 OK).
   - Registrado en `.synapse/decisions.md` (D-110) y `.synapse/workcycle.md`.
 
+## Sesión: 13 de Octubre de 2026 (Seguimiento 2) - Gestión de Usuarios, Operadores y Roles de Acceso en Configuración (Staging)
+- Requerimiento del Usuario / Gonzalo Siri (`media_1791933437978_661895ea.png`):
+  *"Dale lo reviso, está entonces la parte de alta de usuarios y puedo crear en el módulo de pruebas? Para probar crear un operador... No veo la parte de alta de perfiles en configuración"*.
+- Módulo Implementado y Desplegado en Staging:
+  1. **Modelo de Usuarios y Roles (`Usuario`)**:
+     - Extendido en `prisma/schema.prisma` con campos opcionales `email String?`, `telefono String?` y roles soportados: `ADMIN`, `OPERADOR`, `RECEPCION`.
+  2. **APIs Administrativas (`/api/admin/usuarios`)**:
+     - `GET /api/admin/usuarios`: lista segura de usuarios (excluyendo contraseñas) con verificación de rol `ADMIN`.
+     - `POST /api/admin/usuarios`: creación con hash SHA-256 de contraseña, validación de username único y asignación de rol.
+     - `PUT /api/admin/usuarios/[id]`: edición de datos, cambio de rol y reseteo opcional de contraseña.
+     - `DELETE /api/admin/usuarios/[id]`: baja de usuario con defensas contra auto-borrado y eliminación del último admin.
+  3. **Control de Acceso y Visibilidad en Barra Lateral (`SidebarNav.js`)**:
+     - Usuario con rol `OPERADOR`: solo visualiza "Alta de Turno", "Agenda de Turnos" y "Clientes" (ocultando Gastos, Estadísticas, Notificaciones y Configuración).
+     - Usuario con rol `RECEPCION`: añade "Notificaciones".
+     - Usuario con rol `ADMIN`: acceso total sin restricciones.
+  4. **Pestaña Interactiva "👥 Usuarios y Operadores" en `/admin/configuracion`**:
+     - Botón de pestaña en el menú superior de configuración.
+     - Tabla interactiva con columnas: Nombre, Usuario (`@usuario`), Rol con Badges de colores (Administrador en oro, Operador en azul/cyan, Recepción en naranja), Teléfono, Email y botones de Editar y Eliminar.
+     - Modal de alta y edición de usuario/operador con selector de rol, usuario y contraseña.
+  5. **Compilación y Despliegue en VPS Staging**:
+     - Compilación local Next.js Turbopack: 48/48 rutas con 0 errores.
+     - Empujado a la rama `staging` en GitHub (`dd050be`).
+     - Desplegado en VPS Hostinger (`187.127.9.216`, puerto 3008, PM2 `gonzalo-agenda-staging`, PostgreSQL `agenda_db_staging`).
+     - Verificación HTTP 200 OK en `http://187.127.9.216:3008/login`.
+     - Registrado en `.synapse/decisions.md` (D-111) y `.synapse/workcycle.md`.
+
