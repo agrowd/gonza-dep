@@ -1670,11 +1670,18 @@
   1. **5 Módulos Troncales 100% Completados**: Alta Rápida de Turnos (`/admin/alta-turno`), Agenda Neocita con huecos y bloqueos (`/admin/agenda`), Ficha de Clientes con recibos oficiales e historial (`/admin/clientes`), Estadísticas avanzadas con caja y desglose (`/admin/estadisticas`), y Autogestión Online con proximidad 2x y bypass WhatsApp (`src/app/page.js`).
   2. **1 Módulo Parcialmente Avanzado**: Notificaciones (matriz granular por cliente y cron activos; pendientes automatización de cumpleaños e imágenes).
   3. **4 Módulos Pendientes**: Gastos (siguiente según jerarquía), Configuración Avanzada (promos/cupones/servicios), Roles y Accesos (operador/recepción), y Multioperador/Boxes con agendas paralelas (dejado al final por indicación del cliente).
-- [x] Redactar respuesta ejecutiva y detallada lista para que Federico le envíe a Gonzalo por WhatsApp.
 
+## 📅 Sesión: 13 de Octubre de 2026 - Detección y Advertencia de Teléfono Duplicado en Autogestión
 
-
-
-
-
-
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender requerimiento con captura de WhatsApp de Gonzalo Siri (`media_1791896380468_64cc4b4c.png`):
+  *"Perfecto, también paso que un cliente al entrar por autogestion, uso un mail distinto al que nos había dado (ya sea porque lo cambio o lo que sea). Así que el sistema le pide los datos de nuevo y lo carga como cliente nuevo, es posible que en ese caso, si un cliente pone un número de teléfono idéntico a uno que ya hay en el sistema (osea que ya está cargado pero con un mail distinto) le dé un aviso de que ese teléfono ya está cargado con otro mail, y que se contacte con nosotros"*.
+- [x] Extender endpoint `/api/clientes/consultar` para recibir `whatsapp` y `currentEmail`, verificar colisiones de teléfono contra la base de datos PostgreSQL y retornar `{ phoneRegisteredUnderOtherEmail: true, registeredEmailMasked }` con email ofuscado (ej: `g****o@hotmail.com`).
+- [x] Implementar verificación asincrónica en el Paso 1 de Autogestión (`src/app/page.js`): al pulsar "Continuar", si el WhatsApp ingresado ya pertenece a otro cliente con distinto correo, detener el avance y renderizar una tarjeta de alerta ⚠️ de alto contraste.
+- [x] Proporcionar en la alerta dos acciones directas: botón verde de contacto por WhatsApp (`https://wa.me/5491176735678`) con mensaje prearmado para que administración actualice o unifique la cuenta, y botón para volver a intentar con otro mail (`handleSalir`).
+- [x] Blindar endpoint `POST /api/reservas/crear` validando unicidad de teléfono y rechazando con HTTP 400 y `{ phoneConflict: true }` si el teléfono ya pertenece a otro correo, evitando duplicación en PostgreSQL.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`, 41/41 rutas con 0 errores en 58s).
+- [x] Commit y push a ramas `main` y `staging` en GitHub (`03d3f1f`).
+- [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) en Producción (puerto 3006) y Staging (puerto 3008), reiniciar PM2 y verificar respuesta con `fetch` directo.
+- [x] Registrar Decisión `D-108` en `.synapse/decisions.md`.
+- [x] Redactar mensaje para enviar a Gonzalo con todo lo nuevo implementado.

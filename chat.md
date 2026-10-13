@@ -406,3 +406,20 @@
   2. **En curso / Parcial (1)**: Notificaciones (cron, recordatorios 48h, correos transaccionales y matriz granular listos; ajustes de plantillas y cumpleaños).
   3. **Pendientes (4)**: Gastos (siguiente a implementar), Configuración Avanzada, Roles/Niveles de acceso, y Multioperador/Agendas paralelas (para el final).
 - Se redactó respuesta clara, ejecutiva y amigable para WhatsApp.
+
+## Sesión: 13 de Octubre de 2026 - Detección y Advertencia de Teléfono Duplicado en Autogestión (Gonzalo Siri)
+- Requerimiento de Gonzalo Siri (`media_1791896380468_64cc4b4c.png`):
+  *"un cliente al entrar por autogestion, uso un mail distinto al que nos había dado (ya sea porque lo cambio o lo que sea)... es posible que en ese caso, si un cliente pone un número de teléfono idéntico a uno que ya hay en el sistema le dé un aviso de que ese teléfono ya está cargado con otro mail, y que se contacte con nosotros"*.
+- Implementación realizada:
+  1. **Detección en consulta de cliente (`/api/clientes/consultar`)**: Parámetros `whatsapp` y `currentEmail`. Búsqueda exhaustiva y normalizada en PostgreSQL. Si el teléfono ya existe pero con un mail diferente, devuelve `{ phoneRegisteredUnderOtherEmail: true, registeredEmailMasked: 'g****o@hotmail.com' }` protegiendo la privacidad del cliente original.
+  2. **Alerta visual y bloqueo en Autogestión (`src/app/page.js`)**: Al presionar "Continuar a Selección de Zonas" en el Paso 1 de alta, se consulta la API en caliente. Si hay conflicto, se detiene la navegación y se despliega una tarjeta de aviso clara con:
+     - Notificación de que el número ya está registrado bajo otra cuenta (`g****o@hotmail.com`).
+     - Botón verde `💬 Contactar por WhatsApp` a `https://wa.me/5491176735678` con mensaje prearmado: *"Hola! Quise reservar por la web de autogestión pero mi teléfono ya está cargado con otro mail (...). ¿Me ayudan a actualizar mis datos?"*.
+     - Botón `← Probar con otro correo` para reiniciar el flujo si el paciente recuerda su mail registrado anterior.
+  3. **Blindaje de Backend (`POST /api/reservas/crear`)**: Validación defensiva que rechaza con HTTP 400 y `{ phoneConflict: true }` si se intenta crear un cliente con un teléfono existente bajo otro mail, impidiendo duplicación y fragmentación de historiales en la base de datos.
+- Despliegue y Pruebas:
+  - Compilación local Turbopack exitosa (41/41 rutas, 0 errores).
+  - Push a `main` y `staging` en GitHub (`03d3f1f`).
+  - Desplegado y verificado en VPS en Producción (puerto 3006) y Staging (puerto 3008).
+  - Consulta de prueba ejecutada contra la API pública de producción devolviendo respuesta esperada (código 200 con `phoneRegisteredUnderOtherEmail: true`).
+  - Decisión `D-108` registrada en `.synapse/decisions.md`.
