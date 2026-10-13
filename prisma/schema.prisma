@@ -14,7 +14,9 @@ model Usuario {
   usuario   String   @unique
   password  String
   nombre    String
-  rol       String   @default("ADMIN") // "ADMIN", "READONLY"
+  rol       String   @default("ADMIN") // "ADMIN", "OPERADOR", "RECEPCION"
+  email     String?
+  telefono  String?
   createdAt DateTime @default(now())
 }
 

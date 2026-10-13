@@ -70,15 +70,18 @@ const DollarIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
 );
 
-  const navItems = [
-    { name: 'Alta de Turno', path: '/admin/alta-turno', icon: <FlashIcon /> },
-    { name: 'Agenda de Turnos', path: '/admin/agenda', icon: <CalendarIcon /> },
-    { name: 'Clientes', path: '/admin/clientes', icon: <UsersIcon /> },
-    { name: 'Estadísticas', path: '/admin/estadisticas', icon: <ChartIcon /> },
-    { name: 'Gastos', path: '/admin/gastos', icon: <DollarIcon /> },
-    { name: 'Notificaciones', path: '/admin/notificaciones', icon: <BellIcon /> },
-    { name: 'Configuración', path: '/admin/configuracion', icon: <SettingsIcon /> },
+  const allNavItems = [
+    { name: 'Alta de Turno', path: '/admin/alta-turno', icon: <FlashIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
+    { name: 'Agenda de Turnos', path: '/admin/agenda', icon: <CalendarIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
+    { name: 'Clientes', path: '/admin/clientes', icon: <UsersIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
+    { name: 'Estadísticas', path: '/admin/estadisticas', icon: <ChartIcon />, roles: ['ADMIN'] },
+    { name: 'Gastos', path: '/admin/gastos', icon: <DollarIcon />, roles: ['ADMIN'] },
+    { name: 'Notificaciones', path: '/admin/notificaciones', icon: <BellIcon />, roles: ['ADMIN', 'RECEPCION'] },
+    { name: 'Configuración', path: '/admin/configuracion', icon: <SettingsIcon />, roles: ['ADMIN'] },
   ];
+
+  const currentRole = user?.rol || 'ADMIN';
+  const navItems = allNavItems.filter(item => item.roles.includes(currentRole));
 
   const isPrintPage = pathname === '/admin/agenda/imprimir';
 
@@ -205,7 +208,9 @@ const DollarIcon = () => (
         <div className={styles.sidebarFooter}>
           <div className={styles.userInfo}>
             <span className={styles.userName}>{user?.nombre || 'Administrador'}</span>
-            <span className={styles.userRole}>{user?.rol === 'ADMIN' ? 'Administrador' : 'Solo Lectura'}</span>
+            <span className={styles.userRole}>
+              {user?.rol === 'ADMIN' ? 'Administrador' : user?.rol === 'OPERADOR' ? 'Operador' : user?.rol === 'RECEPCION' ? 'Recepción' : (user?.rol || 'Administrador')}
+            </span>
           </div>
           <a
             href="/"

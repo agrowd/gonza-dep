@@ -105,6 +105,20 @@ export default function ConfiguracionPage() {
     activo: true
   });
 
+  // Users / Operators State
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({
+    nombre: '',
+    usuario: '',
+    password: '',
+    rol: 'OPERADOR',
+    email: '',
+    telefono: ''
+  });
+
   // 1. Fetch zones
   const fetchZones = () => {
     setLoadingZones(true);
@@ -187,11 +201,24 @@ export default function ConfiguracionPage() {
       .finally(() => setLoadingCupones(false));
   };
 
+  // 5. Fetch Users / Operators
+  const fetchUsers = () => {
+    setLoadingUsers(true);
+    fetch('/api/admin/usuarios')
+      .then(res => res.json())
+      .then(data => {
+        if (data.usuarios) setUsers(data.usuarios);
+      })
+      .catch(err => console.error('Error fetching users:', err))
+      .finally(() => setLoadingUsers(false));
+  };
+
   useEffect(() => {
     fetchZones();
     fetchConfigs();
     fetchPromociones();
     fetchCupones();
+    fetchUsers();
   }, []);
 
   // 3. Save configurations in bulk
@@ -557,6 +584,86 @@ export default function ConfiguracionPage() {
     }
   };
 
+  // --- USUARIOS Y OPERADORES HANDLERS ---
+  const handleOpenNewUser = () => {
+    setEditingUser(null);
+    setUserForm({
+      nombre: '',
+      usuario: '',
+      password: '',
+      rol: 'OPERADOR',
+      email: '',
+      telefono: ''
+    });
+    setIsUserModalOpen(true);
+  };
+
+  const handleOpenEditUser = (u) => {
+    setEditingUser(u);
+    setUserForm({
+      nombre: u.nombre || '',
+      usuario: u.usuario || '',
+      password: '',
+      rol: u.rol || 'OPERADOR',
+      email: u.email || '',
+      telefono: u.telefono || ''
+    });
+    setIsUserModalOpen(true);
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    if (!userForm.nombre.trim()) {
+      showToast('Ingresa el nombre del usuario.', 'error');
+      return;
+    }
+    if (!userForm.usuario.trim()) {
+      showToast('Ingresa el nombre de usuario.', 'error');
+      return;
+    }
+    if (!editingUser && (!userForm.password || userForm.password.length < 4)) {
+      showToast('La contraseña debe tener al menos 4 caracteres.', 'error');
+      return;
+    }
+
+    try {
+      const url = editingUser ? `/api/admin/usuarios/${editingUser.id}` : '/api/admin/usuarios';
+      const method = editingUser ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(editingUser ? 'Usuario actualizado con éxito.' : 'Usuario creado con éxito.');
+        setIsUserModalOpen(false);
+        fetchUsers();
+      } else {
+        showToast(data.error || 'Error al guardar usuario.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving user:', err);
+      showToast('Error de red al guardar usuario.', 'error');
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este usuario?')) return;
+    try {
+      const res = await fetch(`/api/admin/usuarios/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Usuario eliminado con éxito.');
+        fetchUsers();
+      } else {
+        showToast(data.error || 'Error al eliminar usuario.', 'error');
+      }
+    } catch {
+      showToast('Error al eliminar usuario.', 'error');
+    }
+  };
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -590,6 +697,15 @@ export default function ConfiguracionPage() {
           onClick={() => setActiveTab('promos')}
         >
           🎁 Promociones y Cupones
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'users' ? styles.tabActive : ''}`}
+          onClick={() => {
+            setActiveTab('users');
+            fetchUsers();
+          }}
+        >
+          👥 Usuarios y Operadores
         </button>
       </div>
 
@@ -1377,6 +1493,88 @@ export default function ConfiguracionPage() {
         </div>
       )}
 
+      {/* Tab Content 5: Users and Operators Management */}
+      {activeTab === 'users' && (
+        <div className={styles.sectionCard}>
+          <div className={styles.sectionTitle}>
+            <span>Gestión de Usuarios y Roles de Acceso</span>
+            <button 
+              className="btn btn-primary" 
+              onClick={handleOpenNewUser}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+            >
+              <PlusIcon /> Nuevo Usuario / Operador
+            </button>
+          </div>
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+            Crea cuentas de acceso para operadores y recepcionistas. Los <strong>Operadores</strong> solo pueden ver y gestionar su agenda y clientes (sin acceso a caja, costos, métricas ni configuración).
+          </p>
+
+          {loadingUsers ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando usuarios...</div>
+          ) : users.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay usuarios registrados.</div>
+          ) : (
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.th}>Nombre</th>
+                    <th className={styles.th}>Usuario de Acceso</th>
+                    <th className={styles.th}>Rol / Permisos</th>
+                    <th className={styles.th}>Teléfono / WhatsApp</th>
+                    <th className={styles.th}>Email</th>
+                    <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} className={styles.tr}>
+                      <td className={styles.td} style={{ fontWeight: 600 }}>{u.nombre}</td>
+                      <td className={styles.td} style={{ color: 'var(--text-secondary)' }}>@{u.usuario}</td>
+                      <td className={styles.td}>
+                        {u.rol === 'ADMIN' && (
+                          <span className={styles.roleBadgeAdmin}>👑 Administrador</span>
+                        )}
+                        {u.rol === 'OPERADOR' && (
+                          <span className={styles.roleBadgeOperador}>✂️ Operador</span>
+                        )}
+                        {u.rol === 'RECEPCION' && (
+                          <span className={styles.roleBadgeRecepcion}>📋 Recepción</span>
+                        )}
+                      </td>
+                      <td className={styles.td} style={{ color: 'var(--text-secondary)' }}>{u.telefono || '-'}</td>
+                      <td className={styles.td} style={{ color: 'var(--text-secondary)' }}>{u.email || '-'}</td>
+                      <td className={styles.td} style={{ textAlign: 'right' }}>
+                        <div className={styles.actionCell} style={{ justifyContent: 'flex-end', gap: '0.5rem' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.35rem 0.65rem' }} 
+                            onClick={() => handleOpenEditUser(u)}
+                            title="Editar usuario"
+                          >
+                            <EditIcon />
+                          </button>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
+                            onClick={() => handleDeleteUser(u.id)}
+                            title="Eliminar usuario"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Zone Create / Edit Modal */}
       {isZoneModalOpen && (
         <div className="modal-overlay" onClick={() => setIsZoneModalOpen(false)}>
@@ -1657,6 +1855,100 @@ export default function ConfiguracionPage() {
               <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsCuponModalOpen(false)}>Cancelar</button>
                 <button type="submit" className="btn btn-primary">{editingCupon ? 'Guardar Cambios' : 'Crear Cupón'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* User Create / Edit Modal */}
+      {isUserModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsUserModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>{editingUser ? 'Editar Usuario / Operador' : 'Nuevo Usuario / Operador'}</h3>
+              <button className="modal-close" onClick={() => setIsUserModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleSaveUser}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nombre Completo</label>
+                  <input 
+                    type="text" 
+                    className={styles.input} 
+                    value={userForm.nombre}
+                    onChange={(e) => setUserForm({ ...userForm, nombre: e.target.value })}
+                    placeholder="Ej: Sofía Operadora"
+                    required
+                  />
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Usuario (para Login)</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={userForm.usuario}
+                      onChange={(e) => setUserForm({ ...userForm, usuario: e.target.value })}
+                      placeholder="Ej: sofia"
+                      required
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      {editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
+                    </label>
+                    <input 
+                      type="password" 
+                      className={styles.input} 
+                      value={userForm.password}
+                      onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                      placeholder={editingUser ? 'Dejar en blanco para conservar' : '••••••••'}
+                      required={!editingUser}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Rol de Acceso / Permisos</label>
+                  <select 
+                    className={styles.input}
+                    value={userForm.rol}
+                    onChange={(e) => setUserForm({ ...userForm, rol: e.target.value })}
+                  >
+                    <option value="OPERADOR">✂️ Operador (Solo Agenda, Alta y Clientes)</option>
+                    <option value="RECEPCION">📋 Recepción (Agenda, Alta, Clientes y Notificaciones)</option>
+                    <option value="ADMIN">👑 Administrador (Acceso Total al Sistema)</option>
+                  </select>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Teléfono / WhatsApp (Opcional)</label>
+                    <input 
+                      type="text" 
+                      className={styles.input} 
+                      value={userForm.telefono}
+                      onChange={(e) => setUserForm({ ...userForm, telefono: e.target.value })}
+                      placeholder="Ej: 1132519008"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Email (Opcional)</label>
+                    <input 
+                      type="email" 
+                      className={styles.input} 
+                      value={userForm.email}
+                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                      placeholder="Ej: operador@ejemplo.com"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsUserModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">{editingUser ? 'Guardar Cambios' : 'Crear Usuario'}</button>
               </div>
             </form>
           </div>
