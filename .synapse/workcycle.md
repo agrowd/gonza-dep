@@ -1794,8 +1794,8 @@
   - Exponer `GET /api/admin/usuarios` a staff autenticado para poblar el catálogo de operadores.
 - [x] Verificar compilación local con Next.js Turbopack (`npm run build`: 48 rutas compiladas con 0 errores en 23.5s).
 - [x] Registrar Decisión `D-113` en `.synapse/decisions.md`.
-- [ ] Commit y push a la rama `staging` en GitHub.
-- [ ] Desplegar en servidor VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`).
-- [ ] Validar funcionamiento y respuesta HTTP 200 OK en Staging.
-- [ ] Redactar mensaje de respuesta para Gonzalo / Luciano.
+- [x] Commit y push a la rama `staging` en GitHub (`42dfe17`).
+- [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`).
+- [x] Validar funcionamiento y respuesta HTTP 200 OK en Staging (`http://187.127.9.216:3008/login`).
+- [x] Redactar mensaje de respuesta para Gonzalo / Luciano.
 

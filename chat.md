@@ -513,3 +513,43 @@
   - Desplegado en VPS en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
   - Registrado en `.synapse/decisions.md` (D-112), `.synapse/errores.md` (ERR-48) y `.synapse/workcycle.md`.
 
+## Sesión: 15 de Octubre de 2026 - Restricción de Privacidad para Rol OPERADOR, Asignación de Operador por Turno y Selector Dropdown Mobile en Staging
+- Solicitud de Luciano Gómez y Gonzalo Siri con 7 capturas anotadas (`media_1792072189582_75f1e764` a `media_1792072328876_d0080a2e`):
+  1. *"En estás que tache, el operador desde su cuenta no puede ver nada de esa info"*
+  2. *"Además faltó lo del selector de operador para el administrador, osea que puede cambiar el operador de cada turno"*
+- Solución y Cambios Implementados:
+  1. **Esquema de Base de Datos (`prisma/schema.prisma`)**:
+     - Agregada la relación `operadorId String?` y `operador Usuario?` en `model Turno`.
+     - Agregado `turnos Turno[]` en `model Usuario`.
+     - Sincronizado en SQLite local y PostgreSQL `agenda_db_staging` mediante `npx prisma db push`.
+  2. **Restricción de Acceso y Navegación para Operador**:
+     - En `SidebarNav.js`, los operadores únicamente ven "Agenda de Turnos" (ocultando "Alta de Turno" y "Clientes").
+     - En `/admin/alta-turno`, guarda de sesión que redirige inmediatamente al operador a `/admin/agenda`.
+     - En `/admin/clientes`, guarda que redirige a `/admin/agenda` si no viene con `?id=`. En la ficha del cliente se oculta el DNI, se ocultan las pestañas `🔔 Avisos` y `⚙️ ABM Clientes`, y en el historial se ocultan los importes (Costo, Seña, Saldo). Al cerrar la ficha, regresa a `/admin/agenda`.
+  3. **Privacidad Financiera y Comercial en `/admin/agenda`**:
+     - Encabezado diario: Ocultos los botones "Bloquear Horario", "+ Nuevo Turno" y el importe de "Ingreso Estimado".
+     - Huecos libres Neocita y grilla semanal: Clicks deshabilitados y oculto el botón "+ Agendar".
+     - Tarjetas Neocita: Muestran el badge `👤 {app.operador.nombre}` y se oculta el desglose financiero.
+     - Modal de Detalle de Turno:
+       - Oculto el bloque financiero completo (Valor Total, Valor Original, Seña, Saldo, Método de Pago, Descuentos).
+       - Ocultos los campos de WhatsApp y Email (junto con sus botones de reenvío).
+       - Ocultas las "Observaciones Generales del Cliente" (conservando intactas las "Observaciones del Operador" de potencia/clínica y los "Comentarios de este Turno").
+       - Botonera de acciones reducida exclusivamente a: `📁 Ficha Cliente`, `✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `⏳ Va a Avisar` y `❌ No Asistió`.
+  4. **Asignación Dinámica de Operador por Turno para Administrador**:
+     - En modal de Detalle de Turno: selector instantáneo `👤 Operador Asignado` con guardado automático contra la API.
+     - En modal de Edición de Turno (`isEditing`): selector dropdown para cambiar el operador.
+     - En modal de Nuevo Turno (`newTurno`): selector dropdown para asignar el operador inicial.
+  5. **Selector Dropdown Mobile en Configuración (`/admin/configuracion`)**:
+     - Reemplazo de las pestañas horizontales en pantallas `<= 768px` por un menú `<select>` desplegable responsive estilizado con icono de ajustes (`.tabSelectDropdown`).
+  6. **APIs y Sesión**:
+     - `GET /api/admin/usuarios`: accesible a staff autenticado para poblar el catálogo de operadores.
+     - `GET`, `POST`, `PUT /api/admin/turnos`: incluyen la relación `operador` y persisten `operadorId`.
+     - `GET /api/auth/session`: incluye `id` del usuario en sesión.
+- Validación y Despliegue:
+  - Compilación local Next.js Turbopack: 48/48 rutas con 0 errores.
+  - Commit y push a la rama `staging` en GitHub (`42dfe17`).
+  - Despliegue exitoso en VPS Hostinger Staging (`/srv/gonzalo-dep-staging` en puerto 3008, PM2 `gonzalo-agenda-staging`).
+  - Verificación HTTP 200 OK en `http://187.127.9.216:3008/login`.
+  - Registrado en `.synapse/decisions.md` (D-113) y `.synapse/workcycle.md`.
+
+
