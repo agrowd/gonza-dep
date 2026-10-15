@@ -487,3 +487,29 @@
      - Verificación HTTP 200 OK en `http://187.127.9.216:3008/login`.
      - Registrado en `.synapse/decisions.md` (D-111) y `.synapse/workcycle.md`.
 
+## Sesión: 15 de Octubre de 2026 - Corrección Crítica de Fecha Anterior en Reprogramación de Turnos (Evgenii Morgunov & Sistema General)
+- Reporte de Gonzalo Siri y Luciano Gómez (`media_1792068878423_522902e1.png` a `media_1792068895829_78c9f292.png`):
+  *"Hola Fede nosé que paso con los turnos que se reprograman, en los comentarios del turno que debería aparecer desde que fecha se reprogramó, no dice ese dato. Sino que dice la fecha a la que se cambió, que no necesitamos, necesitamos la fecha anterior"*.
+- Diagnóstico Forense en Base de Datos PostgreSQL VPS:
+  1. Turno de Evgenii Morgunov (`b68817ae-825e-491c-a3ab-c8a564d5d749`): creado el 01/09/2026 para el 07/10/2026 a las 15:30 hs. El 05/10/2026 fue reprogramado al 20/10/2026 a las 16:30 hs.
+  2. Fallo detectado: en `PUT /api/admin/turnos/[id]`, la condición `if (isDateChanged || isTimeChanged || estado === 'REPROGRAMADO')` evaluaba `estado === 'REPROGRAMADO'` en `true` cada vez que el operador guardaba cualquier cambio posterior (notas del operador, método de pago, asistencia) en una cita que ya estaba reprogramada. En ese momento `oldTurn.fecha` era ya la fecha del turno (`20/10/2026`), inyectando `[Turno reprogramado de 20/10/2026 a las 16:30 hs - Administrador]`.
+  3. Adicionalmente, `isTimeChanged` consideraba alteraciones de fin (`horaFin`), y en `alta-turno` se perdían los parámetros `fechaOriginal` y `horaOriginal` en el redirect.
+- Solución Implementada:
+  1. En `src/app/api/admin/turnos/[id]/route.js`:
+     - Eliminada la condición ciega `|| estado === 'REPROGRAMADO'`.
+     - Helpers canónicos `toUtcDateStr` y `toDisplayDateStr` para evitar distorsiones de husos horarios.
+     - Condición estricta: sólo se genera etiqueta si hay un cambio real de fecha o de hora de inicio (`isDateActuallyChanged || isStartTimeActuallyChanged`) o si `body.isReprogramacion === true`, exigiendo que el destino difiera del origen (`targetFechaIso !== originFechaIso || checkHoraInicio !== originHoraInicio`).
+     - Función regex desinfectante que extirpa cualquier etiqueta autorreferencial existente donde la fecha y hora de la etiqueta coincidan con las del propio turno.
+  2. En `src/app/admin/alta-turno/page.js` y `src/app/admin/agenda/page.js`:
+     - Propagación y persistencia formal de `fechaOriginal`, `horaOriginal` e `isReprogramacion: true`.
+  3. En `src/app/api/reservas/reprogramar/route.js`:
+     - Validación defensiva contra reagendamiento en el mismo día y horario, y sanitización de etiquetas glitch.
+  4. Script SQL ejecutado en PostgreSQL VPS (`agenda_db` y `agenda_db_staging`):
+     - Restaurada la fecha original de Evgenii Morgunov (`07/10/2026 a las 15:30 hs`), Joao De Oliveira (`15/10/2026 a las 20:30 hs`) y Gaston Sanchez (`22/09/2026 a las 19:20 hs`).
+     - Purgadas las etiquetas autorreferenciales espurias de Horacio Smidt, Daniel Argañaraz, Pedro Laurenz, Alan Gonzalez, Carlos Boscherino, Mauro Castiglioni y Emiliano Sack.
+- Validación y Despliegue:
+  - Compilación local Next.js Turbopack: 58/58 rutas limpias en 58s.
+  - Empujado a ramas `staging` y `main`.
+  - Desplegado en VPS en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
+  - Registrado en `.synapse/decisions.md` (D-112), `.synapse/errores.md` (ERR-48) y `.synapse/workcycle.md`.
+
