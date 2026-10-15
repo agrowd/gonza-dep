@@ -117,10 +117,26 @@ export async function POST(request) {
     const oldD = String(oldDate.getUTCDate()).padStart(2, '0');
     const oldM = String(oldDate.getUTCMonth() + 1).padStart(2, '0');
     const oldY = oldDate.getUTCFullYear();
+    const oldFechaIso = `${oldY}-${oldM}-${oldD}`;
     const oldFechaStr = `${oldD}/${oldM}/${oldY}`;
+
+    // Disallow rescheduling to the exact same date and time
+    if (oldFechaIso === fechaStr && turno.horaInicio === horaInicio) {
+      return NextResponse.json({ error: 'El horario seleccionado es el mismo de tu turno actual.' }, { status: 400 });
+    }
+
+    const targetD = String(targetDate.getUTCDate()).padStart(2, '0');
+    const targetM = String(targetDate.getUTCMonth() + 1).padStart(2, '0');
+    const targetY = targetDate.getUTCFullYear();
+    const targetFechaDisplay = `${targetD}/${targetM}/${targetY}`;
+
     const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${turno.horaInicio} hs - Autogestión]`;
 
-    const currentObs = turno.observaciones || '';
+    let currentObs = (turno.observaciones || '')
+      .replace(new RegExp(`\\[Turno reprogramado de ${targetFechaDisplay.replace(/\//g, '\\/')} a las ${horaInicio.replace(/:/g, '\\:')} hs[^\\]]*\\]`, 'gi'), '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
     let newObs = currentObs.includes('[REPROGRAMADO_AUTOGESTION]') ? currentObs : `${currentObs} [REPROGRAMADO_AUTOGESTION]`.trim();
     if (!newObs.includes(tagReprogram)) {
       newObs = `${newObs} ${tagReprogram}`.trim();

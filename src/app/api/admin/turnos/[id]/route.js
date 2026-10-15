@@ -140,14 +140,40 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Turno no encontrado' }, { status: 404 });
     }
 
-    const checkFechaStr = fechaStr || oldTurn.fecha.toISOString().split('T')[0];
-    const checkHoraInicio = horaInicio || oldTurn.horaInicio;
-    const checkHoraFin = horaFin || oldTurn.horaFin;
+    // Robust date extractor helpers to prevent UTC / local shift mismatches
+    const toUtcDateStr = (d) => {
+      if (!d) return '';
+      if (typeof d === 'string' && d.includes('T')) return d.split('T')[0];
+      if (typeof d === 'string' && d.length === 10) return d;
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return '';
+      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+    };
+
+    const toDisplayDateStr = (d) => {
+      if (!d) return '';
+      if (typeof d === 'string' && d.includes('/') && d.length <= 10) return d;
+      if (typeof d === 'string' && d.includes('-')) {
+        const parts = d.split('T')[0].split('-');
+        if (parts.length === 3) return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+      }
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return '';
+      return `${String(dt.getUTCDate()).padStart(2, '0')}/${String(dt.getUTCMonth() + 1).padStart(2, '0')}/${dt.getUTCFullYear()}`;
+    };
+
+    const oldFechaIso = toUtcDateStr(oldTurn.fecha);
+    const targetFechaIso = (fechaStr ? fechaStr.trim() : oldFechaIso);
+    const checkFechaStr = targetFechaIso;
+    const checkHoraInicio = horaInicio ? horaInicio.trim() : oldTurn.horaInicio;
+    const checkHoraFin = horaFin ? horaFin.trim() : oldTurn.horaFin;
     const checkEstado = estado || oldTurn.estado;
 
-    const isDateChanged = fechaStr && fechaStr !== oldTurn.fecha.toISOString().split('T')[0];
-    const isTimeChanged = (horaInicio && horaInicio !== oldTurn.horaInicio) || (horaFin && horaFin !== oldTurn.horaFin);
-    const isStateReactivated = estado && estado !== 'CANCELADO' && oldTurn.estado === 'CANCELADO';
+    const isDateActuallyChanged = Boolean(fechaStr && targetFechaIso !== oldFechaIso);
+    const isStartTimeActuallyChanged = Boolean(horaInicio && checkHoraInicio !== oldTurn.horaInicio);
+    const isDateChanged = isDateActuallyChanged;
+    const isTimeChanged = isStartTimeActuallyChanged || Boolean(horaFin && checkHoraFin !== oldTurn.horaFin);
+    const isStateReactivated = Boolean(estado && estado !== 'CANCELADO' && oldTurn.estado === 'CANCELADO');
 
     // Past Date/Time Check (only validate if date/time is actually changing and not cancelled)
     if (checkEstado !== 'CANCELADO') {
@@ -220,21 +246,57 @@ export async function PUT(request, { params }) {
     if (body.metodoPago !== undefined) updateData.metodoPago = body.metodoPago;
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
 
-    // If rescheduled (date or time changed or status is REPROGRAMADO), append record tag
-    if (isDateChanged || isTimeChanged || estado === 'REPROGRAMADO') {
-      const oldDate = new Date(oldTurn.fecha);
-      const oldD = String(oldDate.getUTCDate()).padStart(2, '0');
-      const oldM = String(oldDate.getUTCMonth() + 1).padStart(2, '0');
-      const oldY = oldDate.getUTCFullYear();
-      const oldFechaStr = `${oldD}/${oldM}/${oldY}`;
-      const tagReprogram = `[Turno reprogramado de ${oldFechaStr} a las ${oldTurn.horaInicio} hs - Administrador]`;
+    // Determine canonical origin date and time for rescheduling tag
+    let originFechaIso = oldFechaIso;
+    let originFechaDisplay = toDisplayDateStr(oldTurn.fecha);
+    let originHoraInicio = oldTurn.horaInicio;
 
-      const currentObs = (observaciones !== undefined ? observaciones : oldTurn.observaciones) || '';
+    if (body.fechaOriginal) {
+      const origStr = String(body.fechaOriginal).trim();
+      if (origStr.includes('-')) {
+        const parts = origStr.split('T')[0].split('-');
+        if (parts.length === 3) {
+          originFechaIso = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+          originFechaDisplay = `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+      } else if (origStr.includes('/')) {
+        const parts = origStr.split('/');
+        if (parts.length === 3) {
+          originFechaIso = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          originFechaDisplay = `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+        }
+      }
+    }
+    if (body.horaOriginal) {
+      originHoraInicio = String(body.horaOriginal).trim();
+    }
+
+    // A reschedule ONLY occurs when the destination differs from the origin (date or start time)
+    const isDifferentFromOrigin = (targetFechaIso !== originFechaIso || checkHoraInicio !== originHoraInicio);
+    const isActualReschedule = isDifferentFromOrigin && (isDateActuallyChanged || isStartTimeActuallyChanged || Boolean(body.isReprogramacion));
+
+    // Helper to strip any erroneous self-referential reschedule tags (where tag date/time matches the destination itself)
+    const targetFechaDisplay = toDisplayDateStr(targetFechaIso);
+    const stripSelfRefTag = (str) => {
+      if (!str) return '';
+      const escD = targetFechaDisplay.replace(/\//g, '\\/');
+      const escH = checkHoraInicio.replace(/:/g, '\\:');
+      const reg = new RegExp(`\\[Turno reprogramado de ${escD} a las ${escH} hs[^\\]]*\\]`, 'gi');
+      return str.replace(reg, '').replace(/\s{2,}/g, ' ').trim();
+    };
+
+    const currentObsRaw = (observaciones !== undefined ? observaciones : oldTurn.observaciones) || '';
+    const currentObs = stripSelfRefTag(currentObsRaw);
+
+    if (isActualReschedule) {
+      const tagReprogram = `[Turno reprogramado de ${originFechaDisplay} a las ${originHoraInicio} hs - Administrador]`;
       if (!currentObs.includes(tagReprogram)) {
         updateData.observaciones = `${currentObs} ${tagReprogram}`.trim();
+      } else {
+        updateData.observaciones = currentObs;
       }
-    } else if (observaciones !== undefined) {
-      updateData.observaciones = observaciones;
+    } else if (observaciones !== undefined || currentObs !== currentObsRaw) {
+      updateData.observaciones = currentObs;
     }
 
     // Sync client-level operator notes and frequency, or clientObservaciones if explicitly passed
@@ -259,15 +321,6 @@ export async function PUT(request, { params }) {
           },
           select: { id: true, fecha: true, horaInicio: true }
         });
-
-        // Robust UTC date extractor to prevent timezone shift issues
-        const toUtcDateStr = (d) => {
-          if (!d) return '';
-          if (typeof d === 'string' && d.includes('T')) return d.split('T')[0];
-          if (typeof d === 'string' && d.length === 10) return d;
-          const dt = new Date(d);
-          return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
-        };
 
         // Determine chronological boundary of oldTurn
         const currentTurnDateIso = (checkFechaStr || toUtcDateStr(oldTurn.fecha));
@@ -664,7 +717,7 @@ export async function PUT(request, { params }) {
     // Only send notification when Fecha (Day) OR HoraInicio (Start Time) changes, or explicit status REPROGRAMADO.
     // Modifying only horaFin (duration), zones, prices, or observations will NOT send notifications.
     if (updatedTurno.estado !== 'CANCELADO' && updatedTurno.estado !== 'BLOQUEADO') {
-      const isDateChanged = updatedTurno.fecha.toISOString().split('T')[0] !== oldTurn.fecha.toISOString().split('T')[0];
+      const isDateChanged = toUtcDateStr(updatedTurno.fecha) !== toUtcDateStr(oldTurn.fecha);
       const isStartTimeChanged = updatedTurno.horaInicio !== oldTurn.horaInicio;
       const isStateReprogrammed = updatedTurno.estado === 'REPROGRAMADO' && oldTurn.estado !== 'REPROGRAMADO';
 

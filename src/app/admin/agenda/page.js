@@ -1194,6 +1194,8 @@ export default function AgendaPage() {
         const newDate = searchParams.get('newDate');
         const newTime = searchParams.get('newTime');
         const newHoraFin = searchParams.get('newHoraFin');
+        const fechaOriginalParam = searchParams.get('fechaOriginal');
+        const horaOriginalParam = searchParams.get('horaOriginal');
 
         if (newDate) {
           const parsedDate = parseYYYYMMDD(newDate);
@@ -1223,6 +1225,9 @@ export default function AgendaPage() {
 
               setEditTurno({
                 isInitialEdit: true,
+                isReprogramacion: true,
+                fechaOriginal: fechaOriginalParam || (typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : toYYYYMMDD(turno.fecha)),
+                horaOriginal: horaOriginalParam || turno.horaInicio,
                 initialValorTotal: Number(dynPrices.valorTotal || turno.valorTotal || 0),
                 initialValorSeña: Number(turno.valorSeña || 0),
                 initialZoneIds: [...finalZoneIds],
@@ -1939,6 +1944,9 @@ export default function AgendaPage() {
           horaInicio: editTurno.horaInicio,
           horaFin: editTurno.horaFin,
           estado: editTurno.estado,
+          fechaOriginal: editTurno.fechaOriginal,
+          horaOriginal: editTurno.horaOriginal,
+          isReprogramacion: Boolean(editTurno.isReprogramacion),
           valorTotal: Number(editTurno.valorTotal),
           valorSeña: Number(editTurno.valorSeña),
           bonificacion: Number(editTurno.bonificacion || 0),

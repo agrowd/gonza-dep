@@ -1690,3 +1690,27 @@
 - [x] Commit y push a `main` y `staging` (`95f130e`).
 - [x] Desplegar en servidor VPS Hostinger en Producción y Staging y verificar estado.
 - [x] Registrar Decisión `D-109` en `.synapse/decisions.md`.
+
+## 📅 Sesión: 15 de Octubre de 2026 (Fix Crítico de Fechas de Reprogramación en Agenda y VPS)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Investigar reporte urgente de Gonzalo Siri y Luciano Gómez (`media_1792068878423_522902e1.png` a `media_1792068895829_78c9f292.png`): comentarios del turno reprogramado (Evgenii Morgunov) mostraban la fecha actual cambiada (`20/10/2026 a las 16:30 hs`) en vez de la fecha anterior.
+- [x] Realizar peritaje forense en la base de datos PostgreSQL del VPS (`187.127.9.216`):
+  - Consultar tabla `Notificacion`: se demostró que el turno de Evgenii fue creado para el 07/10/2026 a las 15:30 hs y reprogramado el 05/10/2026 al 20/10/2026 a las 16:30 hs.
+  - Detectar mecanismo de falla: en `src/app/api/admin/turnos/[id]/route.js`, `if (isDateChanged || isTimeChanged || estado === 'REPROGRAMADO')` regeneraba la etiqueta usando `oldTurn.fecha` y `oldTurn.horaInicio` al guardar cualquier cambio posterior (ej. notas, comentarios, método de pago) en citas ya reprogramadas.
+  - Detectar mecanismo colateral en `isTimeChanged`: diferencias de duración (`horaFin`) generaban etiquetas en turnos que no habían cambiado de fecha ni hora de inicio (Daniel Argañaraz).
+  - Detectar pérdida de parámetros de origen en el redirect de `src/app/admin/alta-turno/page.js` hacia `/admin/agenda`.
+- [x] Blindar backend en `src/app/api/admin/turnos/[id]/route.js`:
+  - Implementar helpers canónicos `toUtcDateStr` y `toDisplayDateStr`.
+  - Exigir cambio real de fecha o de hora de inicio (`isDateActuallyChanged || isStartTimeActuallyChanged`) o `isReprogramacion === true`.
+  - Exigir discrepancia estricta entre destino y origen (`targetFechaIso !== originFechaIso || checkHoraInicio !== originHoraInicio`).
+  - Incorporar función de desinfección por regex para extirpar etiquetas autorreferenciales (`[Turno reprogramado de {misma_fecha} a las {misma_hora} hs]`).
+- [x] Propagar parámetros canónicos de origen (`fechaOriginal`, `horaOriginal`, `isReprogramacion: true`) en `src/app/admin/alta-turno/page.js` y `src/app/admin/agenda/page.js`.
+- [x] Blindar autogestión en `src/app/api/reservas/reprogramar/route.js` con rechazo de turno idéntico y sanitización de etiquetas glitch.
+- [x] Ejecutar script de corrección SQL en VPS actualizando `agenda_db` y `agenda_db_staging`:
+  - Restaurar fecha anterior canónica de Evgenii Morgunov (`07/10/2026 a las 15:30 hs`), Joao De Oliveira (`15/10/2026 a las 20:30 hs`) y Gaston Sanchez (`22/09/2026 a las 19:20 hs`).
+  - Purgar etiquetas autorreferenciales espurias de Horacio Smidt, Daniel Argañaraz, Pedro Laurenz, Alan Gonzalez, Carlos Boscherino, Mauro Castiglioni y Emiliano Sack.
+- [x] Registrar Decisión `D-112` en `.synapse/decisions.md` y Error `ERR-48` en `.synapse/errores.md`.
+- [x] Commit y push a ramas `staging` y `main` en GitHub.
+- [ ] Desplegar en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
+- [ ] Redactar mensaje de respuesta para Gonzalo / Luciano.

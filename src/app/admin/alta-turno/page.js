@@ -382,7 +382,10 @@ function AltaTurnoContent() {
         zones: selectedZoneIds.join(','),
         hasOtros: hasOtros ? 'true' : 'false',
         otrosTexto: otrosTexto || '',
-        otrosPrecio: otrosPrecio.toString()
+        otrosPrecio: otrosPrecio.toString(),
+        fechaOriginal: fechaOriginalParam || '',
+        horaOriginal: horaOriginalParam || '',
+        isReprogramacion: 'true'
       });
       window.location.href = `/admin/agenda?${params.toString()}`;
       return;
