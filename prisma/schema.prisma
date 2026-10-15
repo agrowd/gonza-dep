@@ -17,6 +17,7 @@ model Usuario {
   rol       String   @default("ADMIN") // "ADMIN", "OPERADOR", "RECEPCION"
   email     String?
   telefono  String?
+  turnos    Turno[]
   createdAt DateTime @default(now())
 }
 
@@ -53,6 +54,8 @@ model Turno {
   id               String   @id @default(uuid())
   clienteId        String
   cliente          Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  operadorId       String?
+  operador         Usuario? @relation(fields: [operadorId], references: [id], onDelete: SetNull)
   fecha            DateTime
   horaInicio       String   // "10:10"
   horaFin          String   // "10:40"

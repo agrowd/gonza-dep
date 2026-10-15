@@ -73,6 +73,14 @@ export async function GET(request, { params }) {
     const turno = await prisma.turno.findUnique({
       where: { id: String(id) },
       include: {
+        operador: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            rol: true
+          }
+        },
         cliente: {
           include: {
             turnos: {
@@ -110,6 +118,7 @@ export async function PUT(request, { params }) {
 
     const body = await request.json();
     const {
+      operadorId,
       fechaStr,
       horaInicio,
       horaFin,
@@ -471,11 +480,25 @@ export async function PUT(request, { params }) {
     }
 
 
+    if (operadorId !== undefined) {
+      updateData.operadorId = operadorId ? String(operadorId) : null;
+    }
+
     // Perform database update
     const updatedTurno = await prisma.turno.update({
       where: { id },
       data: updateData,
-      include: { cliente: true }
+      include: {
+        cliente: true,
+        operador: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            rol: true
+          }
+        }
+      }
     });
 
     if (updatedTurno.estado === 'BLOQUEADO') {

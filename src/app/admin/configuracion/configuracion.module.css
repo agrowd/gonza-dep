@@ -61,6 +61,63 @@
   border-bottom-color: var(--color-gold);
 }
 
+.tabDropdownWrapper {
+  display: none;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+
+.tabDropdownLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tabSelectDropdown {
+  background-color: #121215;
+  border: 1px solid var(--border-gold, #c5a47e);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.tabSelectDropdown:focus {
+  box-shadow: 0 0 0 2px rgba(197, 164, 126, 0.4);
+}
+
+.tabSelectDropdown option {
+  background-color: #1a1a1f;
+  color: #fff;
+  padding: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .tabs {
+    display: none !important;
+  }
+  .tabDropdownWrapper {
+    display: flex !important;
+  }
+}
+
 .sectionCard {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);

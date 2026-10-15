@@ -71,9 +71,9 @@ const DollarIcon = () => (
 );
 
   const allNavItems = [
-    { name: 'Alta de Turno', path: '/admin/alta-turno', icon: <FlashIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
+    { name: 'Alta de Turno', path: '/admin/alta-turno', icon: <FlashIcon />, roles: ['ADMIN', 'RECEPCION'] },
     { name: 'Agenda de Turnos', path: '/admin/agenda', icon: <CalendarIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
-    { name: 'Clientes', path: '/admin/clientes', icon: <UsersIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
+    { name: 'Clientes', path: '/admin/clientes', icon: <UsersIcon />, roles: ['ADMIN', 'RECEPCION'] },
     { name: 'Estadísticas', path: '/admin/estadisticas', icon: <ChartIcon />, roles: ['ADMIN'] },
     { name: 'Gastos', path: '/admin/gastos', icon: <DollarIcon />, roles: ['ADMIN'] },
     { name: 'Notificaciones', path: '/admin/notificaciones', icon: <BellIcon />, roles: ['ADMIN', 'RECEPCION'] },

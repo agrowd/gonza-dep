@@ -142,6 +142,18 @@ function AltaTurnoContent() {
     }
   }, [searchParams, recommendedWeekRange, modo, fechaOriginalParam]);
 
+  // Restrict access: Operador can only access Agenda
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.user?.rol === 'OPERADOR') {
+          router.replace('/admin/agenda');
+        }
+      })
+      .catch(() => {});
+  }, [router]);
+
   // Fetch zones catalog
   useEffect(() => {
     fetch('/api/zonas')

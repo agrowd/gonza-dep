@@ -17,9 +17,11 @@ export async function GET() {
     }
 
     const session = verifySessionToken(sessionCookie.value);
-    if (!session || session.rol !== 'ADMIN') {
-      return NextResponse.json({ error: 'Acceso restringido a administradores' }, { status: 403 });
+    if (!session) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+
+    const isAdmin = session.rol === 'ADMIN';
 
     const usuarios = await prisma.usuario.findMany({
       select: {
@@ -27,9 +29,7 @@ export async function GET() {
         usuario: true,
         nombre: true,
         rol: true,
-        email: true,
-        telefono: true,
-        createdAt: true
+        ...(isAdmin ? { email: true, telefono: true, createdAt: true } : {})
       },
       orderBy: { createdAt: 'asc' }
     });

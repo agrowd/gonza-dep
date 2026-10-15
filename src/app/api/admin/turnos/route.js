@@ -96,6 +96,14 @@ export async function GET(request) {
         }
       },
       include: {
+        operador: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            rol: true
+          }
+        },
         cliente: {
           include: {
             turnos: {
@@ -132,6 +140,7 @@ export async function POST(request) {
     const body = await request.json();
     const {
       clienteId,
+      operadorId,
       nombreCompleto,
       whatsapp,
       email,
@@ -323,6 +332,7 @@ export async function POST(request) {
     const newTurno = await prisma.turno.create({
       data: {
         clienteId: finalClienteId,
+        operadorId: operadorId ? String(operadorId) : null,
         fecha: targetDate,
         horaInicio,
         horaFin,
@@ -340,7 +350,15 @@ export async function POST(request) {
         notasGonzalo: finalNotasGonzalo
       },
       include: {
-        cliente: true
+        cliente: true,
+        operador: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            rol: true
+          }
+        }
       }
     });
 

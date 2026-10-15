@@ -1755,6 +1755,47 @@
   - Purgar etiquetas autorreferenciales espurias de Horacio Smidt, Daniel Argañaraz, Pedro Laurenz, Alan Gonzalez, Carlos Boscherino, Mauro Castiglioni y Emiliano Sack.
 - [x] Verificar compilación local con Next.js Turbopack (`npm run build`: 58 rutas compiladas con 0 errores en 58s).
 - [x] Registrar Decisión `D-112` en `.synapse/decisions.md` y Error `ERR-48` en `.synapse/errores.md`.
-- [ ] Commit y push a ramas `staging` y `main` en GitHub.
-- [ ] Desplegar en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
+- [x] Commit y push a ramas `staging` y `main` en GitHub.
+- [x] Desplegar en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
+- [x] Redactar mensaje de respuesta para Gonzalo / Luciano.
+
+## 📅 Sesión: 15 de Octubre de 2026 (Staging - Restricción de Privacidad para Rol OPERADOR y Asignación de Operador por Turno)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Analizar requerimientos y 7 capturas de feedback enviadas por Luciano Gómez (`media_1792072189582_75f1e764` a `media_1792072328876_d0080a2e`):
+  - "En estás que tache, el operador desde su cuenta no puede ver nada de esa info"
+  - "Además faltó lo del selector de operador para el administrador, osea que puede cambiar el operador de cada turno"
+- [x] Actualizar `prisma/schema.prisma`:
+  - Agregar `operadorId String?` y relación `operador Usuario?` en `model Turno`.
+  - Agregar `turnos Turno[]` en `model Usuario`.
+  - Sincronizar base de datos local SQLite con `npx prisma db push`.
+- [x] Restringir accesos y navegación del Rol `OPERADOR`:
+  - `src/app/admin/SidebarNav.js`: "Alta de Turno" y "Clientes" restringidos a `['ADMIN', 'RECEPCION']`. El Operador solo ve "Agenda de Turnos".
+  - `src/app/admin/alta-turno/page.js`: Guarda que redirige automáticamente a `/admin/agenda`.
+  - `src/app/admin/clientes/page.js`: Guarda que redirige al operador sin `?id=` a `/admin/agenda`. Al cerrar el perfil, retorna a `/admin/agenda`. En la ficha se oculta el DNI, se ocultan las pestañas `🔔 Avisos` y `⚙️ ABM Clientes`, y en el historial se ocultan los importes (Costo, Seña, Saldo).
+- [x] Blindar Privacidad y Funcionalidades en Agenda (`/admin/agenda`):
+  - Encabezado diario: Ocultar "Bloquear Horario", "+ Nuevo Turno" e "Ingreso Estimado" para `OPERADOR`.
+  - Huecos libres Neocita: Deshabilitar click y ocultar "+ Agendar" para `OPERADOR`.
+  - Grilla semanal: Deshabilitar click en slots vacíos para `OPERADOR`.
+  - Tarjetas Neocita: Renderizar badge `👤 {app.operador.nombre}` y ocultar renglón financiero para `OPERADOR`.
+  - Modal Detalle de Turno:
+    - Ocultar desglose financiero completo (Valor Total, Original, Seña, Saldo, Método de Pago, Descuentos) para `OPERADOR`.
+    - Ocultar bloques de WhatsApp y Email (y botones de reenvío) para `OPERADOR`.
+    - Ocultar "Observaciones Generales del Cliente" para `OPERADOR` (manteniendo intactas las Observaciones del Operador y Comentarios de la Sesión).
+    - Botonera de acciones rápidas restringida para `OPERADOR`: solo se muestran `📁 Ficha Cliente`, `✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `⏳ Va a Avisar` y `❌ No Asistió`.
+- [x] Implementar Asignación Dinámica de Operador para Administrador:
+  - En modal de detalle de turno: selector instantáneo `👤 Operador Asignado` con guardado automático vía `PUT /api/admin/turnos/[id]`.
+  - En modal de edición de turno (`isEditing`): selector dropdown para elegir operador.
+  - En modal de alta manual de turno (`newTurno`): selector dropdown para asignar operador.
+- [x] Implementar Dropdown de Pestañas Mobile en Configuración (`/admin/configuracion`):
+  - Agregar `.tabDropdownWrapper` y `.tabSelectDropdown` con diseño consistente al de Estadísticas para `<= 768px`.
+- [x] Actualizar APIs Backend (`/api/admin/turnos`, `/api/admin/turnos/[id]`, `/api/admin/usuarios`, `/api/auth/session`):
+  - Incluir relación `operador` y soportar `operadorId` en creación y edición.
+  - Exponer `GET /api/admin/usuarios` a staff autenticado para poblar el catálogo de operadores.
+- [x] Verificar compilación local con Next.js Turbopack (`npm run build`: 48 rutas compiladas con 0 errores en 23.5s).
+- [x] Registrar Decisión `D-113` en `.synapse/decisions.md`.
+- [ ] Commit y push a la rama `staging` en GitHub.
+- [ ] Desplegar en servidor VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`).
+- [ ] Validar funcionamiento y respuesta HTTP 200 OK en Staging.
 - [ ] Redactar mensaje de respuesta para Gonzalo / Luciano.
+
