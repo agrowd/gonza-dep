@@ -495,5 +495,5 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 3. En `alta-turno` y `agenda`, se integró la propagación y captura formal de `fechaOriginal`, `horaOriginal` e `isReprogramacion: true` en el payload.
 4. En `/api/reservas/reprogramar`, se añadió validación defensiva que rechaza con HTTP 400 si el paciente intenta reagendar seleccionando exactamente el mismo día y horario de inicio de su turno actual.
 5. Mediante script SQL en PostgreSQL para `agenda_db` y `agenda_db_staging`, se auditó el 100% de los turnos históricos con notificaciones, restaurando la fecha original canónica de Evgenii Morgunov (`07/10/2026 a las 15:30 hs`), Joao De Oliveira (`15/10/2026 a las 20:30 hs`) y Gaston Sanchez (`22/09/2026 a las 19:20 hs`), y purgando las etiquetas autorreferenciales espurias de los turnos que nunca habían sido reprogramados (Horacio Smidt, Daniel Argañaraz, Pedro Laurenz, Alan Gonzalez, Carlos Boscherino, Mauro Castiglioni, Emiliano Sack).
-**Commit:** `hash` (en staging y main)
+**Commit:** `73c0ed2` (main) / `8ac0eca` (staging)
 **Estado:** ✅ FIXED
