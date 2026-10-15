@@ -29,6 +29,11 @@ export async function GET() {
         usuario: true,
         nombre: true,
         rol: true,
+        fechaNacimiento: true,
+        vacacionesInicio: true,
+        vacacionesFin: true,
+        comisionTipo: true,
+        comisionValor: true,
         ...(isAdmin ? { email: true, telefono: true, createdAt: true } : {})
       },
       orderBy: { createdAt: 'asc' }
@@ -55,7 +60,19 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { nombre, usuario, password, rol, email, telefono } = body;
+    const {
+      nombre,
+      usuario,
+      password,
+      rol,
+      email,
+      telefono,
+      fechaNacimiento,
+      vacacionesInicio,
+      vacacionesFin,
+      comisionTipo,
+      comisionValor
+    } = body;
 
     if (!nombre || !nombre.trim()) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
@@ -91,7 +108,12 @@ export async function POST(request) {
         password: hashedPassword,
         rol: assignedRole,
         email: email ? email.trim() : null,
-        telefono: telefono ? telefono.trim() : null
+        telefono: telefono ? telefono.trim() : null,
+        fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
+        vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
+        vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null,
+        comisionTipo: comisionTipo || 'POR_TURNO',
+        comisionValor: comisionValor !== undefined && comisionValor !== '' ? Number(comisionValor) : 0
       },
       select: {
         id: true,
@@ -100,6 +122,11 @@ export async function POST(request) {
         rol: true,
         email: true,
         telefono: true,
+        fechaNacimiento: true,
+        vacacionesInicio: true,
+        vacacionesFin: true,
+        comisionTipo: true,
+        comisionValor: true,
         createdAt: true
       }
     });

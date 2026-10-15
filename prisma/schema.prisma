@@ -15,10 +15,15 @@ model Usuario {
   password  String
   nombre    String
   rol       String   @default("ADMIN") // "ADMIN", "OPERADOR", "RECEPCION"
-  email     String?
-  telefono  String?
-  turnos    Turno[]
-  createdAt DateTime @default(now())
+  email            String?
+  telefono         String?
+  fechaNacimiento  DateTime?
+  vacacionesInicio DateTime?
+  vacacionesFin    DateTime?
+  comisionTipo     String?   @default("POR_TURNO") // "POR_TURNO", "POR_DIA", "PORCENTAJE"
+  comisionValor    Float?    @default(0)
+  turnos           Turno[]
+  createdAt        DateTime  @default(now())
 }
 
 model Cliente {

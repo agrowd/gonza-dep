@@ -13,6 +13,17 @@ export default function FichaImprimirPage({ params }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(d => {
+        if (d?.user?.rol === 'OPERADOR') {
+          window.location.href = '/admin/agenda';
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!id) return;
     fetch(`/api/admin/clientes/${id}`)
       .then(res => {

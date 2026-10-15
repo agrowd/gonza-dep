@@ -596,7 +596,12 @@ export default function ConfiguracionPage() {
       password: '',
       rol: 'OPERADOR',
       email: '',
-      telefono: ''
+      telefono: '',
+      fechaNacimiento: '',
+      vacacionesInicio: '',
+      vacacionesFin: '',
+      comisionTipo: 'POR_TURNO',
+      comisionValor: ''
     });
     setIsUserModalOpen(true);
   };
@@ -609,7 +614,12 @@ export default function ConfiguracionPage() {
       password: '',
       rol: u.rol || 'OPERADOR',
       email: u.email || '',
-      telefono: u.telefono || ''
+      telefono: u.telefono || '',
+      fechaNacimiento: u.fechaNacimiento ? u.fechaNacimiento.slice(0, 10) : '',
+      vacacionesInicio: u.vacacionesInicio ? u.vacacionesInicio.slice(0, 10) : '',
+      vacacionesFin: u.vacacionesFin ? u.vacacionesFin.slice(0, 10) : '',
+      comisionTipo: u.comisionTipo || 'POR_TURNO',
+      comisionValor: u.comisionValor !== undefined && u.comisionValor !== null ? u.comisionValor : ''
     });
     setIsUserModalOpen(true);
   };
@@ -1553,8 +1563,9 @@ export default function ConfiguracionPage() {
                     <th className={styles.th}>Nombre</th>
                     <th className={styles.th}>Usuario de Acceso</th>
                     <th className={styles.th}>Rol / Permisos</th>
-                    <th className={styles.th}>Teléfono / WhatsApp</th>
-                    <th className={styles.th}>Email</th>
+                    <th className={styles.th}>Comisión</th>
+                    <th className={styles.th}>Cumpleaños / Vacaciones</th>
+                    <th className={styles.th}>Contacto</th>
                     <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
                   </tr>
                 </thead>
@@ -1574,8 +1585,36 @@ export default function ConfiguracionPage() {
                           <span className={styles.roleBadgeRecepcion}>📋 Recepción</span>
                         )}
                       </td>
-                      <td className={styles.td} style={{ color: 'var(--text-secondary)' }}>{u.telefono || '-'}</td>
-                      <td className={styles.td} style={{ color: 'var(--text-secondary)' }}>{u.email || '-'}</td>
+                      <td className={styles.td}>
+                        {u.comisionValor ? (
+                          <span style={{ fontWeight: 600, color: 'var(--color-gold)' }}>
+                            {u.comisionTipo === 'PORCENTAJE'
+                              ? `${u.comisionValor}% por turno`
+                              : u.comisionTipo === 'POR_DIA'
+                              ? `$${Number(u.comisionValor).toLocaleString('es-AR')} / día`
+                              : `$${Number(u.comisionValor).toLocaleString('es-AR')} / turno`}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-secondary)' }}>Sin comisión</span>
+                        )}
+                      </td>
+                      <td className={styles.td} style={{ fontSize: '0.85rem' }}>
+                        {u.fechaNacimiento && (
+                          <div>🎂 {new Date(u.fechaNacimiento).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                        )}
+                        {u.vacacionesInicio && u.vacacionesFin && (
+                          <div style={{ color: '#60a5fa', marginTop: '0.2rem' }}>
+                            🏖️ {new Date(u.vacacionesInicio).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })} al {new Date(u.vacacionesFin).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                          </div>
+                        )}
+                        {!u.fechaNacimiento && !u.vacacionesInicio && (
+                          <span style={{ color: 'var(--text-secondary)' }}>-</span>
+                        )}
+                      </td>
+                      <td className={styles.td} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        <div>{u.telefono || '-'}</div>
+                        <div style={{ fontSize: '0.8rem' }}>{u.email || ''}</div>
+                      </td>
                       <td className={styles.td} style={{ textAlign: 'right' }}>
                         <div className={styles.actionCell} style={{ justifyContent: 'flex-end', gap: '0.5rem' }}>
                           <button 
@@ -1894,7 +1933,7 @@ export default function ConfiguracionPage() {
       {/* User Create / Edit Modal */}
       {isUserModalOpen && (
         <div className="modal-overlay" onClick={() => setIsUserModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3>{editingUser ? 'Editar Usuario / Operador' : 'Nuevo Usuario / Operador'}</h3>
               <button className="modal-close" onClick={() => setIsUserModalOpen(false)}>&times;</button>
@@ -1972,6 +2011,69 @@ export default function ConfiguracionPage() {
                       value={userForm.email}
                       onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                       placeholder="Ej: operador@ejemplo.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Cumpleaños */}
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>🎂 Cumpleaños (Fecha de Nacimiento)</label>
+                  <input 
+                    type="date" 
+                    className={styles.input} 
+                    value={userForm.fechaNacimiento}
+                    onChange={(e) => setUserForm({ ...userForm, fechaNacimiento: e.target.value })}
+                  />
+                </div>
+
+                {/* Vacaciones */}
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>🏖️ Vacaciones Desde</label>
+                    <input 
+                      type="date" 
+                      className={styles.input} 
+                      value={userForm.vacacionesInicio}
+                      onChange={(e) => setUserForm({ ...userForm, vacacionesInicio: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>🏖️ Vacaciones Hasta</label>
+                    <input 
+                      type="date" 
+                      className={styles.input} 
+                      value={userForm.vacacionesFin}
+                      onChange={(e) => setUserForm({ ...userForm, vacacionesFin: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Comisión */}
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>💰 Modalidad de Comisión</label>
+                    <select 
+                      className={styles.input}
+                      value={userForm.comisionTipo}
+                      onChange={(e) => setUserForm({ ...userForm, comisionTipo: e.target.value })}
+                    >
+                      <option value="POR_TURNO">Por Turno Realizado ($)</option>
+                      <option value="POR_DIA">Por Día Trabajado ($)</option>
+                      <option value="PORCENTAJE">Porcentaje sobre el Turno (%)</option>
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Valor Comisión {userForm.comisionTipo === 'PORCENTAJE' ? '(%)' : '(ARS $)'}
+                    </label>
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={userForm.comisionValor}
+                      onChange={(e) => setUserForm({ ...userForm, comisionValor: e.target.value })}
+                      placeholder={userForm.comisionTipo === 'PORCENTAJE' ? 'Ej: 20' : 'Ej: 5000'}
+                      min="0"
+                      step="any"
                     />
                   </div>
                 </div>

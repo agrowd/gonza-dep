@@ -230,6 +230,7 @@ export default function AgendaPage() {
   const [cuponCodeInput, setCuponCodeInput] = useState('');
   const [editCuponCodeInput, setEditCuponCodeInput] = useState('');
   const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [operadores, setOperadores] = useState([]);
 
   // Toast Notification State
@@ -407,6 +408,9 @@ export default function AgendaPage() {
         if (data?.user?.rol) {
           setCurrentUserRole(data.user.rol);
         }
+        if (data?.user?.id) {
+          setCurrentUserId(data.user.id);
+        }
       })
       .catch(err => console.error('Error fetching session role:', err));
 
@@ -414,7 +418,16 @@ export default function AgendaPage() {
       .then(res => res.json())
       .then(data => {
         if (data?.usuarios) {
-          setOperadores(data.usuarios.filter(u => u.rol === 'OPERADOR' || u.rol === 'ADMIN'));
+          const ops = data.usuarios.filter(u => u.rol === 'OPERADOR' || u.rol === 'ADMIN');
+          setOperadores(ops);
+          const defaultAdmin = ops.find(u => u.nombre?.toLowerCase().includes('gonzalo') || u.usuario?.toLowerCase() === 'gonzalo')
+            || ops.find(u => u.rol === 'ADMIN');
+          if (defaultAdmin) {
+            setNewTurno(prev => ({
+              ...prev,
+              operadorId: prev.operadorId || defaultAdmin.id
+            }));
+          }
         }
       })
       .catch(err => console.error('Error fetching usuarios:', err));
@@ -1480,7 +1493,10 @@ export default function AgendaPage() {
     ])
       .then(([turnosData, bloqueosData]) => {
         if (Array.isArray(turnosData)) {
-          setAppointments(turnosData);
+          const finalTurnos = currentUserRole === 'OPERADOR' && currentUserId
+            ? turnosData.filter(t => t.operadorId === currentUserId)
+            : turnosData;
+          setAppointments(finalTurnos);
         }
         if (Array.isArray(bloqueosData)) {
           setBloqueos(bloqueosData);
@@ -1488,7 +1504,7 @@ export default function AgendaPage() {
       })
       .catch(err => console.error('Error fetching appointments or bloqueos:', err))
       .finally(() => setLoading(false));
-  }, [viewMode, selectedDate, currentWeekStart]);
+  }, [viewMode, selectedDate, currentWeekStart, currentUserRole, currentUserId]);
 
   useEffect(() => {
     fetchAppointments();
@@ -3248,11 +3264,9 @@ export default function AgendaPage() {
                                     {app.cliente?.nombreCompleto || 'Cliente'}
                                   </span>
                                   <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                    {app.operador?.nombre && (
-                                      <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 600 }}>
-                                        👤 {app.operador.nombre}
-                                      </span>
-                                    )}
+                                    <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 600 }}>
+                                      👤 {app.operador?.nombre || 'Gonzalo'}
+                                    </span>
                                     {app.subEstado && (
                                       <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--color-gold)', fontWeight: 700 }}>
                                         {app.subEstado === 'VA_A_AVISAR' ? '⏳ Va a avisar' : app.subEstado === 'MANTENIMIENTO' ? '🛠️ Mantenimiento' : app.subEstado === 'FINALIZADO' ? '🏁 Finalizó' : app.subEstado}
@@ -3517,7 +3531,7 @@ export default function AgendaPage() {
                         value={editTurno.operadorId || ''}
                         onChange={(e) => setEditTurno(prev => ({ ...prev, operadorId: e.target.value }))}
                       >
-                        <option value="">Sin Asignar</option>
+                        <option value="">Gonzalo (Por defecto)</option>
                         {operadores.map(op => (
                           <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
                         ))}
@@ -3933,9 +3947,33 @@ export default function AgendaPage() {
                     </div>
                   </div>
 
-                  <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.25rem', padding: '0.45rem 0', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
-                    <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.85rem', fontWeight: 600 }}>
-                      👤 Operador Asignado
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    marginTop: '0.35rem',
+                    padding: '0.55rem 0',
+                    borderTop: '1px solid var(--border-color)',
+                    borderBottom: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.6rem',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}>
+                    <span style={{
+                      margin: 0,
+                      textAlign: 'left',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}>
+                      👤 Operador Asignado:
                     </span>
                     {currentUserRole === 'ADMIN' ? (
                       <select
@@ -3956,7 +3994,7 @@ export default function AgendaPage() {
                                 operadorId: newOpId,
                                 operador: updated.operador || operadores.find(op => op.id === newOpId) || null
                               }));
-                              const opName = operadores.find(op => op.id === newOpId)?.nombre || 'Sin Asignar';
+                              const opName = operadores.find(op => op.id === newOpId)?.nombre || 'Gonzalo';
                               showToast(`Operador asignado: ${opName}`);
                               fetchAppointments();
                             } else {
@@ -3968,7 +4006,7 @@ export default function AgendaPage() {
                           }
                         }}
                         style={{
-                          padding: '0.35rem 0.5rem',
+                          padding: '0.4rem 0.6rem',
                           borderRadius: '6px',
                           border: '1px solid var(--border-color)',
                           backgroundColor: 'var(--bg-secondary)',
@@ -3976,19 +4014,19 @@ export default function AgendaPage() {
                           fontSize: '13px',
                           fontWeight: '600',
                           cursor: 'pointer',
-                          minWidth: '140px',
-                          maxWidth: '180px',
-                          flexShrink: 0
+                          minWidth: '150px',
+                          flex: '1 1 auto',
+                          maxWidth: '100%'
                         }}
                       >
-                        <option value="">Sin Asignar</option>
+                        <option value="">Gonzalo (Por defecto)</option>
                         {operadores.map(op => (
                           <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
                         ))}
                       </select>
                     ) : (
                       <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)' }}>
-                        {selectedTurno.operador?.nombre || 'Sin Asignar'}
+                        {selectedTurno.operador?.nombre || 'Gonzalo'}
                       </span>
                     )}
                   </div>
@@ -5573,7 +5611,7 @@ export default function AgendaPage() {
                       value={newTurno.operadorId || ''}
                       onChange={(e) => setNewTurno(prev => ({ ...prev, operadorId: e.target.value }))}
                     >
-                      <option value="">Sin Asignar</option>
+                      <option value="">Gonzalo (Por defecto)</option>
                       {operadores.map(op => (
                         <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
                       ))}

@@ -1799,3 +1799,44 @@
 - [x] Validar funcionamiento y respuesta HTTP 200 OK en Staging (`http://187.127.9.216:3008/login`).
 - [x] Redactar mensaje de respuesta para Gonzalo / Luciano.
 
+## 📅 Sesión: 15 de Octubre de 2026 (Staging - Ajustes de Privacidad de Impresión, Filtrado de Agenda por Operador, Operador Gonzalo por Defecto y Perfil Extendido en Configuración)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender 5 requerimientos y capturas de feedback enviadas por Luciano Gómez (`media_1792098011650_1e695cb5` a `media_1792098087680_5654a2aa`):
+  1. Ocultar valores financieros e ingreso total en la vista de impresión del día para Operador (`/admin/agenda/imprimir`).
+  2. Ocultar botón `📄 Descargar PDF / Imprimir` en la ficha de cliente (`/admin/clientes`) y proteger la ruta de impresión.
+  3. Corregir layout/estilo del selector de operador en el modal de detalle de turno (evitar colapso vertical de letras en móvil) y asignar operador por defecto a "Gonzalo".
+  4. Filtrar agenda de operador para que solo visualice sus turnos asignados (`operadorId === currentUserId`) y no los de Gonzalo u otros operadores.
+  5. Extender perfil de operadores en Configuración (`/admin/configuracion`) agregando Cumpleaños, Vacaciones y Modalidad/Valor de Comisión según documentación.
+- [x] Actualizar `prisma/schema.prisma` agregando a `model Usuario`:
+  - `fechaNacimiento DateTime?`
+  - `vacacionesInicio DateTime?`
+  - `vacacionesFin DateTime?`
+  - `comisionTipo String? @default("POR_TURNO")`
+  - `comisionValor Float? @default(0)`
+- [x] Ejecutar `npx prisma generate` para sincronizar tipos locales del cliente Prisma.
+- [x] Actualizar backend de usuarios (`/api/admin/usuarios` y `/api/admin/usuarios/[id]`):
+  - Añadir soporte de `fechaNacimiento`, `vacacionesInicio`, `vacacionesFin`, `comisionTipo` y `comisionValor` en GET, POST y PUT.
+- [x] Diseñar campos en `/admin/configuracion`:
+  - En modal de usuario: inputs para Cumpleaños (`type="date"`), Vacaciones Desde/Hasta (`type="date"`) y Comisión (Modalidad `POR_TURNO` / `POR_DIA` / `PORCENTAJE` y Valor numérico).
+  - En tabla de usuarios: columnas informativas para Comisión, Cumpleaños/Vacaciones y Contacto.
+- [x] Blindar vista de impresión del día (`/admin/agenda/imprimir` y `/api/admin/turnos/imprimir`):
+  - Para `OPERADOR`: ocultar `Valor: $...` en cada renglón de turno y ocultar `Total Estimado: $...` en el pie de tabla.
+  - En la API: filtrar turnos por `where: { operadorId: session.id }`.
+- [x] Blindar ficha de cliente (`/admin/clientes` y `/admin/clientes/[id]/imprimir`):
+  - En el modal de cliente: renderizado condicional `{currentUserRole !== 'OPERADOR' && (<button>📄 Descargar PDF / Imprimir</button>)}`.
+  - En `/admin/clientes/[id]/imprimir`: redirección inmediata a `/admin/agenda` si el rol es `OPERADOR`.
+- [x] Corregir layout del selector de operador en `/admin/agenda`:
+  - Reemplazar contenedor `.detailRowBetween` por contenedor flexbox con `flexWrap: 'wrap'`, `gap: 0.6rem`, y `whiteSpace: 'nowrap'` en la etiqueta `👤 Operador Asignado:`, erradicando el colapso vertical por carácter.
+  - En los selectores de detalle, edición y creación cambiar "Sin Asignar" por "Gonzalo (Por defecto)".
+- [x] Asignar turnos por defecto a Gonzalo:
+  - En `/api/admin/turnos`: si no se especifica `operadorId`, fallback automático al ID del usuario administrador (Gonzalo).
+  - En `agenda/page.js`: preselección de Gonzalo como operador inicial al abrir modal de nuevo turno.
+  - En `prisma/seed.js`: nombre del usuario admin establecido como `Gonzalo`.
+- [x] Filtrado estricto de Agenda para Operador:
+  - En `GET /api/admin/turnos`: si `session.rol === 'OPERADOR'`, cláusula Prisma `where: { ...where, operadorId: session.id }`.
+  - En `agenda/page.js`: filtro defensivo local para asegurar que el operador solo visualice sus citas asignadas.
+- [x] Verificar compilación local con Turbopack (`npm run build`: 48 rutas compiladas con 0 errores en 47s).
+- [x] Registrar Decisión `D-114` en `.synapse/decisions.md`.
+
+

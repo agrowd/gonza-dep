@@ -23,7 +23,19 @@ export async function PUT(request, context) {
 
     const { id } = await context.params;
     const body = await request.json();
-    const { nombre, usuario, password, rol, email, telefono } = body;
+    const {
+      nombre,
+      usuario,
+      password,
+      rol,
+      email,
+      telefono,
+      fechaNacimiento,
+      vacacionesInicio,
+      vacacionesFin,
+      comisionTipo,
+      comisionValor
+    } = body;
 
     const user = await prisma.usuario.findUnique({ where: { id } });
     if (!user) {
@@ -38,6 +50,22 @@ export async function PUT(request, context) {
     }
     if (email !== undefined) updateData.email = email ? email.trim() : null;
     if (telefono !== undefined) updateData.telefono = telefono ? telefono.trim() : null;
+
+    if (fechaNacimiento !== undefined) {
+      updateData.fechaNacimiento = fechaNacimiento ? new Date(fechaNacimiento) : null;
+    }
+    if (vacacionesInicio !== undefined) {
+      updateData.vacacionesInicio = vacacionesInicio ? new Date(vacacionesInicio) : null;
+    }
+    if (vacacionesFin !== undefined) {
+      updateData.vacacionesFin = vacacionesFin ? new Date(vacacionesFin) : null;
+    }
+    if (comisionTipo !== undefined) {
+      updateData.comisionTipo = comisionTipo || 'POR_TURNO';
+    }
+    if (comisionValor !== undefined) {
+      updateData.comisionValor = comisionValor !== '' && comisionValor !== null ? Number(comisionValor) : 0;
+    }
 
     if (usuario !== undefined && usuario.trim()) {
       const cleanUser = usuario.trim().toLowerCase();
@@ -64,6 +92,11 @@ export async function PUT(request, context) {
         rol: true,
         email: true,
         telefono: true,
+        fechaNacimiento: true,
+        vacacionesInicio: true,
+        vacacionesFin: true,
+        comisionTipo: true,
+        comisionValor: true,
         createdAt: true
       }
     });

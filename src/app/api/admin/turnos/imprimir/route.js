@@ -13,7 +13,12 @@ export async function GET(request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    if (!sessionCookie) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const session = verifySessionToken(sessionCookie.value);
+    if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
@@ -28,14 +33,20 @@ export async function GET(request) {
     const startDate = new Date(`${fecha}T00:00:00.000Z`);
     const endDate = new Date(`${fecha}T23:59:59.999Z`);
 
-    const turnos = await prisma.turno.findMany({
-      where: {
-        fecha: {
-          gte: new Date(startDate.getTime() - 12 * 3600 * 1000),
-          lte: new Date(endDate.getTime() + 12 * 3600 * 1000)
-        },
-        estado: { notIn: ['CANCELADO', 'NO_ASISTIO'] }
+    const whereClause = {
+      fecha: {
+        gte: new Date(startDate.getTime() - 12 * 3600 * 1000),
+        lte: new Date(endDate.getTime() + 12 * 3600 * 1000)
       },
+      estado: { notIn: ['CANCELADO', 'NO_ASISTIO'] }
+    };
+
+    if (session.rol === 'OPERADOR') {
+      whereClause.operadorId = session.id;
+    }
+
+    const turnos = await prisma.turno.findMany({
+      where: whereClause,
       include: {
         cliente: true
       }

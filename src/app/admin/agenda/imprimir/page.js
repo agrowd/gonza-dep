@@ -12,6 +12,18 @@ function PrintContent() {
   const [bloqueos, setBloqueos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(d => {
+        if (d?.user?.rol) {
+          setCurrentUserRole(d.user.rol);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!fecha) {
@@ -260,9 +272,11 @@ function PrintContent() {
                     <tr key={turno.id}>
                       <td className={styles.timeCol}>
                         <span className={styles.timeRange}>{turno.horaInicio} - {turno.horaFin}</span>
-                        <div className={styles.timeValor}>
-                          Valor: ${Number(turno.valorTotal || 0).toLocaleString('es-AR')}
-                        </div>
+                        {currentUserRole !== 'OPERADOR' && (
+                          <div className={styles.timeValor}>
+                            Valor: ${Number(turno.valorTotal || 0).toLocaleString('es-AR')}
+                          </div>
+                        )}
                       </td>
                       <td className={styles.clientCol}>
                         <div className={styles.clientName}>{turno.cliente?.nombreCompleto || turno.nombreCompleto || 'Cliente'}</div>
@@ -283,7 +297,11 @@ function PrintContent() {
                     <strong>{turnos.length}</strong> turno{turnos.length === 1 ? '' : 's'}
                   </td>
                   <td className={styles.zonesCol} style={{ padding: '8px 6px', fontSize: '0.95rem', color: '#000' }}>
-                    <strong>Total Estimado: ${turnos.reduce((acc, t) => acc + (Number(t.valorTotal) || 0), 0).toLocaleString('es-AR')}</strong>
+                    {currentUserRole !== 'OPERADOR' ? (
+                      <strong>Total Estimado: ${turnos.reduce((acc, t) => acc + (Number(t.valorTotal) || 0), 0).toLocaleString('es-AR')}</strong>
+                    ) : (
+                      <span>—</span>
+                    )}
                   </td>
                 </tr>
               </tfoot>

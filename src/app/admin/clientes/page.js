@@ -1292,30 +1292,32 @@ function ClientesPageContent() {
               </div>
 
               {/* Row 2: Action button on its own line */}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
-                <button
-                  type="button"
-                  onClick={() => window.open(`/admin/clientes/${selectedClient.id}/imprimir`, '_blank')}
-                  className="btn"
-                  title="Imprimir o Descargar Ficha en PDF"
-                  style={{
-                    backgroundColor: '#1f2937',
-                    color: '#e5e7eb',
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    padding: '0.45rem 0.85rem',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  📄 Descargar PDF / Imprimir
-                </button>
-              </div>
+              {currentUserRole !== 'OPERADOR' && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.open(`/admin/clientes/${selectedClient.id}/imprimir`, '_blank')}
+                    className="btn"
+                    title="Imprimir o Descargar Ficha en PDF"
+                    style={{
+                      backgroundColor: '#1f2937',
+                      color: '#e5e7eb',
+                      border: '1px solid #374151',
+                      borderRadius: '6px',
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    📄 Descargar PDF / Imprimir
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Tabs */}
