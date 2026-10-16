@@ -1838,5 +1838,17 @@
   - En `agenda/page.js`: filtro defensivo local para asegurar que el operador solo visualice sus citas asignadas.
 - [x] Verificar compilación local con Turbopack (`npm run build`: 48 rutas compiladas con 0 errores en 47s).
 - [x] Registrar Decisión `D-114` en `.synapse/decisions.md`.
+- [x] Ejecutar script de migración en VPS Staging (`scratch/migrate_turnos_staging.js`):
+  - Actualizado nombre del usuario Admin a "Gonzalo".
+  - Asignados 570 turnos preexistentes sin operador a Gonzalo.
+  - Verificada existencia de turno de prueba asignado a Pedrito.
+- [x] Ejecutar suite de validación automatizada en vivo en Staging (`http://187.127.9.216:3008`):
+  - Validado Punto 1: Imprimir día oculta importes individuales y total estimado para OPERADOR, visible para ADMIN.
+  - Validado Punto 2: Ficha cliente oculta botón "Descargar PDF / Imprimir" y protege redirección para OPERADOR.
+  - Validado Punto 3: Selector de operador con layout flexbox anti-colapso vertical y predeterminado a Gonzalo.
+  - Validado Punto 4: Agenda y APIs filtran estrictamente por operador logueado (Pedrito solo ve sus turnos).
+  - Validado Punto 5: Configuración muestra columnas y modal de alta/edición con Cumpleaños, Vacaciones y Comisión.
+- [x] Notificar a Gonzalo y Luciano con resumen completo y credenciales de prueba.
+
 
 

@@ -552,4 +552,38 @@
   - Verificación HTTP 200 OK en `http://187.127.9.216:3008/login`.
   - Registrado en `.synapse/decisions.md` (D-113) y `.synapse/workcycle.md`.
 
+## Sesión: 15-16 de Octubre de 2026 - Privacidad de Impresión, Filtrado Multi-Operador, Operador Gonzalo por Defecto y Perfil Extendido (Staging)
+- Requerimientos de Feedback de Luciano Gómez (`media_1792098011650_1e695cb5` a `media_1792098087680_5654a2aa`):
+  1. Ocultar importes individuales y total estimado en la vista de impresión del día (`/admin/agenda/imprimir`) para Operadores.
+  2. Ocultar botón "📄 Descargar PDF / Imprimir" en la ficha de cliente (`/admin/clientes`) y bloquear acceso para Operadores.
+  3. Corregir layout del selector de operador en móvil (evitar colapso vertical de letras) y asignar operador por defecto a "Gonzalo".
+  4. Filtrar agenda de operador para que solo visualice sus citas asignadas y no las de Gonzalo u otros operadores.
+  5. Extender perfil de operadores en Configuración (`/admin/configuracion`) agregando Cumpleaños, Vacaciones y Modalidad/Valor de Comisión.
+- Solución Implementada y Desplegada en Staging (`http://187.127.9.216:3008`):
+  1. **Vista de Impresión del Día**:
+     - En `src/app/admin/agenda/imprimir/page.js`: para `OPERADOR`, se oculta `Valor: $...` en cada renglón y se sustituye `Total Estimado: $...` por un guión inerte `—`.
+     - En `src/app/api/admin/turnos/imprimir/route.js`: se filtran turnos por `whereClause.operadorId = session.id` si el rol es `OPERADOR`.
+  2. **Ficha de Clientes e Impresión**:
+     - En `src/app/admin/clientes/page.js`: renderizado condicional `{currentUserRole !== 'OPERADOR' && (<button>📄 Descargar PDF / Imprimir</button>)}`.
+     - En `src/app/admin/clientes/[id]/imprimir/page.js`: redirección inmediata a `/admin/agenda` si el rol es `OPERADOR`.
+  3. **Selector de Operador en Agenda & Predeterminado a Gonzalo**:
+     - En `src/app/admin/agenda/page.js`: rediseñado el contenedor con `display: flex; flex-wrap: wrap; gap: 0.6rem;` y `whiteSpace: 'nowrap'`, erradicando el colapso vertical en pantallas móviles.
+     - En selectores de creación, edición y detalle: renombrada la opción por defecto a `Gonzalo (Por defecto)`.
+     - En `POST /api/admin/turnos`: asignación automática del ID del usuario administrador si no se especifica operador.
+     - Script ejecutado en PostgreSQL `agenda_db_staging`: actualizó el nombre del admin a `Gonzalo` y asignó todos los 570 turnos preexistentes a Gonzalo.
+  4. **Filtrado Estricto de Agenda Multi-Operador**:
+     - En `GET /api/admin/turnos/route.js`: si `session.rol === 'OPERADOR'`, cláusula Prisma `where: { operadorId: session.id }`.
+     - En `src/app/admin/agenda/page.js`: filtro defensivo local para asegurar que cada operador solo vea sus propias citas.
+  5. **Perfil Extendido en Configuración**:
+     - Prisma Schema: agregados `fechaNacimiento`, `vacacionesInicio`, `vacacionesFin`, `comisionTipo` y `comisionValor` al modelo `Usuario`.
+     - Backend: soportados en `GET`, `POST` y `PUT` en `/api/admin/usuarios` y `[id]`.
+     - UI: tabla de "👥 Usuarios y Operadores" con columnas para Comisión, Cumpleaños/Vacaciones y Contacto; modal con inputs de Fecha de Nacimiento (`type="date"`), Vacaciones Desde/Hasta (`type="date"`), Modalidad de Comisión (`POR_TURNO`, `POR_DIA`, `PORCENTAJE`) y Valor numérico.
+- Validación y Despliegue:
+  - Compilación local: 48 rutas en 47s con 0 errores (`npm run build`).
+  - Commit y push a `staging` (`14e37ab`).
+  - Desplegado en VPS Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, DB `agenda_db_staging`).
+  - Validación automatizada en vivo con Puppeteer: los 5 puntos verificados con éxito tanto con cuenta Admin (`admin` / `admin123`) como con cuenta Operador (`pedrito` / `pedrito123`).
+  - Registrado en `.synapse/decisions.md` (D-114) y `.synapse/workcycle.md`.
+
+
 
