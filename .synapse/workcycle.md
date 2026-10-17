@@ -1850,5 +1850,16 @@
   - Validado Punto 5: Configuración muestra columnas y modal de alta/edición con Cumpleaños, Vacaciones y Comisión.
 - [x] Notificar a Gonzalo y Luciano con resumen completo y credenciales de prueba.
 
+## 📅 Sesión: 17 de Octubre de 2026 (Incidente 502 Bad Gateway por reinicio de VPS y Recuperación de Recordatorios 48hs)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver error 502 Bad Gateway reportado por Gonzalo Siri en `agenda.depilacionparahombres.com` (`media_1792264045157_8c468b36.png` a `media_1792264113799_8050c508.png`).
+- [x] Restaurar procesos de producción (`gonzalo-agenda`, `gonzalo-agenda-staging`, `ia-gonzadep`).
+- [x] Habilitar arranque automático de PM2 en `systemd` (`pm2 startup` y `systemctl enable pm2-root`).
+- [x] Auditar y despachar inmediatamente los recordatorios de WhatsApp de 48hs para los 8 turnos del lunes 19 de octubre.
+- [x] Validar respuesta HTTP 200 OK en autogestión y panel de agenda.
+- [x] Documentar en `.synapse/errores.md` (`ERR-49`), `.synapse/decisions.md` (`D-115`), `chat.md` y notificar al usuario.
+
+
 
 

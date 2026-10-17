@@ -585,5 +585,23 @@
   - Validación automatizada en vivo con Puppeteer: los 5 puntos verificados con éxito tanto con cuenta Admin (`admin` / `admin123`) como con cuenta Operador (`pedrito` / `pedrito123`).
   - Registrado en `.synapse/decisions.md` (D-114) y `.synapse/workcycle.md`.
 
+## Sesión: 17 de Octubre de 2026 - Resolución de Incidente 502 Bad Gateway y Despacho de Recordatorios de 48hs
+- Reporte Urgente de Gonzalo Siri (`media_1792264045157_8c468b36.png` a `media_1792264113799_8050c508.png`):
+  *"La página de autogestión está tirando error 502 Bad Gateway, lo podés revisar por favor. Tampoco abre la agenda. Y claro que eso hizo que no salieran los mensajes de 48hs antes"*.
+- Diagnóstico Forense en VPS:
+  1. El servidor físico/VPS de Hostinger (`187.127.9.216`) se reinició a las ~06:57 AM hora Argentina (~09:57 UTC).
+  2. Nginx levantó automáticamente, pero el daemon de PM2 no tenía habilitada la persistencia en `systemd` (`pm2-root.service`). En consecuencia, los procesos `gonzalo-agenda` (puerto 3006), `gonzalo-agenda-staging` (puerto 3008) e `ia-gonzadep` (puerto 3007) quedaron caídos tras el reboot.
+  3. Al recibir tráfico en `agenda.depilacionparahombres.com`, Nginx arrojaba `502 Bad Gateway` al no encontrar backend escuchando en 3006.
+  4. Por haber estado la aplicación offline durante las 10:00 AM, el cron de recordatorios automáticos de 48hs no se ejecutó, dejando pendientes las notificaciones de los turnos del lunes 19 de octubre.
+- Solución y Recuperación:
+  1. Se reactivaron los procesos inmediatamente mediante `pm2 resurrect`.
+  2. Se configuró y habilitó el servicio systemd mediante `pm2 startup` (`systemctl enable pm2-root`) y se congeló el estado con `pm2 save`.
+  3. Se auditó la base de datos de producción (`agenda_db`) y se forzó la ejecución de `checkAndSendReminders(true)`:
+     - Se despacharon con éxito los 8 recordatorios de WhatsApp de 48hs correspondientes al lunes 19/10/2026: Alejandro Souto (`5491164229900`), Matias Ramos (`5492657392415`), Javier Picca (`5491130186249`), Pablo Nasillo (`5491123861047`), Lautaro Cocca (`5491140239654`), Gaston Rios (`5491159078777`), David Acosta (`5493516117757`) y Sergio Laguzzi (`5491157745678`).
+     - Se procesaron los recordatorios de mantenimiento a 75 días.
+  4. Se verificó con `curl` que tanto la landing de autogestión (`/`) como el panel administrativo (`/login`) responden con HTTP 200 OK.
+  5. Documentado en `.synapse/errores.md` (`ERR-49`), `.synapse/decisions.md` (`D-115`) y `.synapse/workcycle.md`.
+
+
 
 
