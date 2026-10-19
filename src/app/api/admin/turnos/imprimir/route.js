@@ -48,7 +48,8 @@ export async function GET(request) {
     const turnos = await prisma.turno.findMany({
       where: whereClause,
       include: {
-        cliente: true
+        cliente: true,
+        operador: true
       }
     });
 

@@ -495,7 +495,9 @@ export async function PUT(request, { params }) {
             id: true,
             nombre: true,
             usuario: true,
-            rol: true
+            rol: true,
+            comisionTipo: true,
+            comisionValor: true
           }
         }
       }

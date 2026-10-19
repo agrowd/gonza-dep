@@ -3025,6 +3025,73 @@ export default function AgendaPage() {
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
               const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
+              // Liquidación de Operadores (Desde primer turno hasta último turno con su etiqueta)
+              const activeDayApps = dayApps.filter(a => a.estado !== 'CANCELADO');
+              const opMap = {};
+
+              activeDayApps.forEach(app => {
+                const opId = app.operadorId;
+                if (!opId) return;
+                if (!opMap[opId]) {
+                  const opInfo = operadores.find(o => o.id === opId) || app.operador || { id: opId, nombre: 'Operador' };
+                  opMap[opId] = {
+                    id: opId,
+                    nombre: opInfo.nombre || 'Operador',
+                    rol: opInfo.rol || 'OPERADOR',
+                    comisionTipo: opInfo.comisionTipo === 'POR_DIA' ? 'POR_HORA' : (opInfo.comisionTipo || 'POR_HORA'),
+                    comisionValor: Number(opInfo.comisionValor || 0),
+                    turnos: []
+                  };
+                }
+                opMap[opId].turnos.push(app);
+              });
+
+              const opPayouts = Object.values(opMap).map(op => {
+                const sortedTurnos = [...op.turnos].sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+                const firstTurno = sortedTurnos[0];
+                const lastTurno = sortedTurnos[sortedTurnos.length - 1];
+
+                const startMin = Math.min(...sortedTurnos.map(t => timeToMinutes(t.horaInicio)));
+                const endMin = Math.max(...sortedTurnos.map(t => timeToMinutes(t.horaFin)));
+                const totalMin = Math.max(0, endMin - startMin);
+                const totalHours = totalMin / 60;
+
+                let montoPagar = 0;
+                if (op.comisionTipo === 'POR_HORA' || op.comisionTipo === 'POR_DIA') {
+                  montoPagar = Math.round(totalHours * op.comisionValor);
+                } else if (op.comisionTipo === 'POR_TURNO') {
+                  montoPagar = sortedTurnos.length * op.comisionValor;
+                } else if (op.comisionTipo === 'PORCENTAJE') {
+                  const facturado = sortedTurnos.reduce((s, t) => s + Number(t.valorTotal || 0), 0);
+                  montoPagar = Math.round(facturado * (op.comisionValor / 100));
+                }
+
+                const hoursInt = Math.floor(totalMin / 60);
+                const minsInt = totalMin % 60;
+                let durationFormatted = '';
+                if (hoursInt > 0 && minsInt > 0) {
+                  durationFormatted = `${hoursInt}h ${minsInt}m`;
+                } else if (hoursInt > 0) {
+                  durationFormatted = `${hoursInt} hs`;
+                } else {
+                  durationFormatted = `${minsInt} min`;
+                }
+
+                return {
+                  ...op,
+                  startStr: firstTurno.horaInicio,
+                  endStr: lastTurno.horaFin,
+                  totalMin,
+                  totalHours: Number(totalHours.toFixed(2)),
+                  durationFormatted,
+                  montoPagar,
+                  turnosCount: sortedTurnos.length
+                };
+              });
+
+              const payableOperators = opPayouts.filter(p => p.rol === 'OPERADOR' || p.comisionValor > 0);
+              const totalPagarOperadores = payableOperators.reduce((sum, p) => sum + p.montoPagar, 0);
+
               return (
                 <>
                   <div className={styles.neocitaDayHeader}>
@@ -3042,9 +3109,73 @@ export default function AgendaPage() {
                           <span style={{ color: 'var(--text-secondary)' }}>Ingreso Estimado</span>
                           <span style={{ fontWeight: 800, color: 'var(--color-gold)', fontSize: '1.1rem' }}>${totalRevenue.toLocaleString('es-ES')}</span>
                         </div>
+                        {totalPagarOperadores > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
+                            <span style={{ color: '#60a5fa' }}>A Pagar Operadores</span>
+                            <span style={{ fontWeight: 800, color: '#60a5fa', fontSize: '1.1rem' }}>-${totalPagarOperadores.toLocaleString('es-ES')}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
+
+                  {/* Bloque Informativo de Liquidación de Operadores para Administrador */}
+                  {currentUserRole !== 'OPERADOR' && payableOperators.length > 0 && (
+                    <div style={{
+                      marginBottom: '1rem',
+                      padding: '0.65rem 0.9rem',
+                      backgroundColor: 'rgba(96, 165, 250, 0.08)',
+                      border: '1px solid rgba(96, 165, 250, 0.25)',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.45rem',
+                      boxSizing: 'border-box',
+                      width: '100%'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          ✂️ Liquidación de Operadores (Permanencia del Día):
+                        </span>
+                        {totalPagarOperadores > 0 && (
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#22c55e' }}>
+                            Total a pagar: ${totalPagarOperadores.toLocaleString('es-AR')}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {payableOperators.map(p => (
+                          <div 
+                            key={p.id}
+                            style={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              borderRadius: '6px',
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.78rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.45rem',
+                              flexWrap: 'wrap'
+                            }}
+                          >
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>👤 {p.nombre}:</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              {p.startStr} a {p.endStr} ({p.durationFormatted}) • {p.turnosCount} turno{p.turnosCount === 1 ? '' : 's'}
+                            </span>
+                            <span style={{ fontWeight: 800, color: '#22c55e' }}>
+                              ➔ ${p.montoPagar.toLocaleString('es-AR')}
+                            </span>
+                            {p.comisionValor > 0 && (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                ({p.comisionTipo === 'POR_HORA' || p.comisionTipo === 'POR_DIA' ? `$${p.comisionValor.toLocaleString('es-AR')}/h` : p.comisionTipo === 'PORCENTAJE' ? `${p.comisionValor}%` : `$${p.comisionValor.toLocaleString('es-AR')}/turno`})
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {dayApps.length === 0 && dayBloqueos.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '3rem 1.5rem', backgroundColor: 'var(--bg-card)', border: '1px dashed var(--border-color)', borderRadius: '12px' }}>

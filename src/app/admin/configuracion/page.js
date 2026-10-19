@@ -600,7 +600,7 @@ export default function ConfiguracionPage() {
       fechaNacimiento: '',
       vacacionesInicio: '',
       vacacionesFin: '',
-      comisionTipo: 'POR_TURNO',
+      comisionTipo: 'POR_HORA',
       comisionValor: ''
     });
     setIsUserModalOpen(true);
@@ -618,7 +618,7 @@ export default function ConfiguracionPage() {
       fechaNacimiento: u.fechaNacimiento ? u.fechaNacimiento.slice(0, 10) : '',
       vacacionesInicio: u.vacacionesInicio ? u.vacacionesInicio.slice(0, 10) : '',
       vacacionesFin: u.vacacionesFin ? u.vacacionesFin.slice(0, 10) : '',
-      comisionTipo: u.comisionTipo || 'POR_TURNO',
+      comisionTipo: u.comisionTipo === 'POR_DIA' ? 'POR_HORA' : (u.comisionTipo || 'POR_HORA'),
       comisionValor: u.comisionValor !== undefined && u.comisionValor !== null ? u.comisionValor : ''
     });
     setIsUserModalOpen(true);
@@ -1590,8 +1590,8 @@ export default function ConfiguracionPage() {
                           <span style={{ fontWeight: 600, color: 'var(--color-gold)' }}>
                             {u.comisionTipo === 'PORCENTAJE'
                               ? `${u.comisionValor}% por turno`
-                              : u.comisionTipo === 'POR_DIA'
-                              ? `$${Number(u.comisionValor).toLocaleString('es-AR')} / día`
+                              : (u.comisionTipo === 'POR_HORA' || u.comisionTipo === 'POR_DIA')
+                              ? `$${Number(u.comisionValor).toLocaleString('es-AR')} / hora`
                               : `$${Number(u.comisionValor).toLocaleString('es-AR')} / turno`}
                           </span>
                         ) : (
@@ -2054,24 +2054,24 @@ export default function ConfiguracionPage() {
                     <label className={styles.label}>💰 Modalidad de Comisión</label>
                     <select 
                       className={styles.input}
-                      value={userForm.comisionTipo}
+                      value={userForm.comisionTipo === 'POR_DIA' ? 'POR_HORA' : userForm.comisionTipo}
                       onChange={(e) => setUserForm({ ...userForm, comisionTipo: e.target.value })}
                     >
+                      <option value="POR_HORA">Por Hora Trabajada ($)</option>
                       <option value="POR_TURNO">Por Turno Realizado ($)</option>
-                      <option value="POR_DIA">Por Día Trabajado ($)</option>
                       <option value="PORCENTAJE">Porcentaje sobre el Turno (%)</option>
                     </select>
                   </div>
                   <div className={styles.formGroup}>
                     <label className={styles.label}>
-                      Valor Comisión {userForm.comisionTipo === 'PORCENTAJE' ? '(%)' : '(ARS $)'}
+                      Valor Comisión {userForm.comisionTipo === 'PORCENTAJE' ? '(%)' : userForm.comisionTipo === 'POR_TURNO' ? '(ARS $/turno)' : '(ARS $/hora)'}
                     </label>
                     <input 
                       type="number" 
                       className={styles.input} 
                       value={userForm.comisionValor}
                       onChange={(e) => setUserForm({ ...userForm, comisionValor: e.target.value })}
-                      placeholder={userForm.comisionTipo === 'PORCENTAJE' ? 'Ej: 20' : 'Ej: 5000'}
+                      placeholder={userForm.comisionTipo === 'PORCENTAJE' ? 'Ej: 20' : userForm.comisionTipo === 'POR_TURNO' ? 'Ej: 5000' : 'Ej: 4000'}
                       min="0"
                       step="any"
                     />

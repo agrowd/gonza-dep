@@ -112,7 +112,9 @@ export async function GET(request) {
             id: true,
             nombre: true,
             usuario: true,
-            rol: true
+            rol: true,
+            comisionTipo: true,
+            comisionValor: true
           }
         },
         cliente: {
