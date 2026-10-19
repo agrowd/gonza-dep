@@ -1860,6 +1860,26 @@
 - [x] Validar respuesta HTTP 200 OK en autogestión y panel de agenda.
 - [x] Documentar en `.synapse/errores.md` (`ERR-49`), `.synapse/decisions.md` (`D-115`), `chat.md` y notificar al usuario.
 
+## 📅 Sesión: 19 de Octubre de 2026 (Staging - Modalidad Comisión Por Hora y Permanencia Continua en Agenda)
 
-
-
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender feedback y audios de Luciano Gómez (`media_1792420123294_5a19bae9.png`, `media_1792420139928_f434d7b0.png`, `media_1792420198289_b7352f13.png`):
+  1. Configuración: cambiar modalidad de comisión de operadores de "Por Día" a "Por Hora Trabajada ($/hora)".
+  2. Agenda Administrativa: para administradores, calcular la ganancia del operador por día según el tiempo continuo de permanencia desde su primer turno hasta el último con su tag (`max(horaFin) - min(horaInicio)`), multiplicando por `$/hora`. Mostrar `A Pagar Operadores` junto a `Ingreso Estimado` y tarjeta de liquidación en el encabezado diario.
+  3. Hoja de Impresión: incorporar resumen de liquidación de horas de operadores en `/admin/agenda/imprimir` para administradores.
+  4. Privacidad: garantizar que el rol `OPERADOR` no tenga visibilidad de ingresos estimados, montos totales a pagar ni desgloses financieros.
+- [x] Desarrollar cambios en frontend y backend:
+  - `src/app/admin/configuracion/page.js`: modalidad `POR_HORA` ("Por Hora Trabajada ($)"), label `(ARS $/hora)`, placeholder `Ej: 4000`, tabla de usuarios con `$... / hora`.
+  - `src/app/api/admin/turnos/route.js`, `[id]/route.js`, `imprimir/route.js`: selectores `comisionTipo` y `comisionValor` incluidos en `operador`.
+  - `src/app/admin/agenda/page.js`: cálculo de permanencia continua (`min(horaInicio)` a `max(horaFin)`), total a pagar, badges y chips en encabezado diario para Administrador.
+  - `src/app/admin/agenda/imprimir/page.js`: bloque de liquidación de operadores para administradores.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`: 48/48 rutas en 57s, 0 errores).
+- [x] Commit y push a la rama `staging` (`83e8b91`).
+- [x] Desplegar en VPS Hostinger exclusivamente en Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, DB `agenda_db_staging`).
+- [x] Configurar usuario `pedrito` con `comisionTipo = 'POR_HORA'` y `comisionValor = 5000` en `agenda_db_staging`.
+- [x] Ejecutar suite de pruebas Puppeteer en vivo validando:
+  - Configuración: tabla muestra `$5.000 / hora` y modal tiene selector "Por Hora Trabajada ($)".
+  - Agenda: en 15 Oct (14:00 a 15:40 = 1h 40m ➔ $8.333) y en 16 Oct (14:00 a 15:20 = 1h 20m ➔ $6.667) se calcula y renderiza la permanencia continua.
+  - Impresión: `/admin/agenda/imprimir?fecha=2026-10-15` renderiza bloque de liquidación para admin.
+  - Privacidad: login con cuenta `pedrito` confirma que no ve totales ni liquidaciones.
+- [x] Registrar Decisión `D-116` en `.synapse/decisions.md` y actualizar `chat.md`.

@@ -602,6 +602,36 @@
   4. Se verificó con `curl` que tanto la landing de autogestión (`/`) como el panel administrativo (`/login`) responden con HTTP 200 OK.
   5. Documentado en `.synapse/errores.md` (`ERR-49`), `.synapse/decisions.md` (`D-115`) y `.synapse/workcycle.md`.
 
-
-
-
+## Sesión: 19 de Octubre de 2026 - Modalidad Comisión Por Hora y Cálculo de Permanencia Diaria en Agenda Administrativa (Staging)
+- Requerimiento de Luciano Gómez (`media_1792420123294_5a19bae9.png`, `media_1792420139928_f434d7b0.png`, `media_1792420198289_b7352f13.png`):
+  1. Configuración (`/admin/configuracion`): Cambiar la modalidad de comisión de operadores de "Por Día" a "Por Hora Trabajada ($/hora)".
+  2. Agenda Administrativa (`/admin/agenda`): Para administradores, calcular la ganancia del operador basándose en el lapso continuo desde el inicio de su primer turno hasta el final de su último turno del día (`max(horaFin) - min(horaInicio)`), multiplicado por `$/hora`. Mostrar `A Pagar Operadores` junto a `Ingreso Estimado` y tarjeta de liquidación en el encabezado diario.
+  3. Hoja de Impresión (`/admin/agenda/imprimir`): Incorporar bloque resumen de liquidación de horas de operadores para administradores debajo de totales.
+  4. Privacidad: Mantener el rol `OPERADOR` totalmente aislado de importes financieros, totales e ingresos estimados.
+- Solución Implementada y Desplegada en Staging (`http://187.127.9.216:3008`):
+  1. **Configuración**:
+     - Modal de creación/edición de usuario/operador: selector con opción `POR_HORA` ("Por Hora Trabajada ($)"), `POR_TURNO` y `PORCENTAJE`.
+     - Label interactivo: `Valor Comisión (ARS $/hora)` y placeholder `Ej: 4000`.
+     - Tabla de usuarios: renderiza `$X / hora` para operadores configurados.
+  2. **Backend**:
+     - Selectores `comisionTipo` y `comisionValor` expuestos en `/api/admin/turnos`, `/api/admin/turnos/[id]` y `/api/admin/turnos/imprimir`.
+  3. **Agenda Administrativa (`/admin/agenda`)**:
+     - Cálculo en tiempo real de la permanencia del operador agrupando turnos no cancelados: `min(horaInicio)` a `max(horaFin)`.
+     - Si modalidad es `POR_HORA`: `(minutosPermanencia / 60) * comisionValor`.
+     - Header del día: `Ingreso Estimado` (dorado) + `A Pagar Operadores` (azul).
+     - Tarjeta destacada `Liquidación de Operadores (Permanencia del Día)` con desglose detallado por operador: horas totales, primer y último turno, cantidad de turnos, importe a pagar y tarifa horaria.
+  4. **Hoja de Impresión (`/admin/agenda/imprimir`)**:
+     - Bloque `Liquidación de Operadores (Horas de permanencia del día)` visible para administradores.
+  5. **Privacidad del Operador**:
+     - Verificado que los operadores no ven importes, totales ni desgloses financieros.
+- Validación y Despliegue:
+  - Compilación local: 48/48 rutas en 57s (`npm run build`).
+  - Commit y push a `staging` (`83e8b91`).
+  - Desplegado en VPS Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, DB `agenda_db_staging`).
+  - Configurado usuario `pedrito` con tarifa de $5.000/h.
+  - Validación automatizada con Puppeteer en vivo:
+    - Jueves 15 de Octubre (1 turno de 14:00 a 15:40 = 1h 40m = 100 min) ➔ $8.333 a pagar.
+    - Viernes 16 de Octubre (2 turnos de 14:00 a 15:20 = 1h 20m = 80 min) ➔ $6.667 a pagar.
+    - Hoja de impresión `/admin/agenda/imprimir?fecha=2026-10-15`: muestra desglose de $8.333 para admin.
+    - Login de Pedrito: sin acceso a datos financieros ni totales.
+  - Registrado en `.synapse/decisions.md` (D-116) y `.synapse/workcycle.md`.
