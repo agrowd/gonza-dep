@@ -1883,3 +1883,11 @@
   - Impresión: `/admin/agenda/imprimir?fecha=2026-10-15` renderiza bloque de liquidación para admin.
   - Privacidad: login con cuenta `pedrito` confirma que no ve totales ni liquidaciones.
 - [x] Registrar Decisión `D-116` en `.synapse/decisions.md` y actualizar `chat.md`.
+- [x] Despliegue a Producción aprobado por el usuario:
+  - Backup de base de datos PostgreSQL realizado con éxito (`/srv/gonzalo-dep/backups/agenda_db_pre_deploy_20261019_161315.sql`, 7.3MB).
+  - Merge de `staging` hacia `main` sin conflictos de código (`d237003`).
+  - Compilación local Next.js Turbopack validada (48/48 rutas en 35.3s).
+  - Push a `origin/main` y despliegue automatizado en VPS Producción (`/srv/gonzalo-dep`, puerto 3006).
+  - Sincronización Prisma PostgreSQL y migración de 742 turnos históricos sin operador asignados a Gonzalo.
+  - Recompilación exitosa en VPS (48/48 rutas) y reinicio limpio de PM2 `gonzalo-agenda`.
+  - Validación automatizada con Puppeteer en `https://agenda.depilacionparahombres.com`: autogestión 200 OK, login admin OK, agenda cargada con alertas activas OK, pestaña de Usuarios y Operadores activa con Gonzalo OK, y Módulo de Gastos cargado con balance operativo en vivo OK.

@@ -635,3 +635,23 @@
     - Hoja de impresión `/admin/agenda/imprimir?fecha=2026-10-15`: muestra desglose de $8.333 para admin.
     - Login de Pedrito: sin acceso a datos financieros ni totales.
   - Registrado en `.synapse/decisions.md` (D-116) y `.synapse/workcycle.md`.
+
+## Sesión: 19 de Octubre de 2026 (Parte 2) - Despliegue Exitoso a Producción (Main)
+- Aprobación del Usuario: *"Subila a produccion"*
+- Procedimiento de Despliegue Seguro:
+  1. **Backup Preventivo de Base de Datos**: Creado dump completo de `agenda_db` en `/srv/gonzalo-dep/backups/agenda_db_pre_deploy_20261019_161315.sql` (7.3MB).
+  2. **Merge de Ramas**: `git checkout main && git merge staging` (`d237003`). Conflictos de documentación unificados con la versión extendida de Staging.
+  3. **Verificación de Compilación Local**: `npm run build` completó 48/48 rutas en 35.3s con 0 errores.
+  4. **Empujado a GitHub**: `git push origin main`.
+  5. **Despliegue Automatizado en VPS Producción (`/srv/gonzalo-dep`, puerto 3006)**:
+     - Sincronización git a `origin/main`.
+     - Actualización de esquema Prisma con PostgreSQL y `npx prisma db push`.
+     - Migración de base de datos: 742 turnos históricos sin operador asignados limpiamente a Gonzalo.
+     - Compilación de producción en servidor: 48/48 rutas compiladas en 18.8s.
+     - Reinicio limpio de PM2: `pm2 restart gonzalo-agenda` y persistencia con `pm2 save`.
+  6. **Validación en Vivo en `https://agenda.depilacionparahombres.com` con Puppeteer**:
+     - Landing de autogestión: HTTP 200 OK.
+     - Login administrativo: exitoso.
+     - Agenda de turnos: cargada con grilla completa y alertas activas de autogestión.
+     - Configuración: pestaña "👥 Usuarios y Operadores" activa con Gonzalo como Administrador.
+     - Módulo de Gastos: cargado con balance operativo en vivo ($5.706.000) y categorías preconfiguradas.
