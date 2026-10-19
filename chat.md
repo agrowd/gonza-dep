@@ -438,6 +438,55 @@
   - Desplegado en VPS Hostinger en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008). Ambos servicios online en PM2.
   - Decisión `D-109` registrada en `.synapse/decisions.md`.
 
+## Sesión: 13 de Octubre de 2026 (Seguimiento) - Implementación en Staging de Módulos Pendientes: Gastos, Promociones, Cupones y Cumpleaños
+- Requerimiento del Usuario: *"Hace los que siguen en el staging"* (avanzar con los siguientes módulos de `Mejoras AppWeb.docx` en el entorno Staging).
+- Módulos Implementados y Desplegados:
+  1. **Módulo de Gastos (`/admin/gastos`)**:
+     - Modelos Prisma `CategoriaGasto` y `Gasto`.
+     - APIs `/api/admin/gastos/categorias` (CRUD con auto-seed de 7 categorías por defecto), `/api/admin/gastos` (cálculo de egresos mensuales, comparación vs mes anterior, desglose por categoría, balance entradas vs salidas según regla Gonzalo y desglose día a día) y `/api/admin/gastos/[id]`.
+     - Vista `/admin/gastos` con 4 KPI cards, barra de distribución porcentual, historial de gastos filtrable, balance detallado día a día y modal de administración de categorías con selector de color.
+     - Ítem "Gastos" con icono de dólar añadido en `src/app/admin/SidebarNav.js`.
+  2. **Promociones y Cupones (`/admin/configuracion` > Promos)**:
+     - Modelos Prisma `Promocion` y `Cupon`.
+     - APIs CRUD `/api/admin/promociones`, `/api/admin/cupones` y `/api/cupones/validar`.
+     - Pestaña "🎁 Promociones y Cupones" en `/admin/configuracion` con ABM completo, switches de activación y selector de zonas para combos.
+     - Integración en `/admin/agenda`: sugerencia automática en modal de turno al coincidir zonas seleccionadas con un combo activo ("Aplicar Promo") y validador de cupones alfanuméricos.
+  3. **Automatización de Cumpleaños**:
+     - Plantillas editables de felicitación de cumpleaños por WhatsApp y Correo en `/admin/configuracion`.
+     - Cron diario a las 10:00 AM en `src/lib/whatsapp.js` que detecta clientes activos con cumpleaños hoy, valida idempotencia anual e interactúa enviando el mensaje personalizado.
+- Validación y Despliegue:
+  - Compilación local Next.js Turbopack exitosa (compilado en 36.7s con 0 errores).
+  - Push a rama `staging` en GitHub (`5d284f6`).
+  - Despliegue completado con éxito en VPS Staging (`/srv/gonzalo-dep-staging`, puerto 3008, base de datos `agenda_db_staging`).
+  - Servicios verificados con requests directos: `/api/zonas` (200 OK), `/api/cupones/validar` (200 OK), `/admin/gastos` (200 OK).
+  - Registrado en `.synapse/decisions.md` (D-110) y `.synapse/workcycle.md`.
+
+## Sesión: 13 de Octubre de 2026 (Seguimiento 2) - Gestión de Usuarios, Operadores y Roles de Acceso en Configuración (Staging)
+- Requerimiento del Usuario / Gonzalo Siri (`media_1791933437978_661895ea.png`):
+  *"Dale lo reviso, está entonces la parte de alta de usuarios y puedo crear en el módulo de pruebas? Para probar crear un operador... No veo la parte de alta de perfiles en configuración"*.
+- Módulo Implementado y Desplegado en Staging:
+  1. **Modelo de Usuarios y Roles (`Usuario`)**:
+     - Extendido en `prisma/schema.prisma` con campos opcionales `email String?`, `telefono String?` y roles soportados: `ADMIN`, `OPERADOR`, `RECEPCION`.
+  2. **APIs Administrativas (`/api/admin/usuarios`)**:
+     - `GET /api/admin/usuarios`: lista segura de usuarios (excluyendo contraseñas) con verificación de rol `ADMIN`.
+     - `POST /api/admin/usuarios`: creación con hash SHA-256 de contraseña, validación de username único y asignación de rol.
+     - `PUT /api/admin/usuarios/[id]`: edición de datos, cambio de rol y reseteo opcional de contraseña.
+     - `DELETE /api/admin/usuarios/[id]`: baja de usuario con defensas contra auto-borrado y eliminación del último admin.
+  3. **Control de Acceso y Visibilidad en Barra Lateral (`SidebarNav.js`)**:
+     - Usuario con rol `OPERADOR`: solo visualiza "Alta de Turno", "Agenda de Turnos" y "Clientes" (ocultando Gastos, Estadísticas, Notificaciones y Configuración).
+     - Usuario con rol `RECEPCION`: añade "Notificaciones".
+     - Usuario con rol `ADMIN`: acceso total sin restricciones.
+  4. **Pestaña Interactiva "👥 Usuarios y Operadores" en `/admin/configuracion`**:
+     - Botón de pestaña en el menú superior de configuración.
+     - Tabla interactiva con columnas: Nombre, Usuario (`@usuario`), Rol con Badges de colores (Administrador en oro, Operador en azul/cyan, Recepción en naranja), Teléfono, Email y botones de Editar y Eliminar.
+     - Modal de alta y edición de usuario/operador con selector de rol, usuario y contraseña.
+  5. **Compilación y Despliegue en VPS Staging**:
+     - Compilación local Next.js Turbopack: 48/48 rutas con 0 errores.
+     - Empujado a la rama `staging` en GitHub (`dd050be`).
+     - Desplegado en VPS Hostinger (`187.127.9.216`, puerto 3008, PM2 `gonzalo-agenda-staging`, PostgreSQL `agenda_db_staging`).
+     - Verificación HTTP 200 OK en `http://187.127.9.216:3008/login`.
+     - Registrado en `.synapse/decisions.md` (D-111) y `.synapse/workcycle.md`.
+
 ## Sesión: 15 de Octubre de 2026 - Corrección Crítica de Fecha Anterior en Reprogramación de Turnos (Evgenii Morgunov & Sistema General)
 - Reporte de Gonzalo Siri y Luciano Gómez (`media_1792068878423_522902e1.png` a `media_1792068895829_78c9f292.png`):
   *"Hola Fede nosé que paso con los turnos que se reprograman, en los comentarios del turno que debería aparecer desde que fecha se reprogramó, no dice ese dato. Sino que dice la fecha a la que se cambió, que no necesitamos, necesitamos la fecha anterior"*.
@@ -459,7 +508,130 @@
      - Restaurada la fecha original de Evgenii Morgunov (`07/10/2026 a las 15:30 hs`), Joao De Oliveira (`15/10/2026 a las 20:30 hs`) y Gaston Sanchez (`22/09/2026 a las 19:20 hs`).
      - Purgadas las etiquetas autorreferenciales espurias de Horacio Smidt, Daniel Argañaraz, Pedro Laurenz, Alan Gonzalez, Carlos Boscherino, Mauro Castiglioni y Emiliano Sack.
 - Validación y Despliegue:
-  - Compilación local Next.js Turbopack: todas las rutas limpias con 0 errores.
+  - Compilación local Next.js Turbopack: 58/58 rutas limpias en 58s.
   - Empujado a ramas `staging` y `main`.
   - Desplegado en VPS en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
   - Registrado en `.synapse/decisions.md` (D-112), `.synapse/errores.md` (ERR-48) y `.synapse/workcycle.md`.
+
+## Sesión: 15 de Octubre de 2026 - Restricción de Privacidad para Rol OPERADOR, Asignación de Operador por Turno y Selector Dropdown Mobile en Staging
+- Solicitud de Luciano Gómez y Gonzalo Siri con 7 capturas anotadas (`media_1792072189582_75f1e764` a `media_1792072328876_d0080a2e`):
+  1. *"En estás que tache, el operador desde su cuenta no puede ver nada de esa info"*
+  2. *"Además faltó lo del selector de operador para el administrador, osea que puede cambiar el operador de cada turno"*
+- Solución y Cambios Implementados:
+  1. **Esquema de Base de Datos (`prisma/schema.prisma`)**:
+     - Agregada la relación `operadorId String?` y `operador Usuario?` en `model Turno`.
+     - Agregado `turnos Turno[]` en `model Usuario`.
+     - Sincronizado en SQLite local y PostgreSQL `agenda_db_staging` mediante `npx prisma db push`.
+  2. **Restricción de Acceso y Navegación para Operador**:
+     - En `SidebarNav.js`, los operadores únicamente ven "Agenda de Turnos" (ocultando "Alta de Turno" y "Clientes").
+     - En `/admin/alta-turno`, guarda de sesión que redirige inmediatamente al operador a `/admin/agenda`.
+     - En `/admin/clientes`, guarda que redirige a `/admin/agenda` si no viene con `?id=`. En la ficha del cliente se oculta el DNI, se ocultan las pestañas `🔔 Avisos` y `⚙️ ABM Clientes`, y en el historial se ocultan los importes (Costo, Seña, Saldo). Al cerrar la ficha, regresa a `/admin/agenda`.
+  3. **Privacidad Financiera y Comercial en `/admin/agenda`**:
+     - Encabezado diario: Ocultos los botones "Bloquear Horario", "+ Nuevo Turno" y el importe de "Ingreso Estimado".
+     - Huecos libres Neocita y grilla semanal: Clicks deshabilitados y oculto el botón "+ Agendar".
+     - Tarjetas Neocita: Muestran el badge `👤 {app.operador.nombre}` y se oculta el desglose financiero.
+     - Modal de Detalle de Turno:
+       - Oculto el bloque financiero completo (Valor Total, Valor Original, Seña, Saldo, Método de Pago, Descuentos).
+       - Ocultos los campos de WhatsApp y Email (junto con sus botones de reenvío).
+       - Ocultas las "Observaciones Generales del Cliente" (conservando intactas las "Observaciones del Operador" de potencia/clínica y los "Comentarios de este Turno").
+       - Botonera de acciones reducida exclusivamente a: `📁 Ficha Cliente`, `✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `⏳ Va a Avisar` y `❌ No Asistió`.
+  4. **Asignación Dinámica de Operador por Turno para Administrador**:
+     - En modal de Detalle de Turno: selector instantáneo `👤 Operador Asignado` con guardado automático contra la API.
+     - En modal de Edición de Turno (`isEditing`): selector dropdown para cambiar el operador.
+     - En modal de Nuevo Turno (`newTurno`): selector dropdown para asignar el operador inicial.
+  5. **Selector Dropdown Mobile en Configuración (`/admin/configuracion`)**:
+     - Reemplazo de las pestañas horizontales en pantallas `<= 768px` por un menú `<select>` desplegable responsive estilizado con icono de ajustes (`.tabSelectDropdown`).
+  6. **APIs y Sesión**:
+     - `GET /api/admin/usuarios`: accesible a staff autenticado para poblar el catálogo de operadores.
+     - `GET`, `POST`, `PUT /api/admin/turnos`: incluyen la relación `operador` y persisten `operadorId`.
+     - `GET /api/auth/session`: incluye `id` del usuario en sesión.
+- Validación y Despliegue:
+  - Compilación local Next.js Turbopack: 48/48 rutas con 0 errores.
+  - Commit y push a la rama `staging` en GitHub (`42dfe17`).
+  - Despliegue exitoso en VPS Hostinger Staging (`/srv/gonzalo-dep-staging` en puerto 3008, PM2 `gonzalo-agenda-staging`).
+  - Verificación HTTP 200 OK en `http://187.127.9.216:3008/login`.
+  - Registrado en `.synapse/decisions.md` (D-113) y `.synapse/workcycle.md`.
+
+## Sesión: 15-16 de Octubre de 2026 - Privacidad de Impresión, Filtrado Multi-Operador, Operador Gonzalo por Defecto y Perfil Extendido (Staging)
+- Requerimientos de Feedback de Luciano Gómez (`media_1792098011650_1e695cb5` a `media_1792098087680_5654a2aa`):
+  1. Ocultar importes individuales y total estimado en la vista de impresión del día (`/admin/agenda/imprimir`) para Operadores.
+  2. Ocultar botón "📄 Descargar PDF / Imprimir" en la ficha de cliente (`/admin/clientes`) y bloquear acceso para Operadores.
+  3. Corregir layout del selector de operador en móvil (evitar colapso vertical de letras) y asignar operador por defecto a "Gonzalo".
+  4. Filtrar agenda de operador para que solo visualice sus citas asignadas y no las de Gonzalo u otros operadores.
+  5. Extender perfil de operadores en Configuración (`/admin/configuracion`) agregando Cumpleaños, Vacaciones y Modalidad/Valor de Comisión.
+- Solución Implementada y Desplegada en Staging (`http://187.127.9.216:3008`):
+  1. **Vista de Impresión del Día**:
+     - En `src/app/admin/agenda/imprimir/page.js`: para `OPERADOR`, se oculta `Valor: $...` en cada renglón y se sustituye `Total Estimado: $...` por un guión inerte `—`.
+     - En `src/app/api/admin/turnos/imprimir/route.js`: se filtran turnos por `whereClause.operadorId = session.id` si el rol es `OPERADOR`.
+  2. **Ficha de Clientes e Impresión**:
+     - En `src/app/admin/clientes/page.js`: renderizado condicional `{currentUserRole !== 'OPERADOR' && (<button>📄 Descargar PDF / Imprimir</button>)}`.
+     - En `src/app/admin/clientes/[id]/imprimir/page.js`: redirección inmediata a `/admin/agenda` si el rol es `OPERADOR`.
+  3. **Selector de Operador en Agenda & Predeterminado a Gonzalo**:
+     - En `src/app/admin/agenda/page.js`: rediseñado el contenedor con `display: flex; flex-wrap: wrap; gap: 0.6rem;` y `whiteSpace: 'nowrap'`, erradicando el colapso vertical en pantallas móviles.
+     - En selectores de creación, edición y detalle: renombrada la opción por defecto a `Gonzalo (Por defecto)`.
+     - En `POST /api/admin/turnos`: asignación automática del ID del usuario administrador si no se especifica operador.
+     - Script ejecutado en PostgreSQL `agenda_db_staging`: actualizó el nombre del admin a `Gonzalo` y asignó todos los 570 turnos preexistentes a Gonzalo.
+  4. **Filtrado Estricto de Agenda Multi-Operador**:
+     - En `GET /api/admin/turnos/route.js`: si `session.rol === 'OPERADOR'`, cláusula Prisma `where: { operadorId: session.id }`.
+     - En `src/app/admin/agenda/page.js`: filtro defensivo local para asegurar que cada operador solo vea sus propias citas.
+  5. **Perfil Extendido en Configuración**:
+     - Prisma Schema: agregados `fechaNacimiento`, `vacacionesInicio`, `vacacionesFin`, `comisionTipo` y `comisionValor` al modelo `Usuario`.
+     - Backend: soportados en `GET`, `POST` y `PUT` en `/api/admin/usuarios` y `[id]`.
+     - UI: tabla de "👥 Usuarios y Operadores" con columnas para Comisión, Cumpleaños/Vacaciones y Contacto; modal con inputs de Fecha de Nacimiento (`type="date"`), Vacaciones Desde/Hasta (`type="date"`), Modalidad de Comisión (`POR_TURNO`, `POR_DIA`, `PORCENTAJE`) y Valor numérico.
+- Validación y Despliegue:
+  - Compilación local: 48 rutas en 47s con 0 errores (`npm run build`).
+  - Commit y push a `staging` (`14e37ab`).
+  - Desplegado en VPS Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, DB `agenda_db_staging`).
+  - Validación automatizada en vivo con Puppeteer: los 5 puntos verificados con éxito tanto con cuenta Admin (`admin` / `admin123`) como con cuenta Operador (`pedrito` / `pedrito123`).
+  - Registrado en `.synapse/decisions.md` (D-114) y `.synapse/workcycle.md`.
+
+## Sesión: 17 de Octubre de 2026 - Resolución de Incidente 502 Bad Gateway y Despacho de Recordatorios de 48hs
+- Reporte Urgente de Gonzalo Siri (`media_1792264045157_8c468b36.png` a `media_1792264113799_8050c508.png`):
+  *"La página de autogestión está tirando error 502 Bad Gateway, lo podés revisar por favor. Tampoco abre la agenda. Y claro que eso hizo que no salieran los mensajes de 48hs antes"*.
+- Diagnóstico Forense en VPS:
+  1. El servidor físico/VPS de Hostinger (`187.127.9.216`) se reinició a las ~06:57 AM hora Argentina (~09:57 UTC).
+  2. Nginx levantó automáticamente, pero el daemon de PM2 no tenía habilitada la persistencia en `systemd` (`pm2-root.service`). En consecuencia, los procesos `gonzalo-agenda` (puerto 3006), `gonzalo-agenda-staging` (puerto 3008) e `ia-gonzadep` (puerto 3007) quedaron caídos tras el reboot.
+  3. Al recibir tráfico en `agenda.depilacionparahombres.com`, Nginx arrojaba `502 Bad Gateway` al no encontrar backend escuchando en 3006.
+  4. Por haber estado la aplicación offline durante las 10:00 AM, el cron de recordatorios automáticos de 48hs no se ejecutó, dejando pendientes las notificaciones de los turnos del lunes 19 de octubre.
+- Solución y Recuperación:
+  1. Se reactivaron los procesos inmediatamente mediante `pm2 resurrect`.
+  2. Se configuró y habilitó el servicio systemd mediante `pm2 startup` (`systemctl enable pm2-root`) y se congeló el estado con `pm2 save`.
+  3. Se auditó la base de datos de producción (`agenda_db`) y se forzó la ejecución de `checkAndSendReminders(true)`:
+     - Se despacharon con éxito los 8 recordatorios de WhatsApp de 48hs correspondientes al lunes 19/10/2026: Alejandro Souto (`5491164229900`), Matias Ramos (`5492657392415`), Javier Picca (`5491130186249`), Pablo Nasillo (`5491123861047`), Lautaro Cocca (`5491140239654`), Gaston Rios (`5491159078777`), David Acosta (`5493516117757`) y Sergio Laguzzi (`5491157745678`).
+     - Se procesaron los recordatorios de mantenimiento a 75 días.
+  4. Se verificó con `curl` que tanto la landing de autogestión (`/`) como el panel administrativo (`/login`) responden con HTTP 200 OK.
+  5. Documentado en `.synapse/errores.md` (`ERR-49`), `.synapse/decisions.md` (`D-115`) y `.synapse/workcycle.md`.
+
+## Sesión: 19 de Octubre de 2026 - Modalidad Comisión Por Hora y Cálculo de Permanencia Diaria en Agenda Administrativa (Staging)
+- Requerimiento de Luciano Gómez (`media_1792420123294_5a19bae9.png`, `media_1792420139928_f434d7b0.png`, `media_1792420198289_b7352f13.png`):
+  1. Configuración (`/admin/configuracion`): Cambiar la modalidad de comisión de operadores de "Por Día" a "Por Hora Trabajada ($/hora)".
+  2. Agenda Administrativa (`/admin/agenda`): Para administradores, calcular la ganancia del operador basándose en el lapso continuo desde el inicio de su primer turno hasta el final de su último turno del día (`max(horaFin) - min(horaInicio)`), multiplicado por `$/hora`. Mostrar `A Pagar Operadores` junto a `Ingreso Estimado` y tarjeta de liquidación en el encabezado diario.
+  3. Hoja de Impresión (`/admin/agenda/imprimir`): Incorporar bloque resumen de liquidación de horas de operadores para administradores debajo de totales.
+  4. Privacidad: Mantener el rol `OPERADOR` totalmente aislado de importes financieros, totales e ingresos estimados.
+- Solución Implementada y Desplegada en Staging (`http://187.127.9.216:3008`):
+  1. **Configuración**:
+     - Modal de creación/edición de usuario/operador: selector con opción `POR_HORA` ("Por Hora Trabajada ($)"), `POR_TURNO` y `PORCENTAJE`.
+     - Label interactivo: `Valor Comisión (ARS $/hora)` y placeholder `Ej: 4000`.
+     - Tabla de usuarios: renderiza `$X / hora` para operadores configurados.
+  2. **Backend**:
+     - Selectores `comisionTipo` y `comisionValor` expuestos en `/api/admin/turnos`, `/api/admin/turnos/[id]` y `/api/admin/turnos/imprimir`.
+  3. **Agenda Administrativa (`/admin/agenda`)**:
+     - Cálculo en tiempo real de la permanencia del operador agrupando turnos no cancelados: `min(horaInicio)` a `max(horaFin)`.
+     - Si modalidad es `POR_HORA`: `(minutosPermanencia / 60) * comisionValor`.
+     - Header del día: `Ingreso Estimado` (dorado) + `A Pagar Operadores` (azul).
+     - Tarjeta destacada `Liquidación de Operadores (Permanencia del Día)` con desglose detallado por operador: horas totales, primer y último turno, cantidad de turnos, importe a pagar y tarifa horaria.
+  4. **Hoja de Impresión (`/admin/agenda/imprimir`)**:
+     - Bloque `Liquidación de Operadores (Horas de permanencia del día)` visible para administradores.
+  5. **Privacidad del Operador**:
+     - Verificado que los operadores no ven importes, totales ni desgloses financieros.
+- Validación y Despliegue:
+  - Compilación local: 48/48 rutas en 57s (`npm run build`).
+  - Commit y push a `staging` (`83e8b91`).
+  - Desplegado en VPS Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, DB `agenda_db_staging`).
+  - Configurado usuario `pedrito` con tarifa de $5.000/h.
+  - Validación automatizada con Puppeteer en vivo:
+    - Jueves 15 de Octubre (1 turno de 14:00 a 15:40 = 1h 40m = 100 min) ➔ $8.333 a pagar.
+    - Viernes 16 de Octubre (2 turnos de 14:00 a 15:20 = 1h 20m = 80 min) ➔ $6.667 a pagar.
+    - Hoja de impresión `/admin/agenda/imprimir?fecha=2026-10-15`: muestra desglose de $8.333 para admin.
+    - Login de Pedrito: sin acceso a datos financieros ni totales.
+  - Registrado en `.synapse/decisions.md` (D-116) y `.synapse/workcycle.md`.

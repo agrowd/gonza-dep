@@ -844,6 +844,85 @@ export async function checkAndSendReminders(force = false) {
       }
     }
 
+    // ==========================================
+    // 3. AUTOMATED BIRTHDAY GREETINGS (10:00 AM)
+    // ==========================================
+    try {
+      const allClientsWithBirthday = await prisma.cliente.findMany({
+        where: {
+          fechaNacimiento: { not: null },
+          estado: 'ACTIVO'
+        }
+      });
+
+      const currentMonth = nowLocal.getMonth() + 1;
+      const currentDay = nowLocal.getDate();
+      const currentYear = nowLocal.getFullYear();
+      const startOfCurrentYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
+
+      const birthdayClients = allClientsWithBirthday.filter(c => {
+        if (!c.fechaNacimiento) return false;
+        const bDate = new Date(c.fechaNacimiento);
+        return (bDate.getUTCMonth() + 1) === currentMonth && bDate.getUTCDate() === currentDay;
+      });
+
+      if (birthdayClients.length > 0) {
+        console.log(`[Reminder Cron] Found ${birthdayClients.length} clients with birthday today (${currentDay}/${currentMonth})!`);
+
+        const bdayConf = await prisma.configuracion.findUnique({ where: { key: 'wtsp_birthday_template' } });
+        const bdayTemplate = bdayConf?.value || '¡Feliz cumpleaños [Nombre]! 🎉🎂 Desde Gonzalo Depilación te deseamos que pases un excelente día. Para festejarlo, tenés un beneficio especial reservado en tu próxima sesión. ¡Que lo disfrutes mucho!';
+
+        for (const c of birthdayClients) {
+          if (!canSendNotification(c, 'WHATSAPP', 'ALTA')) continue;
+
+          // Check if already greeted this year
+          const alreadyGreeted = await prisma.notificacion.findFirst({
+            where: {
+              clienteId: c.id,
+              mensaje: { contains: 'cumpleaños' },
+              fechaEnvio: { gte: startOfCurrentYear },
+              estado: 'ENVIADO'
+            }
+          });
+
+          if (alreadyGreeted) {
+            console.log(`[Reminder Cron] Client ${c.nombreCompleto} was already greeted for their birthday this year. Skipping.`);
+            continue;
+          }
+
+          const msg = bdayTemplate
+            .replaceAll('[Nombre]', c.nombreCompleto.split(' ')[0] || c.nombreCompleto)
+            .replaceAll('{cliente}', c.nombreCompleto);
+
+          try {
+            console.log(`[Reminder Cron] Sending birthday greeting to ${c.nombreCompleto}...`);
+            await sendWhatsAppMessage(c.whatsapp, msg);
+
+            await prisma.notificacion.create({
+              data: {
+                clienteId: c.id,
+                canal: 'WHATSAPP',
+                mensaje: `Saludo de cumpleaños automático enviado: "${msg}"`,
+                estado: 'ENVIADO'
+              }
+            });
+          } catch (err) {
+            console.error(`[Reminder Cron] Failed to send birthday greeting to ${c.nombreCompleto}:`, err);
+            await prisma.notificacion.create({
+              data: {
+                clienteId: c.id,
+                canal: 'WHATSAPP',
+                mensaje: `Error al enviar saludo de cumpleaños: ${err.message}`,
+                estado: 'FALLIDO'
+              }
+            });
+          }
+        }
+      }
+    } catch (bdayErr) {
+      console.error('[Reminder Cron] Error processing birthday greetings:', bdayErr);
+    }
+
     if (!hasWppErrors) {
       globalThis.lastReminderRunDate = todayStr;
       console.log(`[Reminder Cron] All reminders for ${todayStr} processed successfully. Locked until tomorrow.`);

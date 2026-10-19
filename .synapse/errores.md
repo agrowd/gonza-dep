@@ -495,5 +495,22 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 3. En `alta-turno` y `agenda`, se integró la propagación y captura formal de `fechaOriginal`, `horaOriginal` e `isReprogramacion: true` en el payload.
 4. En `/api/reservas/reprogramar`, se añadió validación defensiva que rechaza con HTTP 400 si el paciente intenta reagendar seleccionando exactamente el mismo día y horario de inicio de su turno actual.
 5. Mediante script SQL en PostgreSQL para `agenda_db` y `agenda_db_staging`, se auditó el 100% de los turnos históricos con notificaciones, restaurando la fecha original canónica de Evgenii Morgunov (`07/10/2026 a las 15:30 hs`), Joao De Oliveira (`15/10/2026 a las 20:30 hs`) y Gaston Sanchez (`22/09/2026 a las 19:20 hs`), y purgando las etiquetas autorreferenciales espurias de los turnos que nunca habían sido reprogramados (Horacio Smidt, Daniel Argañaraz, Pedro Laurenz, Alan Gonzalez, Carlos Boscherino, Mauro Castiglioni, Emiliano Sack).
-**Commit:** `hash` (en staging y main)
+**Commit:** `73c0ed2` (main) / `8ac0eca` (staging)
 **Estado:** ✅ FIXED
+
+## ERR-49: Caída General 502 Bad Gateway por reinicio no programado del VPS y PM2 sin persistencia de arranque en systemd (2026-10-17)
+**Síntoma:** Gonzalo Siri reportó con capturas de pantalla de móvil y escritorio (`media_1792264045157_8c468b36.png`, `media_1792264079220_5389b28c.png`, `media_1792264113799_8050c508.png`): *"La página de autogestión está tirando error 502 Bad Gateway, lo podés revisar por favor. Tampoco abre la agenda. Y claro que eso hizo que no salieran los mensajes de 48hs antes"*.
+**Root Cause:**
+1. El servidor VPS de Hostinger (`187.127.9.216`) sufrió un reinicio a las ~06:57 AM hora Argentina (~09:57 UTC).
+2. Tras el arranque del sistema operativo, el servicio web Nginx inició automáticamente, pero el gestor de procesos PM2 no contaba con la unidad de arranque habilitada en `systemd` (`pm2 startup` / `systemctl enable pm2-root`). En consecuencia, el daemon de PM2 no se levantó y los procesos `gonzalo-agenda` (puerto 3006), `gonzalo-agenda-staging` (puerto 3008) e `ia-gonzadep` (puerto 3007) quedaron inactivos.
+3. Al recibir peticiones web en `agenda.depilacionparahombres.com`, Nginx intentó reenviar el tráfico al puerto 3006; al encontrar el socket cerrado, respondió con `502 Bad Gateway`.
+4. Al estar caído el proceso de Next.js durante la franja de las 10:00 AM hora Argentina, el cron de recordatorios de 48hs (`checkAndSendReminders`) no pudo ejecutarse, dejando 8 turnos del lunes 19 de octubre sin su notificación automática de WhatsApp.
+**Solución:**
+1. Se conectó por SSH al VPS y se restauraron inmediatamente los procesos mediante `pm2 resurrect`.
+2. Se ejecutó `pm2 startup` generando `/etc/systemd/system/pm2-root.service` y se habilitó el servicio con `systemctl enable pm2-root`, garantizando que ante cualquier futuro reinicio del VPS los servicios inicien automáticamente.
+3. Se congeló la lista de procesos con `pm2 save`.
+4. Se auditó la base de datos de producción (`agenda_db`), identificando los 8 turnos del lunes 19/10/2026 pendientes de recordatorio: Alejandro Souto, Matias Ramos, Javier Picca, Pablo Nasillo, Lautaro Cocca, Gaston Rios, David Acosta y Sergio Laguzzi.
+5. Se forzó la ejecución de `checkAndSendReminders(true)`, despachando exitosamente los 8 recordatorios de WhatsApp vía el relay `ia-gonzadep` y registrando sus respectivas entradas en la tabla `Notificacion`.
+6. Se verificó con `curl` que el portal de autogestión (`/`) y el panel administrativo (`/login`) responden con HTTP 200 OK.
+**Estado:** ✅ FIXED
+

@@ -25,11 +25,13 @@ async function main() {
   const adminPassword = hashPassword("admin123");
   const admin = await prisma.usuario.upsert({
     where: { usuario: "admin" },
-    update: {},
+    update: {
+      nombre: "Gonzalo"
+    },
     create: {
       usuario: "admin",
       password: adminPassword,
-      nombre: "Administrador",
+      nombre: "Gonzalo",
       rol: "ADMIN"
     }
   });

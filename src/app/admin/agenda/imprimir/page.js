@@ -12,6 +12,18 @@ function PrintContent() {
   const [bloqueos, setBloqueos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(d => {
+        if (d?.user?.rol) {
+          setCurrentUserRole(d.user.rol);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!fecha) {
@@ -260,9 +272,11 @@ function PrintContent() {
                     <tr key={turno.id}>
                       <td className={styles.timeCol}>
                         <span className={styles.timeRange}>{turno.horaInicio} - {turno.horaFin}</span>
-                        <div className={styles.timeValor}>
-                          Valor: ${Number(turno.valorTotal || 0).toLocaleString('es-AR')}
-                        </div>
+                        {currentUserRole !== 'OPERADOR' && (
+                          <div className={styles.timeValor}>
+                            Valor: ${Number(turno.valorTotal || 0).toLocaleString('es-AR')}
+                          </div>
+                        )}
                       </td>
                       <td className={styles.clientCol}>
                         <div className={styles.clientName}>{turno.cliente?.nombreCompleto || turno.nombreCompleto || 'Cliente'}</div>
@@ -283,13 +297,83 @@ function PrintContent() {
                     <strong>{turnos.length}</strong> turno{turnos.length === 1 ? '' : 's'}
                   </td>
                   <td className={styles.zonesCol} style={{ padding: '8px 6px', fontSize: '0.95rem', color: '#000' }}>
-                    <strong>Total Estimado: ${turnos.reduce((acc, t) => acc + (Number(t.valorTotal) || 0), 0).toLocaleString('es-AR')}</strong>
+                    {currentUserRole !== 'OPERADOR' ? (
+                      <strong>Total Estimado: ${turnos.reduce((acc, t) => acc + (Number(t.valorTotal) || 0), 0).toLocaleString('es-AR')}</strong>
+                    ) : (
+                      <span>—</span>
+                    )}
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
         )}
+
+        {currentUserRole !== 'OPERADOR' && (() => {
+          const opMapPrint = {};
+          turnos.forEach(t => {
+            const op = t.operador;
+            if (!op) return;
+            if (!opMapPrint[op.id]) {
+              opMapPrint[op.id] = {
+                id: op.id,
+                nombre: op.nombre || 'Operador',
+                rol: op.rol || 'OPERADOR',
+                comisionTipo: op.comisionTipo === 'POR_DIA' ? 'POR_HORA' : (op.comisionTipo || 'POR_HORA'),
+                comisionValor: Number(op.comisionValor || 0),
+                turnos: []
+              };
+            }
+            opMapPrint[op.id].turnos.push(t);
+          });
+
+          const printPayouts = Object.values(opMapPrint).map(op => {
+            const sorted = [...op.turnos].sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+            const startMin = Math.min(...sorted.map(t => timeToMinutes(t.horaInicio)));
+            const endMin = Math.max(...sorted.map(t => timeToMinutes(t.horaFin)));
+            const totalMin = Math.max(0, endMin - startMin);
+            const totalHours = totalMin / 60;
+
+            let montoPagar = 0;
+            if (op.comisionTipo === 'POR_HORA' || op.comisionTipo === 'POR_DIA') {
+              montoPagar = Math.round(totalHours * op.comisionValor);
+            } else if (op.comisionTipo === 'POR_TURNO') {
+              montoPagar = sorted.length * op.comisionValor;
+            } else if (op.comisionTipo === 'PORCENTAJE') {
+              const facturado = sorted.reduce((s, t) => s + Number(t.valorTotal || 0), 0);
+              montoPagar = Math.round(facturado * (op.comisionValor / 100));
+            }
+
+            const hoursInt = Math.floor(totalMin / 60);
+            const minsInt = totalMin % 60;
+            const durationFormatted = hoursInt > 0 && minsInt > 0 ? `${hoursInt}h ${minsInt}m` : hoursInt > 0 ? `${hoursInt} hs` : `${minsInt} min`;
+
+            return {
+              ...op,
+              startStr: sorted[0].horaInicio,
+              endStr: sorted[sorted.length - 1].horaFin,
+              durationFormatted,
+              montoPagar,
+              turnosCount: sorted.length
+            };
+          }).filter(p => p.rol === 'OPERADOR' || p.comisionValor > 0);
+
+          if (printPayouts.length === 0) return null;
+
+          return (
+            <div style={{ marginTop: '1rem', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fcfcfc', fontSize: '0.82rem' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '6px', color: '#111' }}>
+                ✂️ Liquidación de Operadores (Horas de permanencia del día):
+              </div>
+              {printPayouts.map(p => (
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px dashed #eee' }}>
+                  <span><strong>👤 {p.nombre}</strong> ({p.startStr} a {p.endStr} • {p.durationFormatted} • {p.turnosCount} turnos)</span>
+                  <span style={{ fontWeight: 'bold', color: '#111' }}>${p.montoPagar.toLocaleString('es-AR')}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         <footer className={styles.footer}>
           <p>© {new Date().getFullYear()} Gonzalo Depilación para Hombres — agenda.depilacionparahombres.com</p>

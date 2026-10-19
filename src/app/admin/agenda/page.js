@@ -226,6 +226,12 @@ export default function AgendaPage() {
     esDiaCompleto: false
   });
   const [lastClientTurnoInfo, setLastClientTurnoInfo] = useState(null);
+  const [activePromos, setActivePromos] = useState([]);
+  const [cuponCodeInput, setCuponCodeInput] = useState('');
+  const [editCuponCodeInput, setEditCuponCodeInput] = useState('');
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [operadores, setOperadores] = useState([]);
 
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -298,6 +304,7 @@ export default function AgendaPage() {
     horaInicio: '',
     horaFin: '',
     estado: '',
+    operadorId: '',
     valorTotal: '',
     valorSeña: '',
     descuentoTipo: 'NINGUNO',
@@ -335,6 +342,7 @@ export default function AgendaPage() {
     estado: 'SEÑADO', // Manual creations default to SEÑADO
     observaciones: '',
     clienteId: null,
+    operadorId: '',
     hasOtros: false,
     otrosTexto: '',
     otrosPrecio: '',
@@ -390,6 +398,39 @@ export default function AgendaPage() {
       document.addEventListener('visibilitychange', handleVisibilityChange);
       return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }
+  }, []);
+
+  // Fetch current user session role & active operators
+  useEffect(() => {
+    fetch('/api/auth/session', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data?.user?.rol) {
+          setCurrentUserRole(data.user.rol);
+        }
+        if (data?.user?.id) {
+          setCurrentUserId(data.user.id);
+        }
+      })
+      .catch(err => console.error('Error fetching session role:', err));
+
+    fetch('/api/admin/usuarios', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data?.usuarios) {
+          const ops = data.usuarios.filter(u => u.rol === 'OPERADOR' || u.rol === 'ADMIN');
+          setOperadores(ops);
+          const defaultAdmin = ops.find(u => u.nombre?.toLowerCase().includes('gonzalo') || u.usuario?.toLowerCase() === 'gonzalo')
+            || ops.find(u => u.rol === 'ADMIN');
+          if (defaultAdmin) {
+            setNewTurno(prev => ({
+              ...prev,
+              operadorId: prev.operadorId || defaultAdmin.id
+            }));
+          }
+        }
+      })
+      .catch(err => console.error('Error fetching usuarios:', err));
   }, []);
 
   const handleExecuteReauth = async (e) => {
@@ -1452,7 +1493,10 @@ export default function AgendaPage() {
     ])
       .then(([turnosData, bloqueosData]) => {
         if (Array.isArray(turnosData)) {
-          setAppointments(turnosData);
+          const finalTurnos = currentUserRole === 'OPERADOR' && currentUserId
+            ? turnosData.filter(t => t.operadorId === currentUserId)
+            : turnosData;
+          setAppointments(finalTurnos);
         }
         if (Array.isArray(bloqueosData)) {
           setBloqueos(bloqueosData);
@@ -1460,13 +1504,13 @@ export default function AgendaPage() {
       })
       .catch(err => console.error('Error fetching appointments or bloqueos:', err))
       .finally(() => setLoading(false));
-  }, [viewMode, selectedDate, currentWeekStart]);
+  }, [viewMode, selectedDate, currentWeekStart, currentUserRole, currentUserId]);
 
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  // 4. Fetch zones for the new appointment modal
+  // 4. Fetch zones and promotions for the appointment modals
   useEffect(() => {
     fetch('/api/zonas')
       .then(res => res.json())
@@ -1476,7 +1520,58 @@ export default function AgendaPage() {
         }
       })
       .catch(err => console.error('Error fetching zones:', err));
+
+    fetch('/api/admin/promociones')
+      .then(res => res.json())
+      .then(data => {
+        if (data.promociones) {
+          setActivePromos(data.promociones.filter(p => p.activo));
+        }
+      })
+      .catch(err => console.error('Error fetching promociones:', err));
   }, []);
+
+  const handleApplyCoupon = async (isEdit = false) => {
+    const rawCode = isEdit ? editCuponCodeInput : cuponCodeInput;
+    const code = (rawCode || '').trim();
+    if (!code) {
+      showToast('Ingresa un código de cupón.', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/cupones/validar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: code })
+      });
+      const data = await res.json();
+      if (res.ok && data.cupon) {
+        const c = data.cupon;
+        const discountType = c.descuentoTipo === 'PORCENTAJE' ? 'PORCENTAJE' : 'PESOS';
+        if (isEdit) {
+          setEditTurno(prev => ({
+            ...prev,
+            manualTotalOverride: undefined,
+            descuentoTipo: discountType,
+            descuentoValor: c.descuentoValor
+          }));
+        } else {
+          setNewTurno(prev => ({
+            ...prev,
+            manualTotalOverride: undefined,
+            descuentoTipo: discountType,
+            descuentoValor: c.descuentoValor
+          }));
+        }
+        showToast(`¡Cupón "${c.codigo}" aplicado con éxito!`);
+      } else {
+        showToast(data.error || 'Cupón inválido o vencido.', 'error');
+      }
+    } catch (err) {
+      console.error('Error validating coupon:', err);
+      showToast('Error de conexión al validar cupón.', 'error');
+    }
+  };
 
   // 5. Navigate weeks/days
   const handlePrev = () => {
@@ -1957,6 +2052,7 @@ export default function AgendaPage() {
           notasGonzalo: editTurno.notasGonzalo !== undefined ? editTurno.notasGonzalo : undefined,
           frecuencia: editTurno.frecuencia,
           selectedZoneIds: editTurno.selectedZoneIds,
+          operadorId: editTurno.operadorId !== undefined ? (editTurno.operadorId || null) : undefined,
           hasOtros: editTurno.hasOtros,
           otrosTexto: editTurno.otrosTexto,
           otrosPrecio: Number(editTurno.otrosPrecio || 0)
@@ -2014,6 +2110,7 @@ export default function AgendaPage() {
 
   // Open creation modal for a specific day and start hour
   const handleEmptySlotClick = (date, startMin) => {
+    if (currentUserRole === 'OPERADOR') return;
     setSelectedDate(date);
     setIsNextScheduling(false);
     const startHour = Math.floor(startMin / 60);
@@ -2380,6 +2477,7 @@ export default function AgendaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newTurno,
+          operadorId: newTurno.operadorId || null,
           whatsapp: fullPhone,
           valorTotal: Number(newTurno.valorTotal),
           valorSeña: Number(newTurno.valorSeña)
@@ -2729,49 +2827,54 @@ export default function AgendaPage() {
             🖨️ Imprimir Día
           </button>
 
-          <button 
-            onClick={() => {
-              setBlockForm({
-                id: null,
-                fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
-                horaInicio: '10:00',
-                horaFin: '11:00',
-                motivo: '',
-                esDiaCompleto: false
-              });
-              setIsBlockModalOpen(true);
-            }} 
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #f59e0b', color: '#f59e0b' }}
-          >
-            🚫 Bloquear Horario
-          </button>
+          {currentUserRole !== 'OPERADOR' && (
+            <>
+              <button 
+                onClick={() => {
+                  setBlockForm({
+                    id: null,
+                    fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
+                    horaInicio: '10:00',
+                    horaFin: '11:00',
+                    motivo: '',
+                    esDiaCompleto: false
+                  });
+                  setIsBlockModalOpen(true);
+                }} 
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #f59e0b', color: '#f59e0b' }}
+              >
+                🚫 Bloquear Horario
+              </button>
 
-          <button onClick={() => {
-            setIsNextScheduling(false);
-            setNewTurno({
-              nombreCompleto: '',
-              nombre: '',
-              apellido: '',
-              whatsapp: '',
-              email: '',
-              dni: '',
-              fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
-              horaInicio: config.work_start,
-              horaFin: addMinutesToTime(config.work_start, 30),
-              selectedZoneIds: [],
-              valorTotal: '',
-              valorSeña: '',
-              descuentoTipo: 'NINGUNO',
-              descuentoValor: '',
-              bonificacion: 0,
-              estado: 'SEÑADO',
-              observaciones: '',
-              clienteId: null,
-              metodoPago: 'TRANSFERENCIA'
-            });
-            setIsNewOpen(true);
-          }} className="btn btn-primary">+ Nuevo Turno</button>
+              <button onClick={() => {
+                setIsNextScheduling(false);
+                setNewTurno({
+                  nombreCompleto: '',
+                  nombre: '',
+                  apellido: '',
+                  whatsapp: '',
+                  email: '',
+                  dni: '',
+                  fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
+                  horaInicio: config.work_start,
+                  horaFin: addMinutesToTime(config.work_start, 30),
+                  selectedZoneIds: [],
+                  valorTotal: '',
+                  valorSeña: '',
+                  descuentoTipo: 'NINGUNO',
+                  descuentoValor: '',
+                  bonificacion: 0,
+                  estado: 'SEÑADO',
+                  observaciones: '',
+                  clienteId: null,
+                  operadorId: '',
+                  metodoPago: 'TRANSFERENCIA'
+                });
+                setIsNewOpen(true);
+              }} className="btn btn-primary">+ Nuevo Turno</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -2922,6 +3025,73 @@ export default function AgendaPage() {
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
               const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
+              // Liquidación de Operadores (Desde primer turno hasta último turno con su etiqueta)
+              const activeDayApps = dayApps.filter(a => a.estado !== 'CANCELADO');
+              const opMap = {};
+
+              activeDayApps.forEach(app => {
+                const opId = app.operadorId;
+                if (!opId) return;
+                if (!opMap[opId]) {
+                  const opInfo = operadores.find(o => o.id === opId) || app.operador || { id: opId, nombre: 'Operador' };
+                  opMap[opId] = {
+                    id: opId,
+                    nombre: opInfo.nombre || 'Operador',
+                    rol: opInfo.rol || 'OPERADOR',
+                    comisionTipo: opInfo.comisionTipo === 'POR_DIA' ? 'POR_HORA' : (opInfo.comisionTipo || 'POR_HORA'),
+                    comisionValor: Number(opInfo.comisionValor || 0),
+                    turnos: []
+                  };
+                }
+                opMap[opId].turnos.push(app);
+              });
+
+              const opPayouts = Object.values(opMap).map(op => {
+                const sortedTurnos = [...op.turnos].sort((a, b) => timeToMinutes(a.horaInicio) - timeToMinutes(b.horaInicio));
+                const firstTurno = sortedTurnos[0];
+                const lastTurno = sortedTurnos[sortedTurnos.length - 1];
+
+                const startMin = Math.min(...sortedTurnos.map(t => timeToMinutes(t.horaInicio)));
+                const endMin = Math.max(...sortedTurnos.map(t => timeToMinutes(t.horaFin)));
+                const totalMin = Math.max(0, endMin - startMin);
+                const totalHours = totalMin / 60;
+
+                let montoPagar = 0;
+                if (op.comisionTipo === 'POR_HORA' || op.comisionTipo === 'POR_DIA') {
+                  montoPagar = Math.round(totalHours * op.comisionValor);
+                } else if (op.comisionTipo === 'POR_TURNO') {
+                  montoPagar = sortedTurnos.length * op.comisionValor;
+                } else if (op.comisionTipo === 'PORCENTAJE') {
+                  const facturado = sortedTurnos.reduce((s, t) => s + Number(t.valorTotal || 0), 0);
+                  montoPagar = Math.round(facturado * (op.comisionValor / 100));
+                }
+
+                const hoursInt = Math.floor(totalMin / 60);
+                const minsInt = totalMin % 60;
+                let durationFormatted = '';
+                if (hoursInt > 0 && minsInt > 0) {
+                  durationFormatted = `${hoursInt}h ${minsInt}m`;
+                } else if (hoursInt > 0) {
+                  durationFormatted = `${hoursInt} hs`;
+                } else {
+                  durationFormatted = `${minsInt} min`;
+                }
+
+                return {
+                  ...op,
+                  startStr: firstTurno.horaInicio,
+                  endStr: lastTurno.horaFin,
+                  totalMin,
+                  totalHours: Number(totalHours.toFixed(2)),
+                  durationFormatted,
+                  montoPagar,
+                  turnosCount: sortedTurnos.length
+                };
+              });
+
+              const payableOperators = opPayouts.filter(p => p.rol === 'OPERADOR' || p.comisionValor > 0);
+              const totalPagarOperadores = payableOperators.reduce((sum, p) => sum + p.montoPagar, 0);
+
               return (
                 <>
                   <div className={styles.neocitaDayHeader}>
@@ -2933,46 +3103,114 @@ export default function AgendaPage() {
                         {dayApps.length} turnos agendados {dayBloqueos.length > 0 ? `• ${dayBloqueos.length} bloqueos` : ''}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Ingreso Estimado</span>
-                        <span style={{ fontWeight: 800, color: 'var(--color-gold)', fontSize: '1.1rem' }}>${totalRevenue.toLocaleString('es-ES')}</span>
+                    {currentUserRole !== 'OPERADOR' && (
+                      <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Ingreso Estimado</span>
+                          <span style={{ fontWeight: 800, color: 'var(--color-gold)', fontSize: '1.1rem' }}>${totalRevenue.toLocaleString('es-ES')}</span>
+                        </div>
+                        {totalPagarOperadores > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
+                            <span style={{ color: '#60a5fa' }}>A Pagar Operadores</span>
+                            <span style={{ fontWeight: 800, color: '#60a5fa', fontSize: '1.1rem' }}>-${totalPagarOperadores.toLocaleString('es-ES')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bloque Informativo de Liquidación de Operadores para Administrador */}
+                  {currentUserRole !== 'OPERADOR' && payableOperators.length > 0 && (
+                    <div style={{
+                      marginBottom: '1rem',
+                      padding: '0.65rem 0.9rem',
+                      backgroundColor: 'rgba(96, 165, 250, 0.08)',
+                      border: '1px solid rgba(96, 165, 250, 0.25)',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.45rem',
+                      boxSizing: 'border-box',
+                      width: '100%'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          ✂️ Liquidación de Operadores (Permanencia del Día):
+                        </span>
+                        {totalPagarOperadores > 0 && (
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#22c55e' }}>
+                            Total a pagar: ${totalPagarOperadores.toLocaleString('es-AR')}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {payableOperators.map(p => (
+                          <div 
+                            key={p.id}
+                            style={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              borderRadius: '6px',
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.78rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.45rem',
+                              flexWrap: 'wrap'
+                            }}
+                          >
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>👤 {p.nombre}:</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              {p.startStr} a {p.endStr} ({p.durationFormatted}) • {p.turnosCount} turno{p.turnosCount === 1 ? '' : 's'}
+                            </span>
+                            <span style={{ fontWeight: 800, color: '#22c55e' }}>
+                              ➔ ${p.montoPagar.toLocaleString('es-AR')}
+                            </span>
+                            {p.comisionValor > 0 && (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                ({p.comisionTipo === 'POR_HORA' || p.comisionTipo === 'POR_DIA' ? `$${p.comisionValor.toLocaleString('es-AR')}/h` : p.comisionTipo === 'PORCENTAJE' ? `${p.comisionValor}%` : `$${p.comisionValor.toLocaleString('es-AR')}/turno`})
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {dayApps.length === 0 && dayBloqueos.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '3rem 1.5rem', backgroundColor: 'var(--bg-card)', border: '1px dashed var(--border-color)', borderRadius: '12px' }}>
                       <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
                         No hay turnos ni bloqueos agendados para este día.
                       </p>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => {
-                            setIsNextScheduling(false);
-                            setNewTurno({
-                              nombreCompleto: '', nombre: '', apellido: '', whatsapp: '', email: '', dni: '',
-                              fechaStr: dateStr, horaInicio: config.work_start, horaFin: addMinutesToTime(config.work_start, 30),
-                              selectedZoneIds: [], valorTotal: '', valorSeña: '', descuentoTipo: 'NINGUNO', descuentoValor: '',
-                              bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null, metodoPago: 'TRANSFERENCIA'
-                            });
-                            setIsNewOpen(true);
-                          }}
-                          className="btn btn-primary"
-                        >
-                          + Agendar Turno
-                        </button>
-                        <button
-                          onClick={() => {
-                            setBlockForm({ id: null, fechaStr: dateStr, horaInicio: '10:00', horaFin: '11:00', motivo: '', esDiaCompleto: false });
-                            setIsBlockModalOpen(true);
-                          }}
-                          className="btn btn-secondary"
-                          style={{ border: '1px solid #f59e0b', color: '#f59e0b' }}
-                        >
-                          🚫 Bloquear Horario
-                        </button>
-                      </div>
+                      {currentUserRole !== 'OPERADOR' && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => {
+                              setIsNextScheduling(false);
+                              setNewTurno({
+                                nombreCompleto: '', nombre: '', apellido: '', whatsapp: '', email: '', dni: '',
+                                fechaStr: dateStr, horaInicio: config.work_start, horaFin: addMinutesToTime(config.work_start, 30),
+                                selectedZoneIds: [], valorTotal: '', valorSeña: '', descuentoTipo: 'NINGUNO', descuentoValor: '',
+                                bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null, operadorId: '', metodoPago: 'TRANSFERENCIA'
+                              });
+                              setIsNewOpen(true);
+                            }}
+                            className="btn btn-primary"
+                          >
+                            + Agendar Turno
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBlockForm({ id: null, fechaStr: dateStr, horaInicio: '10:00', horaFin: '11:00', motivo: '', esDiaCompleto: false });
+                              setIsBlockModalOpen(true);
+                            }}
+                            className="btn btn-secondary"
+                            style={{ border: '1px solid #f59e0b', color: '#f59e0b' }}
+                          >
+                            🚫 Bloquear Horario
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -3028,7 +3266,7 @@ export default function AgendaPage() {
                             return (
                               <div
                                 key={`gap-${gap.startMin}-${gap.endMin}-${idx}`}
-                                onClick={() => {
+                                onClick={currentUserRole === 'OPERADOR' ? undefined : () => {
                                   setIsNextScheduling(false);
                                   setNewTurno({
                                     nombreCompleto: '',
@@ -3050,12 +3288,14 @@ export default function AgendaPage() {
                                     estado: 'SEÑADO',
                                     observaciones: '',
                                     clienteId: null,
+                                    operadorId: '',
                                     metodoPago: 'TRANSFERENCIA'
                                   });
                                   setIsNewOpen(true);
                                 }}
                                 className={styles.neocitaFreeSlot}
-                                title="Espacio libre: haz clic para agendar un turno en este horario"
+                                style={{ cursor: currentUserRole === 'OPERADOR' ? 'default' : 'pointer' }}
+                                title={currentUserRole === 'OPERADOR' ? 'Espacio libre' : 'Espacio libre: haz clic para agendar un turno en este horario'}
                               >
                                 {/* Renglón 1: Horario libre destacado y duración */}
                                 <div className={styles.neocitaFreeSlotRowTop}>
@@ -3073,9 +3313,11 @@ export default function AgendaPage() {
                                   <span className={styles.neocitaFreeSlotLabel}>
                                     Disponible para agendar
                                   </span>
-                                  <span className={styles.neocitaFreeSlotAction}>
-                                    + Agendar
-                                  </span>
+                                  {currentUserRole !== 'OPERADOR' && (
+                                    <span className={styles.neocitaFreeSlotAction}>
+                                      + Agendar
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -3152,7 +3394,10 @@ export default function AgendaPage() {
                                   <span className={styles.neocitaClientName}>
                                     {app.cliente?.nombreCompleto || 'Cliente'}
                                   </span>
-                                  <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 600 }}>
+                                      👤 {app.operador?.nombre || 'Gonzalo'}
+                                    </span>
                                     {app.subEstado && (
                                       <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--color-gold)', fontWeight: 700 }}>
                                         {app.subEstado === 'VA_A_AVISAR' ? '⏳ Va a avisar' : app.subEstado === 'MANTENIMIENTO' ? '🛠️ Mantenimiento' : app.subEstado === 'FINALIZADO' ? '🏁 Finalizó' : app.subEstado}
@@ -3168,17 +3413,19 @@ export default function AgendaPage() {
                                   <strong>Zonas:</strong> {zonasText || 'Sin zonas'}
                                 </div>
 
-                                <div className={styles.neocitaFinancialRow}>
-                                  <div className={styles.neocitaFinItem}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Total:</span>
-                                    <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>${Number(app.valorTotal || 0).toLocaleString('es-ES')}</span>
+                                {currentUserRole !== 'OPERADOR' && (
+                                  <div className={styles.neocitaFinancialRow}>
+                                    <div className={styles.neocitaFinItem}>
+                                      <span style={{ color: 'var(--text-secondary)' }}>Total:</span>
+                                      <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>${Number(app.valorTotal || 0).toLocaleString('es-ES')}</span>
+                                    </div>
+                                    {app.descuentoTipo && app.descuentoTipo !== 'NINGUNO' && (
+                                      <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(239, 83, 80, 0.15)', color: '#ef5350', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, marginLeft: 'auto' }}>
+                                        🏷️ {app.descuentoTipo === 'PORCENTAJE' ? `${app.descuentoValor}% OFF` : `$${app.descuentoValor} OFF`}
+                                      </span>
+                                    )}
                                   </div>
-                                  {app.descuentoTipo && app.descuentoTipo !== 'NINGUNO' && (
-                                    <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(239, 83, 80, 0.15)', color: '#ef5350', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, marginLeft: 'auto' }}>
-                                      🏷️ {app.descuentoTipo === 'PORCENTAJE' ? `${app.descuentoValor}% OFF` : `$${app.descuentoValor} OFF`}
-                                    </span>
-                                  )}
-                                </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -3408,6 +3655,21 @@ export default function AgendaPage() {
                     </select>
                   </div>
 
+                  {currentUserRole === 'ADMIN' && (
+                    <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                      <label className={styles.inputLabel}>👤 Operador Asignado</label>
+                      <select
+                        value={editTurno.operadorId || ''}
+                        onChange={(e) => setEditTurno(prev => ({ ...prev, operadorId: e.target.value }))}
+                      >
+                        <option value="">Gonzalo (Por defecto)</option>
+                        {operadores.map(op => (
+                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className={styles.inputRow} style={{ gridColumn: '1 / -1' }}>
                     <div className={styles.inputGroup} style={{ flex: 1 }}>
                       <label className={styles.inputLabel}>Hora Inicio</label>
@@ -3580,6 +3842,51 @@ export default function AgendaPage() {
                     </div>
                   )}
 
+                  {/* Matching Promotion Suggestion */}
+                  {(() => {
+                    const selectedNames = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
+                    const matching = activePromos.find(p => {
+                      let pZonas = [];
+                      try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
+                      if (pZonas.length === 0) return false;
+                      return pZonas.every(pz => selectedNames.includes(pz));
+                    });
+                    if (!matching) return null;
+                    return (
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        backgroundColor: 'rgba(212, 165, 77, 0.12)',
+                        border: '1px dashed var(--color-gold)',
+                        borderRadius: '8px',
+                        padding: '0.65rem 0.85rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                          🎁 Promo disponible: {matching.nombre} ({matching.descuentoTipo === 'PORCENTAJE' ? `${matching.descuentoValor}% OFF` : `$${matching.descuentoValor} OFF`})
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ padding: '0.25rem 0.65rem', fontSize: '0.78rem', height: 'auto', whiteSpace: 'nowrap' }}
+                          onClick={() => {
+                            setEditTurno(prev => ({
+                              ...prev,
+                              manualTotalOverride: undefined,
+                              descuentoTipo: matching.descuentoTipo === 'PORCENTAJE' ? 'PORCENTAJE' : 'PESOS',
+                              descuentoValor: matching.descuentoValor
+                            }));
+                            showToast(`¡Promoción "${matching.nombre}" aplicada!`);
+                          }}
+                        >
+                          Aplicar Promo
+                        </button>
+                      </div>
+                    );
+                  })()}
+
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Tipo de Descuento</label>
                     <select
@@ -3601,6 +3908,27 @@ export default function AgendaPage() {
                       placeholder="Ej. 10 o 500"
                       disabled={editTurno.descuentoTipo === 'NINGUNO'}
                     />
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                    <label className={styles.inputLabel}>🎟️ Cupón de Descuento</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        type="text"
+                        placeholder="Código de cupón (ej: VERANO2026)"
+                        value={editCuponCodeInput}
+                        onChange={(e) => setEditCuponCodeInput(e.target.value.toUpperCase())}
+                        style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                        onClick={() => handleApplyCoupon(true)}
+                      >
+                        Validar Cupón
+                      </button>
+                    </div>
                   </div>
 
                   {/* Resumen de Descuento y Saldo a Pagar */}
@@ -3749,171 +4077,260 @@ export default function AgendaPage() {
                       )}
                     </div>
                   </div>
-                  {(() => {
-                    const dynPrices = getUpdatedTurnoPrices(selectedTurno);
-                    return (
-                      <>
-                        {/* Swapped order per Gonzalo's request: VALOR TOTAL in big gold box on top */}
-                        <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.14)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.4)', marginBottom: '0.25rem' }}>
-                          <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.85rem' }}>VALOR TOTAL (A COBRAR)</span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>
-                            ${Number(dynPrices.valorTotal).toLocaleString('es-ES')}
-                          </span>
-                        </div>
 
-                        {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
-                          <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
-                              Valor Original (Sin Descuento)
-                            </span>
-                            <span className={styles.detailValue} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                              ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
-                            </span>
-                          </div>
-                        )}
-                        <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
-                            Seña Cobrada
-                          </span>
-                          <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            ${Number(selectedTurno.valorSeña || 0).toLocaleString('es-ES')}
-                          </span>
-                        </div>
-                        <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
-                            Saldo Pendiente en Local
-                          </span>
-                          <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
-                          </span>
-                        </div>
-                        <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.2rem' }}>
-                          <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.8rem', fontWeight: 600 }}>
-                            💳 Método de Pago
-                          </span>
-                          <select
-                            value={selectedTurno.metodoPago || 'TRANSFERENCIA'}
-                            onChange={async (e) => {
-                              const val = e.target.value;
-                              try {
-                                const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                  body: JSON.stringify({ metodoPago: val })
-                                });
-                                if (res.ok) {
-                                  const updated = await res.json();
-                                  setSelectedTurno(prev => ({ ...prev, metodoPago: val }));
-                                  showToast(`Método de pago: ${val === 'TRANSFERENCIA' ? '🏦 Transferencia' : '💵 Efectivo'}`);
-                                  fetchAppointments();
-                                }
-                              } catch (err) {
-                                console.error(err);
-                              }
-                            }}
-                            style={{
-                              padding: '0.35rem 0.5rem',
-                              borderRadius: '6px',
-                              border: '1px solid var(--border-color)',
-                              backgroundColor: 'var(--bg-secondary)',
-                              color: 'var(--text-primary)',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              width: 'auto',
-                              minWidth: '115px',
-                              maxWidth: '140px',
-                              flexShrink: 0,
-                              boxSizing: 'border-box'
-                            }}
-                          >
-                            <option value="TRANSFERENCIA">🏦 Transferencia</option>
-                            <option value="EFECTIVO">💵 Efectivo</option>
-                          </select>
-                        </div>
-                        {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
-                          <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
-                            <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
-                              Descuento Aplicado
-                            </span>
-                            <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.9rem', flexShrink: 0 }}>
-                              -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-ES')}`})
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>WhatsApp</span>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
-                      <span className={styles.detailValue} style={{ minWidth: 0, wordBreak: 'break-word', flex: '1 1 auto' }}>
-                        {selectedTurno.cliente?.whatsapp ? formatDisplayPhone(selectedTurno.cliente.whatsapp) : 'N/A'}
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    marginTop: '0.35rem',
+                    padding: '0.55rem 0',
+                    borderTop: '1px solid var(--border-color)',
+                    borderBottom: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.6rem',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}>
+                    <span style={{
+                      margin: 0,
+                      textAlign: 'left',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}>
+                      👤 Operador Asignado:
+                    </span>
+                    {currentUserRole === 'ADMIN' ? (
+                      <select
+                        value={selectedTurno.operadorId || ''}
+                        onChange={async (e) => {
+                          const newOpId = e.target.value || null;
+                          try {
+                            const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({ operadorId: newOpId })
+                            });
+                            if (res.ok) {
+                              const updated = await res.json();
+                              setSelectedTurno(prev => ({
+                                ...prev,
+                                operadorId: newOpId,
+                                operador: updated.operador || operadores.find(op => op.id === newOpId) || null
+                              }));
+                              const opName = operadores.find(op => op.id === newOpId)?.nombre || 'Gonzalo';
+                              showToast(`Operador asignado: ${opName}`);
+                              fetchAppointments();
+                            } else {
+                              showToast('Error al asignar operador', 'error');
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            showToast('Error de red al asignar operador', 'error');
+                          }
+                        }}
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--text-primary)',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          minWidth: '150px',
+                          flex: '1 1 auto',
+                          maxWidth: '100%'
+                        }}
+                      >
+                        <option value="">Gonzalo (Por defecto)</option>
+                        {operadores.map(op => (
+                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)' }}>
+                        {selectedTurno.operador?.nombre || 'Gonzalo'}
                       </span>
-                      {selectedTurno.cliente?.whatsapp && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenResendWpp(selectedTurno)}
-                          title="Reenviar recordatorio o aviso por WhatsApp"
-                          style={{
-                            backgroundColor: '#16a34a',
-                            border: '1px solid #15803d',
-                            color: '#ffffff',
-                            borderRadius: '6px',
-                            padding: '0.25rem 0.55rem',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            whiteSpace: 'nowrap',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                            flexShrink: 0,
-                            marginLeft: 'auto'
-                          }}
-                        >
-                          📲 Reenviar
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
 
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Email</span>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
-                      <span className={styles.detailValue} style={{ fontSize: '0.85rem', wordBreak: 'break-all', minWidth: 0, flex: '1 1 auto' }}>
-                        {selectedTurno.cliente?.email || 'Sin email'}
-                      </span>
-                      {selectedTurno.cliente && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenResendEmail(selectedTurno)}
-                          title="Editar correo y reenviar aviso"
-                          style={{
-                            backgroundColor: '#4f46e5',
-                            border: '1px solid #4338ca',
-                            color: '#ffffff',
-                            borderRadius: '6px',
-                            padding: '0.25rem 0.55rem',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            whiteSpace: 'nowrap',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                            flexShrink: 0,
-                            marginLeft: 'auto'
-                          }}
-                        >
-                          ✏️ Reenviar
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  {currentUserRole !== 'OPERADOR' && (
+                    <>
+                      {(() => {
+                        const dynPrices = getUpdatedTurnoPrices(selectedTurno);
+                        return (
+                          <>
+                            {/* Swapped order per Gonzalo's request: VALOR TOTAL in big gold box on top */}
+                            <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.14)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.4)', marginBottom: '0.25rem' }}>
+                              <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.85rem' }}>VALOR TOTAL (A COBRAR)</span>
+                              <span className={styles.detailValue} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>
+                                ${Number(dynPrices.valorTotal).toLocaleString('es-ES')}
+                              </span>
+                            </div>
+
+                            {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
+                              <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                                <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
+                                  Valor Original (Sin Descuento)
+                                </span>
+                                <span className={styles.detailValue} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
+                                </span>
+                              </div>
+                            )}
+                            <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                              <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
+                                Seña Cobrada
+                              </span>
+                              <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                ${Number(selectedTurno.valorSeña || 0).toLocaleString('es-ES')}
+                              </span>
+                            </div>
+                            <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                              <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
+                                Saldo Pendiente en Local
+                              </span>
+                              <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
+                              </span>
+                            </div>
+                            <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.2rem' }}>
+                              <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.8rem', fontWeight: 600 }}>
+                                💳 Método de Pago
+                              </span>
+                              <select
+                                value={selectedTurno.metodoPago || 'TRANSFERENCIA'}
+                                onChange={async (e) => {
+                                  const val = e.target.value;
+                                  try {
+                                    const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      credentials: 'include',
+                                      body: JSON.stringify({ metodoPago: val })
+                                    });
+                                    if (res.ok) {
+                                      const updated = await res.json();
+                                      setSelectedTurno(prev => ({ ...prev, metodoPago: val }));
+                                      showToast(`Método de pago: ${val === 'TRANSFERENCIA' ? '🏦 Transferencia' : '💵 Efectivo'}`);
+                                      fetchAppointments();
+                                    }
+                                  } catch (err) {
+                                    console.error(err);
+                                  }
+                                }}
+                                style={{
+                                  padding: '0.35rem 0.5rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-secondary)',
+                                  color: 'var(--text-primary)',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  width: 'auto',
+                                  minWidth: '115px',
+                                  maxWidth: '140px',
+                                  flexShrink: 0,
+                                  boxSizing: 'border-box'
+                                }}
+                              >
+                                <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                                <option value="EFECTIVO">💵 Efectivo</option>
+                              </select>
+                            </div>
+                            {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
+                              <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                                <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
+                                  Descuento Aplicado
+                                </span>
+                                <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.9rem', flexShrink: 0 }}>
+                                  -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-ES')}`})
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>WhatsApp</span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
+                          <span className={styles.detailValue} style={{ minWidth: 0, wordBreak: 'break-word', flex: '1 1 auto' }}>
+                            {selectedTurno.cliente?.whatsapp ? formatDisplayPhone(selectedTurno.cliente.whatsapp) : 'N/A'}
+                          </span>
+                          {selectedTurno.cliente?.whatsapp && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenResendWpp(selectedTurno)}
+                              title="Reenviar recordatorio o aviso por WhatsApp"
+                              style={{
+                                backgroundColor: '#16a34a',
+                                border: '1px solid #15803d',
+                                color: '#ffffff',
+                                borderRadius: '6px',
+                                padding: '0.25rem 0.55rem',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                flexShrink: 0,
+                                marginLeft: 'auto'
+                              }}
+                            >
+                              📲 Reenviar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Email</span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginTop: '0.2rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
+                          <span className={styles.detailValue} style={{ fontSize: '0.85rem', wordBreak: 'break-all', minWidth: 0, flex: '1 1 auto' }}>
+                            {selectedTurno.cliente?.email || 'Sin email'}
+                          </span>
+                          {selectedTurno.cliente && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenResendEmail(selectedTurno)}
+                              title="Editar correo y reenviar aviso"
+                              style={{
+                                backgroundColor: '#4f46e5',
+                                border: '1px solid #4338ca',
+                                color: '#ffffff',
+                                borderRadius: '6px',
+                                padding: '0.25rem 0.55rem',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                flexShrink: 0,
+                                marginLeft: 'auto'
+                              }}
+                            >
+                              ✏️ Reenviar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {selectedTurno.clienteId && (
                     <div style={{
@@ -4252,55 +4669,57 @@ export default function AgendaPage() {
                     </div>
                   )}
 
-                  <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', gap: '0.4rem', width: '100%' }}>
-                      <span className={styles.detailLabel} style={{ flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
-                        Observaciones Generales del Cliente
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setExpandedObsGeneral(prev => !prev)}
-                        style={{
-                          flexShrink: 0,
-                          background: 'rgba(255,255,255,0.06)',
-                          border: '1px solid var(--border-color)',
-                          color: 'var(--text-secondary)',
-                          borderRadius: '6px',
-                          padding: '0.2rem 0.55rem',
-                          fontSize: '0.72rem',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {expandedObsGeneral ? '⤡ Reducir' : '⤢ Ampliar'}
-                      </button>
+                  {currentUserRole !== 'OPERADOR' && (
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', gap: '0.4rem', width: '100%' }}>
+                        <span className={styles.detailLabel} style={{ flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
+                          Observaciones Generales del Cliente
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedObsGeneral(prev => !prev)}
+                          style={{
+                            flexShrink: 0,
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--text-secondary)',
+                            borderRadius: '6px',
+                            padding: '0.2rem 0.55rem',
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {expandedObsGeneral ? '⤡ Reducir' : '⤢ Ampliar'}
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <textarea
+                          value={tempClientObservaciones}
+                          onChange={(e) => setTempClientObservaciones(e.target.value)}
+                          placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
+                          rows={expandedObsGeneral ? 8 : 2}
+                          style={{
+                            width: '100%',
+                            height: expandedObsGeneral ? '180px' : '65px',
+                            padding: '0.55rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.85rem',
+                            resize: 'vertical',
+                            boxSizing: 'border-box',
+                            transition: 'height 0.2s ease'
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
-                      <textarea
-                        value={tempClientObservaciones}
-                        onChange={(e) => setTempClientObservaciones(e.target.value)}
-                        placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
-                        rows={expandedObsGeneral ? 8 : 2}
-                        style={{
-                          width: '100%',
-                          height: expandedObsGeneral ? '180px' : '65px',
-                          padding: '0.55rem',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-secondary)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.85rem',
-                          resize: 'vertical',
-                          boxSizing: 'border-box',
-                          transition: 'height 0.2s ease'
-                        }}
-                      />
-                    </div>
-                  </div>
+                  )}
 
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem', gap: '0.4rem', width: '100%' }}>
@@ -4462,7 +4881,7 @@ export default function AgendaPage() {
                         📁 Ficha Cliente
                       </button>
                     )}
-                    {selectedTurno.clienteId && selectedTurno.estado !== 'REALIZADO' && (
+                    {selectedTurno.clienteId && selectedTurno.estado !== 'REALIZADO' && currentUserRole !== 'OPERADOR' && (
                       <button
                         onClick={() => handleScheduleNextTurn(selectedTurno)}
                         className="btn"
@@ -4471,7 +4890,7 @@ export default function AgendaPage() {
                         📅 Siguiente Turno
                       </button>
                     )}
-                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && currentUserRole !== 'OPERADOR' && (
                       <button
                         onClick={() => handleReprogramarTurno(selectedTurno)}
                         className="btn"
@@ -4480,59 +4899,62 @@ export default function AgendaPage() {
                         🔄 Reprogramar
                       </button>
                     )}
-                    <button
-                      onClick={() => {
-                        const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
-                        const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
-                        const dynPrices = getUpdatedTurnoPrices(selectedTurno);
-                        const initialObs = (tempClientObservaciones || selectedTurno.cliente?.observaciones || '').trim();
-                        const initialNotas = (tempClientNotasGonzalo || selectedTurno.notasGonzalo || '').trim();
-                        const initialTurnoObs = (tempTurnoObservaciones || selectedTurno.observaciones || '').trim();
-                        const initialFreq = tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4;
+                    {currentUserRole !== 'OPERADOR' && (
+                      <button
+                        onClick={() => {
+                          const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
+                          const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
+                          const dynPrices = getUpdatedTurnoPrices(selectedTurno);
+                          const initialObs = (tempClientObservaciones || selectedTurno.cliente?.observaciones || '').trim();
+                          const initialNotas = (tempClientNotasGonzalo || selectedTurno.notasGonzalo || '').trim();
+                          const initialTurnoObs = (tempTurnoObservaciones || selectedTurno.observaciones || '').trim();
+                          const initialFreq = tempClientFrecuencia || selectedTurno.cliente?.frecuencia || 4;
 
-                        setEditTurno({
-                          isInitialEdit: true,
-                          initialValorTotal: Number(dynPrices.valorTotal || selectedTurno.valorTotal || 0),
-                          initialValorSeña: Number(selectedTurno.valorSeña || 0),
-                          initialZoneIds: [...preselectedZoneIds],
-                          initialHasOtros: Boolean(hasOtros),
-                          initialOtrosTexto: (otrosTexto || '').trim(),
-                          initialOtrosPrecio: String(otrosPrecio || ''),
-                          initialObservaciones: initialObs,
-                          initialNotasGonzalo: initialNotas,
-                          initialTurnoObservaciones: initialTurnoObs,
-                          initialFrecuencia: initialFreq,
-                          fechaStr: typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha),
-                          horaInicio: selectedTurno.horaInicio,
-                          horaFin: selectedTurno.horaFin,
-                          estado: selectedTurno.estado,
-                          valorTotal: dynPrices.valorTotal,
-                          valorSeña: selectedTurno.valorSeña,
-                          manualTotalOverride: undefined,
-                          manualSeñaOverride: selectedTurno.valorSeña !== undefined ? Number(selectedTurno.valorSeña) : undefined,
-                          descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
-                          descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? dynPrices.bonificacion : ''),
-                          bonificacion: dynPrices.bonificacion,
-                          autoTotal: dynPrices.valorTotal,
-                          autoTotalZonas: dynPrices.valorOriginal,
-                          autoSeña: selectedTurno.valorSeña,
-                          selectedZoneIds: preselectedZoneIds,
-                          observaciones: initialObs,
-                          notasGonzalo: initialNotas,
-                          turnoObservaciones: initialTurnoObs,
-                          frecuencia: initialFreq,
-                          hasOtros: Boolean(hasOtros),
-                          otrosTexto: otrosTexto || '',
-                          otrosPrecio: otrosPrecio || ''
-                        });
-                        setIsEditing(true);
-                      }}
-                      className="btn"
-                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
-                    >
-                      ✏️ Editar Turno
-                    </button>
-                    {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && (
+                          setEditTurno({
+                            isInitialEdit: true,
+                            initialValorTotal: Number(dynPrices.valorTotal || selectedTurno.valorTotal || 0),
+                            initialValorSeña: Number(selectedTurno.valorSeña || 0),
+                            initialZoneIds: [...preselectedZoneIds],
+                            initialHasOtros: Boolean(hasOtros),
+                            initialOtrosTexto: (otrosTexto || '').trim(),
+                            initialOtrosPrecio: String(otrosPrecio || ''),
+                            initialObservaciones: initialObs,
+                            initialNotasGonzalo: initialNotas,
+                            initialTurnoObservaciones: initialTurnoObs,
+                            initialFrecuencia: initialFreq,
+                            fechaStr: typeof selectedTurno.fecha === 'string' ? selectedTurno.fecha.split('T')[0] : toYYYYMMDD(selectedTurno.fecha),
+                            horaInicio: selectedTurno.horaInicio,
+                            horaFin: selectedTurno.horaFin,
+                            estado: selectedTurno.estado,
+                            valorTotal: dynPrices.valorTotal,
+                            valorSeña: selectedTurno.valorSeña,
+                            manualTotalOverride: undefined,
+                            manualSeñaOverride: selectedTurno.valorSeña !== undefined ? Number(selectedTurno.valorSeña) : undefined,
+                            descuentoTipo: selectedTurno.descuentoTipo || (hasDiscount ? 'PESOS' : 'NINGUNO'),
+                            descuentoValor: selectedTurno.descuentoValor !== undefined && selectedTurno.descuentoValor !== null && selectedTurno.descuentoValor !== '' ? selectedTurno.descuentoValor : (hasDiscount ? dynPrices.bonificacion : ''),
+                            bonificacion: dynPrices.bonificacion,
+                            autoTotal: dynPrices.valorTotal,
+                            autoTotalZonas: dynPrices.valorOriginal,
+                            autoSeña: selectedTurno.valorSeña,
+                            selectedZoneIds: preselectedZoneIds,
+                            observaciones: initialObs,
+                            notasGonzalo: initialNotas,
+                            turnoObservaciones: initialTurnoObs,
+                            frecuencia: initialFreq,
+                            operadorId: selectedTurno.operadorId || '',
+                            hasOtros: Boolean(hasOtros),
+                            otrosTexto: otrosTexto || '',
+                            otrosPrecio: otrosPrecio || ''
+                          });
+                          setIsEditing(true);
+                        }}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                      >
+                        ✏️ Editar Turno
+                      </button>
+                    )}
+                    {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && currentUserRole !== 'OPERADOR' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✓ Aprobar
                       </button>
@@ -4562,22 +4984,22 @@ export default function AgendaPage() {
                         ❌ No Asistió
                       </button>
                     )}
-                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && currentUserRole !== 'OPERADOR' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         ✕ Cancelar
                       </button>
                     )}
-                    {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && (
+                    {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && currentUserRole !== 'OPERADOR' && (
                       <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
                         🔄 Reactivar
                       </button>
                     )}
-                    {selectedTurno.estado !== 'BLOQUEADO' && (
+                    {selectedTurno.estado !== 'BLOQUEADO' && currentUserRole !== 'OPERADOR' && (
                       <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#25D366', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box', textDecoration: 'none' }}>
                         💬 WhatsApp
                       </a>
                     )}
-                    {selectedTurno.cliente?.whatsapp && !selectedTurno.cliente?.recibioResena && (
+                    {selectedTurno.cliente?.whatsapp && !selectedTurno.cliente?.recibioResena && currentUserRole !== 'OPERADOR' && (
                       <button
                         type="button"
                         onClick={async () => {
@@ -4617,15 +5039,17 @@ export default function AgendaPage() {
                         ⭐ Mandar Reseña
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => window.open(`/admin/recibos/${selectedTurno.id}`, '_blank')}
-                      className="btn"
-                      style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
-                    >
-                      📄 Ver Recibo Oficial
-                    </button>
-                    {selectedTurno.cliente?.email && (
+                    {currentUserRole !== 'OPERADOR' && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(`/admin/recibos/${selectedTurno.id}`, '_blank')}
+                        className="btn"
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                      >
+                        📄 Ver Recibo Oficial
+                      </button>
+                    )}
+                    {selectedTurno.cliente?.email && currentUserRole !== 'OPERADOR' && (
                       <button
                         onClick={() => handleSendReceipt(selectedTurno.id)}
                         disabled={sendingReceipt[selectedTurno.id]}
@@ -4635,9 +5059,11 @@ export default function AgendaPage() {
                         {sendingReceipt[selectedTurno.id] ? 'Enviando...' : '🧾 Recibo Email'}
                       </button>
                     )}
-                    <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
-                      🗑️ Eliminar
-                    </button>
+                    {currentUserRole !== 'OPERADOR' && (
+                      <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                        🗑️ Eliminar
+                      </button>
+                    )}
                   </div>
                 </div>
               </>
@@ -5171,6 +5597,52 @@ export default function AgendaPage() {
                   </div>
                 )}
 
+                {/* Matching Promotion Suggestion */}
+                {(() => {
+                  const selectedNames = zones.filter(z => (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
+                  const matching = activePromos.find(p => {
+                    let pZonas = [];
+                    try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
+                    if (pZonas.length === 0) return false;
+                    return pZonas.every(pz => selectedNames.includes(pz));
+                  });
+                  if (!matching) return null;
+                  return (
+                    <div style={{
+                      gridColumn: '1 / -1',
+                      backgroundColor: 'rgba(212, 165, 77, 0.12)',
+                      border: '1px dashed var(--color-gold)',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.85rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '0.25rem'
+                    }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                        🎁 Promo disponible: {matching.nombre} ({matching.descuentoTipo === 'PORCENTAJE' ? `${matching.descuentoValor}% OFF` : `$${matching.descuentoValor} OFF`})
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ padding: '0.25rem 0.65rem', fontSize: '0.78rem', height: 'auto', whiteSpace: 'nowrap' }}
+                        onClick={() => {
+                          setNewTurno(prev => ({
+                            ...prev,
+                            manualTotalOverride: undefined,
+                            descuentoTipo: matching.descuentoTipo === 'PORCENTAJE' ? 'PORCENTAJE' : 'PESOS',
+                            descuentoValor: matching.descuentoValor
+                          }));
+                          showToast(`¡Promoción "${matching.nombre}" aplicada!`);
+                        }}
+                      >
+                        Aplicar Promo
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Tipo de Descuento</label>
                   <select
@@ -5192,6 +5664,27 @@ export default function AgendaPage() {
                     placeholder="Ej. 10 o 500"
                     disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />
+                </div>
+
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                  <label className={styles.inputLabel}>🎟️ Cupón de Descuento</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Código de cupón (ej: VERANO2026)"
+                      value={cuponCodeInput}
+                      onChange={(e) => setCuponCodeInput(e.target.value.toUpperCase())}
+                      style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                      onClick={() => handleApplyCoupon(false)}
+                    >
+                      Validar Cupón
+                    </button>
+                  </div>
                 </div>
 
                 <div className={styles.inputGroup}>
@@ -5241,6 +5734,21 @@ export default function AgendaPage() {
                     <option value="BLOQUEADO">🔒 BLOQUEADO (Bloqueo)</option>
                   </select>
                 </div>
+
+                {currentUserRole === 'ADMIN' && (
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                    <label className={styles.inputLabel}>👤 Operador Asignado</label>
+                    <select
+                      value={newTurno.operadorId || ''}
+                      onChange={(e) => setNewTurno(prev => ({ ...prev, operadorId: e.target.value }))}
+                    >
+                      <option value="">Gonzalo (Por defecto)</option>
+                      {operadores.map(op => (
+                        <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Resumen de Descuento y Saldo a Pagar */}
                 {newTurno.estado !== 'BLOQUEADO' && (

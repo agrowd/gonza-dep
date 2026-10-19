@@ -14,8 +14,16 @@ model Usuario {
   usuario   String   @unique
   password  String
   nombre    String
-  rol       String   @default("ADMIN") // "ADMIN", "READONLY"
-  createdAt DateTime @default(now())
+  rol       String   @default("ADMIN") // "ADMIN", "OPERADOR", "RECEPCION"
+  email            String?
+  telefono         String?
+  fechaNacimiento  DateTime?
+  vacacionesInicio DateTime?
+  vacacionesFin    DateTime?
+  comisionTipo     String?   @default("POR_TURNO") // "POR_TURNO", "POR_DIA", "PORCENTAJE"
+  comisionValor    Float?    @default(0)
+  turnos           Turno[]
+  createdAt        DateTime  @default(now())
 }
 
 model Cliente {
@@ -51,6 +59,8 @@ model Turno {
   id               String   @id @default(uuid())
   clienteId        String
   cliente          Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  operadorId       String?
+  operador         Usuario? @relation(fields: [operadorId], references: [id], onDelete: SetNull)
   fecha            DateTime
   horaInicio       String   // "10:10"
   horaFin          String   // "10:40"
@@ -105,6 +115,50 @@ model Notificacion {
 model Configuracion {
   key   String @id
   value String
+}
+
+model CategoriaGasto {
+  id        String   @id @default(uuid())
+  nombre    String   @unique
+  color     String   @default("#64748b")
+  gastos    Gasto[]
+  createdAt DateTime @default(now())
+}
+
+model Gasto {
+  id            String         @id @default(uuid())
+  concepto      String
+  monto         Float
+  fecha         DateTime
+  categoriaId   String
+  categoria     CategoriaGasto @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  observaciones String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+}
+
+model Promocion {
+  id             String    @id @default(uuid())
+  nombre         String
+  zonas          String    // JSON stringified array de IDs o nombres de zonas requeridas
+  descuentoTipo  String    @default("PORCENTAJE") // "PORCENTAJE" o "MONTO_FIJO"
+  descuentoValor Float
+  fechaInicio    DateTime?
+  fechaFin       DateTime?
+  activo         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+}
+
+model Cupon {
+  id               String    @id @default(uuid())
+  codigo           String    @unique
+  descuentoTipo    String    @default("PORCENTAJE") // "PORCENTAJE" o "MONTO_FIJO"
+  descuentoValor   Float
+  usosPermitidos   Int       @default(1)
+  usosActuales     Int       @default(0)
+  fechaVencimiento DateTime?
+  activo           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
 }
 
 // ==========================================

@@ -1691,6 +1691,49 @@
 - [x] Desplegar en servidor VPS Hostinger en Producción y Staging y verificar estado.
 - [x] Registrar Decisión `D-109` en `.synapse/decisions.md`.
 
+## 📅 Sesión: 13 de Octubre de 2026 (Seguimiento - Implementación en Staging de Módulos Pendientes: Gastos, Promociones, Cupones y Cumpleaños)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender solicitud del usuario: *"Hace los que siguen en el staging"* para ir completando los módulos pendientes del documento maestro `Mejoras AppWeb.docx` antes del cierre del proyecto.
+- [x] Actualizar `prisma/schema.prisma` incorporando modelos `CategoriaGasto`, `Gasto`, `Promocion` y `Cupon` compatibles con PostgreSQL (`agenda_db_staging`) y SQLite local.
+- [x] Desarrollar backend de Gastos: `/api/admin/gastos/categorias` (CRUD con auto-seed de 7 categorías por defecto), `/api/admin/gastos` (cálculo de egresos mensuales, comparación vs mes anterior, desglose por categoría, flujo de caja entradas vs gastos según regla de Gonzalo y balance día a día) y `/api/admin/gastos/[id]`.
+- [x] Desarrollar interfaz de Gastos en `/admin/gastos`: selector mensual, 4 KPI cards (Gastos, Entradas, Balance Neto, Mayor Categoría), barra de distribución porcentual, tabla de historial filtrable, tabla de balance día a día y modal de administración de categorías con selector de color.
+- [x] Integrar ítem de navegación "Gastos" con icono de dólar en la barra lateral `src/app/admin/SidebarNav.js`.
+- [x] Desarrollar backend de Promociones y Cupones: CRUD `/api/admin/promociones` y `/api/admin/promociones/[id]` (soporte de combos de zonas, % o monto fijo, vigencia), CRUD `/api/admin/cupones` y `/api/admin/cupones/[id]` (código alfanumérico, límite de usos y vencimiento), y endpoint de validación pública `/api/cupones/validar`.
+- [x] Diseñar pestaña interactiva "🎁 Promociones y Cupones" en `/admin/configuracion` con ABM completo de Promociones por zonas y Cupones, badges de estado, switches de activación y modales.
+- [x] Añadir soporte de plantillas de saludo de cumpleaños (`wtsp_birthday_template`, `email_birthday_subject`, `email_birthday_body`) en `/api/admin/configuracion` y campos de edición en la pestaña *Mensajes y Plantillas* de `/admin/configuracion`.
+- [x] Programar cron diario automático a las 10:00 AM en `src/lib/whatsapp.js` para enviar saludos de cumpleaños a clientes activos que cumplen años hoy, validando idempotencia anual por notificación previa en la base de datos.
+- [x] Integrar sugerencia inteligente de promociones en `/admin/agenda`: al seleccionar zonas para un turno manual o edición, si coincide con un combo activo, renderizar banner dorado destacado con botón "Aplicar Promo" para aplicar el descuento automáticamente con un clic.
+- [x] Integrar validador de cupones con botón "Validar Cupón" en los formularios de agendamiento y edición de `/admin/agenda`.
+- [x] Verificar compilación local con Next.js Turbopack (`npm run build`, compilado exitoso en 36.7s con 0 errores).
+- [x] Commit y push a la rama `staging` en GitHub (`5d284f6`).
+- [x] Desplegar en el VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`), sincronizando Prisma y reiniciando PM2 `gonzalo-agenda-staging`.
+- [x] Validar disponibilidad de rutas y APIs en Staging mediante requests directos (`/api/zonas`, `/api/cupones/validar`, `/admin/gastos` respondiendo HTTP 200 OK).
+- [x] Registrar Decisión `D-110` en `.synapse/decisions.md`.
+
+## 📅 Sesión: 13 de Octubre de 2026 (Seguimiento - Implementación de Gestión de Usuarios y Roles de Operador en Staging)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender mensaje de Gonzalo Siri (`media_1791933437978_661895ea.png`): *"está entonces la parte de alta de usuarios y puedo crear en el módulo de pruebas? Para probar crear un operador... No veo la parte de alta de perfiles en configuración"*.
+- [x] Actualizar `prisma/schema.prisma` extendiendo el modelo `Usuario` con `email String?`, `telefono String?` y soporte de roles (`ADMIN`, `OPERADOR`, `RECEPCION`).
+- [x] Desarrollar backend administrativo de usuarios:
+  - `GET /api/admin/usuarios`: listado seguro de usuarios excluyendo passwords y validando rol `ADMIN`.
+  - `POST /api/admin/usuarios`: alta de usuario con hashing SHA-256 de contraseña, asignación de rol y validación de unicidad de username.
+  - `PUT /api/admin/usuarios/[id]`: edición de datos, actualización opcional de contraseña y cambio de rol.
+  - `DELETE /api/admin/usuarios/[id]`: borrado seguro protegiendo contra auto-eliminación y eliminación del único administrador del sistema.
+- [x] Integrar control de acceso y filtrado granular por rol en `src/app/admin/SidebarNav.js`: los usuarios con rol `OPERADOR` solo ven "Alta de Turno", "Agenda de Turnos" y "Clientes" (ocultando Estadísticas, Gastos, Notificaciones y Configuración).
+- [x] Implementar la pestaña interactiva "👥 Usuarios y Operadores" en `src/app/admin/configuracion/page.js`:
+  - Selector de pestaña agregado a la barra de tabs.
+  - Tabla completa con Nombre, `@usuario`, Badges con estilo distintivo según rol (Administrador, Operador, Recepción), Teléfono, Email y botones de acción (Editar y Eliminar).
+  - Modal interactivo de creación y edición de usuario/operador con selector de rol y campos para credenciales y contacto.
+  - Estilos de badges añadidos a `configuracion.module.css`.
+- [x] Compilar exitosamente en local con Turbopack (`npm run build`, 0 errores en 84s).
+- [x] Commit y push a la rama `staging` en GitHub (`dd050be`).
+- [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`), sincronizando Prisma y reiniciando PM2 `gonzalo-agenda-staging`.
+- [x] Validar disponibilidad HTTP 200 OK en Staging (`http://187.127.9.216:3008/login`).
+- [x] Registrar Decisión `D-111` en `.synapse/decisions.md`.
+- [x] Redactar mensaje claro y preciso para enviar a Gonzalo por WhatsApp.
+
 ## 📅 Sesión: 15 de Octubre de 2026 (Fix Crítico de Fechas de Reprogramación en Agenda y VPS)
 
 ### 🎯 Tareas en curso / Objetivos
@@ -1710,7 +1753,133 @@
 - [x] Ejecutar script de corrección SQL en VPS actualizando `agenda_db` y `agenda_db_staging`:
   - Restaurar fecha anterior canónica de Evgenii Morgunov (`07/10/2026 a las 15:30 hs`), Joao De Oliveira (`15/10/2026 a las 20:30 hs`) y Gaston Sanchez (`22/09/2026 a las 19:20 hs`).
   - Purgar etiquetas autorreferenciales espurias de Horacio Smidt, Daniel Argañaraz, Pedro Laurenz, Alan Gonzalez, Carlos Boscherino, Mauro Castiglioni y Emiliano Sack.
+- [x] Verificar compilación local con Next.js Turbopack (`npm run build`: 58 rutas compiladas con 0 errores en 58s).
 - [x] Registrar Decisión `D-112` en `.synapse/decisions.md` y Error `ERR-48` en `.synapse/errores.md`.
 - [x] Commit y push a ramas `staging` y `main` en GitHub.
-- [ ] Desplegar en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
-- [ ] Redactar mensaje de respuesta para Gonzalo / Luciano.
+- [x] Desplegar en Producción (`gonzalo-agenda`, puerto 3006) y Staging (`gonzalo-agenda-staging`, puerto 3008).
+- [x] Redactar mensaje de respuesta para Gonzalo / Luciano.
+
+## 📅 Sesión: 15 de Octubre de 2026 (Staging - Restricción de Privacidad para Rol OPERADOR y Asignación de Operador por Turno)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Analizar requerimientos y 7 capturas de feedback enviadas por Luciano Gómez (`media_1792072189582_75f1e764` a `media_1792072328876_d0080a2e`):
+  - "En estás que tache, el operador desde su cuenta no puede ver nada de esa info"
+  - "Además faltó lo del selector de operador para el administrador, osea que puede cambiar el operador de cada turno"
+- [x] Actualizar `prisma/schema.prisma`:
+  - Agregar `operadorId String?` y relación `operador Usuario?` en `model Turno`.
+  - Agregar `turnos Turno[]` en `model Usuario`.
+  - Sincronizar base de datos local SQLite con `npx prisma db push`.
+- [x] Restringir accesos y navegación del Rol `OPERADOR`:
+  - `src/app/admin/SidebarNav.js`: "Alta de Turno" y "Clientes" restringidos a `['ADMIN', 'RECEPCION']`. El Operador solo ve "Agenda de Turnos".
+  - `src/app/admin/alta-turno/page.js`: Guarda que redirige automáticamente a `/admin/agenda`.
+  - `src/app/admin/clientes/page.js`: Guarda que redirige al operador sin `?id=` a `/admin/agenda`. Al cerrar el perfil, retorna a `/admin/agenda`. En la ficha se oculta el DNI, se ocultan las pestañas `🔔 Avisos` y `⚙️ ABM Clientes`, y en el historial se ocultan los importes (Costo, Seña, Saldo).
+- [x] Blindar Privacidad y Funcionalidades en Agenda (`/admin/agenda`):
+  - Encabezado diario: Ocultar "Bloquear Horario", "+ Nuevo Turno" e "Ingreso Estimado" para `OPERADOR`.
+  - Huecos libres Neocita: Deshabilitar click y ocultar "+ Agendar" para `OPERADOR`.
+  - Grilla semanal: Deshabilitar click en slots vacíos para `OPERADOR`.
+  - Tarjetas Neocita: Renderizar badge `👤 {app.operador.nombre}` y ocultar renglón financiero para `OPERADOR`.
+  - Modal Detalle de Turno:
+    - Ocultar desglose financiero completo (Valor Total, Original, Seña, Saldo, Método de Pago, Descuentos) para `OPERADOR`.
+    - Ocultar bloques de WhatsApp y Email (y botones de reenvío) para `OPERADOR`.
+    - Ocultar "Observaciones Generales del Cliente" para `OPERADOR` (manteniendo intactas las Observaciones del Operador y Comentarios de la Sesión).
+    - Botonera de acciones rápidas restringida para `OPERADOR`: solo se muestran `📁 Ficha Cliente`, `✓ Realizado`, `🏁 Finalizar`, `🛠️ Mantenimiento`, `⏳ Va a Avisar` y `❌ No Asistió`.
+- [x] Implementar Asignación Dinámica de Operador para Administrador:
+  - En modal de detalle de turno: selector instantáneo `👤 Operador Asignado` con guardado automático vía `PUT /api/admin/turnos/[id]`.
+  - En modal de edición de turno (`isEditing`): selector dropdown para elegir operador.
+  - En modal de alta manual de turno (`newTurno`): selector dropdown para asignar operador.
+- [x] Implementar Dropdown de Pestañas Mobile en Configuración (`/admin/configuracion`):
+  - Agregar `.tabDropdownWrapper` y `.tabSelectDropdown` con diseño consistente al de Estadísticas para `<= 768px`.
+- [x] Actualizar APIs Backend (`/api/admin/turnos`, `/api/admin/turnos/[id]`, `/api/admin/usuarios`, `/api/auth/session`):
+  - Incluir relación `operador` y soportar `operadorId` en creación y edición.
+  - Exponer `GET /api/admin/usuarios` a staff autenticado para poblar el catálogo de operadores.
+- [x] Verificar compilación local con Next.js Turbopack (`npm run build`: 48 rutas compiladas con 0 errores en 23.5s).
+- [x] Registrar Decisión `D-113` en `.synapse/decisions.md`.
+- [x] Commit y push a la rama `staging` en GitHub (`42dfe17`).
+- [x] Desplegar en servidor VPS Hostinger (`187.127.9.216`) exclusivamente en Staging (`/srv/gonzalo-dep-staging` en puerto 3008 y base de datos `agenda_db_staging`).
+- [x] Validar funcionamiento y respuesta HTTP 200 OK en Staging (`http://187.127.9.216:3008/login`).
+- [x] Redactar mensaje de respuesta para Gonzalo / Luciano.
+
+## 📅 Sesión: 15 de Octubre de 2026 (Staging - Ajustes de Privacidad de Impresión, Filtrado de Agenda por Operador, Operador Gonzalo por Defecto y Perfil Extendido en Configuración)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender 5 requerimientos y capturas de feedback enviadas por Luciano Gómez (`media_1792098011650_1e695cb5` a `media_1792098087680_5654a2aa`):
+  1. Ocultar valores financieros e ingreso total en la vista de impresión del día para Operador (`/admin/agenda/imprimir`).
+  2. Ocultar botón `📄 Descargar PDF / Imprimir` en la ficha de cliente (`/admin/clientes`) y proteger la ruta de impresión.
+  3. Corregir layout/estilo del selector de operador en el modal de detalle de turno (evitar colapso vertical de letras en móvil) y asignar operador por defecto a "Gonzalo".
+  4. Filtrar agenda de operador para que solo visualice sus turnos asignados (`operadorId === currentUserId`) y no los de Gonzalo u otros operadores.
+  5. Extender perfil de operadores en Configuración (`/admin/configuracion`) agregando Cumpleaños, Vacaciones y Modalidad/Valor de Comisión según documentación.
+- [x] Actualizar `prisma/schema.prisma` agregando a `model Usuario`:
+  - `fechaNacimiento DateTime?`
+  - `vacacionesInicio DateTime?`
+  - `vacacionesFin DateTime?`
+  - `comisionTipo String? @default("POR_TURNO")`
+  - `comisionValor Float? @default(0)`
+- [x] Ejecutar `npx prisma generate` para sincronizar tipos locales del cliente Prisma.
+- [x] Actualizar backend de usuarios (`/api/admin/usuarios` y `/api/admin/usuarios/[id]`):
+  - Añadir soporte de `fechaNacimiento`, `vacacionesInicio`, `vacacionesFin`, `comisionTipo` y `comisionValor` en GET, POST y PUT.
+- [x] Diseñar campos en `/admin/configuracion`:
+  - En modal de usuario: inputs para Cumpleaños (`type="date"`), Vacaciones Desde/Hasta (`type="date"`) y Comisión (Modalidad `POR_TURNO` / `POR_DIA` / `PORCENTAJE` y Valor numérico).
+  - En tabla de usuarios: columnas informativas para Comisión, Cumpleaños/Vacaciones y Contacto.
+- [x] Blindar vista de impresión del día (`/admin/agenda/imprimir` y `/api/admin/turnos/imprimir`):
+  - Para `OPERADOR`: ocultar `Valor: $...` en cada renglón de turno y ocultar `Total Estimado: $...` en el pie de tabla.
+  - En la API: filtrar turnos por `where: { operadorId: session.id }`.
+- [x] Blindar ficha de cliente (`/admin/clientes` y `/admin/clientes/[id]/imprimir`):
+  - En el modal de cliente: renderizado condicional `{currentUserRole !== 'OPERADOR' && (<button>📄 Descargar PDF / Imprimir</button>)}`.
+  - En `/admin/clientes/[id]/imprimir`: redirección inmediata a `/admin/agenda` si el rol es `OPERADOR`.
+- [x] Corregir layout del selector de operador en `/admin/agenda`:
+  - Reemplazar contenedor `.detailRowBetween` por contenedor flexbox con `flexWrap: 'wrap'`, `gap: 0.6rem`, y `whiteSpace: 'nowrap'` en la etiqueta `👤 Operador Asignado:`, erradicando el colapso vertical por carácter.
+  - En los selectores de detalle, edición y creación cambiar "Sin Asignar" por "Gonzalo (Por defecto)".
+- [x] Asignar turnos por defecto a Gonzalo:
+  - En `/api/admin/turnos`: si no se especifica `operadorId`, fallback automático al ID del usuario administrador (Gonzalo).
+  - En `agenda/page.js`: preselección de Gonzalo como operador inicial al abrir modal de nuevo turno.
+  - En `prisma/seed.js`: nombre del usuario admin establecido como `Gonzalo`.
+- [x] Filtrado estricto de Agenda para Operador:
+  - En `GET /api/admin/turnos`: si `session.rol === 'OPERADOR'`, cláusula Prisma `where: { ...where, operadorId: session.id }`.
+  - En `agenda/page.js`: filtro defensivo local para asegurar que el operador solo visualice sus citas asignadas.
+- [x] Verificar compilación local con Turbopack (`npm run build`: 48 rutas compiladas con 0 errores en 47s).
+- [x] Registrar Decisión `D-114` en `.synapse/decisions.md`.
+- [x] Ejecutar script de migración en VPS Staging (`scratch/migrate_turnos_staging.js`):
+  - Actualizado nombre del usuario Admin a "Gonzalo".
+  - Asignados 570 turnos preexistentes sin operador a Gonzalo.
+  - Verificada existencia de turno de prueba asignado a Pedrito.
+- [x] Ejecutar suite de validación automatizada en vivo en Staging (`http://187.127.9.216:3008`):
+  - Validado Punto 1: Imprimir día oculta importes individuales y total estimado para OPERADOR, visible para ADMIN.
+  - Validado Punto 2: Ficha cliente oculta botón "Descargar PDF / Imprimir" y protege redirección para OPERADOR.
+  - Validado Punto 3: Selector de operador con layout flexbox anti-colapso vertical y predeterminado a Gonzalo.
+  - Validado Punto 4: Agenda y APIs filtran estrictamente por operador logueado (Pedrito solo ve sus turnos).
+  - Validado Punto 5: Configuración muestra columnas y modal de alta/edición con Cumpleaños, Vacaciones y Comisión.
+- [x] Notificar a Gonzalo y Luciano con resumen completo y credenciales de prueba.
+
+## 📅 Sesión: 17 de Octubre de 2026 (Incidente 502 Bad Gateway por reinicio de VPS y Recuperación de Recordatorios 48hs)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar y resolver error 502 Bad Gateway reportado por Gonzalo Siri en `agenda.depilacionparahombres.com` (`media_1792264045157_8c468b36.png` a `media_1792264113799_8050c508.png`).
+- [x] Restaurar procesos de producción (`gonzalo-agenda`, `gonzalo-agenda-staging`, `ia-gonzadep`).
+- [x] Habilitar arranque automático de PM2 en `systemd` (`pm2 startup` y `systemctl enable pm2-root`).
+- [x] Auditar y despachar inmediatamente los recordatorios de WhatsApp de 48hs para los 8 turnos del lunes 19 de octubre.
+- [x] Validar respuesta HTTP 200 OK en autogestión y panel de agenda.
+- [x] Documentar en `.synapse/errores.md` (`ERR-49`), `.synapse/decisions.md` (`D-115`), `chat.md` y notificar al usuario.
+
+## 📅 Sesión: 19 de Octubre de 2026 (Staging - Modalidad Comisión Por Hora y Permanencia Continua en Agenda)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Atender feedback y audios de Luciano Gómez (`media_1792420123294_5a19bae9.png`, `media_1792420139928_f434d7b0.png`, `media_1792420198289_b7352f13.png`):
+  1. Configuración: cambiar modalidad de comisión de operadores de "Por Día" a "Por Hora Trabajada ($/hora)".
+  2. Agenda Administrativa: para administradores, calcular la ganancia del operador por día según el tiempo continuo de permanencia desde su primer turno hasta el último con su tag (`max(horaFin) - min(horaInicio)`), multiplicando por `$/hora`. Mostrar `A Pagar Operadores` junto a `Ingreso Estimado` y tarjeta de liquidación en el encabezado diario.
+  3. Hoja de Impresión: incorporar resumen de liquidación de horas de operadores en `/admin/agenda/imprimir` para administradores.
+  4. Privacidad: garantizar que el rol `OPERADOR` no tenga visibilidad de ingresos estimados, montos totales a pagar ni desgloses financieros.
+- [x] Desarrollar cambios en frontend y backend:
+  - `src/app/admin/configuracion/page.js`: modalidad `POR_HORA` ("Por Hora Trabajada ($)"), label `(ARS $/hora)`, placeholder `Ej: 4000`, tabla de usuarios con `$... / hora`.
+  - `src/app/api/admin/turnos/route.js`, `[id]/route.js`, `imprimir/route.js`: selectores `comisionTipo` y `comisionValor` incluidos en `operador`.
+  - `src/app/admin/agenda/page.js`: cálculo de permanencia continua (`min(horaInicio)` a `max(horaFin)`), total a pagar, badges y chips en encabezado diario para Administrador.
+  - `src/app/admin/agenda/imprimir/page.js`: bloque de liquidación de operadores para administradores.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`: 48/48 rutas en 57s, 0 errores).
+- [x] Commit y push a la rama `staging` (`83e8b91`).
+- [x] Desplegar en VPS Hostinger exclusivamente en Staging (`/srv/gonzalo-dep-staging`, puerto 3008, PM2 `gonzalo-agenda-staging`, DB `agenda_db_staging`).
+- [x] Configurar usuario `pedrito` con `comisionTipo = 'POR_HORA'` y `comisionValor = 5000` en `agenda_db_staging`.
+- [x] Ejecutar suite de pruebas Puppeteer en vivo validando:
+  - Configuración: tabla muestra `$5.000 / hora` y modal tiene selector "Por Hora Trabajada ($)".
+  - Agenda: en 15 Oct (14:00 a 15:40 = 1h 40m ➔ $8.333) y en 16 Oct (14:00 a 15:20 = 1h 20m ➔ $6.667) se calcula y renderiza la permanencia continua.
+  - Impresión: `/admin/agenda/imprimir?fecha=2026-10-15` renderiza bloque de liquidación para admin.
+  - Privacidad: login con cuenta `pedrito` confirma que no ve totales ni liquidaciones.
+- [x] Registrar Decisión `D-116` en `.synapse/decisions.md` y actualizar `chat.md`.

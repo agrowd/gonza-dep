@@ -63,6 +63,7 @@ function ClientesPageContent() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('history');
+  const [currentUserRole, setCurrentUserRole] = useState(null);
 
   // Create client modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -604,10 +605,24 @@ function ClientesPageContent() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.user?.rol) {
+          setCurrentUserRole(d.user.rol);
+          if (d.user.rol === 'OPERADOR' && !initialClientId) {
+            router.replace('/admin/agenda');
+          }
+        }
+      })
+      .catch(() => {});
+  }, [initialClientId, router]);
+
   // Handle modal close
   const handleCloseProfile = () => {
     setIsProfileOpen(false);
-    if (fromPage === 'agenda') {
+    if (fromPage === 'agenda' || currentUserRole === 'OPERADOR') {
       const params = [];
       if (dateParam) params.push(`date=${dateParam}`);
       if (viewParam) params.push(`view=${viewParam}`);
@@ -1257,7 +1272,9 @@ function ClientesPageContent() {
                   </div>
                   <div className={styles.clientMetaList}>
                     <span className={styles.clientMetaItem}>Alta: {new Date(selectedClient.fechaAlta).toLocaleDateString('es-ES')}</span>
-                    <span className={styles.clientMetaItem}>DNI: {selectedClient.dni || 'Sin registrar'}</span>
+                    {currentUserRole !== 'OPERADOR' && (
+                      <span className={styles.clientMetaItem}>DNI: {selectedClient.dni || 'Sin registrar'}</span>
+                    )}
                     <span className={styles.clientMetaItem}>
                       Nacimiento: {selectedClient.fechaNacimiento ? `${formatBirthDate(selectedClient.fechaNacimiento)}${stats.edad !== null ? ` (${stats.edad} años)` : ''}` : 'Sin registrar'}
                     </span>
@@ -1275,30 +1292,32 @@ function ClientesPageContent() {
               </div>
 
               {/* Row 2: Action button on its own line */}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
-                <button
-                  type="button"
-                  onClick={() => window.open(`/admin/clientes/${selectedClient.id}/imprimir`, '_blank')}
-                  className="btn"
-                  title="Imprimir o Descargar Ficha en PDF"
-                  style={{
-                    backgroundColor: '#1f2937',
-                    color: '#e5e7eb',
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    padding: '0.45rem 0.85rem',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  📄 Descargar PDF / Imprimir
-                </button>
-              </div>
+              {currentUserRole !== 'OPERADOR' && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.open(`/admin/clientes/${selectedClient.id}/imprimir`, '_blank')}
+                    className="btn"
+                    title="Imprimir o Descargar Ficha en PDF"
+                    style={{
+                      backgroundColor: '#1f2937',
+                      color: '#e5e7eb',
+                      border: '1px solid #374151',
+                      borderRadius: '6px',
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    📄 Descargar PDF / Imprimir
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Tabs */}
@@ -1311,22 +1330,26 @@ function ClientesPageContent() {
                 <span className={styles.tabDesktopText}>Ficha Histórica</span>
                 <span className={styles.tabMobileText}>📋 Historial</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('logs')}
-                className={`${styles.tabBtn} ${activeTab === 'logs' ? styles.tabBtnActive : ''}`}
-              >
-                <span className={styles.tabDesktopText}>Historial Notificaciones</span>
-                <span className={styles.tabMobileText}>🔔 Avisos</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('settings')}
-                className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`}
-              >
-                <span className={styles.tabDesktopText}>ABM Clientes</span>
-                <span className={styles.tabMobileText}>⚙️ ABM Clientes</span>
-              </button>
+              {currentUserRole !== 'OPERADOR' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('logs')}
+                    className={`${styles.tabBtn} ${activeTab === 'logs' ? styles.tabBtnActive : ''}`}
+                  >
+                    <span className={styles.tabDesktopText}>Historial Notificaciones</span>
+                    <span className={styles.tabMobileText}>🔔 Avisos</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('settings')}
+                    className={`${styles.tabBtn} ${activeTab === 'settings' ? styles.tabBtnActive : ''}`}
+                  >
+                    <span className={styles.tabDesktopText}>ABM Clientes</span>
+                    <span className={styles.tabMobileText}>⚙️ ABM Clientes</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Scrollable Content Container */}
@@ -1406,11 +1429,13 @@ function ClientesPageContent() {
                                   </span>
                                 </div>
                                 <div className={styles.paperZonas}>Zonas: {zonas}</div>
-                                <div className={styles.paperMeta}>
-                                  <span><strong>Costo:</strong> ${t.valorTotal.toLocaleString('es-ES')}</span>
-                                  <span><strong>Seña:</strong> ${t.valorSeña.toLocaleString('es-ES')}</span>
-                                  <span><strong>Saldo:</strong> ${t.saldoPendiente.toLocaleString('es-ES')}</span>
-                                </div>
+                                {currentUserRole !== 'OPERADOR' && (
+                                  <div className={styles.paperMeta}>
+                                    <span><strong>Costo:</strong> ${t.valorTotal.toLocaleString('es-ES')}</span>
+                                    <span><strong>Seña:</strong> ${t.valorSeña.toLocaleString('es-ES')}</span>
+                                    <span><strong>Saldo:</strong> ${t.saldoPendiente.toLocaleString('es-ES')}</span>
+                                  </div>
+                                )}
                                 {Boolean(t.notasGonzalo && t.notasGonzalo.trim()) && (
                                   <div style={{
                                     marginTop: '0.6rem',

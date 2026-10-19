@@ -73,7 +73,12 @@ export async function GET(request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    if (!sessionCookie) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const session = verifySessionToken(sessionCookie.value);
+    if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
@@ -88,14 +93,30 @@ export async function GET(request) {
     const startDate = new Date(startStr + 'T00:00:00');
     const endDate = new Date(endStr + 'T23:59:59');
 
+    const whereClause = {
+      fecha: {
+        gte: startDate,
+        lte: endDate
+      }
+    };
+
+    if (session.rol === 'OPERADOR') {
+      whereClause.operadorId = session.id;
+    }
+
     const turnos = await prisma.turno.findMany({
-      where: {
-        fecha: {
-          gte: startDate,
-          lte: endDate
-        }
-      },
+      where: whereClause,
       include: {
+        operador: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            rol: true,
+            comisionTipo: true,
+            comisionValor: true
+          }
+        },
         cliente: {
           include: {
             turnos: {
@@ -132,6 +153,7 @@ export async function POST(request) {
     const body = await request.json();
     const {
       clienteId,
+      operadorId,
       nombreCompleto,
       whatsapp,
       email,
@@ -319,10 +341,27 @@ export async function POST(request) {
       }
     }
 
-    // 4. Create appointment
+    // 4. Resolve default operator (defaults to Gonzalo / primary Admin if not specified)
+    let finalOperadorId = operadorId ? String(operadorId) : null;
+    if (!finalOperadorId) {
+      try {
+        const allUsers = await prisma.usuario.findMany();
+        const defaultOp = allUsers.find(u => u.nombre?.toLowerCase().includes('gonzalo') || u.usuario?.toLowerCase() === 'gonzalo')
+          || allUsers.find(u => u.rol === 'ADMIN')
+          || allUsers[0];
+        if (defaultOp) {
+          finalOperadorId = defaultOp.id;
+        }
+      } catch (err) {
+        console.error('Error resolving default operator:', err);
+      }
+    }
+
+    // 5. Create appointment
     const newTurno = await prisma.turno.create({
       data: {
         clienteId: finalClienteId,
+        operadorId: finalOperadorId,
         fecha: targetDate,
         horaInicio,
         horaFin,
@@ -340,7 +379,15 @@ export async function POST(request) {
         notasGonzalo: finalNotasGonzalo
       },
       include: {
-        cliente: true
+        cliente: true,
+        operador: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            rol: true
+          }
+        }
       }
     });
 

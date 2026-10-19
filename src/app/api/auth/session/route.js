@@ -20,6 +20,7 @@ export async function GET(request) {
     const response = NextResponse.json({
       authenticated: true,
       user: {
+        id: payload.id,
         usuario: payload.usuario,
         nombre: payload.nombre,
         rol: payload.rol
