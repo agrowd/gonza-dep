@@ -389,7 +389,7 @@ export default function GastosPage() {
             <span className={styles.kpiTitle}>Gastos del Mes</span>
             <span className={styles.kpiIcon}>💸</span>
           </div>
-          <div className={styles.kpiValue}>
+          <div className={styles.kpiValue} style={{ color: '#dc2626' }}>
             {formatCurrency(totales.totalGastosMes)}
           </div>
           <div className={styles.kpiSub}>
@@ -398,12 +398,12 @@ export default function GastosPage() {
                 <span className={totales.variacionPorcentual > 0 ? styles.badgeTrendRed : styles.badgeTrendGreen}>
                   {totales.variacionPorcentual > 0 ? `+${totales.variacionPorcentual}%` : `${totales.variacionPorcentual}%`}
                 </span>
-                <span style={{ color: 'var(--text-secondary)' }}>
+                <span style={{ color: '#475569' }}>
                   vs mes anterior ({formatCurrency(totales.totalGastosMesAnterior)})
                 </span>
               </>
             ) : (
-              <span style={{ color: 'var(--text-secondary)' }}>Sin gastos el mes anterior</span>
+              <span style={{ color: '#475569' }}>Sin gastos el mes anterior</span>
             )}
           </div>
         </div>
@@ -414,10 +414,10 @@ export default function GastosPage() {
             <span className={styles.kpiTitle}>Entradas del Mes</span>
             <span className={styles.kpiIcon}>💰</span>
           </div>
-          <div className={styles.kpiValue} style={{ color: '#22c55e' }}>
+          <div className={styles.kpiValue} style={{ color: '#16a34a' }}>
             {formatCurrency(totales.totalEntradasMes)}
           </div>
-          <div className={styles.kpiSub} style={{ color: 'var(--text-secondary)' }}>
+          <div className={styles.kpiSub} style={{ color: '#475569' }}>
             Turnos cobrados + señas recibidas
           </div>
         </div>
@@ -431,7 +431,7 @@ export default function GastosPage() {
           <div className={`${styles.kpiValue} ${totales.balanceNeto >= 0 ? styles.balancePositive : styles.balanceNegative}`}>
             {formatCurrency(totales.balanceNeto)}
           </div>
-          <div className={styles.kpiSub} style={{ color: 'var(--text-secondary)' }}>
+          <div className={styles.kpiSub} style={{ color: '#475569' }}>
             {totales.balanceNeto >= 0 ? '🟢 Ganancia neta operativa' : '🔴 Déficit operativo en el mes'}
           </div>
         </div>
@@ -442,16 +442,16 @@ export default function GastosPage() {
             <span className={styles.kpiTitle}>Mayor Categoría</span>
             <span className={styles.kpiIcon}>🏷️</span>
           </div>
-          <div className={styles.kpiValue} style={{ fontSize: '1.45rem' }}>
+          <div className={styles.kpiValue} style={{ fontSize: '1.45rem', color: '#1d1d1d' }}>
             {topCategory ? topCategory.nombre : 'Sin gastos'}
           </div>
           <div className={styles.kpiSub}>
             {topCategory ? (
-              <span style={{ color: 'var(--text-secondary)' }}>
+              <span style={{ color: '#475569' }}>
                 {formatCurrency(topCategory.total)} ({topCategory.porcentaje}% del total)
               </span>
             ) : (
-              <span style={{ color: 'var(--text-secondary)' }}>0% de gastos</span>
+              <span style={{ color: '#475569' }}>0% de gastos</span>
             )}
           </div>
         </div>
@@ -462,7 +462,7 @@ export default function GastosPage() {
         <div className={styles.categoriesCard}>
           <div className={styles.categoriesHeader}>
             <h3>Distribución de Gastos por Categoría</h3>
-            <span style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.86rem', color: '#475569', fontWeight: 700 }}>
               {data.desgloseCategorias.length} categorías activas
             </span>
           </div>
@@ -585,10 +585,10 @@ export default function GastosPage() {
 
                       return (
                         <tr key={gasto.id}>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: '#1d1d1d' }}>
                             {formattedDate}
                           </td>
-                          <td style={{ fontWeight: 700, color: '#fff' }}>
+                          <td style={{ fontWeight: 700, color: '#1d1d1d' }}>
                             {gasto.concepto}
                           </td>
                           <td>
@@ -596,23 +596,23 @@ export default function GastosPage() {
                               className={styles.categoryBadge}
                               style={{
                                 background: `${gasto.categoriaColor}22`,
-                                color: gasto.categoriaColor,
-                                border: `1px solid ${gasto.categoriaColor}44`
+                                color: '#1d1d1d',
+                                border: `1.5px solid ${gasto.categoriaColor}`
                               }}
                             >
                               <span style={{
-                                width: '6px',
-                                height: '6px',
+                                width: '8px',
+                                height: '8px',
                                 borderRadius: '50%',
                                 background: gasto.categoriaColor
                               }} />
                               {gasto.categoriaNombre}
                             </span>
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 800, color: '#f87171', fontSize: '0.96rem' }}>
+                          <td style={{ textAlign: 'right', fontWeight: 800, color: '#dc2626', fontSize: '0.96rem' }}>
                             {formatCurrency(gasto.monto)}
                           </td>
-                          <td style={{ color: 'var(--text-secondary)', maxWidth: '280px' }}>
+                          <td style={{ color: '#475569', maxWidth: '280px' }}>
                             {gasto.observaciones || '—'}
                           </td>
                           <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -646,7 +646,7 @@ export default function GastosPage() {
       {activeTab === 'balance' && (
         <div className={styles.tableCard}>
           <div style={{ padding: '1.25rem 1.4rem' }}>
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: '#fff', fontWeight: 800 }}>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: '#1d1d1d', fontWeight: 800 }}>
               Balance Diario de {MESES[selectedMonth - 1]} {selectedYear}
             </h3>
 
@@ -683,33 +683,33 @@ export default function GastosPage() {
                         <tr
                           key={diaItem.dia}
                           style={{
-                            background: hasActivity ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
-                            opacity: hasActivity ? 1 : 0.65
+                            background: hasActivity ? '#fcfbf7' : 'transparent',
+                            opacity: hasActivity ? 1 : 0.7
                           }}
                         >
-                          <td style={{ fontWeight: 800, color: 'var(--color-gold)' }}>
+                          <td style={{ fontWeight: 800, color: '#7a1f1e' }}>
                             Día {diaItem.dia}
                           </td>
-                          <td style={{ whiteSpace: 'nowrap' }}>
+                          <td style={{ whiteSpace: 'nowrap', color: '#1d1d1d' }}>
                             {formattedDate}
                           </td>
-                          <td style={{ textAlign: 'right', color: '#94a3b8' }}>
+                          <td style={{ textAlign: 'right', color: '#475569', fontWeight: 600 }}>
                             {diaItem.entradasTurnos > 0 ? formatCurrency(diaItem.entradasTurnos) : '—'}
                           </td>
-                          <td style={{ textAlign: 'right', color: '#94a3b8' }}>
+                          <td style={{ textAlign: 'right', color: '#475569', fontWeight: 600 }}>
                             {diaItem.entradasSenas > 0 ? formatCurrency(diaItem.entradasSenas) : '—'}
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: diaItem.entradas > 0 ? '#22c55e' : 'var(--text-secondary)' }}>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: diaItem.entradas > 0 ? '#16a34a' : '#64748b' }}>
                             {diaItem.entradas > 0 ? formatCurrency(diaItem.entradas) : '$0'}
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: diaItem.gastos > 0 ? '#ef4444' : 'var(--text-secondary)' }}>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: diaItem.gastos > 0 ? '#dc2626' : '#64748b' }}>
                             {diaItem.gastos > 0 ? formatCurrency(diaItem.gastos) : '$0'}
                           </td>
                           <td
                             style={{
                               textAlign: 'right',
                               fontWeight: 800,
-                              color: diaItem.balance > 0 ? '#22c55e' : (diaItem.balance < 0 ? '#ef4444' : 'var(--text-secondary)')
+                              color: diaItem.balance > 0 ? '#16a34a' : (diaItem.balance < 0 ? '#dc2626' : '#64748b')
                             }}
                           >
                             {formatCurrency(diaItem.balance)}
@@ -719,27 +719,27 @@ export default function GastosPage() {
                     })}
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: 'rgba(255, 255, 255, 0.05)', fontWeight: 800 }}>
-                      <td colSpan={2} style={{ color: '#fff', fontSize: '0.96rem' }}>
+                    <tr style={{ background: '#f1ede4', fontWeight: 800, borderTop: '2px solid #cbd5e1' }}>
+                      <td colSpan={2} style={{ color: '#1d1d1d', fontSize: '0.96rem' }}>
                         TOTALES DEL MES
                       </td>
-                      <td style={{ textAlign: 'right', color: '#cbd5e1' }}>
+                      <td style={{ textAlign: 'right', color: '#1d1d1d' }}>
                         {formatCurrency(totales.entradasTurnosMes)}
                       </td>
-                      <td style={{ textAlign: 'right', color: '#cbd5e1' }}>
+                      <td style={{ textAlign: 'right', color: '#1d1d1d' }}>
                         {formatCurrency(totales.entradasSenasMes)}
                       </td>
-                      <td style={{ textAlign: 'right', color: '#22c55e', fontSize: '1rem' }}>
+                      <td style={{ textAlign: 'right', color: '#16a34a', fontSize: '1rem' }}>
                         {formatCurrency(totales.totalEntradasMes)}
                       </td>
-                      <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '1rem' }}>
+                      <td style={{ textAlign: 'right', color: '#dc2626', fontSize: '1rem' }}>
                         {formatCurrency(totales.totalGastosMes)}
                       </td>
                       <td
                         style={{
                           textAlign: 'right',
                           fontSize: '1.05rem',
-                          color: totales.balanceNeto >= 0 ? '#22c55e' : '#ef4444'
+                          color: totales.balanceNeto >= 0 ? '#16a34a' : '#dc2626'
                         }}
                       >
                         {formatCurrency(totales.balanceNeto)}
@@ -759,10 +759,10 @@ export default function GastosPage() {
           <div style={{ padding: '1.25rem 1.4rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', fontWeight: 800 }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1d1d1d', fontWeight: 800 }}>
                   Categorías de Gastos
                 </h3>
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>
                   Clasificá tus costos para comparar en qué área se concentra el presupuesto
                 </p>
               </div>
@@ -792,14 +792,14 @@ export default function GastosPage() {
                             height: '24px',
                             borderRadius: '6px',
                             background: cat.color,
-                            border: '1.5px solid rgba(255, 255, 255, 0.2)'
+                            border: '1.5px solid rgba(0, 0, 0, 0.15)'
                           }}
                         />
                       </td>
-                      <td style={{ fontWeight: 700, color: '#fff', fontSize: '0.94rem' }}>
+                      <td style={{ fontWeight: 700, color: '#1d1d1d', fontSize: '0.94rem' }}>
                         {cat.nombre}
                       </td>
-                      <td style={{ textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      <td style={{ textAlign: 'center', color: '#475569', fontWeight: 600 }}>
                         {cat.cantidadGastos || 0} gastos
                       </td>
                       <td style={{ textAlign: 'center' }}>
@@ -1027,9 +1027,9 @@ export default function GastosPage() {
               </button>
             </div>
 
-            <p style={{ margin: '0.5rem 0 1rem 0', color: 'var(--text-secondary)', fontSize: '0.94rem', lineHeight: 1.5 }}>
+            <p style={{ margin: '0.5rem 0 1rem 0', color: '#475569', fontSize: '0.94rem', lineHeight: 1.5 }}>
               ¿Estás seguro de que deseás eliminar {deleteTarget.type === 'gasto' ? 'el gasto' : 'la categoría'}{' '}
-              <strong style={{ color: '#fff' }}>"{deleteTarget.name}"</strong>?
+              <strong style={{ color: '#1d1d1d' }}>"{deleteTarget.name}"</strong>?
               Esta acción no se puede deshacer.
             </p>
 
