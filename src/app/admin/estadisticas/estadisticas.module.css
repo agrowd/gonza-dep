@@ -114,9 +114,9 @@
 }
 
 .metricDropdown {
-  background-color: #18181c;
-  border: 2px solid #c5a47e;
-  color: #ffffff;
+  background-color: #ffffff !important;
+  border: 2px solid #7a1f1e;
+  color: #1d1d1d !important;
   font-size: 1.02rem;
   font-weight: 700;
   padding: 0.75rem 1.25rem;
@@ -129,12 +129,15 @@
 }
 
 .metricDropdown:focus {
-  box-shadow: 0 0 0 3px rgba(197, 164, 126, 0.35);
+  background-color: #ffffff !important;
+  color: #1d1d1d !important;
+  border-color: #7a1f1e;
+  box-shadow: 0 0 0 3px rgba(122, 31, 30, 0.2);
 }
 
 .metricDropdown option {
-  background-color: #18181c;
-  color: #ffffff;
+  background-color: #ffffff;
+  color: #1d1d1d;
   padding: 0.5rem;
 }
 
