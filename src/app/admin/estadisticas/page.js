@@ -455,236 +455,38 @@ export default function EstadisticasPage() {
   }, [activeMetricData.filteredItems, currentMetricDef, selectedMetric]);
 
   // ==========================================
-  // DESCARGA DE ARCHIVO EXCEL (.XLS CON FORMATO DE PLANILLA)
+  // DESCARGA DE ARCHIVO EXCEL (.XLSX REAL OPENXML COMPATIBLE CON CELULARES Y PC)
   // ==========================================
   const handleDownloadExcel = () => {
     const items = activeMetricData.filteredItems || [];
-    const s = excelSummary;
-    const isModelA = s.model === 'A';
+    const payload = {
+      startDate,
+      endDate,
+      selectedMetric,
+      summary: excelSummary,
+      items
+    };
 
-    const rowsHtml = items.map((item, idx) => {
-      const bg = idx % 2 === 0 ? '#f1f5f9' : '#ffffff';
-      if (isModelA) {
-        const vFinal = Number(item.valorTotal || 0);
-        const vSena = Number(item.valorSeña || 0);
-        const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
-        return `
-          <tr style="background-color:${bg};">
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.clienteNombre}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.origenCategoria || 'Orgánico'}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.metodoPagoLabel || 'Transferencia'}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(vFinal)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(vSena)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(vSaldo)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.zonasTexto || '-'}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
-          </tr>
-        `;
-      } else {
-        const val = Number(item.valorTotal || 0);
-        const senaT = Number(item.señaDelTurnoReporte ?? item.valorSeña ?? 0);
-        const ret = Number(item.señaRetenida || 0);
-        const opNoConc = Number(item.oportunidadNoConcretada ?? Math.max(0, val - ret));
-        return `
-          <tr style="background-color:${bg};">
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.clienteNombre}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.ultimoEstadoLabel || item.estado}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.tipoValor || 'Turno no realizado'}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(val)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(senaT)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(ret)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(opNoConc)}</td>
-            <td style="border:1px solid #cbd5e1;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
-          </tr>
-        `;
+    // Usamos envío de formulario nativo POST para que Android / iOS / WhatsApp Browser
+    // y navegadores de escritorio descarguen el binario .xlsx directamente sin bloqueos de Blob URL.
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/admin/estadisticas/exportar-excel';
+    form.style.display = 'none';
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'payload';
+    input.value = JSON.stringify(payload);
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => {
+      if (document.body.contains(form)) {
+        document.body.removeChild(form);
       }
-    }).join('');
-
-    const tableHeaderHtml = isModelA
-      ? `
-        <tr style="background-color:#1f2d3d;color:#ffffff;font-weight:bold;">
-          <th style="border:1px solid #1f2d3d;padding:8px;">Fecha de turno</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Hora</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Cliente</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Origen</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Tipo de pago</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Valor final</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Seña aplicada</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Saldo del turno</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Zonas</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Operador</th>
-        </tr>
-      `
-      : `
-        <tr style="background-color:#1f2d3d;color:#ffffff;font-weight:bold;">
-          <th style="border:1px solid #1f2d3d;padding:8px;">Fecha de turno</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Hora</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Cliente</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Último estado</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Tipo de valor</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Valor</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Seña del turno</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Seña retenida</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Oportunidad no concretada</th>
-          <th style="border:1px solid #1f2d3d;padding:8px;">Operador</th>
-        </tr>
-      `;
-
-    const summaryHtml = isModelA
-      ? `
-        <tr><td colspan="10"></td></tr>
-        <tr>
-          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">RESUMEN DEL PERÍODO</th>
-          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">VALOR</th>
-          <td colspan="2"></td>
-          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">IMPORTES</th>
-          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">TOTAL</th>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Cantidad de turnos</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.cantidadTurnos}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor total de turnos</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorTotalTurnos)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Cantidad de clientes únicos</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.cantidadClientesUnicos}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Total de señas aplicadas</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.totalSenasAplicadas)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes de Orgánico</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesOrganico}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Total de saldos</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.totalSaldos)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes de Redes sociales</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesRedes}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor en efectivo</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorEfectivo)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes de Publicidad</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesPublicidad}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor en transferencia</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorTransferencia)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="5"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Ticket promedio por cliente</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.ticketPromedioCliente)}</td>
-          <td colspan="2"></td>
-        </tr>
-      `
-      : `
-        <tr><td colspan="10"></td></tr>
-        <tr>
-          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">RESUMEN DEL PERÍODO</th>
-          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">CANTIDAD</th>
-          <td colspan="2"></td>
-          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">IMPORTES</th>
-          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">TOTAL</th>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Cantidad de clientes</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.cantidadClientes}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor de referencia total</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorReferenciaTotal)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes ausentes</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesAusentes}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Total de señas retenidas</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.totalSenasRetenidas)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes va a avisar</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesVaAAvisar}</td>
-          <td colspan="2"></td>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Oportunidad total no concretada</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.oportunidadTotalNoConcretada)}</td>
-          <td colspan="2"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes cancelados</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesCancelados}</td>
-          <td colspan="7"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes mantenimiento</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesMantenimiento}</td>
-          <td colspan="7"></td>
-        </tr>
-        <tr>
-          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes finalizados</td>
-          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesFinalizados}</td>
-          <td colspan="7"></td>
-        </tr>
-        <tr>
-          <td colspan="10" style="font-style:italic;color:#555555;padding-top:8px;">
-            Seña retenida: importe perdido; 0 si quedó guardada. En seguimiento se toma el valor de la última sesión, sin descontar su seña.
-          </td>
-        </tr>
-      `;
-
-    const fullHtml = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta charset="UTF-8" />
-      </head>
-      <body style="font-family:Arial,sans-serif;">
-        <table style="border-collapse:collapse;width:100%;">
-          <tr>
-            <th colspan="10" style="background-color:#6b1d1d;color:#ffffff;font-size:16px;padding:10px;text-align:center;">
-              ${s.title}
-            </th>
-          </tr>
-          <tr>
-            <td style="background-color:#d6c8b4;font-weight:bold;padding:6px;border:1px solid #b8a890;">Desde</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(startDate)}</td>
-            <td style="background-color:#d6c8b4;font-weight:bold;padding:6px;border:1px solid #b8a890;">Hasta</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(endDate)}</td>
-            <td colspan="6"></td>
-          </tr>
-          <tr><td colspan="10"></td></tr>
-          ${tableHeaderHtml}
-          ${rowsHtml}
-          ${summaryHtml}
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob(['\ufeff', fullHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Informe_${selectedMetric}_${startDate}_al_${endDate}.xls`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    }, 2000);
   };
 
   // Renderizado reutilizable de la tabla de registros (para la vista normal y el modal ampliado)
@@ -1197,7 +999,7 @@ export default function EstadisticasPage() {
                   className={styles.btnExcel}
                   onClick={handleDownloadExcel}
                 >
-                  📥 Descargar Archivo Excel (.xls)
+                  📥 Descargar Archivo Excel (.xlsx)
                 </button>
                 <button className={styles.modalCloseBtn} onClick={() => setExcelModalOpen(false)}>
                   ✕ Cerrar
