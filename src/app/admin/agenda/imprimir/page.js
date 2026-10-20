@@ -332,11 +332,13 @@ function PrintContent() {
             const startMin = Math.min(...sorted.map(t => timeToMinutes(t.horaInicio)));
             const endMin = Math.max(...sorted.map(t => timeToMinutes(t.horaFin)));
             const totalMin = Math.max(0, endMin - startMin);
-            const totalHours = totalMin / 60;
+            const hoursInt = Math.floor(totalMin / 60);
+            const minsInt = totalMin % 60;
+            const horasRedondeadas = minsInt >= 20 ? hoursInt + 1 : hoursInt;
 
             let montoPagar = 0;
             if (op.comisionTipo === 'POR_HORA' || op.comisionTipo === 'POR_DIA') {
-              montoPagar = Math.round(totalHours * op.comisionValor);
+              montoPagar = Math.round(horasRedondeadas * op.comisionValor);
             } else if (op.comisionTipo === 'POR_TURNO') {
               montoPagar = sorted.length * op.comisionValor;
             } else if (op.comisionTipo === 'PORCENTAJE') {
@@ -344,9 +346,11 @@ function PrintContent() {
               montoPagar = Math.round(facturado * (op.comisionValor / 100));
             }
 
-            const hoursInt = Math.floor(totalMin / 60);
-            const minsInt = totalMin % 60;
-            const durationFormatted = hoursInt > 0 && minsInt > 0 ? `${hoursInt}h ${minsInt}m` : hoursInt > 0 ? `${hoursInt} hs` : `${minsInt} min`;
+            const durationFormatted = hoursInt > 0 && minsInt > 0
+              ? `${hoursInt}h ${minsInt}m ➔ ${horasRedondeadas} hs`
+              : hoursInt > 0
+                ? `${hoursInt} hs`
+                : `${minsInt}m ➔ ${horasRedondeadas} hs`;
 
             return {
               ...op,

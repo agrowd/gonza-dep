@@ -4,811 +4,1423 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './estadisticas.module.css';
 
-// SVG Icons
-const CalendarIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-);
-
-const UserIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-);
-
-const ExternalLinkIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-);
-
-const WhatsAppIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
-);
-
+// ==========================================
+// DEFINICIÓN DE MÉTRICAS DEL DESPLEGABLE
+// ==========================================
 const METRIC_DEFINITIONS = [
-  { id: 'realizados', label: '✅ Turnos Realizados', desc: 'Sesiones completadas (incluye Siguiente turno, Mantenimiento, Va a avisar y Finalizado)' },
-  { id: 'senados', label: '💳 Turnos Señados / Confirmados', desc: 'Citas activas con seña registrada para fechas futuras' },
-  { id: 'cancelados', label: '❌ Turnos Cancelados', desc: 'Citas canceladas y pérdida económica estimada' },
-  { id: 'ausentes', label: '⚠️ Turnos Ausentes (No Asistió)', desc: 'Pacientes que faltaron a su turno y saldo perdido' },
-  { id: 'sinMarcar', label: '⏳ Turnos Sin Marcar', desc: 'Turnos pasados que quedaron sin actualizar (requieren regularización)' },
-  { id: 'vaAAvisar', label: '💬 Clientes "Va a avisar"', desc: 'Clientes cuyo último turno finalizó en "Va a avisar" (pérdida de turno no agendado)' },
-  { id: 'mantenimiento', label: '🔄 Clientes "Mantenimiento"', desc: 'Clientes en etapa de mantenimiento (recordatorio a los 2.5 meses)' },
-  { id: 'finalizo', label: '🏁 Clientes "Finalizó"', desc: 'Clientes con tratamiento completo finalizado' },
-  { id: 'nuevos', label: '🌱 Clientes Nuevos', desc: 'Clientes que agendaron su primer turno, con desglose por canal de adquisición' },
-  { id: 'zonas', label: '📍 Zonas Más Demandadas', desc: 'Ranking de zonas solicitadas con histograma y facturación' },
-  { id: 'operador', label: '👤 Operador (Gonzalo)', desc: 'Desempeño, sesiones atendidas y comisiones' }
+  {
+    id: 'realizados',
+    label: '✅ Turnos Realizados',
+    valueLabel: 'Facturación Realizada',
+    isDanger: false,
+    hasAvg: true,
+    excelModel: 'A',
+    description: 'Sesiones completadas dentro del período seleccionado (suma el valor total de los turnos realizados, sin señas futuras).'
+  },
+  {
+    id: 'gananciaNeta',
+    label: '💰 Ganancia Neta (Ingresos Reales del Período)',
+    valueLabel: 'Ganancia Neta Ingresada',
+    isDanger: false,
+    hasAvg: true,
+    excelModel: 'A',
+    description: 'Dinero que realmente ingresa en el período: saldos cobrados en sesiones realizadas + señas abonadas en el período (incluyendo próximos turnos y turnos nuevos).'
+  },
+  {
+    id: 'senados',
+    label: '📌 Turnos Señados / Confirmados',
+    valueLabel: 'Total Proyectado en Turnos Señados',
+    isDanger: false,
+    hasAvg: true,
+    excelModel: 'A',
+    description: 'Turnos agendados en estado Señado, Reprogramado o Pendiente que aún no fueron realizados.'
+  },
+  {
+    id: 'cancelados',
+    label: '❌ Turnos Cancelados (Pérdidas)',
+    valueLabel: 'Pérdida por Cancelaciones',
+    isDanger: true,
+    hasAvg: false,
+    excelModel: 'B',
+    description: 'Turnos cancelados en el período. Se descuenta la seña si quedó retenida; si la seña se guardó para otro turno, se toma el valor completo.'
+  },
+  {
+    id: 'ausentes',
+    label: '🚫 Turnos Ausentes (No asistió)',
+    valueLabel: 'Pérdida por Inasistencias',
+    isDanger: true,
+    hasAvg: false,
+    excelModel: 'B',
+    description: 'Clientes que no asistieron a su turno. Se calcula el valor del turno menos la seña retenida.'
+  },
+  {
+    id: 'vaAAvisar',
+    label: '💬 Clientes en "Va a avisar"',
+    valueLabel: 'Oportunidad Pendiente (Última Sesión)',
+    isDanger: true,
+    hasAvg: false,
+    excelModel: 'B',
+    description: 'Clientes que actualmente están en estado "Va a avisar" y aún no agendaron un nuevo turno (valor completo de su última sesión).'
+  },
+  {
+    id: 'mantenimiento',
+    label: '🔄 Clientes en "Mantenimiento"',
+    valueLabel: 'Valor Referencia (Última Sesión)',
+    isDanger: false,
+    hasAvg: false,
+    excelModel: 'B',
+    description: 'Clientes actualmente en etapa de sesiones de mantenimiento periódico (se toma el valor completo de su última sesión realizada).'
+  },
+  {
+    id: 'finalizo',
+    label: '🏁 Clientes que "Finalizaron Tratamiento"',
+    valueLabel: 'Valor Referencia (Última Sesión)',
+    isDanger: false,
+    hasAvg: false,
+    excelModel: 'B',
+    description: 'Clientes cuyo tratamiento fue marcado como finalizado (se toma el valor completo de su última sesión realizada).'
+  },
+  {
+    id: 'nuevos',
+    label: '🆕 Clientes Nuevos en el Período',
+    valueLabel: 'Facturación de Clientes Nuevos',
+    isDanger: false,
+    hasAvg: true,
+    excelModel: 'A',
+    description: 'Contabiliza tanto los clientes agendados sin sesiones previas (0 sesiones) como los que realizaron su primera sesión en el período (1 sesión).'
+  },
+  {
+    id: 'sinMarcar',
+    label: '⚠️ Turnos Sin Marcar (Pasados de hora)',
+    valueLabel: 'Monto Pendiente de Cierre',
+    isDanger: true,
+    hasAvg: false,
+    excelModel: 'B',
+    description: 'Turnos cuya fecha y horario ya pasaron pero continúan abiertos sin marcar como Realizado o Ausente.'
+  },
+  {
+    id: 'zonas',
+    label: '📍 Zonas Más Demandadas (Histograma y Filtros)',
+    valueLabel: 'Facturación de Zonas Seleccionadas',
+    isDanger: false,
+    hasAvg: true,
+    excelModel: null,
+    description: 'Análisis detallado por zona corporal, frecuencia de aplicación e ingresos.'
+  }
 ];
 
 const CANAL_LABELS = {
-  TODOS: 'Todos los canales',
-  ORGANICO: 'Orgánico / Directo',
-  PUBLICIDAD_IG: 'Instagram Ads',
-  PUBLICIDAD_FB: 'Facebook Ads',
-  GOOGLE: 'Google Search / Ads',
-  RECOMENDACION: 'Recomendación',
-  OTRO: 'Otro Canal'
+  ORGANICO: '🌱 Orgánico',
+  PUBLICIDAD_IG: '📸 Publicidad Instagram',
+  PUBLICIDAD_FB: '📘 Publicidad Facebook',
+  GOOGLE: '🔍 Google / Web',
+  RECOMENDACION: '🗣️ Recomendación',
+  OTRO: '✨ Otro'
 };
+
+// Iconos SVG
+const CalendarIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="16" y1="2" x2="16" y2="6"></line>
+    <line x1="8" y1="2" x2="8" y2="6"></line>
+    <line x1="3" y1="10" x2="21" y2="10"></line>
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+    <circle cx="12" cy="7" r="4"></circle>
+  </svg>
+);
+
+const ExternalLinkIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+    <polyline points="15 3 21 3 21 9"></polyline>
+    <line x1="10" y1="14" x2="21" y2="3"></line>
+  </svg>
+);
+
+function getLocalTodayStr() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getMonthRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const start = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const end = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { start, end };
+}
 
 export default function EstadisticasPage() {
   const router = useRouter();
 
-  // Date Range State
-  const now = new Date();
-  const firstDayStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const lastDayStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  // Rango de fechas (por defecto: mes actual)
+  const defaultRange = useMemo(() => getMonthRange(), []);
+  const [startDate, setStartDate] = useState(defaultRange.start);
+  const [endDate, setEndDate] = useState(defaultRange.end);
 
-  const [activePreset, setActivePreset] = useState('mes'); // 'hoy', 'semana', 'mes', 'mes_pasado', 'custom'
-  const [startDate, setStartDate] = useState(firstDayStr);
-  const [endDate, setEndDate] = useState(lastDayStr);
-
-  // Tabs: 'avanzadas' (default) vs 'generales'
-  const [activeTab, setActiveTab] = useState('avanzadas');
-
-  // Advanced View: Active Metric & Exclusions
-  const [selectedMetric, setSelectedMetric] = useState('realizados');
-  const [excludedIds, setExcludedIds] = useState(new Set());
-  const [showDetailsTable, setShowDetailsTable] = useState(true);
-
-  // Sub-filters for Nuevos and Zonas
-  const [canalFilter, setCanalFilter] = useState('TODOS');
-  const [zonaFilter, setZonaFilter] = useState('TODAS');
-  const [zonaStateFilter, setZonaStateFilter] = useState('todos'); // 'todos', 'realizados', 'senados'
-
-  // Data & Loading
+  // Estado de carga y datos del backend
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal Ficha del Cliente
+  // Selector de métrica
+  const [selectedMetric, setSelectedMetric] = useState('realizados');
+
+  // Exclusiones dinámicas (botón X para recalcular en vivo)
+  const [excludedIds, setExcludedIds] = useState(new Set());
+
+  // Filtros multi-selección para Zonas y Canales
+  const [selectedZonesFilter, setSelectedZonesFilter] = useState([]);
+  const [selectedCanalesFilter, setSelectedCanalesFilter] = useState([]);
+
+  // Modales: Ficha de Cliente, Listado Ampliado y Vista/Descarga Excel
   const [modalClient, setModalClient] = useState(null);
-  const [loadingModalClient, setLoadingModalClient] = useState(false);
+  const [loadingClientModal, setLoadingClientModal] = useState(false);
+  const [expandedListModalOpen, setExpandedListModalOpen] = useState(false);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
 
-  // Helper date preset changer
-  const applyPreset = (preset) => {
-    setActivePreset(preset);
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-
-    if (preset === 'hoy') {
-      setStartDate(todayStr);
-      setEndDate(todayStr);
-    } else if (preset === 'semana') {
-      const dayOfWeek = today.getDay();
-      const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-      const monday = new Date(today);
-      monday.setDate(diffToMonday);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      setStartDate(monday.toISOString().split('T')[0]);
-      setEndDate(sunday.toISOString().split('T')[0]);
-    } else if (preset === 'mes') {
-      const f = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-      const l = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-      setStartDate(f);
-      setEndDate(l);
-    } else if (preset === 'mes_pasado') {
-      const f = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0];
-      const l = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0];
-      setStartDate(f);
-      setEndDate(l);
-    }
-  };
-
-  const fetchStats = () => {
+  // Cargar estadísticas al cambiar fechas
+  useEffect(() => {
     if (!startDate || !endDate) return;
     setLoading(true);
     fetch(`/api/admin/estadisticas?start=${startDate}&end=${endDate}`)
       .then(res => res.json())
-      .then(resData => {
-        if (!resData.error) {
-          setData(resData);
-          setExcludedIds(new Set()); // reset exclusions on date change
+      .then(json => {
+        if (!json.error) {
+          setData(json);
         }
+        setLoading(false);
       })
-      .catch(err => console.error('Error loading stats:', err))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchStats();
+      .catch(err => {
+        console.error('Error cargando estadísticas:', err);
+        setLoading(false);
+      });
   }, [startDate, endDate]);
 
-  const formatMoney = (amount) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      maximumFractionDigits: 0
-    }).format(amount || 0);
+  // Limpiar exclusiones y subfiltros cuando se cambia de métrica
+  const handleMetricChange = (newMetric) => {
+    setSelectedMetric(newMetric);
+    setExcludedIds(new Set());
+    setSelectedZonesFilter([]);
+    setSelectedCanalesFilter([]);
   };
 
-  const getPercent = (value, total) => {
-    if (!total || total === 0) return 0;
-    return Math.round((value / total) * 100);
-  };
-
-  // Exclusion handler
-  const handleExcludeItem = (id) => {
+  const toggleExcludeId = (id) => {
     setExcludedIds(prev => {
       const next = new Set(prev);
-      next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
-  const handleResetExclusions = () => {
+  const resetExclusions = () => {
     setExcludedIds(new Set());
   };
 
-  // Navigation to Agenda
-  const handleGoToTurnoInAgenda = (item) => {
-    if (!item) return;
-    router.push(`/admin/agenda?date=${item.fecha}&view=day&turnoId=${item.id}&fromStats=true`);
+  const toggleZoneFilter = (zoneName) => {
+    setSelectedZonesFilter(prev =>
+      prev.includes(zoneName) ? prev.filter(z => z !== zoneName) : [...prev, zoneName]
+    );
   };
 
-  // Open Client Modal
-  const handleOpenClientFicha = async (clienteId) => {
+  const toggleCanalFilter = (canalKey) => {
+    setSelectedCanalesFilter(prev =>
+      prev.includes(canalKey) ? prev.filter(c => c !== canalKey) : [...prev, canalKey]
+    );
+  };
+
+  // Abrir modal de ficha de cliente
+  const handleOpenFicha = async (clienteId) => {
     if (!clienteId) return;
-    setLoadingModalClient(true);
+    setLoadingClientModal(true);
     try {
       const res = await fetch(`/api/admin/clientes/${clienteId}`);
-      if (res.ok) {
-        const cData = await res.json();
-        setModalClient(cData);
+      const cl = await res.json();
+      if (cl && !cl.error) {
+        setModalClient(cl);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Error abriendo ficha de cliente:', e);
     } finally {
-      setLoadingModalClient(false);
+      setLoadingClientModal(false);
     }
   };
 
-  // Compute Active Metric Items and Dynamic KPIs
+  // Navegar al turno exacto en la agenda (Día y hora del turno)
+  const handleGoToTurno = (item) => {
+    if (!item || !item.fecha) return;
+    const targetId = item.turnoOriginalId || item.id;
+    router.push(`/admin/agenda?date=${item.fecha}&view=day&turnoId=${targetId}&fromStats=true`);
+  };
+
+  const formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-AR')}`;
+
+  const formatDateDisplay = (yyyyMmDd) => {
+    if (!yyyyMmDd) return '-';
+    const parts = yyyyMmDd.split('-');
+    if (parts.length !== 3) return yyyyMmDd;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  // ==========================================
+  // CÁLCULO DINÁMICO DE ITEMS Y TOTALES (CON EXCLUSIÓN 'X' Y FILTROS)
+  // ==========================================
+  const currentMetricDef = useMemo(
+    () => METRIC_DEFINITIONS.find(m => m.id === selectedMetric) || METRIC_DEFINITIONS[0],
+    [selectedMetric]
+  );
+
   const activeMetricData = useMemo(() => {
-    if (!data || !data.avanzadas) return { items: [], count: 0, total: 0, ticketPromedio: 0, isLoss: false };
-
-    let rawItems = [];
-    let isLoss = false;
-
-    if (selectedMetric === 'realizados') {
-      rawItems = data.avanzadas.realizados?.items || [];
-    } else if (selectedMetric === 'senados') {
-      rawItems = data.avanzadas.senados?.items || [];
-    } else if (selectedMetric === 'cancelados') {
-      rawItems = data.avanzadas.cancelados?.items || [];
-      isLoss = true;
-    } else if (selectedMetric === 'ausentes') {
-      rawItems = data.avanzadas.ausentes?.items || [];
-      isLoss = true;
-    } else if (selectedMetric === 'sinMarcar') {
-      rawItems = data.avanzadas.sinMarcar?.items || [];
-    } else if (selectedMetric === 'vaAAvisar') {
-      rawItems = data.avanzadas.vaAAvisar?.items || [];
-      isLoss = true;
-    } else if (selectedMetric === 'mantenimiento') {
-      rawItems = data.avanzadas.mantenimiento?.items || [];
-    } else if (selectedMetric === 'finalizo') {
-      rawItems = data.avanzadas.finalizo?.items || [];
-    } else if (selectedMetric === 'nuevos') {
-      rawItems = data.avanzadas.nuevos?.items || [];
-      if (canalFilter !== 'TODOS') {
-        rawItems = rawItems.filter(i => (i.canalAdquisicion || 'ORGANICO') === canalFilter);
-      }
-    } else if (selectedMetric === 'zonas') {
-      // Find items in selected zone
-      const allHist = data.avanzadas.zonas?.histograma || [];
-      if (zonaFilter === 'TODAS') {
-        rawItems = allHist.flatMap(z => z.items || []);
-      } else {
-        const matchedZ = allHist.find(z => z.nombre === zonaFilter);
-        rawItems = matchedZ ? (matchedZ.items || []) : [];
-      }
-      if (zonaStateFilter === 'realizados') {
-        rawItems = rawItems.filter(i => i.estado === 'REALIZADO' || ['SIGUIENTE_TURNO', 'VA_A_AVISAR', 'MANTENIMIENTO', 'FINALIZADO'].includes(i.subEstado));
-      } else if (zonaStateFilter === 'senados') {
-        rawItems = rawItems.filter(i => i.estado === 'SEÑADO');
-      }
-    } else if (selectedMetric === 'operador') {
-      rawItems = data.avanzadas.operador?.items || [];
+    if (!data || !data.avanzadas) {
+      return { rawItems: [], filteredItems: [], count: 0, totalMoney: 0, avgTicket: 0 };
     }
 
-    // Filter out user-excluded items
+    const av = data.avanzadas;
+    let rawItems = [];
+
+    if (selectedMetric === 'zonas') {
+      const seenTurnoIds = new Set();
+      const hist = av.zonas?.histograma || [];
+      hist.forEach(zGroup => {
+        if (selectedZonesFilter.length > 0 && !selectedZonesFilter.includes(zGroup.nombre)) {
+          return;
+        }
+        (zGroup.items || []).forEach(item => {
+          if (!seenTurnoIds.has(item.id)) {
+            seenTurnoIds.add(item.id);
+            rawItems.push(item);
+          }
+        });
+      });
+    } else if (selectedMetric === 'nuevos') {
+      const baseItems = av.nuevos?.items || [];
+      rawItems = selectedCanalesFilter.length > 0
+        ? baseItems.filter(i => selectedCanalesFilter.includes(i.canalAdquisicion || 'ORGANICO'))
+        : baseItems;
+    } else {
+      rawItems = av[selectedMetric]?.items || [];
+    }
+
+    // Filtrar los excluidos con el botón 'X'
     const filteredItems = rawItems.filter(item => !excludedIds.has(item.id));
 
-    // Calculate dynamic totals
-    let computedTotal = 0;
+    // Recalcular monto según la naturaleza de la métrica
+    let totalMoney = 0;
     filteredItems.forEach(item => {
-      if (selectedMetric === 'cancelados') {
-        if (item.señaEstado === 'CONSERVADA') computedTotal += item.valorTotal;
-        else if (item.señaEstado === 'PERDIDA') computedTotal += Math.max(0, item.valorTotal - item.valorSeña);
-        else computedTotal += (item.valorTotal || 0);
-      } else if (selectedMetric === 'ausentes') {
-        computedTotal += (item.saldoPendiente > 0 ? item.saldoPendiente : Math.max(0, item.valorTotal - item.valorSeña));
+      if (selectedMetric === 'cancelados' || selectedMetric === 'ausentes') {
+        totalMoney += Number(item.oportunidadNoConcretada ?? item.valorTotal ?? 0);
       } else {
-        computedTotal += (item.valorTotal || 0);
+        totalMoney += Number(item.valorTotal || 0);
       }
     });
 
     const count = filteredItems.length;
-    const ticketPromedio = count > 0 ? Math.round(computedTotal / count) : 0;
+    const avgTicket = count > 0 ? Math.round(totalMoney / count) : 0;
 
     return {
-      items: filteredItems,
+      rawItems,
+      filteredItems,
       count,
-      total: computedTotal,
-      ticketPromedio,
-      isLoss
+      totalMoney,
+      avgTicket
     };
-  }, [data, selectedMetric, excludedIds, canalFilter, zonaFilter, zonaStateFilter]);
+  }, [data, selectedMetric, excludedIds, selectedZonesFilter, selectedCanalesFilter]);
+
+  // ==========================================
+  // CÁLCULO DE RESÚMENES PARA EL INFORME EXCEL (MODELOS A y B)
+  // ==========================================
+  const excelSummary = useMemo(() => {
+    const items = activeMetricData.filteredItems || [];
+    const model = currentMetricDef.excelModel;
+
+    if (model === 'A') {
+      const uniqueClientIds = new Set();
+      const clientOriginMap = new Map();
+
+      let valorTotalTurnos = 0;
+      let totalSenasAplicadas = 0;
+      let totalSaldos = 0;
+      let valorEfectivo = 0;
+      let valorTransferencia = 0;
+
+      items.forEach(item => {
+        if (item.clienteId) {
+          uniqueClientIds.add(item.clienteId);
+          if (!clientOriginMap.has(item.clienteId)) {
+            clientOriginMap.set(item.clienteId, item.origenCategoria || 'Orgánico');
+          }
+        }
+        const vFinal = Number(item.valorTotal || 0);
+        const vSena = Number(item.valorSeña || 0);
+        const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
+
+        valorTotalTurnos += vFinal;
+        totalSenasAplicadas += vSena;
+        totalSaldos += vSaldo;
+
+        if (item.metodoPago === 'EFECTIVO' || item.metodoPagoLabel === 'Efectivo') {
+          valorEfectivo += vFinal;
+        } else {
+          valorTransferencia += vFinal;
+        }
+      });
+
+      let clientesOrganico = 0;
+      let clientesRedes = 0;
+      let clientesPublicidad = 0;
+      clientOriginMap.forEach((orig) => {
+        if (orig === 'Publicidad') clientesPublicidad++;
+        else if (orig === 'Redes sociales') clientesRedes++;
+        else clientesOrganico++;
+      });
+
+      const cantClientesUnicos = uniqueClientIds.size || items.length;
+      const ticketPromedioCliente = cantClientesUnicos > 0 ? Math.round(valorTotalTurnos / cantClientesUnicos) : 0;
+
+      return {
+        model: 'A',
+        title: selectedMetric === 'gananciaNeta'
+          ? 'INFORME DE GANANCIA NETA (INGRESOS REALES DEL PERÍODO)'
+          : selectedMetric === 'senados'
+            ? 'INFORME DE TURNOS SEÑADOS Y CONFIRMADOS'
+            : selectedMetric === 'nuevos'
+              ? 'INFORME DE CLIENTES NUEVOS EN EL PERÍODO'
+              : 'INFORME DE CLIENTES Y TURNOS REALIZADOS',
+        cantidadTurnos: items.length,
+        cantidadClientesUnicos: cantClientesUnicos,
+        clientesOrganico,
+        clientesRedes,
+        clientesPublicidad,
+        valorTotalTurnos,
+        totalSenasAplicadas,
+        totalSaldos,
+        valorEfectivo,
+        valorTransferencia,
+        ticketPromedioCliente
+      };
+    }
+
+    // Modelo B: Cancelaciones y Seguimiento
+    let clientesAusentes = 0;
+    let clientesVaAAvisar = 0;
+    let clientesCancelados = 0;
+    let clientesMantenimiento = 0;
+    let clientesFinalizados = 0;
+
+    let valorReferenciaTotal = 0;
+    let totalSenasRetenidas = 0;
+    let oportunidadTotalNoConcretada = 0;
+
+    items.forEach(item => {
+      const est = item.ultimoEstadoLabel || '';
+      if (est === 'Ausente' || item.estado === 'NO_ASISTIO') clientesAusentes++;
+      else if (est === 'Va a avisar' || item.subEstado === 'VA_A_AVISAR') clientesVaAAvisar++;
+      else if (est === 'Cancelado' || item.estado === 'CANCELADO') clientesCancelados++;
+      else if (est === 'Mantenimiento' || item.subEstado === 'MANTENIMIENTO') clientesMantenimiento++;
+      else if (est === 'Finalizó' || item.subEstado === 'FINALIZADO') clientesFinalizados++;
+
+      const val = Number(item.valorTotal || 0);
+      const ret = Number(item.señaRetenida || 0);
+      const opNoConc = Number(item.oportunidadNoConcretada ?? Math.max(0, val - ret));
+
+      valorReferenciaTotal += val;
+      totalSenasRetenidas += ret;
+      oportunidadTotalNoConcretada += opNoConc;
+    });
+
+    return {
+      model: 'B',
+      title: 'INFORME DE CANCELACIONES Y SEGUIMIENTO',
+      cantidadClientes: items.length,
+      clientesAusentes,
+      clientesVaAAvisar,
+      clientesCancelados,
+      clientesMantenimiento,
+      clientesFinalizados,
+      valorReferenciaTotal,
+      totalSenasRetenidas,
+      oportunidadTotalNoConcretada
+    };
+  }, [activeMetricData.filteredItems, currentMetricDef, selectedMetric]);
+
+  // ==========================================
+  // DESCARGA DE ARCHIVO EXCEL (.XLS CON FORMATO DE PLANILLA)
+  // ==========================================
+  const handleDownloadExcel = () => {
+    const items = activeMetricData.filteredItems || [];
+    const s = excelSummary;
+    const isModelA = s.model === 'A';
+
+    const rowsHtml = items.map((item, idx) => {
+      const bg = idx % 2 === 1 ? '#fbf9f4' : '#ffffff';
+      if (isModelA) {
+        const vFinal = Number(item.valorTotal || 0);
+        const vSena = Number(item.valorSeña || 0);
+        const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
+        return `
+          <tr style="background-color:${bg};">
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.clienteNombre}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.origenCategoria || 'Orgánico'}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.metodoPagoLabel || 'Transferencia'}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(vFinal)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(vSena)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(vSaldo)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.zonasTexto || '-'}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
+          </tr>
+        `;
+      } else {
+        const val = Number(item.valorTotal || 0);
+        const senaT = Number(item.señaDelTurnoReporte ?? item.valorSeña ?? 0);
+        const ret = Number(item.señaRetenida || 0);
+        const opNoConc = Number(item.oportunidadNoConcretada ?? Math.max(0, val - ret));
+        return `
+          <tr style="background-color:${bg};">
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.clienteNombre}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.ultimoEstadoLabel || item.estado}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.tipoValor || 'Turno no realizado'}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(val)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(senaT)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(ret)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(opNoConc)}</td>
+            <td style="border:1px solid #cbbba0;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
+          </tr>
+        `;
+      }
+    }).join('');
+
+    const tableHeaderHtml = isModelA
+      ? `
+        <tr style="background-color:#b5945b;color:#ffffff;font-weight:bold;">
+          <th style="border:1px solid #8a6d3b;padding:8px;">Fecha de turno</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Hora</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Cliente</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Origen</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Tipo de pago</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Valor final</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Seña aplicada</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Saldo del turno</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Zonas</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Operador</th>
+        </tr>
+      `
+      : `
+        <tr style="background-color:#b5945b;color:#ffffff;font-weight:bold;">
+          <th style="border:1px solid #8a6d3b;padding:8px;">Fecha de turno</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Hora</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Cliente</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Último estado</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Tipo de valor</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Valor</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Seña del turno</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Seña retenida</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Oportunidad no concretada</th>
+          <th style="border:1px solid #8a6d3b;padding:8px;">Operador</th>
+        </tr>
+      `;
+
+    const summaryHtml = isModelA
+      ? `
+        <tr><td colspan="10"></td></tr>
+        <tr>
+          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">RESUMEN DEL PERÍODO</th>
+          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">VALOR</th>
+          <td colspan="2"></td>
+          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">IMPORTES</th>
+          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">TOTAL</th>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Cantidad de turnos</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.cantidadTurnos}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor total de turnos</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorTotalTurnos)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Cantidad de clientes únicos</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.cantidadClientesUnicos}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Total de señas aplicadas</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.totalSenasAplicadas)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes de Orgánico</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesOrganico}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Total de saldos</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.totalSaldos)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes de Redes sociales</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesRedes}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor en efectivo</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorEfectivo)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes de Publicidad</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesPublicidad}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor en transferencia</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorTransferencia)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="5"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Ticket promedio por cliente</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.ticketPromedioCliente)}</td>
+          <td colspan="2"></td>
+        </tr>
+      `
+      : `
+        <tr><td colspan="10"></td></tr>
+        <tr>
+          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">RESUMEN DEL PERÍODO</th>
+          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">CANTIDAD</th>
+          <td colspan="2"></td>
+          <th colspan="2" style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">IMPORTES</th>
+          <th style="background-color:#6b1d1d;color:#ffffff;padding:7px;border:1px solid #4a1212;">TOTAL</th>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Cantidad de clientes</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.cantidadClientes}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Valor de referencia total</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.valorReferenciaTotal)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes ausentes</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesAusentes}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Total de señas retenidas</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.totalSenasRetenidas)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes va a avisar</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesVaAAvisar}</td>
+          <td colspan="2"></td>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Oportunidad total no concretada</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${formatMoney(s.oportunidadTotalNoConcretada)}</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes cancelados</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesCancelados}</td>
+          <td colspan="7"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes mantenimiento</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesMantenimiento}</td>
+          <td colspan="7"></td>
+        </tr>
+        <tr>
+          <td colspan="2" style="background-color:#f4efe6;border:1px solid #cbbba0;padding:6px;">Clientes finalizados</td>
+          <td style="border:1px solid #cbbba0;padding:6px;text-align:right;font-weight:bold;">${s.clientesFinalizados}</td>
+          <td colspan="7"></td>
+        </tr>
+        <tr>
+          <td colspan="10" style="font-style:italic;color:#555555;padding-top:8px;">
+            Seña retenida: importe perdido; 0 si quedó guardada. En seguimiento se toma el valor de la última sesión, sin descontar su seña.
+          </td>
+        </tr>
+      `;
+
+    const fullHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="UTF-8" />
+      </head>
+      <body style="font-family:Arial,sans-serif;">
+        <table style="border-collapse:collapse;width:100%;">
+          <tr>
+            <th colspan="10" style="background-color:#6b1d1d;color:#ffffff;font-size:16px;padding:10px;text-align:center;">
+              ${s.title}
+            </th>
+          </tr>
+          <tr>
+            <td style="background-color:#d6c8b4;font-weight:bold;padding:6px;border:1px solid #b8a890;">Desde</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(startDate)}</td>
+            <td style="background-color:#d6c8b4;font-weight:bold;padding:6px;border:1px solid #b8a890;">Hasta</td>
+            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(endDate)}</td>
+            <td colspan="6"></td>
+          </tr>
+          <tr><td colspan="10"></td></tr>
+          ${tableHeaderHtml}
+          ${rowsHtml}
+          ${summaryHtml}
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', fullHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Informe_${selectedMetric}_${startDate}_al_${endDate}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Renderizado reutilizable de la tabla de registros (para la vista normal y el modal ampliado)
+  const renderTurnosTable = () => {
+    if (activeMetricData.filteredItems.length === 0) {
+      return (
+        <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#475569', fontWeight: 600 }}>
+          No se encontraron registros para esta métrica en el período seleccionado ({formatDateDisplay(startDate)} al {formatDateDisplay(endDate)}).
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.tableWrapper}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th className={styles.th}>Acciones</th>
+              <th className={styles.th}>Fecha y Hora</th>
+              <th className={styles.th}>Cliente</th>
+              <th className={styles.th}>Zonas</th>
+              <th className={styles.th}>Estado</th>
+              <th className={styles.th}>Pago / Operador</th>
+              <th className={styles.th}>Valor Turno</th>
+              <th className={styles.th}>Seña / Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activeMetricData.filteredItems.map(item => {
+              let badgeClass = styles.statusSenado;
+              if (item.estado === 'REALIZADO') badgeClass = styles.statusRealizado;
+              else if (item.estado === 'CANCELADO') badgeClass = styles.statusCancelado;
+              else if (item.estado === 'NO_ASISTIO') badgeClass = styles.statusNoAsistio;
+
+              return (
+                <tr key={item.id} className={styles.tr}>
+                  <td className={styles.td}>
+                    <div className={styles.actionsCell}>
+                      <button
+                        type="button"
+                        className={styles.btnActionX}
+                        title="Excluir registro del cálculo actual"
+                        onClick={() => toggleExcludeId(item.id)}
+                      >
+                        ✕
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btnActionTurno}
+                        title="Ir al día y hora exacta de este turno en la Agenda"
+                        onClick={() => handleGoToTurno(item)}
+                      >
+                        <CalendarIcon /> Turno
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btnActionFicha}
+                        title="Ver ficha clínica del cliente sin salir de Estadísticas"
+                        onClick={() => handleOpenFicha(item.clienteId)}
+                      >
+                        <UserIcon /> Ficha
+                      </button>
+                    </div>
+                  </td>
+                  <td className={styles.td}>
+                    <div style={{ fontWeight: 800, color: '#1d1d1d' }}>{formatDateDisplay(item.fecha)}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                      {item.horaInicio} - {item.horaFin}
+                    </div>
+                  </td>
+                  <td className={styles.td}>
+                    <div style={{ fontWeight: 800, color: '#1d1d1d' }}>{item.clienteNombre}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
+                      {item.clienteWhatsapp || 'Sin WhatsApp'} • {item.origenCategoria || 'Orgánico'}
+                    </div>
+                  </td>
+                  <td className={styles.td} style={{ maxWidth: '250px' }}>
+                    <div style={{ fontSize: '0.84rem', color: '#1d1d1d', fontWeight: 600, lineHeight: 1.35 }}>
+                      {item.zonasTexto}
+                    </div>
+                    {item.subtipoGanancia && (
+                      <div style={{ fontSize: '0.74rem', color: '#7a1f1e', fontWeight: 700, marginTop: '0.2rem' }}>
+                        • {item.subtipoGanancia}
+                      </div>
+                    )}
+                  </td>
+                  <td className={styles.td}>
+                    <span className={`${styles.badgeStatus} ${badgeClass}`}>
+                      {item.estado}
+                    </span>
+                    {item.subEstado && (
+                      <span className={`${styles.badgeStatus} ${styles.statusSubEstado}`}>
+                        {item.subEstado}
+                      </span>
+                    )}
+                    {item.señaEstado && (
+                      <div style={{ fontSize: '0.73rem', color: '#475569', fontWeight: 700, marginTop: '0.25rem' }}>
+                        Seña: {item.señaEstado}
+                      </div>
+                    )}
+                  </td>
+                  <td className={styles.td}>
+                    <div style={{ fontWeight: 700, color: '#1d1d1d', fontSize: '0.82rem' }}>
+                      💳 {item.metodoPagoLabel || 'Transferencia'}
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: '#475569', fontWeight: 600 }}>
+                      👤 {item.operadorNombre || 'Gonzalo'}
+                    </div>
+                  </td>
+                  <td className={styles.td}>
+                    <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#1d1d1d' }}>
+                      {formatMoney(
+                        selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
+                          ? item.oportunidadNoConcretada
+                          : item.valorTotal
+                      )}
+                    </div>
+                    {(selectedMetric === 'cancelados' || selectedMetric === 'ausentes') && item.señaRetenida > 0 && (
+                      <div style={{ fontSize: '0.73rem', color: '#b91c1c', fontWeight: 700 }}>
+                        (Turno {formatMoney(item.valorTotal)} - Seña ret. {formatMoney(item.señaRetenida)})
+                      </div>
+                    )}
+                  </td>
+                  <td className={styles.td}>
+                    <div style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700 }}>
+                      Seña: {formatMoney(item.valorSeña)}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                      Saldo: {formatMoney(item.saldoPendiente)}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   return (
     <div className={styles.container}>
-      {/* Header */}
+      {/* HEADER + FILTRO DE FECHAS LIMPIO */}
       <div className={styles.header}>
         <div className={styles.titleSection}>
-          <h2>Estadísticas & Reportes</h2>
-          <p>Control financiero, métricas de fidelización y desglose operativo.</p>
+          <h2>Centro de Estadísticas</h2>
+          <p>Análisis de turnos, ingresos reales, seguimiento de clientes e informes exportables</p>
         </div>
 
-        {/* Date Presets and Controls */}
         <div className={styles.controls}>
-          <div className={styles.presetsGroup}>
-            <button
-              className={`${styles.presetBtn} ${activePreset === 'hoy' ? styles.presetBtnActive : ''}`}
-              onClick={() => applyPreset('hoy')}
-            >
-              Hoy
-            </button>
-            <button
-              className={`${styles.presetBtn} ${activePreset === 'semana' ? styles.presetBtnActive : ''}`}
-              onClick={() => applyPreset('semana')}
-            >
-              Esta Semana
-            </button>
-            <button
-              className={`${styles.presetBtn} ${activePreset === 'mes' ? styles.presetBtnActive : ''}`}
-              onClick={() => applyPreset('mes')}
-            >
-              Este Mes
-            </button>
-            <button
-              className={`${styles.presetBtn} ${activePreset === 'mes_pasado' ? styles.presetBtnActive : ''}`}
-              onClick={() => applyPreset('mes_pasado')}
-            >
-              Mes Anterior
-            </button>
+          <div className={styles.dateInputGroup}>
+            <label>Desde</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <div className={styles.dateInputGroup}>
-              <label>Desde</label>
-              <input
-                type="date"
-                className={styles.dateInput}
-                value={startDate}
-                onChange={(e) => {
-                  setActivePreset('custom');
-                  setStartDate(e.target.value);
-                }}
-              />
-            </div>
-            <div className={styles.dateInputGroup}>
-              <label>Hasta</label>
-              <input
-                type="date"
-                className={styles.dateInput}
-                value={endDate}
-                onChange={(e) => {
-                  setActivePreset('custom');
-                  setEndDate(e.target.value);
-                }}
-              />
-            </div>
+          <div className={styles.dateInputGroup}>
+            <label>Hasta</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
           </div>
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className={styles.tabNav}>
-        <button
-          className={`${styles.tabBtn} ${activeTab === 'avanzadas' ? styles.tabBtnActive : ''}`}
-          onClick={() => setActiveTab('avanzadas')}
-        >
-          ⚡ Estadísticas Avanzadas (Principal)
-        </button>
-        <button
-          className={`${styles.tabBtn} ${activeTab === 'generales' ? styles.tabBtnActive : ''}`}
-          onClick={() => setActiveTab('generales')}
-        >
-          📊 Estadísticas Generales (Renovada)
-        </button>
       </div>
 
       {loading ? (
         <div className={styles.loadingWrapper}>
           <div className={styles.spinner}></div>
-          <p>Procesando métricas y contabilidad de señas...</p>
+          <span>Calculando métricas y armando informes del período...</span>
         </div>
       ) : !data ? (
         <div className={styles.loadingWrapper}>
-          <p>No se encontraron datos para el período seleccionado.</p>
+          <span>No se pudieron obtener los datos estadísticos.</span>
         </div>
       ) : (
         <>
-          {/* BANNER DE CAJA DIARIA & FLUJO (REGLA GONZALO) */}
-          <div className={styles.cajaBanner}>
-            <div className={styles.cajaItem}>
-              <span className={styles.cajaTitle}>Caja del Día (Hoy)</span>
-              <span className={styles.cajaValue}>{formatMoney(data.caja?.hoy?.total)}</span>
-              <div className={styles.cajaSub}>
-                <span>🔹 Turnos cobrados hoy: <strong>{formatMoney(data.caja?.hoy?.entradasTurnos)}</strong></span>
-                <span>🔸 Señas recibidas hoy: <strong>{formatMoney(data.caja?.hoy?.entradasSenas)}</strong></span>
-              </div>
-            </div>
-
-            <div className={styles.cajaItem}>
-              <span className={styles.cajaTitle}>Caja de la Semana</span>
-              <span className={styles.cajaValue}>{formatMoney(data.caja?.semana?.total)}</span>
-              <div className={styles.cajaSub}>
-                <span>🔹 Saldos de turnos: <strong>{formatMoney(data.caja?.semana?.entradasTurnos)}</strong></span>
-                <span>🔸 Señas de la semana: <strong>{formatMoney(data.caja?.semana?.entradasSenas)}</strong></span>
-              </div>
-            </div>
-
-            <div className={styles.cajaItem}>
-              <span className={styles.cajaTitle}>Total Período Seleccionado</span>
-              <span className={styles.cajaValue} style={{ color: 'var(--color-gold)' }}>
-                {formatMoney(data.caja?.periodo?.total)}
+          {/* SELECTOR DE MÉTRICA DIRECTAMENTE DEBAJO DE LAS FECHAS */}
+          <div className={styles.metricSelectorCard}>
+            <div className={styles.metricSelectorHeader}>
+              <label>🔎 Seleccionar Métrica a Analizar:</label>
+              <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
+                {currentMetricDef.description}
               </span>
-              <div className={styles.cajaSub}>
-                <span>🔹 Turnos realizados: <strong>{formatMoney(data.caja?.periodo?.entradasTurnos)}</strong></span>
-                <span>🔸 Señas captadas: <strong>{formatMoney(data.caja?.periodo?.entradasSenas)}</strong></span>
+            </div>
+
+            <div className={styles.metricSelectorRow}>
+              <select
+                className={styles.metricDropdown}
+                value={selectedMetric}
+                onChange={(e) => handleMetricChange(e.target.value)}
+              >
+                {METRIC_DEFINITIONS.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+
+              <div className={styles.actionButtonsGroup}>
+                {currentMetricDef.excelModel && (
+                  <button
+                    type="button"
+                    className={styles.btnExcel}
+                    onClick={() => setExcelModalOpen(true)}
+                  >
+                    📊 Ver / Descargar Informe Excel
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className={styles.btnExpandList}
+                  onClick={() => setExpandedListModalOpen(true)}
+                >
+                  🔍 Ampliar Listado en Ventana
+                </button>
               </div>
             </div>
           </div>
 
-          {/* ======================================================== */}
-          {/* TAB 1: ESTADÍSTICAS AVANZADAS (VISTA PRINCIPAL)          */}
-          {/* ======================================================== */}
-          {activeTab === 'avanzadas' && (
+          {/* 3 TARJETAS KPI DE LA MÉTRICA SELECCIONADA */}
+          <div className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiLabel}>Cantidad de Registros</div>
+              <div className={styles.kpiValue}>{activeMetricData.count}</div>
+              <div className={styles.kpiSub}>
+                {excludedIds.size > 0
+                  ? `${excludedIds.size} excluido(s) manualmente con [X]`
+                  : 'Total contabilizado en el período'}
+              </div>
+            </div>
+
+            <div className={`${styles.kpiCard} ${currentMetricDef.isDanger ? styles.kpiCardDanger : ''}`}>
+              <div className={styles.kpiLabel}>{currentMetricDef.valueLabel}</div>
+              <div
+                className={styles.kpiValue}
+                style={{ color: currentMetricDef.isDanger ? '#dc2626' : '#7a1f1e' }}
+              >
+                {formatMoney(activeMetricData.totalMoney)}
+              </div>
+              <div className={styles.kpiSub}>
+                {selectedMetric === 'gananciaNeta'
+                  ? `Saldos sesiones: ${formatMoney(data.avanzadas?.gananciaNeta?.entradasTurnos)} + Señas: ${formatMoney(data.avanzadas?.gananciaNeta?.entradasSenas)}`
+                  : 'Se actualiza en vivo al filtrar o excluir filas'}
+              </div>
+            </div>
+
+            {currentMetricDef.hasAvg && (
+              <div className={`${styles.kpiCard} ${styles.kpiCardInfo}`}>
+                <div className={styles.kpiLabel}>Ticket Promedio</div>
+                <div className={styles.kpiValue}>{formatMoney(activeMetricData.avgTicket)}</div>
+                <div className={styles.kpiSub}>Promedio por turno / cliente en esta métrica</div>
+              </div>
+            )}
+          </div>
+
+          {/* SECCIÓN ESPECIAL: ZONAS (FILTROS PÍLDORA + HISTOGRAMA LEGIBLE) */}
+          {selectedMetric === 'zonas' && data.avanzadas?.zonas && (
             <>
-              {/* Selector de Métrica */}
-              <div className={styles.metricSelectorCard}>
-                <div className={styles.metricSelectorHeader}>
-                  <label>
-                    <CalendarIcon /> Seleccionar Métrica a Analizar:
-                  </label>
-                  <select
-                    className={styles.metricDropdown}
-                    value={selectedMetric}
-                    onChange={(e) => {
-                      setSelectedMetric(e.target.value);
-                      setExcludedIds(new Set()); // reset exclusions
-                    }}
+              <div className={styles.filtersCard}>
+                <div className={styles.filtersHeader}>
+                   Filtrar Zonas (Seleccioná una o varias para recalcular):
+                </div>
+                <div className={styles.pillsRow}>
+                  <button
+                    type="button"
+                    className={`${styles.pillBtn} ${selectedZonesFilter.length === 0 ? styles.pillBtnActive : ''}`}
+                    onClick={() => setSelectedZonesFilter([])}
                   >
-                    {METRIC_DEFINITIONS.map(m => (
-                      <option key={m.id} value={m.id}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
-                  {METRIC_DEFINITIONS.find(m => m.id === selectedMetric)?.desc}
+                    Todas las Zonas
+                  </button>
+                  {(data.avanzadas.zonas.histograma || []).map(z => (
+                    <button
+                      type="button"
+                      key={z.nombre}
+                      className={`${styles.pillBtn} ${selectedZonesFilter.includes(z.nombre) ? styles.pillBtnActive : ''}`}
+                      onClick={() => toggleZoneFilter(z.nombre)}
+                    >
+                      {z.nombre} ({z.total})
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* KPI Cards de la Métrica Seleccionada */}
-              <div className={styles.kpiGrid}>
-                <div className={styles.kpiCard}>
-                  <div className={styles.kpiLabel}>Cantidad de Registros</div>
-                  <div className={styles.kpiValue}>{activeMetricData.count}</div>
-                  <div className={styles.kpiSub}>
-                    {excludedIds.size > 0 ? `(${excludedIds.size} temporalmente excluidos)` : 'Total en período'}
-                  </div>
+              <div className={styles.histogramCard}>
+                <div className={styles.histogramTitle}>
+                  <span>📊 Histograma de Demanda por Zona</span>
+                  <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
+                    Turnos agendados / realizados en el período
+                  </span>
                 </div>
-
-                <div className={`${styles.kpiCard} ${activeMetricData.isLoss ? styles.kpiCardDanger : ''}`}>
-                  <div className={styles.kpiLabel}>
-                    {activeMetricData.isLoss ? 'Pérdida Económica Estimada' : 'Facturación / Valor Total'}
-                  </div>
-                  <div className={styles.kpiValue} style={{ color: activeMetricData.isLoss ? '#ff4d4f' : 'var(--color-gold)' }}>
-                    {formatMoney(activeMetricData.total)}
-                  </div>
-                  <div className={styles.kpiSub}>
-                    {activeMetricData.isLoss ? 'Ingresos no percibidos' : 'Suma de importes'}
-                  </div>
-                </div>
-
-                {!activeMetricData.isLoss && selectedMetric !== 'sinMarcar' && (
-                  <div className={styles.kpiCard}>
-                    <div className={styles.kpiLabel}>Ticket Promedio</div>
-                    <div className={styles.kpiValue}>{formatMoney(activeMetricData.ticketPromedio)}</div>
-                    <div className={styles.kpiSub}>Por turno / cliente</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Sub-filtros específicos e Histogramas */}
-              {selectedMetric === 'nuevos' && (
-                <div className={styles.histogramCard}>
-                  <div className={styles.histogramTitle}>
-                    <span>📊 Clientes Nuevos por Canal de Adquisición</span>
-                  </div>
-
-                  {/* Filter Pills */}
-                  <div className={styles.pillsRow}>
-                    {Object.keys(CANAL_LABELS).map(k => (
-                      <button
-                        key={k}
-                        className={`${styles.pillBtn} ${canalFilter === k ? styles.pillBtnActive : ''}`}
-                        onClick={() => setCanalFilter(k)}
-                      >
-                        {CANAL_LABELS[k]} {data.avanzadas?.nuevos?.canales?.[k] !== undefined && `(${data.avanzadas.nuevos.canales[k]})`}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Bars */}
-                  <div className={styles.barsContainer}>
-                    {Object.entries(data.avanzadas?.nuevos?.canales || {}).map(([canalKey, count]) => {
-                      const totalNuevos = data.avanzadas?.nuevos?.count || 1;
-                      const pct = Math.round((count / (totalNuevos || 1)) * 100);
-                      return (
-                        <div key={canalKey} className={styles.barRow}>
-                          <div className={styles.barName}>{CANAL_LABELS[canalKey] || canalKey}</div>
-                          <div className={styles.barTrack}>
-                            <div className={styles.barFill} style={{ width: `${Math.max(2, pct)}%` }}></div>
-                          </div>
-                          <div className={styles.barStat}>
-                            {count} <span className={styles.barStatSub}>({pct}%)</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {selectedMetric === 'zonas' && (
-                <div className={styles.histogramCard}>
-                  <div className={styles.histogramTitle}>
-                    <span>📍 Ranking de Zonas Más Solicitadas</span>
-                  </div>
-
-                  {/* Filter Pills */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div className={styles.pillsRow}>
-                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', alignSelf: 'center', fontWeight: 600 }}>
-                        Estado:
-                      </span>
-                      <button
-                        className={`${styles.pillBtn} ${zonaStateFilter === 'todos' ? styles.pillBtnActive : ''}`}
-                        onClick={() => setZonaStateFilter('todos')}
-                      >
-                        Todos
-                      </button>
-                      <button
-                        className={`${styles.pillBtn} ${zonaStateFilter === 'realizados' ? styles.pillBtnActive : ''}`}
-                        onClick={() => setZonaStateFilter('realizados')}
-                      >
-                        Solo Realizados
-                      </button>
-                      <button
-                        className={`${styles.pillBtn} ${zonaStateFilter === 'senados' ? styles.pillBtnActive : ''}`}
-                        onClick={() => setZonaStateFilter('senados')}
-                      >
-                        Solo Señados
-                      </button>
-                    </div>
-
-                    <div className={styles.pillsRow}>
-                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', alignSelf: 'center', fontWeight: 600 }}>
-                        Zona:
-                      </span>
-                      <button
-                        className={`${styles.pillBtn} ${zonaFilter === 'TODAS' ? styles.pillBtnActive : ''}`}
-                        onClick={() => setZonaFilter('TODAS')}
-                      >
-                        Todas las zonas
-                      </button>
-                      {(data.avanzadas?.zonas?.catalog || []).map(zName => (
-                        <button
-                          key={zName}
-                          className={`${styles.pillBtn} ${zonaFilter === zName ? styles.pillBtnActive : ''}`}
-                          onClick={() => setZonaFilter(zName)}
-                        >
-                          {zName}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bars Ranking */}
-                  <div className={styles.barsContainer}>
-                    {(data.avanzadas?.zonas?.histograma || [])
-                      .filter(z => zonaFilter === 'TODAS' || z.nombre === zonaFilter)
-                      .slice(0, 10)
-                      .map((z) => {
-                        const maxCount = data.avanzadas?.zonas?.histograma?.[0]?.total || 1;
-                        const pct = Math.round((z.total / (maxCount || 1)) * 100);
+                <div className={styles.barsContainer}>
+                  {(() => {
+                    const list = data.avanzadas.zonas.histograma || [];
+                    const maxCount = Math.max(1, ...list.map(i => i.total));
+                    return list
+                      .filter(z => selectedZonesFilter.length === 0 || selectedZonesFilter.includes(z.nombre))
+                      .map(z => {
+                        const pct = Math.round((z.total / maxCount) * 100);
                         return (
                           <div key={z.nombre} className={styles.barRow}>
                             <div className={styles.barName} title={z.nombre}>{z.nombre}</div>
                             <div className={styles.barTrack}>
-                              <div className={styles.barFill} style={{ width: `${Math.max(2, pct)}%` }}></div>
+                              <div className={styles.barFill} style={{ width: `${pct}%` }} />
                             </div>
                             <div className={styles.barStat}>
-                              {z.total} <span className={styles.barStatSub}>turnos</span>
+                              {z.total} t.
+                              <div className={styles.barStatSub}>{formatMoney(z.ingresos)}</div>
                             </div>
                           </div>
                         );
-                      })}
-                  </div>
+                      });
+                  })()}
                 </div>
-              )}
-
-              {/* SECCIÓN DESPLEGABLE "DETALLES" */}
-              <div className={styles.detailsSection}>
-                <div className={styles.detailsHeader}>
-                  <div className={styles.detailsTitle}>
-                    <span>📋 DETALLES ({activeMetricData.items.length} turnos)</span>
-                  </div>
-                  <button
-                    className={styles.presetBtn}
-                    onClick={() => setShowDetailsTable(!showDetailsTable)}
-                  >
-                    {showDetailsTable ? '▲ Ocultar Detalles' : '▼ Mostrar Detalles'}
-                  </button>
-                </div>
-
-                {/* Exclusion Alert Banner */}
-                {excludedIds.size > 0 && (
-                  <div className={styles.exclusionBanner}>
-                    <span>
-                      ⚠️ Has excluido temporalmente a <strong>{excludedIds.size}</strong> turno(s)/cliente(s). Los totales se recalcularon en vivo.
-                    </span>
-                    <button className={styles.btnResetExclusion} onClick={handleResetExclusions}>
-                      🔄 Restablecer Lista Original
-                    </button>
-                  </div>
-                )}
-
-                {showDetailsTable && (
-                  <div className={styles.tableWrapper}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          <th className={styles.th}>Fecha & Hora</th>
-                          <th className={styles.th}>Cliente</th>
-                          <th className={styles.th}>Zonas</th>
-                          <th className={styles.th}>Valor</th>
-                          <th className={styles.th}>Seña</th>
-                          <th className={styles.th}>Saldo</th>
-                          <th className={styles.th}>Estado</th>
-                          <th className={styles.th} style={{ textAlign: 'center' }}>Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activeMetricData.items.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className={styles.td} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                              No hay turnos para mostrar con los filtros aplicados.
-                            </td>
-                          </tr>
-                        ) : (
-                          activeMetricData.items.map(item => (
-                            <tr key={item.id} className={styles.tr}>
-                              <td className={styles.td} style={{ whiteSpace: 'nowrap' }}>
-                                <div style={{ fontWeight: 600, color: '#fff' }}>{item.fecha}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                  {item.horaInicio} - {item.horaFin} ({item.duracionMinutos} min)
-                                </div>
-                              </td>
-
-                              <td className={styles.td}>
-                                <div style={{ fontWeight: 700, color: 'var(--color-gold)' }}>
-                                  {item.clienteNombre}
-                                </div>
-                                {item.clienteWhatsapp && (
-                                  <a
-                                    href={`https://wa.me/${item.clienteWhatsapp.replace(/\D/g, '')}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: '#4cd964', textDecoration: 'none' }}
-                                  >
-                                    <WhatsAppIcon /> {item.clienteWhatsapp}
-                                  </a>
-                                )}
-                              </td>
-
-                              <td className={styles.td} style={{ maxWidth: '200px' }}>
-                                <div style={{ fontSize: '0.82rem', color: '#e2e8f0', whiteSpace: 'normal' }}>
-                                  {item.zonasTexto}
-                                </div>
-                              </td>
-
-                              <td className={styles.td} style={{ fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>
-                                {formatMoney(item.valorTotal)}
-                              </td>
-
-                              <td className={styles.td} style={{ color: 'var(--color-gold)', whiteSpace: 'nowrap' }}>
-                                {formatMoney(item.valorSeña)}
-                              </td>
-
-                              <td className={styles.td} style={{ color: item.saldoPendiente > 0 ? '#ffc107' : '#4cd964', whiteSpace: 'nowrap' }}>
-                                {formatMoney(item.saldoPendiente)}
-                              </td>
-
-                              <td className={styles.td}>
-                                <span className={`${styles.badgeStatus} ${
-                                  item.estado === 'REALIZADO' ? styles.statusRealizado :
-                                  item.estado === 'SEÑADO' ? styles.statusSenado :
-                                  item.estado === 'CANCELADO' ? styles.statusCancelado :
-                                  styles.statusNoAsistio
-                                }`}>
-                                  {item.estado}
-                                </span>
-                                {item.subEstado && (
-                                  <span className={`${styles.badgeStatus} ${styles.statusSubEstado}`}>
-                                    {item.subEstado.replace(/_/g, ' ')}
-                                  </span>
-                                )}
-                              </td>
-
-                              <td className={styles.td}>
-                                <div className={styles.actionsCell}>
-                                  {/* Botón X para excluir del cálculo */}
-                                  <button
-                                    className={styles.btnActionX}
-                                    title="Excluir temporalmente este turno del cálculo de estadísticas"
-                                    onClick={() => handleExcludeItem(item.id)}
-                                  >
-                                    ✕
-                                  </button>
-
-                                  {/* Botón Turno a Agenda */}
-                                  <button
-                                    className={styles.btnActionTurno}
-                                    title="Abrir este turno en la Agenda"
-                                    onClick={() => handleGoToTurnoInAgenda(item)}
-                                  >
-                                    <ExternalLinkIcon /> Turno
-                                  </button>
-
-                                  {/* Botón Ficha */}
-                                  <button
-                                    className={styles.btnActionFicha}
-                                    title="Ver Ficha Histórica del Paciente"
-                                    onClick={() => handleOpenClientFicha(item.clienteId)}
-                                  >
-                                    <UserIcon /> Ficha
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
               </div>
             </>
           )}
 
-          {/* ======================================================== */}
-          {/* TAB 2: ESTADÍSTICAS GENERALES (RENOVADA)                  */}
-          {/* ======================================================== */}
-          {activeTab === 'generales' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div className={styles.kpiGrid}>
-                <div className={styles.kpiCard}>
-                  <div className={styles.kpiLabel}>Total Turnos Período</div>
-                  <div className={styles.kpiValue}>{data.generales?.turnos?.total}</div>
-                  <div className={styles.kpiSub}>Citas agendadas</div>
+          {/* SECCIÓN ESPECIAL: CLIENTES NUEVOS (FILTROS POR CANAL + GRÁFICO DE BARRAS) */}
+          {selectedMetric === 'nuevos' && data.avanzadas?.nuevos?.canales && (
+            <>
+              <div className={styles.filtersCard}>
+                <div className={styles.filtersHeader}>
+                  📣 Filtrar Clientes Nuevos por Canal de Adquisición:
                 </div>
-
-                <div className={styles.kpiCard}>
-                  <div className={styles.kpiLabel}>Turnos Realizados</div>
-                  <div className={styles.kpiValue} style={{ color: '#4cd964' }}>
-                    {data.generales?.turnos?.realizados}
-                  </div>
-                  <div className={styles.kpiSub}>
-                    {getPercent(data.generales?.turnos?.realizados, data.generales?.turnos?.total)}% de efectividad
-                  </div>
-                </div>
-
-                <div className={`${styles.kpiCard} ${styles.kpiCardDanger}`}>
-                  <div className={styles.kpiLabel}>Cancelados + Ausencias</div>
-                  <div className={styles.kpiValue} style={{ color: '#ff4d4f' }}>
-                    {(data.generales?.turnos?.cancelados || 0) + (data.generales?.turnos?.ausentes || 0)}
-                  </div>
-                  <div className={styles.kpiSub}>
-                    Pérdida total: {formatMoney(data.generales?.perdidas?.total)}
-                  </div>
-                </div>
-
-                <div className={styles.kpiCard}>
-                  <div className={styles.kpiLabel}>Clientes "Va a avisar"</div>
-                  <div className={styles.kpiValue} style={{ color: '#ffc107' }}>
-                    {data.generales?.turnos?.vaAAvisar}
-                  </div>
-                  <div className={styles.kpiSub}>Pendientes de agendar</div>
+                <div className={styles.pillsRow}>
+                  <button
+                    type="button"
+                    className={`${styles.pillBtn} ${selectedCanalesFilter.length === 0 ? styles.pillBtnActive : ''}`}
+                    onClick={() => setSelectedCanalesFilter([])}
+                  >
+                    Todos los Canales
+                  </button>
+                  {Object.entries(data.avanzadas.nuevos.canales).map(([key, count]) => (
+                    <button
+                      type="button"
+                      key={key}
+                      className={`${styles.pillBtn} ${selectedCanalesFilter.includes(key) ? styles.pillBtnActive : ''}`}
+                      onClick={() => toggleCanalFilter(key)}
+                    >
+                      {CANAL_LABELS[key] || key} ({count})
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Grid 2 Columns */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                {/* Desglose de Clientes */}
-                <div className={styles.histogramCard}>
-                  <div className={styles.histogramTitle}>
-                    <span>👥 Rendimiento de Clientes</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Clientes Atendidos en Período:</span>
-                      <strong style={{ color: '#fff' }}>{data.generales?.clientes?.activosConTurno}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Clientes Nuevos:</span>
-                      <strong style={{ color: '#4cd964' }}>{data.generales?.clientes?.nuevosCreados}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Clientes en Mantenimiento:</span>
-                      <strong style={{ color: 'var(--color-gold)' }}>{data.avanzadas?.mantenimiento?.count || 0}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Clientes Finalizados:</span>
-                      <strong style={{ color: '#fff' }}>{data.generales?.turnos?.finalizado}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Ticket Promedio por Paciente:</span>
-                      <strong style={{ color: 'var(--color-gold)' }}>{formatMoney(data.generales?.ganancias?.promedioPorCliente)}</strong>
-                    </div>
-                  </div>
+              <div className={styles.histogramCard}>
+                <div className={styles.histogramTitle}>
+                  <span>📈 Distribución por Canal de Adquisición</span>
                 </div>
+                <div className={styles.barsContainer}>
+                  {(() => {
+                    const entries = Object.entries(data.avanzadas.nuevos.canales);
+                    const maxVal = Math.max(1, ...entries.map(([, c]) => c));
+                    return entries.map(([key, count]) => {
+                      const pct = Math.round((count / maxVal) * 100);
+                      return (
+                        <div key={key} className={styles.barRow}>
+                          <div className={styles.barName}>{CANAL_LABELS[key] || key}</div>
+                          <div className={styles.barTrack}>
+                            <div className={styles.barFill} style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className={styles.barStat}>{count} clientes</div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            </>
+          )}
 
-                {/* Desglose de Pérdidas */}
-                <div className={styles.histogramCard}>
-                  <div className={styles.histogramTitle}>
-                    <span>⚠️ Desglose de Pérdidas Económicas</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Pérdidas por Cancelaciones:</span>
-                      <strong style={{ color: '#ff4d4f' }}>{formatMoney(data.generales?.perdidas?.porCancelaciones)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Pérdidas por Ausencias (No Asistió):</span>
-                      <strong style={{ color: '#ff4d4f' }}>{formatMoney(data.generales?.perdidas?.porAusencias)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Pérdida Potencial Clientes "Va a avisar":</span>
-                      <strong style={{ color: '#ffc107' }}>{formatMoney(data.avanzadas?.vaAAvisar?.totalPerdida)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Total Pérdidas Directas:</span>
-                      <strong style={{ color: '#ff4d4f', fontSize: '1.1rem' }}>{formatMoney(data.generales?.perdidas?.total)}</strong>
-                    </div>
-                  </div>
-                </div>
+          {/* TABLA INTERACTIVA DE DETALLES */}
+          <div className={styles.detailsSection}>
+            <div className={styles.detailsHeader}>
+              <div className={styles.detailsTitle}>
+                📋 Listado Detallado ({activeMetricData.count} registros)
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                {currentMetricDef.excelModel && (
+                  <button
+                    type="button"
+                    className={styles.btnExcel}
+                    style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
+                    onClick={() => setExcelModalOpen(true)}
+                  >
+                    📊 Informe Excel
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.btnExpandList}
+                  style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
+                  onClick={() => setExpandedListModalOpen(true)}
+                >
+                  🔍 Ampliar en Ventana
+                </button>
               </div>
             </div>
-          )}
+
+            {excludedIds.size > 0 && (
+              <div className={styles.exclusionBanner}>
+                <span>
+                  ⚠️ Has excluido <strong>{excludedIds.size}</strong> registro(s) del cálculo actual usando el botón [X].
+                </span>
+                <button type="button" className={styles.btnResetExclusion} onClick={resetExclusions}>
+                  Restaurar Todos ({excludedIds.size})
+                </button>
+              </div>
+            )}
+
+            {renderTurnosTable()}
+          </div>
         </>
+      )}
+
+      {/* MODAL DE LISTADO AMPLIADO EN VENTANA */}
+      {expandedListModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setExpandedListModalOpen(false)}>
+          <div className={styles.modalCardWide} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitle}>
+                📋 {currentMetricDef.label} — Listado Ampliado ({activeMetricData.count} registros | Total: {formatMoney(activeMetricData.totalMoney)})
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {currentMetricDef.excelModel && (
+                  <button
+                    type="button"
+                    className={styles.btnExcel}
+                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
+                    onClick={() => {
+                      setExpandedListModalOpen(false);
+                      setExcelModalOpen(true);
+                    }}
+                  >
+                    📊 Ver Informe Excel
+                  </button>
+                )}
+                <button className={styles.modalCloseBtn} onClick={() => setExpandedListModalOpen(false)}>
+                  ✕ Cerrar
+                </button>
+              </div>
+            </div>
+            <div className={styles.modalBody} style={{ padding: 0 }}>
+              {excludedIds.size > 0 && (
+                <div className={styles.exclusionBanner}>
+                  <span>
+                    ⚠️ Has excluido <strong>{excludedIds.size}</strong> registro(s) del cálculo actual.
+                  </span>
+                  <button type="button" className={styles.btnResetExclusion} onClick={resetExclusions}>
+                    Restaurar Todos ({excludedIds.size})
+                  </button>
+                </div>
+              )}
+              {renderTurnosTable()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE INFORME EXCEL (MODELO A: GANANCIAS / MODELO B: PÉRDIDAS Y SEGUIMIENTO) */}
+      {excelModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setExcelModalOpen(false)}>
+          <div className={styles.modalCardWide} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitle}>
+                📊 Vista de Planilla Excel — {excelSummary.title}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className={styles.btnExcel}
+                  onClick={handleDownloadExcel}
+                >
+                  📥 Descargar Archivo Excel (.xls)
+                </button>
+                <button className={styles.modalCloseBtn} onClick={() => setExcelModalOpen(false)}>
+                  ✕ Cerrar
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.excelSheet}>
+                <div className={styles.excelTitleBanner}>{excelSummary.title}</div>
+
+                <div className={styles.excelPeriodRow}>
+                  <span className={styles.excelPeriodLabel}>Desde</span>
+                  <span className={styles.excelPeriodValue}>{formatDateDisplay(startDate)}</span>
+                  <span className={styles.excelPeriodLabel}>Hasta</span>
+                  <span className={styles.excelPeriodValue}>{formatDateDisplay(endDate)}</span>
+                </div>
+
+                <div className={styles.tableWrapper}>
+                  {excelSummary.model === 'A' ? (
+                    <table className={styles.excelTable}>
+                      <thead>
+                        <tr>
+                          <th>Fecha de turno</th>
+                          <th>Hora</th>
+                          <th>Cliente</th>
+                          <th>Origen</th>
+                          <th>Tipo de pago</th>
+                          <th>Valor final</th>
+                          <th>Seña aplicada</th>
+                          <th>Saldo del turno</th>
+                          <th>Zonas</th>
+                          <th>Operador</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeMetricData.filteredItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={10} style={{ textAlign: 'center', padding: '1.5rem' }}>
+                              Sin registros en el período seleccionado.
+                            </td>
+                          </tr>
+                        ) : (
+                          activeMetricData.filteredItems.map(item => {
+                            const vFinal = Number(item.valorTotal || 0);
+                            const vSena = Number(item.valorSeña || 0);
+                            const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
+                            return (
+                              <tr key={item.id}>
+                                <td style={{ textAlign: 'center' }}>{formatDateDisplay(item.fecha)}</td>
+                                <td style={{ textAlign: 'center' }}>{item.horaInicio}</td>
+                                <td style={{ fontWeight: 700 }}>{item.clienteNombre}</td>
+                                <td>{item.origenCategoria || 'Orgánico'}</td>
+                                <td>{item.metodoPagoLabel || 'Transferencia'}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(vFinal)}</td>
+                                <td style={{ textAlign: 'right' }}>{formatMoney(vSena)}</td>
+                                <td style={{ textAlign: 'right' }}>{formatMoney(vSaldo)}</td>
+                                <td>{item.zonasTexto}</td>
+                                <td>{item.operadorNombre || 'Gonzalo'}</td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <table className={styles.excelTable}>
+                      <thead>
+                        <tr>
+                          <th>Fecha de turno</th>
+                          <th>Hora</th>
+                          <th>Cliente</th>
+                          <th>Último estado</th>
+                          <th>Tipo de valor</th>
+                          <th>Valor</th>
+                          <th>Seña del turno</th>
+                          <th>Seña retenida</th>
+                          <th>Oportunidad no concretada</th>
+                          <th>Operador</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeMetricData.filteredItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={10} style={{ textAlign: 'center', padding: '1.5rem' }}>
+                              Sin registros en el período seleccionado.
+                            </td>
+                          </tr>
+                        ) : (
+                          activeMetricData.filteredItems.map(item => {
+                            const val = Number(item.valorTotal || 0);
+                            const senaT = Number(item.señaDelTurnoReporte ?? item.valorSeña ?? 0);
+                            const ret = Number(item.señaRetenida || 0);
+                            const opNoConc = Number(item.oportunidadNoConcretada ?? Math.max(0, val - ret));
+                            return (
+                              <tr key={item.id}>
+                                <td style={{ textAlign: 'center' }}>{formatDateDisplay(item.fecha)}</td>
+                                <td style={{ textAlign: 'center' }}>{item.horaInicio}</td>
+                                <td style={{ fontWeight: 700 }}>{item.clienteNombre}</td>
+                                <td>{item.ultimoEstadoLabel || item.estado}</td>
+                                <td>{item.tipoValor || 'Turno no realizado'}</td>
+                                <td style={{ textAlign: 'right' }}>{formatMoney(val)}</td>
+                                <td style={{ textAlign: 'right' }}>{formatMoney(senaT)}</td>
+                                <td style={{ textAlign: 'right' }}>{formatMoney(ret)}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(opNoConc)}</td>
+                                <td>{item.operadorNombre || 'Gonzalo'}</td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* CUADROS DE RESUMEN INFERIORES (IDÉNTICOS A LAS CAPTURAS 6 y 7 DE LUCIANO) */}
+                {excelSummary.model === 'A' ? (
+                  <div className={styles.excelSummaryRow}>
+                    <table className={styles.excelSummaryTable}>
+                      <thead>
+                        <tr>
+                          <th>RESUMEN DEL PERÍODO</th>
+                          <th>VALOR</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Cantidad de turnos</td>
+                          <td>{excelSummary.cantidadTurnos}</td>
+                        </tr>
+                        <tr>
+                          <td>Cantidad de clientes únicos</td>
+                          <td>{excelSummary.cantidadClientesUnicos}</td>
+                        </tr>
+                        <tr>
+                          <td>Clientes de Orgánico</td>
+                          <td>{excelSummary.clientesOrganico}</td>
+                        </tr>
+                        <tr>
+                          <td>Clientes de Redes sociales</td>
+                          <td>{excelSummary.clientesRedes}</td>
+                        </tr>
+                        <tr>
+                          <td>Clientes de Publicidad</td>
+                          <td>{excelSummary.clientesPublicidad}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <table className={styles.excelSummaryTable}>
+                      <thead>
+                        <tr>
+                          <th>IMPORTES</th>
+                          <th>TOTAL</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Valor total de turnos</td>
+                          <td>{formatMoney(excelSummary.valorTotalTurnos)}</td>
+                        </tr>
+                        <tr>
+                          <td>Total de señas aplicadas</td>
+                          <td>{formatMoney(excelSummary.totalSenasAplicadas)}</td>
+                        </tr>
+                        <tr>
+                          <td>Total de saldos</td>
+                          <td>{formatMoney(excelSummary.totalSaldos)}</td>
+                        </tr>
+                        <tr>
+                          <td>Valor en efectivo</td>
+                          <td>{formatMoney(excelSummary.valorEfectivo)}</td>
+                        </tr>
+                        <tr>
+                          <td>Valor en transferencia</td>
+                          <td>{formatMoney(excelSummary.valorTransferencia)}</td>
+                        </tr>
+                        <tr>
+                          <td>Ticket promedio por cliente</td>
+                          <td>{formatMoney(excelSummary.ticketPromedioCliente)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.excelSummaryRow}>
+                      <table className={styles.excelSummaryTable}>
+                        <thead>
+                          <tr>
+                            <th>RESUMEN DEL PERÍODO</th>
+                            <th>CANTIDAD</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Cantidad de clientes</td>
+                            <td>{excelSummary.cantidadClientes}</td>
+                          </tr>
+                          <tr>
+                            <td>Clientes ausentes</td>
+                            <td>{excelSummary.clientesAusentes}</td>
+                          </tr>
+                          <tr>
+                            <td>Clientes va a avisar</td>
+                            <td>{excelSummary.clientesVaAAvisar}</td>
+                          </tr>
+                          <tr>
+                            <td>Clientes cancelados</td>
+                            <td>{excelSummary.clientesCancelados}</td>
+                          </tr>
+                          <tr>
+                            <td>Clientes mantenimiento</td>
+                            <td>{excelSummary.clientesMantenimiento}</td>
+                          </tr>
+                          <tr>
+                            <td>Clientes finalizados</td>
+                            <td>{excelSummary.clientesFinalizados}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      <table className={styles.excelSummaryTable}>
+                        <thead>
+                          <tr>
+                            <th>IMPORTES</th>
+                            <th>TOTAL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Valor de referencia total</td>
+                            <td>{formatMoney(excelSummary.valorReferenciaTotal)}</td>
+                          </tr>
+                          <tr>
+                            <td>Total de señas retenidas</td>
+                            <td>{formatMoney(excelSummary.totalSenasRetenidas)}</td>
+                          </tr>
+                          <tr>
+                            <td>Oportunidad total no concretada</td>
+                            <td>{formatMoney(excelSummary.oportunidadTotalNoConcretada)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className={styles.excelFootnote}>
+                      Seña retenida: importe perdido; 0 si quedó guardada. En seguimiento se toma el valor de la última sesión, sin descontar su seña.
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MODAL FICHA DEL CLIENTE EMBEBIDO */}
@@ -844,7 +1456,7 @@ export default function EstadisticasPage() {
                 </div>
                 <div className={styles.modalField}>
                   <span className={styles.modalFieldLabel}>Estado</span>
-                  <span className={styles.modalFieldValue} style={{ color: 'var(--color-gold)' }}>{modalClient.estado}</span>
+                  <span className={styles.modalFieldValue} style={{ color: '#7a1f1e' }}>{modalClient.estado}</span>
                 </div>
                 <div className={styles.modalField}>
                   <span className={styles.modalFieldLabel}>Frecuencia</span>
@@ -870,7 +1482,6 @@ export default function EstadisticasPage() {
                 </div>
               </div>
 
-              {/* Botón para ver la ficha completa en Clientes */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button
                   className={styles.btnActionTurno}

@@ -7,8 +7,14 @@ export async function GET(request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const session = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    // Los operadores únicamente deben ver sus turnos agendados, no los bloqueos de agenda
+    if (session.rol === 'OPERADOR') {
+      return NextResponse.json([]);
     }
 
     const { searchParams } = new URL(request.url);
@@ -45,8 +51,14 @@ export async function POST(request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const session = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    // Los operadores únicamente deben ver sus turnos agendados, no los bloqueos de agenda
+    if (session.rol === 'OPERADOR') {
+      return NextResponse.json([]);
     }
 
     const body = await request.json();

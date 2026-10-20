@@ -24,26 +24,93 @@ function getZonasLabel(zonasRaw) {
   return list.map(z => typeof z === 'string' ? z : (z.nombre || z.name || '')).filter(Boolean).join(', ') || 'Sin zonas especificadas';
 }
 
-function formatTurnoItem(t) {
+function mapOrigenCategoria(canalRaw) {
+  const c = (canalRaw || 'ORGANICO').toUpperCase();
+  if (['PUBLICIDAD', 'PUBLICIDAD_IG', 'PUBLICIDAD_FB', 'GOOGLE'].includes(c)) return 'Publicidad';
+  if (['REDES', 'INSTAGRAM', 'FACEBOOK', 'TIKTOK', 'REDES_SOCIALES'].includes(c)) return 'Redes sociales';
+  return 'Orgánico';
+}
+
+function formatTurnoItem(t, extra = {}) {
+  const valorTotal = Number(t.valorTotal || 0);
+  const valorSeña = Number(t.valorSeña || 0);
+  const saldoDelTurno = Math.max(0, valorTotal - valorSeña);
+  const metodoPagoRaw = t.metodoPago || 'TRANSFERENCIA';
+  const metodoPagoLabel = metodoPagoRaw === 'EFECTIVO' ? 'Efectivo' : 'Transferencia';
+  const canalAdquisicion = t.cliente?.canalAdquisicion || 'ORGANICO';
+  const origenCategoria = mapOrigenCategoria(canalAdquisicion);
+  const operadorNombre = t.operador?.nombre || 'Gonzalo';
+
+  // Campos para Informe de Cancelaciones y Seguimiento (Modelo B)
+  const esSeguimiento = Boolean(extra.esSeguimiento);
+  const tipoValor = esSeguimiento ? 'Última sesión' : 'Turno no realizado';
+
+  let ultimoEstadoLabel = t.estado || '';
+  if (extra.ultimoEstadoLabel) {
+    ultimoEstadoLabel = extra.ultimoEstadoLabel;
+  } else if (t.subEstado === 'VA_A_AVISAR') {
+    ultimoEstadoLabel = 'Va a avisar';
+  } else if (t.subEstado === 'MANTENIMIENTO') {
+    ultimoEstadoLabel = 'Mantenimiento';
+  } else if (t.subEstado === 'FINALIZADO') {
+    ultimoEstadoLabel = 'Finalizó';
+  } else if (t.estado === 'NO_ASISTIO') {
+    ultimoEstadoLabel = 'Ausente';
+  } else if (t.estado === 'CANCELADO') {
+    ultimoEstadoLabel = 'Cancelado';
+  }
+
+  let señaDelTurnoReporte = valorSeña;
+  let señaRetenida = 0;
+  let oportunidadNoConcretada = valorTotal;
+
+  if (esSeguimiento) {
+    // En seguimiento se toma el valor de la última sesión, sin descontar su seña
+    señaDelTurnoReporte = 0;
+    señaRetenida = 0;
+    oportunidadNoConcretada = valorTotal;
+  } else if (t.estado === 'CANCELADO' || t.estado === 'NO_ASISTIO') {
+    // Si la seña quedó guardada (CONSERVADA), seña retenida es 0 y la pérdida es el valor total
+    // Si la seña se perdió (retenida por el centro), se resta del valor del turno
+    if (t.señaEstado === 'CONSERVADA') {
+      señaRetenida = 0;
+    } else {
+      señaRetenida = valorSeña;
+    }
+    oportunidadNoConcretada = Math.max(0, valorTotal - señaRetenida);
+  }
+
   return {
-    id: t.id,
+    id: extra.customId || t.id,
+    turnoOriginalId: t.id,
     clienteId: t.clienteId,
     clienteNombre: t.cliente?.nombreCompleto || 'Sin nombre',
     clienteWhatsapp: t.cliente?.whatsapp || '',
     clienteEmail: t.cliente?.email || '',
-    canalAdquisicion: t.cliente?.canalAdquisicion || 'ORGANICO',
+    canalAdquisicion,
+    origenCategoria,
+    metodoPago: metodoPagoRaw,
+    metodoPagoLabel,
+    operadorId: t.operadorId || null,
+    operadorNombre,
     fecha: typeof t.fecha === 'string' ? t.fecha.split('T')[0] : t.fecha.toISOString().split('T')[0],
     horaInicio: t.horaInicio,
     horaFin: t.horaFin,
     duracionMinutos: t.duracionMinutos,
     zonasTexto: getZonasLabel(t.zonas),
     zonas: parseTurnoZonas(t.zonas),
-    valorTotal: Number(t.valorTotal || 0),
-    valorSeña: Number(t.valorSeña || 0),
-    saldoPendiente: Number(t.saldoPendiente || 0),
+    valorTotal: extra.overrideValorTotal !== undefined ? extra.overrideValorTotal : valorTotal,
+    valorSeña: extra.overrideValorSeña !== undefined ? extra.overrideValorSeña : valorSeña,
+    saldoPendiente: extra.overrideSaldo !== undefined ? extra.overrideSaldo : saldoDelTurno,
     estado: t.estado,
     subEstado: t.subEstado || null,
     señaEstado: t.señaEstado || null,
+    ultimoEstadoLabel,
+    tipoValor,
+    señaDelTurnoReporte,
+    señaRetenida,
+    oportunidadNoConcretada,
+    subtipoGanancia: extra.subtipoGanancia || null,
     notasGonzalo: t.notasGonzalo || t.cliente?.notasGonzalo || '',
     observaciones: t.observaciones || ''
   };
@@ -119,32 +186,34 @@ export async function GET(request) {
     ] = await Promise.all([
       prisma.turno.findMany({
         where: { fecha: { gte: startOfPeriod, lte: endOfPeriod } },
-        include: { cliente: true },
+        include: { cliente: true, operador: true },
         orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }]
       }),
       prisma.turno.findMany({
         where: { createdAt: { gte: startOfPeriod, lte: endOfPeriod } },
-        include: { cliente: true }
+        include: { cliente: true, operador: true },
+        orderBy: [{ createdAt: 'asc' }]
       }),
       prisma.turno.findMany({
         where: { fecha: { gte: startOfToday, lte: endOfToday } },
-        include: { cliente: true }
+        include: { cliente: true, operador: true }
       }),
       prisma.turno.findMany({
         where: { createdAt: { gte: startOfToday, lte: endOfToday } },
-        include: { cliente: true }
+        include: { cliente: true, operador: true }
       }),
       prisma.turno.findMany({
         where: { fecha: { gte: startOfWeek, lte: endOfWeek } },
-        include: { cliente: true }
+        include: { cliente: true, operador: true }
       }),
       prisma.turno.findMany({
         where: { createdAt: { gte: startOfWeek, lte: endOfWeek } },
-        include: { cliente: true }
+        include: { cliente: true, operador: true }
       }),
       prisma.cliente.findMany({
         include: {
           turnos: {
+            include: { operador: true },
             orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }]
           }
         }
@@ -202,34 +271,83 @@ export async function GET(request) {
     const bonificacionPeriodo = turnosPeriodo.reduce((acc, t) => acc + (t.bonificacion || 0), 0);
 
     // ==========================================
-    // 11 CATEGORÍAS DE ESTADÍSTICAS AVANZADAS
+    // 12 CATEGORÍAS DE ESTADÍSTICAS AVANZADAS
     // ==========================================
 
-    // 1. Turnos Realizados
-    const itemsRealizados = turnosPeriodo.filter(t => isCompletedSession(t)).map(formatTurnoItem);
+    // 1. Turnos Realizados (Solo el valor de las sesiones realizadas en el período)
+    const itemsRealizados = turnosPeriodo.filter(t => isCompletedSession(t)).map(t => formatTurnoItem(t));
     const totalRealizados = itemsRealizados.reduce((acc, item) => acc + item.valorTotal, 0);
     const ticketPromedioRealizados = itemsRealizados.length > 0 ? Math.round(totalRealizados / itemsRealizados.length) : 0;
 
-    // 2. Turnos Señados / Confirmados
-    const itemsSenados = turnosPeriodo.filter(t => t.estado === 'SEÑADO' || t.estado === 'PENDIENTE_AUTORIZACION').map(formatTurnoItem);
+    // 1B. Ganancia Neta (Dinero que realmente ingresa en el período seleccionado)
+    // - Turnos realizados en el período creados antes del período -> ingresa el saldo (valorTotal - valorSeña)
+    // - Turnos realizados en el período creados dentro del mismo período -> ingresa valorTotal (seña + saldo)
+    // - Turnos agendados/creados en el período para fechas futuras (o aún no realizados) -> ingresa la seña (valorSeña)
+    const createdInPeriodIds = new Set(
+      turnosCreatedPeriodo
+        .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO')
+        .map(t => t.id)
+    );
+    const completedInPeriodIds = new Set(
+      turnosPeriodo.filter(t => isCompletedSession(t)).map(t => t.id)
+    );
+
+    const itemsGananciaNeta = [];
+
+    // A) Sesiones realizadas dentro del período
+    turnosPeriodo.filter(t => isCompletedSession(t)).forEach(t => {
+      const vTotal = Number(t.valorTotal || 0);
+      const vSena = Number(t.valorSeña || 0);
+      const saldo = Math.max(0, vTotal - vSena);
+      const fueCreadoEnPeriodo = createdInPeriodIds.has(t.id);
+      const ingresoReal = fueCreadoEnPeriodo ? vTotal : saldo;
+      const subtipo = fueCreadoEnPeriodo
+        ? 'Sesión realizada (Seña + Saldo en período)'
+        : 'Sesión realizada (Cobro de Saldo)';
+
+      itemsGananciaNeta.push(
+        formatTurnoItem(t, {
+          overrideValorTotal: ingresoReal,
+          overrideValorSeña: fueCreadoEnPeriodo ? vSena : 0,
+          overrideSaldo: saldo,
+          subtipoGanancia: subtipo
+        })
+      );
+    });
+
+    // B) Señas cobradas en el período por turnos nuevos o próximos turnos aún no realizados en el período
+    turnosCreatedPeriodo
+      .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO' && !completedInPeriodIds.has(t.id))
+      .forEach(t => {
+        const vSena = Number(t.valorSeña || 0);
+        itemsGananciaNeta.push(
+          formatTurnoItem(t, {
+            customId: `sena-${t.id}`,
+            overrideValorTotal: vSena,
+            overrideValorSeña: vSena,
+            overrideSaldo: 0,
+            subtipoGanancia: 'Seña ingresada en período (Turno agendado)'
+          })
+        );
+      });
+
+    const totalGananciaNeta = itemsGananciaNeta.reduce((acc, item) => acc + item.valorTotal, 0);
+    const ticketPromedioGananciaNeta = itemsGananciaNeta.length > 0 ? Math.round(totalGananciaNeta / itemsGananciaNeta.length) : 0;
+
+    // 2. Turnos Señados / Confirmados (Solo turnos que están en estado SEÑADO / REPROGRAMADO / PENDIENTE_AUTORIZACION y aún NO fueron realizados)
+    const itemsSenados = turnosPeriodo
+      .filter(t => !isCompletedSession(t) && ['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'].includes(t.estado))
+      .map(t => formatTurnoItem(t));
     const totalSenados = itemsSenados.reduce((acc, item) => acc + item.valorTotal, 0);
     const ticketPromedioSenados = itemsSenados.length > 0 ? Math.round(totalSenados / itemsSenados.length) : 0;
 
-    // 3. Turnos Cancelados (con cálculo de pérdida)
-    const itemsCancelados = turnosPeriodo.filter(t => t.estado === 'CANCELADO').map(formatTurnoItem);
-    const totalPerdidaCancelados = itemsCancelados.reduce((acc, item) => {
-      // Si la seña se conservó para otro turno, la sesión actual fue pérdida total
-      if (item.señaEstado === 'CONSERVADA') return acc + item.valorTotal;
-      // Si la seña se perdió o no hubo seña:
-      if (item.señaEstado === 'PERDIDA') return acc + Math.max(0, item.valorTotal - item.valorSeña);
-      return acc + (item.valorTotal || 0);
-    }, 0);
+    // 3. Turnos Cancelados (Pérdida = Valor del turno - Seña retenida)
+    const itemsCancelados = turnosPeriodo.filter(t => t.estado === 'CANCELADO').map(t => formatTurnoItem(t));
+    const totalPerdidaCancelados = itemsCancelados.reduce((acc, item) => acc + item.oportunidadNoConcretada, 0);
 
-    // 4. Turnos Ausentes (No asistió)
-    const itemsAusentes = turnosPeriodo.filter(t => t.estado === 'NO_ASISTIO').map(formatTurnoItem);
-    const totalPerdidaAusentes = itemsAusentes.reduce((acc, item) => {
-      return acc + (item.saldoPendiente > 0 ? item.saldoPendiente : Math.max(0, item.valorTotal - item.valorSeña));
-    }, 0);
+    // 4. Turnos Ausentes (No asistió: Pérdida = Valor del turno - Seña retenida)
+    const itemsAusentes = turnosPeriodo.filter(t => t.estado === 'NO_ASISTIO').map(t => formatTurnoItem(t));
+    const totalPerdidaAusentes = itemsAusentes.reduce((acc, item) => acc + item.oportunidadNoConcretada, 0);
 
     // 5. Turnos Sin Marcar (ya pasaron de fecha/hora pero siguen en SEÑADO, PENDIENTE_PAGO o PENDIENTE_AUTORIZACION)
     const itemsSinMarcar = turnosPeriodo.filter(t => {
@@ -238,63 +356,94 @@ export async function GET(request) {
       if (tFechaStr < todayStr) return true;
       if (tFechaStr === todayStr && t.horaFin && t.horaFin < currentHourMin) return true;
       return false;
-    }).map(formatTurnoItem);
+    }).map(t => formatTurnoItem(t));
 
-    // 6. Clientes "Va a avisar"
-    // Clientes cuyo último turno realizado terminó en VA_A_AVISAR (o turnos del período)
+    // Helper: verificar si un cliente tiene un turno activo/señado posterior a su última sesión realizada
+    const hasFutureActiveTurno = (c, lastRealizadoFecha) => {
+      const lastTime = new Date(lastRealizadoFecha).getTime();
+      return (c.turnos || []).some(t => {
+        if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'].includes(t.estado)) return false;
+        return new Date(t.fecha).getTime() > lastTime;
+      });
+    };
+
+    // 6. Clientes "Va a avisar" (Clientes que actualmente están en ese estado y aún no agendaron un nuevo turno)
     const itemsVaAAvisar = [];
     let totalPerdidaVaAAvisar = 0;
     allClients.forEach(c => {
       const turnosRealizadosCliente = (c.turnos || []).filter(isCompletedSession);
       if (turnosRealizadosCliente.length > 0) {
         const lastRealizado = turnosRealizadosCliente[0]; // ordenado desc
-        if (lastRealizado.subEstado === 'VA_A_AVISAR') {
-          const item = formatTurnoItem({ ...lastRealizado, cliente: c });
+        if (lastRealizado.subEstado === 'VA_A_AVISAR' && !hasFutureActiveTurno(c, lastRealizado.fecha)) {
+          const item = formatTurnoItem(
+            { ...lastRealizado, cliente: c },
+            { esSeguimiento: true, ultimoEstadoLabel: 'Va a avisar' }
+          );
           itemsVaAAvisar.push(item);
           totalPerdidaVaAAvisar += item.valorTotal;
         }
       }
     });
 
-    // 7. Clientes "Mantenimiento"
+    // 7. Clientes "Mantenimiento" (Se toma el valor del último turno realizado sin descontar su seña)
     const itemsMantenimiento = [];
     let totalValorMantenimiento = 0;
     allClients.forEach(c => {
       const turnosRealizadosCliente = (c.turnos || []).filter(isCompletedSession);
       if (turnosRealizadosCliente.length > 0) {
         const lastRealizado = turnosRealizadosCliente[0];
-        if (lastRealizado.subEstado === 'MANTENIMIENTO') {
-          const item = formatTurnoItem({ ...lastRealizado, cliente: c });
+        if (lastRealizado.subEstado === 'MANTENIMIENTO' && !hasFutureActiveTurno(c, lastRealizado.fecha)) {
+          const item = formatTurnoItem(
+            { ...lastRealizado, cliente: c },
+            { esSeguimiento: true, ultimoEstadoLabel: 'Mantenimiento' }
+          );
           itemsMantenimiento.push(item);
           totalValorMantenimiento += item.valorTotal;
         }
       }
     });
 
-    // 8. Clientes "Finalizó"
+    // 8. Clientes "Finalizó" (Clientes cuyo tratamiento fue marcado como finalizado; valor de última sesión)
     const itemsFinalizo = [];
     let totalValorFinalizo = 0;
     allClients.forEach(c => {
       const turnosRealizadosCliente = (c.turnos || []).filter(isCompletedSession);
       if (turnosRealizadosCliente.length > 0) {
         const lastRealizado = turnosRealizadosCliente[0];
-        if (lastRealizado.subEstado === 'FINALIZADO') {
-          const item = formatTurnoItem({ ...lastRealizado, cliente: c });
+        if (lastRealizado.subEstado === 'FINALIZADO' && !hasFutureActiveTurno(c, lastRealizado.fecha)) {
+          const item = formatTurnoItem(
+            { ...lastRealizado, cliente: c },
+            { esSeguimiento: true, ultimoEstadoLabel: 'Finalizó' }
+          );
           itemsFinalizo.push(item);
           totalValorFinalizo += item.valorTotal;
         }
       }
     });
 
-    // 9. Clientes Nuevos con turno en el período
-    // Clientes cuya fechaAlta o primer turno coincide con el período
+    // 9. Clientes Nuevos en el período
+    // Se contabilizan tanto los clientes agendados sin sesiones realizadas (0 sesiones)
+    // como los que realizaron su primera sesión dentro del período (1 sesión)
     const clientesNuevosMap = new Map();
     turnosPeriodo.forEach(t => {
+      if (t.estado === 'CANCELADO' || t.estado === 'NO_ASISTIO') return;
       const cl = t.cliente;
       if (!cl) return;
-      const allClientTurnos = (cl.turnos || allClients.find(c => c.id === cl.id)?.turnos || []);
-      const isFirstTurno = allClientTurnos.length <= 1 || (cl.fechaPrimerTurno && new Date(cl.fechaPrimerTurno) >= startOfPeriod && new Date(cl.fechaPrimerTurno) <= endOfPeriod);
-      if (isFirstTurno && !clientesNuevosMap.has(cl.id)) {
+      const fullClient = allClients.find(c => c.id === cl.id) || cl;
+      const previas = Number(fullClient.sesionesPrevias || 0);
+      if (previas > 0) return;
+
+      const allClientTurnos = fullClient.turnos || [];
+      const completedTurnos = [...allClientTurnos]
+        .filter(isCompletedSession)
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+      // Caso A: Cliente agendado con 0 sesiones realizadas en total
+      const isZeroSessionsBooked = completedTurnos.length === 0;
+      // Caso B: Cliente cuya 1ra sesión realizada ocurre dentro del período (es este turno)
+      const isFirstCompletedInPeriod = completedTurnos.length >= 1 && completedTurnos[0].id === t.id;
+
+      if ((isZeroSessionsBooked || isFirstCompletedInPeriod) && !clientesNuevosMap.has(cl.id)) {
         clientesNuevosMap.set(cl.id, {
           cliente: cl,
           primerTurno: t
@@ -372,7 +521,7 @@ export async function GET(request) {
     const histogramaZonas = Object.values(zonasMap).sort((a, b) => b.total - a.total);
 
     // 11. Operador (Gonzalo Siri)
-    const itemsOperador = turnosPeriodo.map(formatTurnoItem);
+    const itemsOperador = turnosPeriodo.map(t => formatTurnoItem(t));
     const operadorData = {
       nombre: 'Gonzalo Siri',
       rol: 'Administrador / Operador Principal',
@@ -452,13 +601,21 @@ export async function GET(request) {
           bonificaciones: bonificacionPeriodo
         }
       },
-      // 11 Categorías de Estadísticas Avanzadas
+      // 12 Categorías de Estadísticas Avanzadas
       avanzadas: {
         realizados: {
           count: itemsRealizados.length,
           total: totalRealizados,
           ticketPromedio: ticketPromedioRealizados,
           items: itemsRealizados
+        },
+        gananciaNeta: {
+          count: itemsGananciaNeta.length,
+          total: totalGananciaNeta,
+          ticketPromedio: ticketPromedioGananciaNeta,
+          entradasTurnos: entradasTurnosPeriodo,
+          entradasSenas: entradasSenasPeriodo,
+          items: itemsGananciaNeta
         },
         senados: {
           count: itemsSenados.length,

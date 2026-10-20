@@ -1499,7 +1499,7 @@ export default function AgendaPage() {
           setAppointments(finalTurnos);
         }
         if (Array.isArray(bloqueosData)) {
-          setBloqueos(bloqueosData);
+          setBloqueos(currentUserRole === 'OPERADOR' ? [] : bloqueosData);
         }
       })
       .catch(err => console.error('Error fetching appointments or bloqueos:', err))
@@ -3054,11 +3054,14 @@ export default function AgendaPage() {
                 const startMin = Math.min(...sortedTurnos.map(t => timeToMinutes(t.horaInicio)));
                 const endMin = Math.max(...sortedTurnos.map(t => timeToMinutes(t.horaFin)));
                 const totalMin = Math.max(0, endMin - startMin);
-                const totalHours = totalMin / 60;
+                const hoursInt = Math.floor(totalMin / 60);
+                const minsInt = totalMin % 60;
+                // Regla de redondeo: si el sobrante es >= 20 min suma 1 hora, si es < 20 min redondea hacia abajo
+                const horasRedondeadas = minsInt >= 20 ? hoursInt + 1 : hoursInt;
 
                 let montoPagar = 0;
                 if (op.comisionTipo === 'POR_HORA' || op.comisionTipo === 'POR_DIA') {
-                  montoPagar = Math.round(totalHours * op.comisionValor);
+                  montoPagar = Math.round(horasRedondeadas * op.comisionValor);
                 } else if (op.comisionTipo === 'POR_TURNO') {
                   montoPagar = sortedTurnos.length * op.comisionValor;
                 } else if (op.comisionTipo === 'PORCENTAJE') {
@@ -3066,15 +3069,13 @@ export default function AgendaPage() {
                   montoPagar = Math.round(facturado * (op.comisionValor / 100));
                 }
 
-                const hoursInt = Math.floor(totalMin / 60);
-                const minsInt = totalMin % 60;
                 let durationFormatted = '';
                 if (hoursInt > 0 && minsInt > 0) {
-                  durationFormatted = `${hoursInt}h ${minsInt}m`;
+                  durationFormatted = `${hoursInt}h ${minsInt}m ➔ ${horasRedondeadas} hs`;
                 } else if (hoursInt > 0) {
                   durationFormatted = `${hoursInt} hs`;
                 } else {
-                  durationFormatted = `${minsInt} min`;
+                  durationFormatted = `${minsInt}m ➔ ${horasRedondeadas} hs`;
                 }
 
                 return {
@@ -3082,7 +3083,7 @@ export default function AgendaPage() {
                   startStr: firstTurno.horaInicio,
                   endStr: lastTurno.horaFin,
                   totalMin,
-                  totalHours: Number(totalHours.toFixed(2)),
+                  totalHours: horasRedondeadas,
                   durationFormatted,
                   montoPagar,
                   turnosCount: sortedTurnos.length
