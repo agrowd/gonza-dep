@@ -655,3 +655,17 @@
      - Agenda de turnos: cargada con grilla completa y alertas activas de autogestión.
      - Configuración: pestaña "👥 Usuarios y Operadores" activa con Gonzalo como Administrador.
      - Módulo de Gastos: cargado con balance operativo en vivo ($5.706.000) y categorías preconfiguradas.
+
+
+---
+
+## Sesión 20/10/2026 - Implementación de los 7 Puntos de Luciano Gómez en Producción (`main`)
+- **Usuario**: "En la carpeta luciano del escritorio te dejo todas las capturas de las cosas que me pidio luciano y todo el contexto para agregar directamente todo al main, analiza todo, no toques codigo, y cuando me digas que entendiste todo te doy el ok" -> "Te doy el ok"
+- **Acciones**:
+  1. Redondeo de horas de operadores con umbral de 20 minutos (`>= 20m` suma 1 hora, `< 20m` redondea hacia abajo) en `/admin/agenda` y `/admin/agenda/imprimir`.
+  2. Ocultamiento de bloqueos de agenda para el rol `OPERADOR`.
+  3. Rediseño limpio y corrección de alto contraste en `/admin/estadisticas`.
+  4. Modal ampliado (`🔍 Ampliar Listado en Ventana`) para la lista de turnos/clientes en Estadísticas.
+  5. Modal y exportación a Excel (`.xls`) con Modelo A (Ganancias) y Modelo B (Cancelaciones y Seguimiento).
+  6. Ajuste de reglas de valor por métrica e incorporación de `💰 Ganancia Neta` en el desplegable de Estadísticas.
+  7. Despliegue directo en `main` (`3b994ae`) en el VPS de Producción (`https://agenda.depilacionparahombres.com`).

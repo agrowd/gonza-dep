@@ -1891,3 +1891,18 @@
   - Sincronización Prisma PostgreSQL y migración de 742 turnos históricos sin operador asignados a Gonzalo.
   - Recompilación exitosa en VPS (48/48 rutas) y reinicio limpio de PM2 `gonzalo-agenda`.
   - Validación automatizada con Puppeteer en `https://agenda.depilacionparahombres.com`: autogestión 200 OK, login admin OK, agenda cargada con alertas activas OK, pestaña de Usuarios y Operadores activa con Gonzalo OK, y Módulo de Gastos cargado con balance operativo en vivo OK.
+
+
+## 📅 Sesión: 20 de Octubre de 2026 (Producción - Implementación Integral de los 7 Puntos de Luciano Gómez en Main)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Analizar las 10 capturas de la carpeta `C:\Users\Try Hard\Desktop\luciano` (`1.png` a `10.png`) y confirmar alcance con el usuario.
+- [x] Implementar Punto 1: Regla de redondeo de 20 minutos para horas de permanencia de operadores (`minsInt >= 20 ? hoursInt + 1 : hoursInt`) en `/admin/agenda` y `/admin/agenda/imprimir`.
+- [x] Implementar Punto 2: Ocultar bloqueos de agenda al rol `OPERADOR` en `/api/admin/bloqueos`, `/api/admin/turnos/imprimir` y `/admin/agenda`.
+- [x] Implementar Punto 3: Limpieza visual de `/admin/estadisticas` (quitar botones rápidos Hoy/Semana/Mes, sub-pestañas y tarjetas oscuras intermedias de Caja) y corrección total de contraste (textos oscuros sobre fondos claros).
+- [x] Implementar Punto 4: Botón y ventana modal `🔍 Ampliar Listado en Ventana` para visualizar cómodamente la tabla de clientes/turnos.
+- [x] Implementar Punto 5: Vista previa interactiva y descarga de archivo Excel (`.xls`) con los dos modelos exactos de Luciano:
+  - Modelo A (`INFORME DE CLIENTES Y TURNOS REALIZADOS`) para `realizados`, `gananciaNeta`, `senados`, `nuevos`.
+  - Modelo B (`INFORME DE CANCELACIONES Y SEGUIMIENTO`) para `cancelados`, `ausentes`, `vaAAvisar`, `mantenimiento`, `finalizo`, `sinMarcar`.
+- [x] Implementar Punto 6 y Punto 7: Reglas contables exactas por métrica y nueva categoría `💰 Ganancia Neta (Ingresos Reales del Período)` en `/api/admin/estadisticas` y `/admin/estadisticas`.
+- [x] Compilar localmente (`npm run build`: 48/48 rutas con 0 errores), commitear y pushear a `main` y `staging` (`3b994ae`), y desplegar en VPS Producción (`https://agenda.depilacionparahombres.com`).
