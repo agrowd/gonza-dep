@@ -21,7 +21,7 @@ function parseTurnoZonas(zonasRaw) {
 
 function getZonasLabel(zonasRaw) {
   const list = parseTurnoZonas(zonasRaw);
-  return list.map(z => typeof z === 'string' ? z : (z.nombre || z.name || '')).filter(Boolean).join(', ') || 'Sin zonas especificadas';
+  return list.map(z => typeof z === 'string' ? z : (z.nombre || z.name || '')).filter(Boolean).join(' / ') || 'Sin zonas especificadas';
 }
 
 function mapOrigenCategoria(canalRaw) {
@@ -65,8 +65,9 @@ function formatTurnoItem(t, extra = {}) {
   let oportunidadNoConcretada = valorTotal;
 
   if (esSeguimiento) {
-    // En seguimiento se toma el valor de la última sesión, sin descontar su seña
-    señaDelTurnoReporte = 0;
+    // En seguimiento se muestra la seña que tuvo ese turno, seña retenida es 0,
+    // y se toma el valor completo de la última sesión sin descontar su seña (como en captura 7.png)
+    señaDelTurnoReporte = valorSeña;
     señaRetenida = 0;
     oportunidadNoConcretada = valorTotal;
   } else if (t.estado === 'CANCELADO' || t.estado === 'NO_ASISTIO') {
@@ -280,9 +281,9 @@ export async function GET(request) {
     const ticketPromedioRealizados = itemsRealizados.length > 0 ? Math.round(totalRealizados / itemsRealizados.length) : 0;
 
     // 1B. Ganancia Neta (Dinero que realmente ingresa en el período seleccionado)
-    // - Turnos realizados en el período creados antes del período -> ingresa el saldo (valorTotal - valorSeña)
-    // - Turnos realizados en el período creados dentro del mismo período -> ingresa valorTotal (seña + saldo)
-    // - Turnos agendados/creados en el período para fechas futuras (o aún no realizados) -> ingresa la seña (valorSeña)
+    // - Turnos nuevos: Si hoy se agenda un cliente y paga la seña, la seña se contabiliza en el período aunque el turno sea para otro día.
+    // - Turnos siguientes: Si un cliente que se atendió en el período pidió nuevo turno, se suma el saldo pendiente del turno realizado + la seña del siguiente turno.
+    // - Turnos sin siguiente: Si un cliente se atendió y no agendó nuevo turno, solo se suma el saldo pendiente abonado en la sesión.
     const createdInPeriodIds = new Set(
       turnosCreatedPeriodo
         .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO')
@@ -292,7 +293,21 @@ export async function GET(request) {
       turnosPeriodo.filter(t => isCompletedSession(t)).map(t => t.id)
     );
 
+    // Mapear señas de próximos turnos creados en el período por clienteId (que no sean sesiones ya realizadas en el período)
+    const futureSenasByClient = new Map();
+    turnosCreatedPeriodo
+      .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO' && !completedInPeriodIds.has(t.id))
+      .forEach(t => {
+        const list = futureSenasByClient.get(t.clienteId) || [];
+        list.push(t);
+        futureSenasByClient.set(t.clienteId, list);
+      });
+
     const itemsGananciaNeta = [];
+    let montoTurnosNuevos = 0;
+    let montoTurnosSiguientes = 0;
+    let montoTurnosSinSiguiente = 0;
+    const consumedFutureTurnoIds = new Set();
 
     // A) Sesiones realizadas dentro del período
     turnosPeriodo.filter(t => isCompletedSession(t)).forEach(t => {
@@ -300,33 +315,57 @@ export async function GET(request) {
       const vSena = Number(t.valorSeña || 0);
       const saldo = Math.max(0, vTotal - vSena);
       const fueCreadoEnPeriodo = createdInPeriodIds.has(t.id);
-      const ingresoReal = fueCreadoEnPeriodo ? vTotal : saldo;
-      const subtipo = fueCreadoEnPeriodo
-        ? 'Sesión realizada (Seña + Saldo en período)'
-        : 'Sesión realizada (Cobro de Saldo)';
 
-      itemsGananciaNeta.push(
-        formatTurnoItem(t, {
-          overrideValorTotal: ingresoReal,
-          overrideValorSeña: fueCreadoEnPeriodo ? vSena : 0,
-          overrideSaldo: saldo,
-          subtipoGanancia: subtipo
-        })
-      );
+      // Verificar si este cliente agendó un próximo turno con seña durante este período
+      const clientFutureTurnos = (futureSenasByClient.get(t.clienteId) || []).filter(ft => !consumedFutureTurnoIds.has(ft.id));
+      const nextTurnoBooked = clientFutureTurnos.length > 0 ? clientFutureTurnos[0] : null;
+
+      if (nextTurnoBooked) {
+        consumedFutureTurnoIds.add(nextTurnoBooked.id);
+        const senaSiguiente = Number(nextTurnoBooked.valorSeña || 0);
+        const senaPropiaEnPeriodo = fueCreadoEnPeriodo ? vSena : 0;
+        const ingresoTotalFila = saldo + senaSiguiente + senaPropiaEnPeriodo;
+        montoTurnosSiguientes += ingresoTotalFila;
+
+        itemsGananciaNeta.push(
+          formatTurnoItem(t, {
+            overrideValorTotal: ingresoTotalFila,
+            overrideValorSeña: senaSiguiente + senaPropiaEnPeriodo,
+            overrideSaldo: saldo,
+            subtipoGanancia: `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + Seña próx. $${senaSiguiente.toLocaleString('es-AR')})`
+          })
+        );
+      } else {
+        const senaPropiaEnPeriodo = fueCreadoEnPeriodo ? vSena : 0;
+        const ingresoTotalFila = saldo + senaPropiaEnPeriodo;
+        montoTurnosSinSiguiente += ingresoTotalFila;
+
+        itemsGananciaNeta.push(
+          formatTurnoItem(t, {
+            overrideValorTotal: ingresoTotalFila,
+            overrideValorSeña: senaPropiaEnPeriodo,
+            overrideSaldo: saldo,
+            subtipoGanancia: fueCreadoEnPeriodo
+              ? 'Turno realizado en período (Seña + Saldo)'
+              : 'Turno sin siguiente (Solo Saldo cobrado)'
+          })
+        );
+      }
     });
 
-    // B) Señas cobradas en el período por turnos nuevos o próximos turnos aún no realizados en el período
+    // B) Turnos nuevos / señas agendadas en el período (sin sesión realizada en el período)
     turnosCreatedPeriodo
-      .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO' && !completedInPeriodIds.has(t.id))
+      .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO' && !completedInPeriodIds.has(t.id) && !consumedFutureTurnoIds.has(t.id))
       .forEach(t => {
         const vSena = Number(t.valorSeña || 0);
+        montoTurnosNuevos += vSena;
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
             customId: `sena-${t.id}`,
             overrideValorTotal: vSena,
             overrideValorSeña: vSena,
             overrideSaldo: 0,
-            subtipoGanancia: 'Seña ingresada en período (Turno agendado)'
+            subtipoGanancia: 'Turno nuevo (Seña cobrada en el período)'
           })
         );
       });
@@ -615,6 +654,11 @@ export async function GET(request) {
           ticketPromedio: ticketPromedioGananciaNeta,
           entradasTurnos: entradasTurnosPeriodo,
           entradasSenas: entradasSenasPeriodo,
+          desglose: {
+            turnosNuevos: montoTurnosNuevos,
+            turnosSiguientes: montoTurnosSiguientes,
+            turnosSinSiguiente: montoTurnosSinSiguiente
+          },
           items: itemsGananciaNeta
         },
         senados: {

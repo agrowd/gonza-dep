@@ -463,23 +463,23 @@ export default function EstadisticasPage() {
     const isModelA = s.model === 'A';
 
     const rowsHtml = items.map((item, idx) => {
-      const bg = idx % 2 === 1 ? '#fbf9f4' : '#ffffff';
+      const bg = idx % 2 === 0 ? '#f1f5f9' : '#ffffff';
       if (isModelA) {
         const vFinal = Number(item.valorTotal || 0);
         const vSena = Number(item.valorSeña || 0);
         const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
         return `
           <tr style="background-color:${bg};">
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.clienteNombre}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.origenCategoria || 'Orgánico'}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.metodoPagoLabel || 'Transferencia'}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(vFinal)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(vSena)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(vSaldo)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.zonasTexto || '-'}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.clienteNombre}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.origenCategoria || 'Orgánico'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.metodoPagoLabel || 'Transferencia'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(vFinal)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(vSena)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(vSaldo)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.zonasTexto || '-'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
           </tr>
         `;
       } else {
@@ -489,16 +489,16 @@ export default function EstadisticasPage() {
         const opNoConc = Number(item.oportunidadNoConcretada ?? Math.max(0, val - ret));
         return `
           <tr style="background-color:${bg};">
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.clienteNombre}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.ultimoEstadoLabel || item.estado}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.tipoValor || 'Turno no realizado'}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(val)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(senaT)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(ret)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;text-align:right;">${formatMoney(opNoConc)}</td>
-            <td style="border:1px solid #cbbba0;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${formatDateDisplay(item.fecha)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:center;">${item.horaInicio || '-'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.clienteNombre}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.ultimoEstadoLabel || item.estado}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.tipoValor || 'Turno no realizado'}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(val)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(senaT)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(ret)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;text-align:right;">${formatMoney(opNoConc)}</td>
+            <td style="border:1px solid #cbd5e1;padding:6px;">${item.operadorNombre || 'Gonzalo'}</td>
           </tr>
         `;
       }
@@ -506,31 +506,31 @@ export default function EstadisticasPage() {
 
     const tableHeaderHtml = isModelA
       ? `
-        <tr style="background-color:#b5945b;color:#ffffff;font-weight:bold;">
-          <th style="border:1px solid #8a6d3b;padding:8px;">Fecha de turno</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Hora</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Cliente</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Origen</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Tipo de pago</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Valor final</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Seña aplicada</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Saldo del turno</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Zonas</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Operador</th>
+        <tr style="background-color:#1f2d3d;color:#ffffff;font-weight:bold;">
+          <th style="border:1px solid #1f2d3d;padding:8px;">Fecha de turno</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Hora</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Cliente</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Origen</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Tipo de pago</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Valor final</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Seña aplicada</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Saldo del turno</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Zonas</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Operador</th>
         </tr>
       `
       : `
-        <tr style="background-color:#b5945b;color:#ffffff;font-weight:bold;">
-          <th style="border:1px solid #8a6d3b;padding:8px;">Fecha de turno</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Hora</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Cliente</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Último estado</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Tipo de valor</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Valor</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Seña del turno</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Seña retenida</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Oportunidad no concretada</th>
-          <th style="border:1px solid #8a6d3b;padding:8px;">Operador</th>
+        <tr style="background-color:#1f2d3d;color:#ffffff;font-weight:bold;">
+          <th style="border:1px solid #1f2d3d;padding:8px;">Fecha de turno</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Hora</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Cliente</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Último estado</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Tipo de valor</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Valor</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Seña del turno</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Seña retenida</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Oportunidad no concretada</th>
+          <th style="border:1px solid #1f2d3d;padding:8px;">Operador</th>
         </tr>
       `;
 
@@ -948,6 +948,41 @@ export default function EstadisticasPage() {
             )}
           </div>
 
+          {/* DESGLOSE DE LOS 3 CONCEPTOS DE GANANCIA NETA (CAPTURA 10.PNG DE LUCIANO) */}
+          {selectedMetric === 'gananciaNeta' && data.avanzadas?.gananciaNeta?.desglose && (
+            <div className={styles.kpiGrid}>
+              <div className={styles.kpiCard}>
+                <div className={styles.kpiLabel}>Turnos Nuevos (Señas Cobradas)</div>
+                <div className={styles.kpiValue} style={{ fontSize: '1.45rem', color: '#15803d' }}>
+                  {formatMoney(data.avanzadas.gananciaNeta.desglose.turnosNuevos)}
+                </div>
+                <div className={styles.kpiSub}>
+                  Señas abonadas en el período por reservas nuevas (aunque el turno sea otro día)
+                </div>
+              </div>
+
+              <div className={styles.kpiCard}>
+                <div className={styles.kpiLabel}>Turnos Siguientes (Saldo + Seña Próx.)</div>
+                <div className={styles.kpiValue} style={{ fontSize: '1.45rem', color: '#15803d' }}>
+                  {formatMoney(data.avanzadas.gananciaNeta.desglose.turnosSiguientes)}
+                </div>
+                <div className={styles.kpiSub}>
+                  Clientes atendidos en el período que agendaron próximo turno (saldo + nueva seña)
+                </div>
+              </div>
+
+              <div className={styles.kpiCard}>
+                <div className={styles.kpiLabel}>Turnos Sin Siguiente (Solo Saldo)</div>
+                <div className={styles.kpiValue} style={{ fontSize: '1.45rem', color: '#15803d' }}>
+                  {formatMoney(data.avanzadas.gananciaNeta.desglose.turnosSinSiguiente)}
+                </div>
+                <div className={styles.kpiSub}>
+                  Clientes atendidos en el período que no agendaron nuevo turno (solo saldo cobrado)
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* SECCIÓN ESPECIAL: ZONAS (FILTROS PÍLDORA + HISTOGRAMA LEGIBLE) */}
           {selectedMetric === 'zonas' && data.avanzadas?.zonas && (
             <>
@@ -1064,30 +1099,28 @@ export default function EstadisticasPage() {
             </>
           )}
 
-          {/* TABLA INTERACTIVA DE DETALLES */}
+          {/* BARRA LIMPIA DE ACCESO AL LISTADO DE CLIENTES COMO VENTANA PARA AMPLIAR Y EXCEL (CAPTURA 5.PNG) */}
           <div className={styles.detailsSection}>
             <div className={styles.detailsHeader}>
               <div className={styles.detailsTitle}>
-                📋 Listado Detallado ({activeMetricData.count} registros)
+                📋 Listado de Clientes y Turnos ({activeMetricData.count} registros)
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                 {currentMetricDef.excelModel && (
                   <button
                     type="button"
                     className={styles.btnExcel}
-                    style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
                     onClick={() => setExcelModalOpen(true)}
                   >
-                    📊 Informe Excel
+                    📊 Abrir Informe Excel ({excelSummary.model === 'A' ? 'Ganancias' : 'Cancelaciones y Seguimiento'})
                   </button>
                 )}
                 <button
                   type="button"
                   className={styles.btnExpandList}
-                  style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }}
                   onClick={() => setExpandedListModalOpen(true)}
                 >
-                  🔍 Ampliar en Ventana
+                  🔍 Ampliar Listado de Clientes en Ventana ({activeMetricData.count})
                 </button>
               </div>
             </div>
@@ -1102,8 +1135,6 @@ export default function EstadisticasPage() {
                 </button>
               </div>
             )}
-
-            {renderTurnosTable()}
           </div>
         </>
       )}
@@ -1286,12 +1317,6 @@ export default function EstadisticasPage() {
                 {excelSummary.model === 'A' ? (
                   <div className={styles.excelSummaryRow}>
                     <table className={styles.excelSummaryTable}>
-                      <thead>
-                        <tr>
-                          <th>RESUMEN DEL PERÍODO</th>
-                          <th>VALOR</th>
-                        </tr>
-                      </thead>
                       <tbody>
                         <tr>
                           <td>Cantidad de turnos</td>
@@ -1317,12 +1342,6 @@ export default function EstadisticasPage() {
                     </table>
 
                     <table className={styles.excelSummaryTable}>
-                      <thead>
-                        <tr>
-                          <th>IMPORTES</th>
-                          <th>TOTAL</th>
-                        </tr>
-                      </thead>
                       <tbody>
                         <tr>
                           <td>Valor total de turnos</td>
@@ -1355,12 +1374,6 @@ export default function EstadisticasPage() {
                   <>
                     <div className={styles.excelSummaryRow}>
                       <table className={styles.excelSummaryTable}>
-                        <thead>
-                          <tr>
-                            <th>RESUMEN DEL PERÍODO</th>
-                            <th>CANTIDAD</th>
-                          </tr>
-                        </thead>
                         <tbody>
                           <tr>
                             <td>Cantidad de clientes</td>
@@ -1390,12 +1403,6 @@ export default function EstadisticasPage() {
                       </table>
 
                       <table className={styles.excelSummaryTable}>
-                        <thead>
-                          <tr>
-                            <th>IMPORTES</th>
-                            <th>TOTAL</th>
-                          </tr>
-                        </thead>
                         <tbody>
                           <tr>
                             <td>Valor de referencia total</td>

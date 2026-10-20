@@ -710,123 +710,111 @@
   white-space: pre-wrap;
 }
 
-/* Diseño Planilla Excel (Modelos A y B de Luciano) */
+/* Diseño Planilla Excel (Modelos A y B de Luciano - Capturas 6.png y 7.png) */
 .excelSheet {
-  background-color: #f7f4eb;
-  border: 1px solid #cbbba0;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 1.25rem;
-  color: #1d1d1d;
-  font-family: Arial, Helvetica, sans-serif;
+  padding: 1.5rem;
+  color: #0f172a;
+  font-family: Calibri, Arial, Helvetica, sans-serif;
 }
 
 .excelTitleBanner {
-  background-color: #6b1d1d;
-  color: #ffffff;
-  text-align: center;
-  font-size: 1.15rem;
+  background-color: #ffffff;
+  color: #0f172a;
+  text-align: left;
+  font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 0.65rem 1rem;
+  letter-spacing: 0.01em;
+  padding: 0 0 0.5rem 0;
   text-transform: uppercase;
-  border: 1px solid #4a1212;
 }
 
 .excelPeriodRow {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin: 0.75rem 0;
-  font-size: 0.88rem;
+  gap: 1.5rem;
+  margin: 0.25rem 0 1rem 0;
+  font-size: 0.9rem;
   flex-wrap: wrap;
 }
 
 .excelPeriodLabel {
-  background-color: #d6c8b4;
-  color: #1d1d1d;
-  font-weight: 700;
-  padding: 0.35rem 0.85rem;
-  border: 1px solid #b8a890;
+  color: #334155;
+  font-weight: 600;
 }
 
 .excelPeriodValue {
-  background-color: #ffffff;
-  color: #1d1d1d;
-  font-weight: 600;
-  padding: 0.35rem 1rem;
-  border: 1px solid #cbbba0;
+  color: #0f172a;
+  font-weight: 700;
+  min-width: 90px;
 }
 
 .excelTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.84rem;
+  font-size: 0.85rem;
   background-color: #ffffff;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .excelTable th {
-  background-color: #b5945b;
+  background-color: #1f2d3d;
   color: #ffffff;
   font-weight: 700;
   text-align: center;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid #9c7b44;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #1f2d3d;
   white-space: nowrap;
 }
 
 .excelTable td {
-  padding: 0.45rem 0.65rem;
-  border: 1px solid #dfd7c8;
-  color: #1d1d1d;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.excelTable tbody tr:nth-child(odd) {
+  background-color: #f1f5f9;
 }
 
 .excelTable tbody tr:nth-child(even) {
-  background-color: #fbf9f4;
+  background-color: #ffffff;
 }
 
 .excelSummaryRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2.5rem;
+  margin-top: 0.75rem;
 }
 
 .excelSummaryTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   background-color: #ffffff;
-}
-
-.excelSummaryTable th {
-  background-color: #6b1d1d;
-  color: #ffffff;
-  font-weight: 700;
-  text-align: center;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #4a1212;
-  text-transform: uppercase;
 }
 
 .excelSummaryTable td {
   padding: 0.45rem 0.75rem;
-  border: 1px solid #d6c8b4;
-  color: #1d1d1d;
-  background-color: #f4EFE6;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  background-color: #f1f5f9;
 }
 
 .excelSummaryTable td:last-child {
   text-align: right;
   font-weight: 700;
   background-color: #ffffff;
+  min-width: 90px;
 }
 
 .excelFootnote {
   margin-top: 0.85rem;
-  font-size: 0.8rem;
-  font-style: italic;
-  color: #475569;
+  font-size: 0.82rem;
+  color: #0f172a;
 }
 
 /* Spinner & Loading */
