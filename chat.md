@@ -669,3 +669,38 @@
   5. Modal y exportación a Excel (`.xls`) con Modelo A (Ganancias) y Modelo B (Cancelaciones y Seguimiento).
   6. Ajuste de reglas de valor por métrica e incorporación de `💰 Ganancia Neta` en el desplegable de Estadísticas.
   7. Despliegue directo en `main` (`3b994ae`) en el VPS de Producción (`https://agenda.depilacionparahombres.com`).
+
+
+---
+
+## 📅 Sesión: 20 de Octubre de 2026 - Corrección de Contraste en Gastos y Balance (`/admin/gastos`)
+- **Solicitud del usuario**: *"Gastos del mes y mayor categoria no se ve lo que quiere mostrar"* (captura adjunta mostrando texto blanco sobre fondo blanco en `/admin/gastos`).
+- **Solución aplicada (`30d001e`)**:
+  - En [gastos.module.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/gastos/gastos.module.css) y [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/gastos/page.js):
+    - **Gastos del Mes**: valor ahora en rojo intenso (`#dc2626`) de alto contraste y subtítulos en `#475569`.
+    - **Mayor Categoría**: valor (`Sin gastos` o nombre de la categoría) ahora en negro (`#1d1d1d`) con alto contraste.
+    - **Selector de Mes y Año (`Octubre`, `2026`) y flechas (`←` / `→`)**: antes tenían `color: #fff` sobre fondo blanco; ahora tienen texto `#1d1d1d`, fondo `#f8f6f0` y borde `#cbd5e1`.
+    - **Título principal, pestañas, buscador, selector de categorías, modales y tablas de Historial / Balance Día a Día / Categorías**: convertidos de `#fff` a `#1d1d1d` / `#475569` sobre fondos claros.
+- **Despliegue**: Subido a `main` y `staging` (`30d001e`) y desplegado en vivo en Producción (`https://agenda.depilacionparahombres.com`).
+
+
+---
+
+## 📅 Sesión: 20 de Octubre de 2026 - Corrección de Descarga de Excel (`.xlsx` OpenXML Nativo para Celulares y PC)
+- **Solicitud del usuario**: *"Me dijo esto luciano, quiso descargar el excel y verlo en el celular"* (captura adjunta mostrando *"No se puede abrir este documento. Aparentemente, la hoja de cálculo está dañada."*).
+- **Causa**: El archivo descargado anteriormente era una tabla HTML con extensión `.xls` generada con `Blob` URL, lo cual funciona en Excel de escritorio pero es rechazado como archivo dañado por los visores móviles de Android/iOS (Google Sheets, Excel Mobile, WPS Office).
+- **Solución aplicada (`dda0084`)**:
+  - Se creó el endpoint [route.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/api/admin/estadisticas/exportar-excel/route.js) (`/api/admin/estadisticas/exportar-excel`) que construye un archivo binario **OpenXML `.xlsx` real** (contenedor ZIP comprimido con `DEFLATE`, `xl/workbook.xml`, `xl/styles.xml`, `xl/sharedStrings.xml`, `xl/worksheets/sheet1.xml`, `docProps/core.xml` y `docProps/app.xml`) con todos los estilos institucionales (encabezado bordó `#6B1D1D`, cabecera azul marino `#1F2D3D`, filas alternadas, bordes, anchos de columna y formato numérico de moneda `"$ "#,##0`).
+  - Se actualizó `handleDownloadExcel` en [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/estadisticas/page.js) para realizar una descarga HTTP nativa (`POST` con `Content-Disposition: attachment; filename="Informe_... .xlsx"`), compatible con Android, iPhone y PC.
+- **Despliegue**: Subido a `main` y `staging` (`dda0084`) y desplegado en vivo en Producción (`https://agenda.depilacionparahombres.com`).
+
+
+---
+
+## 📅 Sesión: 20 de Octubre de 2026 - Corrección de Texto Invisible al Seleccionar una Métrica en Estadísticas (`0359c99`)
+- **Solicitud del usuario**: Captura de Luciano desde el celular: *"Acá cuando elijo una opción, desaparece el texto"* (en el desplegable `🔎 SELECCIONAR MÉTRICA A ANALIZAR:`).
+- **Causa**: `.metricDropdown` en [estadisticas.module.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/estadisticas/estadisticas.module.css) tenía `color: #ffffff` y `background-color: #18181c`, pero al tocar y elegir una opción el `<select>` quedaba en estado `:focus`, y la regla global `select:focus` en [globals.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/globals.css) forzaba `background-color: var(--bg-card)` (`#ffffff`), dejando el texto `#ffffff` invisible sobre fondo `#ffffff` (viéndose únicamente el emoji `❌`).
+- **Solución aplicada (`0359c99`)**:
+  - En [estadisticas.module.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/estadisticas/estadisticas.module.css): `.metricDropdown`, `.metricDropdown:focus` y `.metricDropdown option` ahora usan fondo blanco (`#ffffff !important`), texto negro (`#1d1d1d !important`) y borde bordó (`#7a1f1e`).
+  - En [globals.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/globals.css): se eliminó el `background-color: var(--bg-card)` forzado en `input:focus, select:focus, textarea:focus`.
+- **Despliegue**: Subido a `main` y `staging` (`0359c99`) y desplegado en vivo en Producción (`https://agenda.depilacionparahombres.com`).

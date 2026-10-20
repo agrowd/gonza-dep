@@ -514,3 +514,24 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 6. Se verificó con `curl` que el portal de autogestión (`/`) y el panel administrativo (`/login`) responden con HTTP 200 OK.
 **Estado:** ✅ FIXED
 
+
+
+## ERR-50: Error "La hoja de cálculo está dañada" al abrir el Excel descargado en celulares Android/iOS (20/10/2026)
+**Síntoma:** Al descargar el informe de Estadísticas y abrirlo en el celular (Google Sheets / Excel Mobile / visor de Android), aparece el mensaje *"No se puede abrir este documento. Aparentemente, la hoja de cálculo está dañada."*
+**Root Cause:** La descarga anterior generaba una tabla HTML con extensión `.xls` (`application/vnd.ms-excel`) mediante un `Blob` URL en el navegador. Mientras Excel de escritorio interpreta tablas HTML dentro de archivos `.xls`, las aplicaciones móviles (Google Sheets, Excel Mobile, visores de Android/iOS) exigen un archivo binario OpenXML `.xlsx` real (contenedor ZIP con compresión DEFLATE y esquema `xl/workbook.xml`, `xl/styles.xml`, `xl/sharedStrings.xml`, `xl/worksheets/sheet1.xml`).
+**Solución:** Se creó el endpoint `/api/admin/estadisticas/exportar-excel` (`src/app/api/admin/estadisticas/exportar-excel/route.js`) que empaqueta un binario OpenXML `.xlsx` 100% estándar con compresión `DEFLATE`, estilos completos (encabezado bordó `#6B1D1D`, cabecera azul marino `#1F2D3D`, filas cebradas, celdas combinadas y valores numéricos con formato de moneda `"$ "#,##0`) y se descarga vía `POST` nativo con `Content-Disposition: attachment; filename="Informe_... .xlsx"`.
+**Commit:** `dda0084`
+**Estado:** ✅ FIXED
+
+## ERR-51: Duración de citas desfasada (`duracionMinutos`) y reseteo del scroll al entrar y salir de una ficha desde la Agenda (20/10/2026)
+**Síntoma:**
+1. En la vista diaria de la Agenda (`media_1792524920683_c575bed6.png`), turnos de 50 min (`14:00 - 14:50`) mostraban `⏱ 60 min` y turnos de 30 min (`16:00 - 16:30`) mostraban `⏱ 40 min`.
+2. Al ingresar a la ficha de un cliente desde la Agenda (`📁 Ficha Cliente`) y luego cerrarla, la página de la Agenda se desplazaba arriba de todo perdiendo la posición exacta donde el operador estaba scrolleando.
+**Root Cause:**
+1. En `POST /api/admin/turnos`, si el cliente tenía 0 turnos registrados en el sistema, `isNew = true` agregaba automáticamente +10 min de bonus por primer turno en `calculateTurnDetails`, sobrescribiendo la duración real calculada entre `horaFin` y `horaInicio`.
+2. En `src/app/admin/agenda/page.js`, el scroll se guardaba únicamente en `gridBodyRef.current.scrollTop` (el cual es `null` en vista diaria Neocita). Además, en móviles el contenedor con scroll es `.calendarContainer` (`calendarRef.current`) y `<main>`, los cuales nunca se guardaban ni restauraban. Al volver de `/admin/clientes`, `handleCloseProfile` tampoco preservaba la bandera de contexto de fecha, reiniciando fechas pasadas a "Hoy" en la agenda.
+**Solución:**
+1. En `POST /api/admin/turnos`, se fijó `computedDuration` estrictamente a `endMin - startMin` cuando `horaInicio` y `horaFin` están presentes. En `GET /api/admin/turnos` y en la UI de la Agenda, se sanitizó dinámicamente `duracionMinutos` a `timeToMinutes(horaFin) - timeToMinutes(horaInicio)` asegurando que todas las citas existentes y nuevas muestren su duración exacta.
+2. Se implementaron los helpers `captureAgendaScroll` y `restoreAgendaScroll` que guardan y recuperan las posiciones de `<main>`, `calendarRef.current`, `gridBodyRef.current` y `window`, asociando el ID del turno (`agenda-turno-${app.id}`) para restaurar el scroll de inmediato en el cierre de modal y tras la recarga de citas. En `handleCloseProfile` de `/admin/clientes` se agregó el parámetro `fromAgendaReturn=true` para no perder la fecha al retornar a la agenda.
+**Commit:** `pending`
+**Estado:** ✅ FIXED

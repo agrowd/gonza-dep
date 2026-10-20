@@ -134,7 +134,17 @@ export async function GET(request) {
       }
     });
 
-    return NextResponse.json(turnos);
+    const sanitizedTurnos = turnos.map(t => {
+      const s = timeToMinutes(t.horaInicio);
+      const e = timeToMinutes(t.horaFin);
+      const realDuration = (e > s) ? (e - s) : (t.duracionMinutos || 30);
+      return {
+        ...t,
+        duracionMinutos: realDuration
+      };
+    });
+
+    return NextResponse.json(sanitizedTurnos);
   } catch (error) {
     console.error('Error listing appointments:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
@@ -296,11 +306,16 @@ export async function POST(request) {
       const isNew = clientRecord ? (clientRecord.turnos?.length === 0) : true;
       const coreDetails = calculateTurnDetails(dbZones, isNew);
       
-      computedDuration = coreDetails.duracionMinutos;
-      if (computedDuration <= 0) {
-        const startMin = timeToMinutes(horaInicio);
-        const endMin = timeToMinutes(horaFin);
-        computedDuration = Math.max(10, endMin - startMin);
+      const startMin = timeToMinutes(horaInicio);
+      const endMin = timeToMinutes(horaFin);
+      const diffMin = endMin - startMin;
+
+      if (diffMin > 0) {
+        computedDuration = diffMin;
+      } else if (coreDetails.duracionMinutos > 0) {
+        computedDuration = coreDetails.duracionMinutos;
+      } else {
+        computedDuration = 30;
       }
       if (valorTotal === undefined || valorTotal === '') finalValorTotal = coreDetails.valorTotal;
       if (valorSeña === undefined || valorSeña === '') finalValorSeña = Math.round(finalValorTotal * 0.5);

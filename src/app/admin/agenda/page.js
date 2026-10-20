@@ -575,39 +575,126 @@ export default function AgendaPage() {
     };
   }, [dismissedAlerts]);
 
-  const savedScrollRef = useRef(0);
+  const savedScrollRef = useRef(null);
   const gridBodyRef = useRef(null);
 
-  // Restore scroll position when closing details modal or mounting from client profile
-  useEffect(() => {
-    if (isDetailsOpen) {
-      if (gridBodyRef.current) {
-        savedScrollRef.current = gridBodyRef.current.scrollTop;
+  // Helper to capture scroll position across all possible scroll containers
+  const captureAgendaScroll = (turnoId = null) => {
+    if (typeof window === 'undefined') return;
+    const mainEl = document.querySelector('main');
+    const calEl = calendarRef.current;
+    const gridEl = gridBodyRef.current;
+
+    const scrollData = {
+      main: mainEl ? mainEl.scrollTop : 0,
+      calendar: calEl ? calEl.scrollTop : 0,
+      calendarLeft: calEl ? calEl.scrollLeft : 0,
+      grid: gridEl ? gridEl.scrollTop : 0,
+      win: window.scrollY || document.documentElement.scrollTop || 0,
+      turnoId: turnoId || selectedTurno?.id || null,
+      date: selectedDate ? toYYYYMMDD(selectedDate) : null,
+      view: viewMode,
+      timestamp: Date.now()
+    };
+    savedScrollRef.current = scrollData;
+    try {
+      sessionStorage.setItem('agenda_scroll_state', JSON.stringify(scrollData));
+      sessionStorage.setItem('agenda_scroll_pos', String(scrollData.grid || scrollData.calendar || scrollData.main || 0));
+    } catch (e) {}
+  };
+
+  // Helper to restore scroll position across all possible scroll containers
+  const restoreAgendaScroll = () => {
+    if (typeof window === 'undefined') return;
+    let data = savedScrollRef.current;
+    if (!data || typeof data !== 'object') {
+      try {
+        const stored = sessionStorage.getItem('agenda_scroll_state');
+        if (stored) data = JSON.parse(stored);
+      } catch (e) {}
+    }
+    if (!data) return;
+
+    const mainEl = document.querySelector('main');
+    const calEl = calendarRef.current;
+    const gridEl = gridBodyRef.current;
+
+    if (data.main !== undefined && mainEl && data.main > 0) {
+      mainEl.scrollTop = data.main;
+    }
+    if (data.calendar !== undefined && calEl && data.calendar > 0) {
+      calEl.scrollTop = data.calendar;
+    }
+    if (data.calendarLeft !== undefined && calEl && data.calendarLeft > 0) {
+      calEl.scrollLeft = data.calendarLeft;
+    }
+    if (data.grid !== undefined && gridEl && data.grid > 0) {
+      gridEl.scrollTop = data.grid;
+    }
+    if (data.win !== undefined && data.win > 0) {
+      window.scrollTo(0, data.win);
+    }
+    if (data.turnoId) {
+      const cardEl = document.getElementById(`agenda-turno-${data.turnoId}`);
+      if (cardEl && (!data.main || data.main === 0) && (!data.calendar || data.calendar === 0)) {
+        cardEl.scrollIntoView({ block: 'nearest', behavior: 'auto' });
       }
+    }
+  };
+
+  // Restore scroll position when closing details modal
+  useEffect(() => {
+    if (!isDetailsOpen && savedScrollRef.current) {
+      restoreAgendaScroll();
+      const t1 = setTimeout(restoreAgendaScroll, 50);
+      const t2 = setTimeout(restoreAgendaScroll, 150);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
     }
   }, [isDetailsOpen]);
 
+  // Restore scroll when appointments finish loading (e.g. returning from client profile)
   useEffect(() => {
-    if (appointments && appointments.length > 0) {
-      const scrollPos = sessionStorage.getItem('agenda_scroll_pos');
-      const winScrollPos = sessionStorage.getItem('agenda_window_scroll');
-      if (scrollPos || winScrollPos) {
-        const restoreScroll = () => {
-          if (scrollPos && gridBodyRef.current) {
-            gridBodyRef.current.scrollTop = parseInt(scrollPos, 10);
-          }
-          if (winScrollPos) {
-            window.scrollTo(0, parseInt(winScrollPos, 10));
-          }
+    if (!loading && appointments && appointments.length > 0) {
+      const stored = typeof window !== 'undefined' ? sessionStorage.getItem('agenda_scroll_state') : null;
+      if (stored || savedScrollRef.current) {
+        const runRestore = () => restoreAgendaScroll();
+        runRestore();
+        const t1 = setTimeout(runRestore, 60);
+        const t2 = setTimeout(runRestore, 200);
+        const t3 = setTimeout(runRestore, 450);
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          clearTimeout(t3);
         };
-        restoreScroll();
-        setTimeout(restoreScroll, 100);
-        setTimeout(restoreScroll, 300);
-        sessionStorage.removeItem('agenda_scroll_pos');
-        sessionStorage.removeItem('agenda_window_scroll');
       }
     }
-  }, [loading, appointments]);
+  }, [loading, appointments, viewMode]);
+
+  // Helper to compute session number for a turno: (sesionesPrevias + prior completed turnos + 1)
+  const getTurnoSessionNumber = (app) => {
+    if (!app || !app.cliente) return null;
+    const clientTurnos = app.cliente.turnos || [];
+    const previas = Number(app.cliente.sesionesPrevias) || 0;
+    const appDateStr = getAppDateStr(app.fecha);
+    const appStartMin = timeToMinutes(app.horaInicio);
+
+    const completedPrior = clientTurnos.filter(t => {
+      if (t.id === app.id) return false;
+      if (t.estado !== 'REALIZADO') return false;
+      const tDateStr = getAppDateStr(t.fecha);
+      if (tDateStr < appDateStr) return true;
+      if (tDateStr === appDateStr) {
+        return timeToMinutes(t.horaInicio) < appStartMin;
+      }
+      return false;
+    }).length;
+
+    return previas + completedPrior + 1;
+  };
 
   // Helper to robustly extract selected zone IDs and custom "otros" info from any format of turno.zonas
   const extractZoneSelection = (zonasInput, zonesCatalog = []) => {
@@ -1135,7 +1222,8 @@ export default function AgendaPage() {
       
       const isNewTurnoReq = searchParams.get('newTurno') === 'true';
       const reprogramarTurnoId = searchParams.get('reprogramarTurnoId');
-      const hasExplicitTurnoContext = Boolean(turnoIdParam || reprogramarTurnoId || isNewTurnoReq || fromClientParam || fromStatsParam);
+      const fromAgendaReturnParam = searchParams.get('fromAgendaReturn') === 'true';
+      const hasExplicitTurnoContext = Boolean(turnoIdParam || reprogramarTurnoId || isNewTurnoReq || fromClientParam || fromStatsParam || fromAgendaReturnParam);
       
       const today = new Date();
       const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -2974,10 +3062,12 @@ export default function AgendaPage() {
                         return (
                           <div
                             key={app.id}
+                            id={`agenda-turno-${app.id}`}
                             className={`${styles.monthAppBlock} ${getStatusBlockClass(app.estado)}`}
                             title={`${app.horaInicio} - ${app.cliente?.nombreCompleto || 'Bloqueo'}: ${zonasText}`}
                             onClick={(e) => {
                               e.stopPropagation();
+                              captureAgendaScroll(app.id);
                               setSelectedTurno(app);
                               setIsDetailsOpen(true);
                             }}
@@ -3373,11 +3463,18 @@ export default function AgendaPage() {
                             zonasText = app.zonas;
                           }
 
+                          const appStartM = timeToMinutes(app.horaInicio);
+                          const appEndM = timeToMinutes(app.horaFin);
+                          const realDurationMin = (appEndM > appStartM) ? (appEndM - appStartM) : (app.duracionMinutos || 30);
+                          const sessionNumber = getTurnoSessionNumber(app);
+
                           return (
                             <div
                               key={`t-${app.id}`}
+                              id={`agenda-turno-${app.id}`}
                               className={`${styles.neocitaCard} ${getStatusBlockClass(app.estado)}`}
                               onClick={() => {
+                                captureAgendaScroll(app.id);
                                 setSelectedTurno(app);
                                 setIsDetailsOpen(true);
                               }}
@@ -3387,8 +3484,13 @@ export default function AgendaPage() {
                                   {app.horaInicio} - {app.horaFin}
                                 </span>
                                 <span className={styles.neocitaDurationBadge}>
-                                  ⏱️ {app.duracionMinutos || 30} min
+                                  ⏱️ {realDurationMin} min
                                 </span>
+                                {sessionNumber !== null && (
+                                  <span className={styles.neocitaSessionBadge}>
+                                    Sesión {sessionNumber}
+                                  </span>
+                                )}
                               </div>
                               <div className={styles.neocitaBody}>
                                 <div className={styles.neocitaTopRow}>
@@ -3563,9 +3665,11 @@ export default function AgendaPage() {
                         return (
                           <div
                             key={app.id}
+                            id={`agenda-turno-${app.id}`}
                             className={`${styles.appointmentBlock} ${getStatusBlockClass(app.estado)}`}
                             style={blockStyle}
                             onClick={() => {
+                              captureAgendaScroll(app.id);
                               setSelectedTurno(app);
                               setIsDetailsOpen(true);
                             }}
@@ -4870,9 +4974,7 @@ export default function AgendaPage() {
                           if (checkHasUnsavedChanges() || tempClientFechaPrimerTurno || tempClientSesionesPrevias !== undefined) {
                             await handleSaveClientObservaciones(true);
                           }
-                          if (typeof window !== 'undefined' && gridBodyRef.current) {
-                            sessionStorage.setItem('agenda_scroll_pos', gridBodyRef.current.scrollTop.toString());
-                          }
+                          captureAgendaScroll(selectedTurno.id);
                           const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
                           window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
                         }}
@@ -5004,8 +5106,7 @@ export default function AgendaPage() {
                       <button
                         type="button"
                         onClick={async () => {
-                          const clientName = selectedTurno.cliente?.nombreCompleto?.split(' ')[0] || 'Hola';
-                          const reviewMsg = `¡Hola ${clientName}! Esperamos que hayas tenido una excelente sesión en Gonzalo Depilación Masculina ✨ Nos ayudaría muchísimo que nos dejes tu opinión y reseña en Google: https://maps.app.goo.gl/9XurMQfdnv1NMP6H6?g_st=iwb ¡Muchas gracias!`;
+                          const reviewMsg = `Hola, si podes me dejas tu calificación o comentario en nuestro perfil de Google 🙏 para que otros usuarios puedan tener una referencia de mi trabajo y atención 📖, ya que con esto me ayudas un montón 😄\nEl link es el siguiente: https://g.page/r/CZHRtLKRQ2dPEBE/review`;
                           const cleanPhone = selectedTurno.cliente?.whatsapp?.replace(/\D/g, '');
                           const link = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(reviewMsg)}`;
                           window.open(link, '_blank');

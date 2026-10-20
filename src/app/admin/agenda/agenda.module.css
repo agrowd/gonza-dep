@@ -469,6 +469,20 @@
   margin-top: 6px;
 }
 
+.neocitaSessionBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background-color: rgba(180, 83, 9, 0.12);
+  color: #92400e;
+  border: 1px solid rgba(180, 83, 9, 0.28);
+  margin-top: 5px;
+  white-space: nowrap;
+  display: inline-block;
+  line-height: 1.2;
+}
+
 .neocitaBody {
   flex: 1;
   padding: 0.85rem 1.1rem;
