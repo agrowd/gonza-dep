@@ -704,3 +704,35 @@
   - En [estadisticas.module.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/estadisticas/estadisticas.module.css): `.metricDropdown`, `.metricDropdown:focus` y `.metricDropdown option` ahora usan fondo blanco (`#ffffff !important`), texto negro (`#1d1d1d !important`) y borde bordó (`#7a1f1e`).
   - En [globals.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/globals.css): se eliminó el `background-color: var(--bg-card)` forzado en `input:focus, select:focus, textarea:focus`.
 - **Despliegue**: Subido a `main` y `staging` (`0359c99`) y desplegado en vivo en Producción (`https://agenda.depilacionparahombres.com`).
+
+
+---
+
+## 📅 Sesión: 20 de Octubre de 2026 - Implementación de 4 Requerimientos de Luciano para la Agenda (`9cf1acc`)
+- **Capturas de Luciano**: `media_1792524920683_c575bed6.png`, `media_1792524942046_5aff41f2.png`, `media_1792525073780_e4c098a4.png`:
+  1. *"Hola Fede, las duraciones se desconfiguraron y aparecen mal"* (ej. `14:00 - 14:50` mostraba `⏱ 60 min`, `16:00 - 16:30` mostraba `⏱ 40 min`).
+  2. *"También si se puede poner el numero de sesión en el recuadro, así sabemos que sesión es"* (flecha roja en la tarjeta diaria hacia la columna izquierda debajo del horario y duración, con el texto `"Sesión 2"`).
+  3. *"Y en producción a Gonza le sigue pasando que al entrar a una ficha desde la agenda, al salir de la ficha, lo devuelve arriba de todo del scroll, no conserva el scroll donde estaba al momento de tocar"*.
+  4. *"Y el botón de mandar reseñas ahora debe mandar este mensaje y link"*:
+     `Hola, si podes me dejas tu calificación o comentario en nuestro perfil de Google 🙏 para que otros usuarios puedan tener una referencia de mi trabajo y atención 📖, ya que con esto me ayudas un montón 😄`
+     `El link es el siguiente: https://g.page/r/CZHRtLKRQ2dPEBE/review`
+- **Solución implementada**:
+  1. **Duraciones reales**:
+     - En [route.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/api/admin/turnos/route.js) (`POST`), se corrigió el cálculo de `computedDuration` para usar directamente la diferencia en minutos entre `horaFin` y `horaInicio` (`endMin - startMin`), impidiendo que el bonus de +10 min de nuevo cliente infle la duración de las citas guardadas.
+     - En `GET /api/admin/turnos` y en la UI de [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/agenda/page.js), se sanitiza la duración calculando `endMin - startMin`, garantizando que tanto turnos nuevos como citas preexistentes muestren sus minutos exactos (`14:00 - 14:50` ➔ `⏱ 50 min`, `16:00 - 16:30` ➔ `⏱ 30 min`).
+  2. **Número de sesión (`Sesión X`) en columna izquierda de tarjeta diaria**:
+     - Se creó la función `getTurnoSessionNumber(app)` que calcula la sesión del turno en base a `cliente.sesionesPrevias + turnos realizados cronológicamente previos + 1`.
+     - En `.neocitaTimeCol` de [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/agenda/page.js) y [agenda.module.css](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/agenda/agenda.module.css), se renderiza el badge estilizado `.neocitaSessionBadge` con `Sesión {numeroSesion}` debajo de `⏱ {duracion} min`.
+  3. **Preservación total de scroll en Agenda móvil y desktop**:
+     - Se crearon las funciones `captureAgendaScroll(turnoId)` y `restoreAgendaScroll()` que guardan y restauran las posiciones de scroll de `<main>`, `calendarRef.current`, `gridBodyRef.current` y `window`, asociando el ID único `agenda-turno-${app.id}` a cada tarjeta de turno.
+     - Se dispara la captura de scroll inmediatamente al tocar cualquier turno en la grilla diaria, semanal o mensual, y al hacer clic en `📁 Ficha Cliente`.
+     - Se restaura el scroll automáticamente al cerrar el modal de turno y cuando finaliza la recarga de citas tras regresar de la ficha.
+     - En [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/clientes/page.js) (`handleCloseProfile`), se agregó el parámetro `fromAgendaReturn=true` y en la Agenda se integró para que las fechas no se reseteen a "Hoy" al regresar de una ficha de cliente.
+  4. **Mensaje oficial de reseña de Google**:
+     - En [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/agenda/page.js), se actualizó el texto del mensaje predeterminado y el enlace a `https://g.page/r/CZHRtLKRQ2dPEBE/review`.
+- **Validación y Despliegue**:
+  - Compilación local validada con `npm run build` (Turbopack, 49/49 páginas en 85s con 0 errores).
+  - Push a `main` y `staging` (`9cf1acc`).
+  - Despliegue seguro ejecutado con éxito en el VPS Hostinger (`187.127.9.216`, PM2 `gonzalo-agenda`, puerto 3006).
+  - Backup de PostgreSQL generado exitosamente antes del despliegue (`agenda_db_pre_deploy_20261020_202443.sql`, 7.4MB).
+  - Respuesta HTTP 200 OK validada en `https://agenda.depilacionparahombres.com`.
