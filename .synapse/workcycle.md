@@ -1929,6 +1929,10 @@
 - [x] Resolver bloque duplicado en `/admin/estadisticas` (`media_1792591617080_31297eec.png` - *"Y esto también borralo porque ya lo dice arriba"*):
   - Eliminar `.detailsSection` redundante debajo de las tarjetas KPI, manteniendo los botones de Excel y ampliación de ventana arriba en `.filtersCard`.
 - [x] Compilar localmente con Next.js Turbopack (`npm run build`: 49/49 rutas en 57s, 0 errores).
-- [ ] Commit y push a `main` y `staging`.
-- [ ] Desplegar en Producción VPS (`187.127.9.216`, puerto 3006).
-- [ ] Documentar en `.synapse/` y actualizar `chat.md`.
+- [x] Commit y push a `main` y `staging` (`da4f057`).
+- [x] Desplegar en Producción VPS (`187.127.9.216`, puerto 3006, PM2 `gonzalo-agenda`).
+  - Backup de base de datos realizado exitosamente (`agenda_db_pre_deploy_20261021_142121.sql`, 7.5MB).
+  - Limpieza de `subEstado` en citas canceladas/ausentes aplicada en PostgreSQL.
+  - Compilación en VPS exitosa (49/49 rutas en 21.8s) y reinicio limpio de PM2.
+  - Validación HTTP 200 OK en `https://agenda.depilacionparahombres.com`.
+- [x] Documentar en `.synapse/` y actualizar `chat.md`.

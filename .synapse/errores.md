@@ -544,5 +544,5 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 2. En `formatTurnoItem`, se dio precedencia absoluta a `t.estado === 'CANCELADO'` y `'NO_ASISTIO'` antes de evaluar `subEstado`.
 3. En `PUT /api/admin/turnos/[id]` y `executeCancelTurno` en `src/app/admin/agenda/page.js`, al cancelar o marcar inasistencia se setea preventivamente `subEstado = null`.
 4. En `src/app/admin/estadisticas/page.js`, se eliminó el bloque redundante `.detailsSection` ubicado bajo las tarjetas KPI (`media_1792591617080_31297eec.png`), conservando únicamente los controles superiores.
-**Commit:** `pending`
+**Commit:** `da4f057`
 **Estado:** ✅ FIXED

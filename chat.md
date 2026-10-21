@@ -736,3 +736,24 @@
   - Despliegue seguro ejecutado con éxito en el VPS Hostinger (`187.127.9.216`, PM2 `gonzalo-agenda`, puerto 3006).
   - Backup de PostgreSQL generado exitosamente antes del despliegue (`agenda_db_pre_deploy_20261020_202443.sql`, 7.4MB).
   - Respuesta HTTP 200 OK validada en `https://agenda.depilacionparahombres.com`.
+
+---
+
+## 📅 Sesión: 21 de Octubre de 2026 - Corrección de Turnos Cancelados en Excel Realizados y Limpieza de Bloque Duplicado (`da4f057`)
+- **Capturas y reportes de Luciano Gómez**: `media_1792591293694_a9e9bb00.png` a `media_1792591617080_31297eec.png`:
+  1. *"En el Excel de Realizados, toma y suma el turno de Diego Bolemi que está cancelado"* (`media_1792591327262_33ac0be2.png`): En la Agenda del 19/10/2026, Diego Bolemi (`17:50 - 19:20`) figuraba como `CANCELADO` (con `subEstado: VA_A_AVISAR`). Sin embargo, en la métrica de Realizados y en el Excel generado aparecía en la fila 8 y sus $150.000 se sumaban a `FACTURACIÓN REALIZADA` ($645.000 en vez de $495.000).
+  2. *"Y esto también borralo porque ya lo dice arriba"* (`media_1792591617080_31297eec.png`): Luciano señaló la sección inferior `.detailsSection` en `/admin/estadisticas` que duplicaba el título de registros y los botones de descarga de Excel y ampliación de ventana.
+- **Solución implementada**:
+  1. **Exclusión estricta de turnos cancelados/ausentes de las sesiones realizadas**:
+     - En [route.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/api/admin/estadisticas/route.js) y [gastos/route.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/api/admin/gastos/route.js), se reescribió `isCompletedSession(t)` para evaluar estrictamente `t.estado === 'REALIZADO'`, retornando `false` si el estado es `'CANCELADO'`, `'NO_ASISTIO'` o `'BLOQUEADO'`. Esto garantiza que tener un `subEstado` (ej. `'VA_A_AVISAR'`) nunca clasifique erróneamente una cita cancelada como sesión realizada.
+     - En `formatTurnoItem` ([estadisticas/route.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/api/admin/estadisticas/route.js)), se priorizó `CANCELADO` y `NO_ASISTIO` sobre `subEstado` para evitar que un turno cancelado se rotule con etiquetas de seguimiento como "Va a avisar".
+     - En [turnos/[id]/route.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/api/admin/turnos/[id]/route.js) y [agenda/page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/agenda/page.js) (`executeCancelTurno`), al cancelar un turno se setea preventivamente `subEstado: null`.
+     - Se ejecutó limpieza en PostgreSQL en producción eliminando `subEstado` de turnos cancelados/ausentes preexistentes.
+  2. **Eliminación del bloque duplicado en Estadísticas**:
+     - En [estadisticas/page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/estadisticas/page.js), se eliminó el contenedor `.detailsSection` redundante debajo de las tarjetas KPI, manteniendo los botones principales en la barra superior `.filtersCard` junto al selector de métricas y conservando el banner de exclusiones activas.
+- **Validación y Despliegue**:
+  - Compilación local validada con Turbopack (`npm run build`: 49/49 rutas en 57s, 0 errores).
+  - Push a `main` y `staging` (`da4f057`).
+  - Despliegue seguro ejecutado con éxito en el VPS Hostinger (`187.127.9.216`, PM2 `gonzalo-agenda`, puerto 3006).
+  - Backup de base de datos de producción realizado exitosamente (`agenda_db_pre_deploy_20261021_142121.sql`, 7.5MB).
+  - Respuesta HTTP 200 OK validada en `https://agenda.depilacionparahombres.com`.
