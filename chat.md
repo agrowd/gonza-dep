@@ -757,3 +757,30 @@
   - Despliegue seguro ejecutado con éxito en el VPS Hostinger (`187.127.9.216`, PM2 `gonzalo-agenda`, puerto 3006).
   - Backup de base de datos de producción realizado exitosamente (`agenda_db_pre_deploy_20261021_142121.sql`, 7.5MB).
   - Respuesta HTTP 200 OK validada en `https://agenda.depilacionparahombres.com`.
+
+
+---
+
+## 📅 Sesión: 21 de Octubre de 2026 (Noche) - Preservación de Valores Reales en Ganancia Neta, Selector de Método de Pago en Edición y Erradicación de Caché (`8d1e67e`)
+- **Capturas y feedback de Luciano Gómez**: `media_1792622997218_dee94a0e.png`, `media_1792623022115_14b32b1c.png`, `media_1792623038735_1aead050.png`:
+  1. *"A Pablo Domínguez que tuvo su turno a las 20:00 le modificamos el valor de la sesión a 89.000 pero acá sigue tomando 67.000 (o 63.000)"*: En el Excel y listado de Ganancia Neta, la fila de Pablo Domínguez mostraba `Valor final: $63.000 | Seña aplicada: $0 | Saldo: $63.000` (y Pablo Nasillo `Valor final: $15.000 | Seña: $0 | Saldo: $15.000`).
+  2. *"Y a Pablo navallo le pase de transferencia a efectivo, pero sigue apareciendo transferencia"*: Al intentar pasar a Pablo Nasillo a Efectivo, el turno no persistía en efectivo en la base de datos ni en el Excel.
+  3. *"Y lo descargue hace un ratito así que es un archivo fresco. Nosé cada cuánto es que lo actualiza. Avisame porque el Excel y el listado de ayer me sigue apareciendo desactualizado"*: El navegador móvil cacheaba la respuesta de estadísticas.
+- **Solución implementada**:
+  1. **Preservación de valores reales en filas de Ganancia Neta**:
+     - En [route.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/api/admin/estadisticas/route.js), se eliminó el override que reemplazaba `valorTotal` por el saldo ingresado y `valorSeña` por $0 en las citas agendadas antes del período.
+     - Ahora las filas reflejan exactamente el valor real del turno (`valorTotal: $89.000`, `valorSeña: $26.000`, `saldoPendiente: $63.000`), mientras que el dinero que ingresa en caja se calcula de forma limpia con `ingresoCobradoPeriodo` para los KPI de Ganancia Neta ($368.500 total).
+  2. **Selector de Método de Pago en el Modal de Edición**:
+     - En [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/agenda/page.js), se añadió el campo `💳 Método de Pago` (`TRANSFERENCIA` / `EFECTIVO`) dentro del formulario del modal `Editar / Reprogramar Turno`.
+     - Se inicializa en `setEditTurno` y se despacha en `handleSaveEditTurno` hacia `PUT /api/admin/turnos/[id]`.
+     - Se actualizó en la base de datos de producción el registro de Pablo Nasillo a `metodoPago = 'EFECTIVO'`.
+  3. **Erradicación de caché en endpoints y botón de actualización**:
+     - Se fijaron `export const dynamic = 'force-dynamic'` y `export const revalidate = 0` con cabeceras `Cache-Control: no-store, no-cache, must-revalidate` en `estadisticas/route.js` y `gastos/route.js`.
+     - En [page.js](file:///c:/Users/Try%20Hard/Desktop/Nexte/gonzalo-dep/src/app/admin/estadisticas/page.js), se añadió `{ cache: 'no-store' }` y parámetro anti-caché `_t=${Date.now()}` al fetch.
+     - Se sumó el botón interactivo `🔄 Actualizar` junto al rango de fechas para forzar la recarga inmediata de datos en vivo sin depender del caché de teléfonos móviles.
+- **Validación y Despliegue**:
+  - Compilación local Turbopack: 49/49 rutas en 60s con 0 errores.
+  - Commits `8d1e67e` pusheados a `main` y `staging`.
+  - Despliegue seguro en Producción Hostinger (puerto 3006, PM2 `gonzalo-agenda`).
+  - Backup de base de datos generado: `agenda_db_pre_deploy_20261021_232126.sql` (7.6MB).
+  - Verificación en vivo en `/api/admin/estadisticas`: Pablo Domínguez figura en $89.000 (Seña $26.000, Saldo $63.000) y Pablo Nasillo en $75.000 (Seña $60.000, Saldo $15.000, Método: Efectivo). Ganancia Neta Total: $368.500.

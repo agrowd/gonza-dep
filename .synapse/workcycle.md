@@ -1945,6 +1945,9 @@
   2. Método de pago en Pablo Nasillo: Se integró el selector `💳 Método de Pago` en el modal de edición de turnos (`Editar / Reprogramar Turno`) y en `handleSaveEditTurno`, y se actualizó en la base de datos de producción a `EFECTIVO`.
   3. Erradicación de caché en móvil y botón de refresco: Se añadieron `export const dynamic = 'force-dynamic'` y `revalidate = 0` con cabeceras `Cache-Control: no-store` en los endpoints de estadísticas y gastos, parámetro anti-caché en el fetch, y el botón `🔄 Actualizar` en la cabecera de `/admin/estadisticas`.
 - [x] Validar compilación local con Next.js Turbopack (`npm run build`: 49/49 rutas en 60s, 0 errores).
-- [ ] Commit y push a `main` y `staging`.
-- [ ] Desplegar en Producción VPS (`187.127.9.216`, puerto 3006).
-- [ ] Documentar en `.synapse/` y actualizar `chat.md`.
+- [x] Commit y push a `main` y `staging` (`8d1e67e`).
+- [x] Desplegar en Producción VPS (`187.127.9.216`, puerto 3006).
+  - Backup de base de datos generado exitosamente (`agenda_db_pre_deploy_20261021_232126.sql`, 7.6MB).
+  - Compilación en VPS en 12.3s con Turbopack (47/47 rutas) y reinicio limpio de PM2.
+  - Verificación en vivo en `/api/admin/estadisticas`: Pablo Domínguez muestra $89.000 ($26.000 seña, $63.000 saldo) y Pablo Nasillo muestra $75.000 ($60.000 seña, $15.000 saldo, Efectivo).
+- [x] Documentar en `.synapse/` y actualizar `chat.md`.

@@ -557,5 +557,5 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 1. Se removió el override de `valorTotal` y `valorSeña` en las filas de `itemsGananciaNeta`, conservando los valores reales del turno ($89.000 y $75.000) y derivando el flujo de caja del período a `ingresoCobradoPeriodo` para las tarjetas KPI.
 2. Se integró el selector `💳 Método de Pago` en el modal de edición y en el payload de guardado de turnos, y se actualizó el turno de Pablo Nasillo a `EFECTIVO` en la base de datos de producción.
 3. Se agregaron `export const dynamic = 'force-dynamic'`, `revalidate = 0` y `Cache-Control: no-store` en los endpoints, y se sumó el botón `🔄 Actualizar` con parámetro anti-caché en `/admin/estadisticas`.
-**Commit:** `pending`
+**Commit:** `8d1e67e`
 **Estado:** ✅ FIXED
