@@ -559,3 +559,10 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 3. Se agregaron `export const dynamic = 'force-dynamic'`, `revalidate = 0` y `Cache-Control: no-store` en los endpoints, y se sumó el botón `🔄 Actualizar` con parámetro anti-caché en `/admin/estadisticas`.
 **Commit:** `8d1e67e`
 **Estado:** ✅ FIXED
+
+## ERR-54: Error de cliente `useCallback is not defined` en `/admin/estadisticas` (21/10/2026)
+**Síntoma:** Al ingresar a `/admin/estadisticas` (`media_1792626086603_3a8d802f.png`), la pantalla mostraba el Error Boundary: *"Ocurrió un error en el Panel: useCallback is not defined"*.
+**Root Cause:** Al refactorizar la función `fetchEstadisticas` para memoizarla con `useCallback`, faltó incluir `useCallback` en la desestructuración de `import { useState, useEffect, useMemo } from 'react'` en `src/app/admin/estadisticas/page.js`.
+**Solución:** Se añadió `useCallback` a los imports de React en `src/app/admin/estadisticas/page.js`.
+**Commit:** `8710a41`
+**Estado:** ✅ FIXED

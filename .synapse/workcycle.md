@@ -1951,3 +1951,10 @@
   - Compilación en VPS en 12.3s con Turbopack (47/47 rutas) y reinicio limpio de PM2.
   - Verificación en vivo en `/api/admin/estadisticas`: Pablo Domínguez muestra $89.000 ($26.000 seña, $63.000 saldo) y Pablo Nasillo muestra $75.000 ($60.000 seña, $15.000 saldo, Efectivo).
 - [x] Documentar en `.synapse/` y actualizar `chat.md`.
+- [x] Resolver inmediatamente `useCallback is not defined` reportado por Luciano en `/admin/estadisticas` (`media_1792626086603_3a8d802f.png`).
+  - Importar `useCallback` en `src/app/admin/estadisticas/page.js`.
+  - Compilar localmente con Next.js Turbopack (47/47 rutas en 49s con 0 errores).
+  - Commit y push a `main` y `staging` (`8710a41`).
+  - Desplegar en VPS Producción (`187.127.9.216`, puerto 3006).
+  - Backup de base de datos generado exitosamente (`agenda_db_pre_deploy_20261021_234455.sql`, 7.7MB).
+  - Verificación en vivo en producción HTTP 200 OK y endpoint de estadísticas operativo.

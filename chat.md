@@ -784,3 +784,14 @@
   - Despliegue seguro en Producción Hostinger (puerto 3006, PM2 `gonzalo-agenda`).
   - Backup de base de datos generado: `agenda_db_pre_deploy_20261021_232126.sql` (7.6MB).
   - Verificación en vivo en `/api/admin/estadisticas`: Pablo Domínguez figura en $89.000 (Seña $26.000, Saldo $63.000) y Pablo Nasillo en $75.000 (Seña $60.000, Saldo $15.000, Método: Efectivo). Ganancia Neta Total: $368.500.
+
+
+---
+
+## 📅 Sesión: 21 de Octubre de 2026 (Noche, Fix Rápido) - Importación de `useCallback` en Estadísticas (`8710a41`)
+- **Reporte de Luciano**: `media_1792626086603_3a8d802f.png` (*"Ocurrió un error en el Panel: useCallback is not defined"*).
+- **Causa y Solución**:
+  - Al memoizar `fetchEstadisticas` con `useCallback`, faltó incluirlo en el `import` de React en `src/app/admin/estadisticas/page.js`.
+  - Se importó `useCallback` de `'react'`, se compiló localmente con Turbopack (47/47 rutas OK) y se desplegó de inmediato al VPS de producción.
+  - Backup de base de datos generado: `agenda_db_pre_deploy_20261021_234455.sql` (7.7MB).
+  - Verificado en vivo en `https://agenda.depilacionparahombres.com/admin/estadisticas` respondiendo 200 OK sin errores de cliente.
