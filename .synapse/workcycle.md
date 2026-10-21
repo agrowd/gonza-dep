@@ -1916,3 +1916,19 @@
   3. Preservación del scroll en Agenda: Se implementó la captura y restauración universal de scroll (`<main>`, `calendarRef.current`, `gridBodyRef.current`, `window`, ID de turno `agenda-turno-${app.id}`), evitando que cerrar el modal de turno o entrar/salir de `/admin/clientes` (con `fromAgendaReturn=true`) resetee el scroll.
   4. Mensaje y link de Google Reviews: En `/admin/agenda` (botón pedir reseña de Google), se actualizó el texto y el link a `https://g.page/r/CZHRtLKRQ2dPEBE/review`.
 - [x] Compilación validada localmente con `npm run build` (Turbopack, 48/48 rutas en 85s, 0 errores).
+
+## 📅 Sesión: 21 de Octubre de 2026 (Corrección de Turnos Cancelados en Excel Realizados y Limpieza de Bloque Duplicado)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver caso Diego Bolemi reportado por Luciano Gómez (`media_1792591293694_a9e9bb00.png` a `media_1792591327262_33ac0be2.png`):
+  - El turno cancelado de Diego Bolemi ($150.000) se sumaba en Facturación Realizada ($645.000 vs $495.000) y se listaba en el Excel de Realizados.
+  - Causa raíz: `isCompletedSession(t)` en `estadisticas/route.js` y `gastos/route.js` consideraba realizado a cualquier turno con `subEstado: 'VA_A_AVISAR'`.
+  - Solución: restringir `isCompletedSession(t)` a `t.estado === 'REALIZADO'` estricto y excluir `CANCELADO`, `NO_ASISTIO` y `BLOQUEADO`.
+  - Precedencia de estados: priorizar `CANCELADO` y `NO_ASISTIO` sobre `subEstado` en `formatTurnoItem`.
+  - Limpieza en base de datos y backend: setear `subEstado = null` al cancelar turno en `PUT /api/admin/turnos/[id]` y `executeCancelTurno`.
+- [x] Resolver bloque duplicado en `/admin/estadisticas` (`media_1792591617080_31297eec.png` - *"Y esto también borralo porque ya lo dice arriba"*):
+  - Eliminar `.detailsSection` redundante debajo de las tarjetas KPI, manteniendo los botones de Excel y ampliación de ventana arriba en `.filtersCard`.
+- [x] Compilar localmente con Next.js Turbopack (`npm run build`: 49/49 rutas en 57s, 0 errores).
+- [ ] Commit y push a `main` y `staging`.
+- [ ] Desplegar en Producción VPS (`187.127.9.216`, puerto 3006).
+- [ ] Documentar en `.synapse/` y actualizar `chat.md`.

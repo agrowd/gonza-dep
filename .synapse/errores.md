@@ -533,5 +533,16 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 **Solución:**
 1. En `POST /api/admin/turnos`, se fijó `computedDuration` estrictamente a `endMin - startMin` cuando `horaInicio` y `horaFin` están presentes. En `GET /api/admin/turnos` y en la UI de la Agenda, se sanitizó dinámicamente `duracionMinutos` a `timeToMinutes(horaFin) - timeToMinutes(horaInicio)` asegurando que todas las citas existentes y nuevas muestren su duración exacta.
 2. Se implementaron los helpers `captureAgendaScroll` y `restoreAgendaScroll` que guardan y recuperan las posiciones de `<main>`, `calendarRef.current`, `gridBodyRef.current` y `window`, asociando el ID del turno (`agenda-turno-${app.id}`) para restaurar el scroll de inmediato en el cierre de modal y tras la recarga de citas. En `handleCloseProfile` de `/admin/clientes` se agregó el parámetro `fromAgendaReturn=true` para no perder la fecha al retornar a la agenda.
+**Commit:** `9cf1acc` / `31eead3`
+**Estado:** ✅ FIXED
+
+## ERR-52: Turnos cancelados con `subEstado` contabilizados falsamente como sesiones realizadas en Estadísticas y Excel de Realizados (21/10/2026)
+**Síntoma:** Al descargar el Excel de "Turnos Realizados" o consultar la métrica de Realizados en `/admin/estadisticas` para el 19/10/2026 (`media_1792591327262_33ac0be2.png`), la cita de Diego Bolemi ($150.000) figuraba en la fila 8 y se sumaba a Facturación Realizada ($645.000 en lugar de $495.000), a pesar de estar marcada como `CANCELADO` en la Agenda.
+**Root Cause:** En `src/app/api/admin/estadisticas/route.js` y `src/app/api/admin/gastos/route.js`, la función `isCompletedSession(t)` contenía `return t.estado === 'REALIZADO' || ['SIGUIENTE_TURNO', 'VA_A_AVISAR', 'MANTENIMIENTO', 'FINALIZADO'].includes(t.subEstado);`. Debido a esa disyunción lógica, cualquier turno que tuviera un `subEstado` asignado (como Diego Bolemi que tenía `subEstado: 'VA_A_AVISAR'`) era evaluado como sesión realizada y completada, ignorando por completo que `t.estado === 'CANCELADO'`.
+**Solución:**
+1. Se reescribió `isCompletedSession(t)` tanto en `estadisticas/route.js` como en `gastos/route.js` para exigir estrictamente `t.estado === 'REALIZADO'`, devolviendo `false` inmediatamente si el estado es `'CANCELADO'`, `'NO_ASISTIO'` o `'BLOQUEADO'`.
+2. En `formatTurnoItem`, se dio precedencia absoluta a `t.estado === 'CANCELADO'` y `'NO_ASISTIO'` antes de evaluar `subEstado`.
+3. En `PUT /api/admin/turnos/[id]` y `executeCancelTurno` en `src/app/admin/agenda/page.js`, al cancelar o marcar inasistencia se setea preventivamente `subEstado = null`.
+4. En `src/app/admin/estadisticas/page.js`, se eliminó el bloque redundante `.detailsSection` ubicado bajo las tarjetas KPI (`media_1792591617080_31297eec.png`), conservando únicamente los controles superiores.
 **Commit:** `pending`
 **Estado:** ✅ FIXED

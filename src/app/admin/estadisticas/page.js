@@ -901,43 +901,16 @@ export default function EstadisticasPage() {
             </>
           )}
 
-          {/* BARRA LIMPIA DE ACCESO AL LISTADO DE CLIENTES COMO VENTANA PARA AMPLIAR Y EXCEL (CAPTURA 5.PNG) */}
-          <div className={styles.detailsSection}>
-            <div className={styles.detailsHeader}>
-              <div className={styles.detailsTitle}>
-                📋 Listado de Clientes y Turnos ({activeMetricData.count} registros)
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-                {currentMetricDef.excelModel && (
-                  <button
-                    type="button"
-                    className={styles.btnExcel}
-                    onClick={() => setExcelModalOpen(true)}
-                  >
-                    📊 Abrir Informe Excel ({excelSummary.model === 'A' ? 'Ganancias' : 'Cancelaciones y Seguimiento'})
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className={styles.btnExpandList}
-                  onClick={() => setExpandedListModalOpen(true)}
-                >
-                  🔍 Ampliar Listado de Clientes en Ventana ({activeMetricData.count})
-                </button>
-              </div>
+          {excludedIds.size > 0 && (
+            <div className={styles.exclusionBanner} style={{ marginTop: '1rem' }}>
+              <span>
+                ⚠️ Has excluido <strong>{excludedIds.size}</strong> registro(s) del cálculo actual usando el botón [X].
+              </span>
+              <button type="button" className={styles.btnResetExclusion} onClick={resetExclusions}>
+                Restaurar Todos ({excludedIds.size})
+              </button>
             </div>
-
-            {excludedIds.size > 0 && (
-              <div className={styles.exclusionBanner}>
-                <span>
-                  ⚠️ Has excluido <strong>{excludedIds.size}</strong> registro(s) del cálculo actual usando el botón [X].
-                </span>
-                <button type="button" className={styles.btnResetExclusion} onClick={resetExclusions}>
-                  Restaurar Todos ({excludedIds.size})
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </>
       )}
 

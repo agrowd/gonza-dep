@@ -251,7 +251,11 @@ export async function PUT(request, { params }) {
     if (horaInicio) updateData.horaInicio = horaInicio;
     if (horaFin) updateData.horaFin = horaFin;
     if (estado) updateData.estado = estado;
-    if (subEstado !== undefined) updateData.subEstado = subEstado;
+    if (subEstado !== undefined) {
+      updateData.subEstado = subEstado;
+    } else if (estado === 'CANCELADO' || estado === 'NO_ASISTIO') {
+      updateData.subEstado = null;
+    }
     if (body.metodoPago !== undefined) updateData.metodoPago = body.metodoPago;
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
 

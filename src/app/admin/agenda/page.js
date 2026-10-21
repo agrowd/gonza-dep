@@ -1739,6 +1739,7 @@ export default function AgendaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           estado: 'CANCELADO', 
+          subEstado: null,
           preserveDeposit 
         })
       });

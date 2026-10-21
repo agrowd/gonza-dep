@@ -158,8 +158,10 @@ export async function GET(request) {
     // Señas: en fecha de creación (createdAt)
     // ==========================================
     const isCompletedSession = (t) => {
-      return t.estado === 'REALIZADO' ||
-             ['SIGUIENTE_TURNO', 'VA_A_AVISAR', 'MANTENIMIENTO', 'FINALIZADO'].includes(t.subEstado);
+      if (!t || t.estado === 'CANCELADO' || t.estado === 'NO_ASISTIO' || t.estado === 'BLOQUEADO') {
+        return false;
+      }
+      return t.estado === 'REALIZADO';
     };
 
     // Entradas por turnos completados en el mes

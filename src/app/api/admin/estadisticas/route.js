@@ -48,16 +48,18 @@ function formatTurnoItem(t, extra = {}) {
   let ultimoEstadoLabel = t.estado || '';
   if (extra.ultimoEstadoLabel) {
     ultimoEstadoLabel = extra.ultimoEstadoLabel;
+  } else if (t.estado === 'CANCELADO') {
+    ultimoEstadoLabel = 'Cancelado';
+  } else if (t.estado === 'NO_ASISTIO') {
+    ultimoEstadoLabel = 'Ausente';
   } else if (t.subEstado === 'VA_A_AVISAR') {
     ultimoEstadoLabel = 'Va a avisar';
   } else if (t.subEstado === 'MANTENIMIENTO') {
     ultimoEstadoLabel = 'Mantenimiento';
   } else if (t.subEstado === 'FINALIZADO') {
     ultimoEstadoLabel = 'Finalizó';
-  } else if (t.estado === 'NO_ASISTIO') {
-    ultimoEstadoLabel = 'Ausente';
-  } else if (t.estado === 'CANCELADO') {
-    ultimoEstadoLabel = 'Cancelado';
+  } else if (t.estado === 'REALIZADO') {
+    ultimoEstadoLabel = 'Realizado';
   }
 
   let señaDelTurnoReporte = valorSeña;
@@ -232,8 +234,10 @@ export async function GET(request) {
 
     // Helper: calculate session balance collected (valorTotal - valorSeña)
     const isCompletedSession = (t) => {
-      return t.estado === 'REALIZADO' || 
-             ['SIGUIENTE_TURNO', 'VA_A_AVISAR', 'MANTENIMIENTO', 'FINALIZADO'].includes(t.subEstado);
+      if (!t || t.estado === 'CANCELADO' || t.estado === 'NO_ASISTIO' || t.estado === 'BLOQUEADO') {
+        return false;
+      }
+      return t.estado === 'REALIZADO';
     };
 
     // Hoy
