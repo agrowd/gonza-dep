@@ -190,10 +190,12 @@ export default function EstadisticasPage() {
   const [excelModalOpen, setExcelModalOpen] = useState(false);
 
   // Cargar estadísticas al cambiar fechas
-  useEffect(() => {
+  const fetchEstadisticas = useCallback(() => {
     if (!startDate || !endDate) return;
     setLoading(true);
-    fetch(`/api/admin/estadisticas?start=${startDate}&end=${endDate}`)
+    fetch(`/api/admin/estadisticas?start=${startDate}&end=${endDate}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    })
       .then(res => res.json())
       .then(json => {
         if (!json.error) {
@@ -206,6 +208,10 @@ export default function EstadisticasPage() {
         setLoading(false);
       });
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    fetchEstadisticas();
+  }, [fetchEstadisticas]);
 
   // Limpiar exclusiones y subfiltros cuando se cambia de métrica
   const handleMetricChange = (newMetric) => {
@@ -320,6 +326,8 @@ export default function EstadisticasPage() {
     filteredItems.forEach(item => {
       if (selectedMetric === 'cancelados' || selectedMetric === 'ausentes') {
         totalMoney += Number(item.oportunidadNoConcretada ?? item.valorTotal ?? 0);
+      } else if (selectedMetric === 'gananciaNeta') {
+        totalMoney += Number(item.ingresoCobradoPeriodo ?? item.valorTotal ?? 0);
       } else {
         totalMoney += Number(item.valorTotal || 0);
       }
@@ -656,6 +664,16 @@ export default function EstadisticasPage() {
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
+
+          <button
+            type="button"
+            className={styles.btnRefresh}
+            onClick={fetchEstadisticas}
+            title="Recargar datos actualizados en vivo"
+            disabled={loading}
+          >
+            {loading ? '⏳ Actualizando...' : '🔄 Actualizar'}
+          </button>
         </div>
       </div>
 

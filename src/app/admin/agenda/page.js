@@ -304,6 +304,7 @@ export default function AgendaPage() {
     horaInicio: '',
     horaFin: '',
     estado: '',
+    metodoPago: 'TRANSFERENCIA',
     operadorId: '',
     valorTotal: '',
     valorSeña: '',
@@ -1371,6 +1372,7 @@ export default function AgendaPage() {
                 horaInicio: newTime || turno.horaInicio,
                 horaFin: newHoraFin || turno.horaFin,
                 estado: 'REPROGRAMADO',
+                metodoPago: turno.metodoPago || 'TRANSFERENCIA',
                 valorTotal: dynPrices.valorTotal,
                 valorSeña: turno.valorSeña,
                 manualTotalOverride: undefined,
@@ -2128,6 +2130,7 @@ export default function AgendaPage() {
           horaInicio: editTurno.horaInicio,
           horaFin: editTurno.horaFin,
           estado: editTurno.estado,
+          metodoPago: editTurno.metodoPago || 'TRANSFERENCIA',
           fechaOriginal: editTurno.fechaOriginal,
           horaOriginal: editTurno.horaOriginal,
           isReprogramacion: Boolean(editTurno.isReprogramacion),
@@ -3761,6 +3764,17 @@ export default function AgendaPage() {
                     </select>
                   </div>
 
+                  <div className={styles.inputGroup}>
+                    <label className={styles.inputLabel}>💳 Método de Pago</label>
+                    <select
+                      value={editTurno.metodoPago || 'TRANSFERENCIA'}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, metodoPago: e.target.value }))}
+                    >
+                      <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                      <option value="EFECTIVO">💵 Efectivo</option>
+                    </select>
+                  </div>
+
                   {currentUserRole === 'ADMIN' && (
                     <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                       <label className={styles.inputLabel}>👤 Operador Asignado</label>
@@ -5030,6 +5044,7 @@ export default function AgendaPage() {
                             horaInicio: selectedTurno.horaInicio,
                             horaFin: selectedTurno.horaFin,
                             estado: selectedTurno.estado,
+                            metodoPago: selectedTurno.metodoPago || 'TRANSFERENCIA',
                             valorTotal: dynPrices.valorTotal,
                             valorSeña: selectedTurno.valorSeña,
                             manualTotalOverride: undefined,

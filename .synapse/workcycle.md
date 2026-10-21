@@ -1936,3 +1936,15 @@
   - Compilación en VPS exitosa (49/49 rutas en 21.8s) y reinicio limpio de PM2.
   - Validación HTTP 200 OK en `https://agenda.depilacionparahombres.com`.
 - [x] Documentar en `.synapse/` y actualizar `chat.md`.
+
+## 📅 Sesión: 21 de Octubre de 2026 (Noche - Corrección de Valores en Ganancia Neta, Método de Pago en Edición y Erradicación de Caché)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver inconsistencias reportadas por Luciano Gómez (`media_1792622997218_dee94a0e.png` a `media_1792623038735_1aead050.png`):
+  1. Valor de sesión editado en Pablo Domínguez: En Ganancia Neta, se eliminó el override que reemplazaba `valorTotal` por el saldo ingresado ($63.000 en vez de $89.000) y `valorSeña` por 0. Ahora el Excel y la grilla reflejan exactamente el valor total de la sesión ($89.000), la seña aplicada ($26.000) y el saldo ($63.000), y lo mismo para Pablo Nasillo ($75.000 total, $60.000 seña, $15.000 saldo).
+  2. Método de pago en Pablo Nasillo: Se integró el selector `💳 Método de Pago` en el modal de edición de turnos (`Editar / Reprogramar Turno`) y en `handleSaveEditTurno`, y se actualizó en la base de datos de producción a `EFECTIVO`.
+  3. Erradicación de caché en móvil y botón de refresco: Se añadieron `export const dynamic = 'force-dynamic'` y `revalidate = 0` con cabeceras `Cache-Control: no-store` en los endpoints de estadísticas y gastos, parámetro anti-caché en el fetch, y el botón `🔄 Actualizar` en la cabecera de `/admin/estadisticas`.
+- [x] Validar compilación local con Next.js Turbopack (`npm run build`: 49/49 rutas en 60s, 0 errores).
+- [ ] Commit y push a `main` y `staging`.
+- [ ] Desplegar en Producción VPS (`187.127.9.216`, puerto 3006).
+- [ ] Documentar en `.synapse/` y actualizar `chat.md`.

@@ -546,3 +546,16 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 4. En `src/app/admin/estadisticas/page.js`, se eliminó el bloque redundante `.detailsSection` ubicado bajo las tarjetas KPI (`media_1792591617080_31297eec.png`), conservando únicamente los controles superiores.
 **Commit:** `da4f057`
 **Estado:** ✅ FIXED
+
+## ERR-53: Filas de Ganancia Neta sobrescribían valores reales de turno por saldo cobrado y ausencia de selector de Método de Pago en edición (21/10/2026)
+**Síntoma:** Luciano Gómez reportó (`media_1792622997218_dee94a0e.png`, `media_1792623022115_14b32b1c.png`): 1) Al editar el valor de la sesión de Pablo Domínguez a $89.000, en el Excel y listado de Ganancia Neta seguía figurando en $63.000 y seña en $0; 2) Al pasar a Pablo Nasillo a Efectivo, seguía figurando como Transferencia; 3) El Excel descargado no reflejaba los cambios frescos de inmediato.
+**Root Cause:**
+1. En `src/app/api/admin/estadisticas/route.js`, al mapear `itemsGananciaNeta` para sesiones agendadas con anterioridad, se aplicaba `overrideValorTotal = saldo` ($63.000 en vez de $89.000) y `overrideValorSeña = 0` (en vez de $26.000), desvirtuando el valor real del turno en la grilla y en el Excel.
+2. En `src/app/admin/agenda/page.js`, el modal de edición (`Editar / Reprogramar Turno`) no contaba con el campo `metodoPago` en su formulario ni en `handleSaveEditTurno`, impidiendo actualizar la modalidad de cobro al editar el turno.
+3. La ruta de estadísticas no tenía declaradas las directivas `force-dynamic` ni cabeceras `Cache-Control: no-store`, provocando que navegadores móviles cachearan las peticiones GET.
+**Solución:**
+1. Se removió el override de `valorTotal` y `valorSeña` en las filas de `itemsGananciaNeta`, conservando los valores reales del turno ($89.000 y $75.000) y derivando el flujo de caja del período a `ingresoCobradoPeriodo` para las tarjetas KPI.
+2. Se integró el selector `💳 Método de Pago` en el modal de edición y en el payload de guardado de turnos, y se actualizó el turno de Pablo Nasillo a `EFECTIVO` en la base de datos de producción.
+3. Se agregaron `export const dynamic = 'force-dynamic'`, `revalidate = 0` y `Cache-Control: no-store` en los endpoints, y se sumó el botón `🔄 Actualizar` con parámetro anti-caché en `/admin/estadisticas`.
+**Commit:** `pending`
+**Estado:** ✅ FIXED

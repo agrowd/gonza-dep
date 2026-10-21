@@ -844,6 +844,35 @@
   to { transform: rotate(360deg); }
 }
 
+.btnRefresh {
+  background-color: #ffffff;
+  color: #7a1f1e;
+  border: 1.5px solid #7a1f1e;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+  align-self: flex-end;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.btnRefresh:hover:not(:disabled) {
+  background-color: #7a1f1e;
+  color: #ffffff;
+}
+
+.btnRefresh:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .header {

@@ -3,6 +3,9 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 function parseTurnoZonas(zonasRaw) {
   if (!zonasRaw) return [];
   if (Array.isArray(zonasRaw)) return zonasRaw;
@@ -105,6 +108,7 @@ function formatTurnoItem(t, extra = {}) {
     valorTotal: extra.overrideValorTotal !== undefined ? extra.overrideValorTotal : valorTotal,
     valorSeña: extra.overrideValorSeña !== undefined ? extra.overrideValorSeña : valorSeña,
     saldoPendiente: extra.overrideSaldo !== undefined ? extra.overrideSaldo : saldoDelTurno,
+    ingresoCobradoPeriodo: extra.ingresoCobradoPeriodo !== undefined ? Number(extra.ingresoCobradoPeriodo) : (extra.overrideValorTotal !== undefined ? Number(extra.overrideValorTotal) : valorTotal),
     estado: t.estado,
     subEstado: t.subEstado || null,
     señaEstado: t.señaEstado || null,
@@ -333,9 +337,7 @@ export async function GET(request) {
 
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
-            overrideValorTotal: ingresoTotalFila,
-            overrideValorSeña: senaSiguiente + senaPropiaEnPeriodo,
-            overrideSaldo: saldo,
+            ingresoCobradoPeriodo: ingresoTotalFila,
             subtipoGanancia: `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + Seña próx. $${senaSiguiente.toLocaleString('es-AR')})`
           })
         );
@@ -346,9 +348,7 @@ export async function GET(request) {
 
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
-            overrideValorTotal: ingresoTotalFila,
-            overrideValorSeña: senaPropiaEnPeriodo,
-            overrideSaldo: saldo,
+            ingresoCobradoPeriodo: ingresoTotalFila,
             subtipoGanancia: fueCreadoEnPeriodo
               ? 'Turno realizado en período (Seña + Saldo)'
               : 'Turno sin siguiente (Solo Saldo cobrado)'
@@ -369,12 +369,13 @@ export async function GET(request) {
             overrideValorTotal: vSena,
             overrideValorSeña: vSena,
             overrideSaldo: 0,
+            ingresoCobradoPeriodo: vSena,
             subtipoGanancia: 'Turno nuevo (Seña cobrada en el período)'
           })
         );
       });
 
-    const totalGananciaNeta = itemsGananciaNeta.reduce((acc, item) => acc + item.valorTotal, 0);
+    const totalGananciaNeta = montoTurnosNuevos + montoTurnosSiguientes + montoTurnosSinSiguiente;
     const ticketPromedioGananciaNeta = itemsGananciaNeta.length > 0 ? Math.round(totalGananciaNeta / itemsGananciaNeta.length) : 0;
 
     // 2. Turnos Señados / Confirmados (Solo turnos que están en estado SEÑADO / REPROGRAMADO / PENDIENTE_AUTORIZACION y aún NO fueron realizados)
@@ -743,6 +744,10 @@ export async function GET(request) {
           porAusencias: totalPerdidaAusentes,
           total: perdidasTotalesPeriodo
         }
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
       }
     });
 
