@@ -858,3 +858,33 @@
     - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261022_163850.sql` (7.7 MB).
     - Compilación en VPS en Producción (47/47 rutas) y reinicio limpio de PM2 `gonzalo-agenda` (HTTP 200 OK).
     - Compilación en VPS en Staging (47/47 rutas) y reinicio limpio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
+
+---
+
+## 📱 Sesión: 22 de Octubre de 2026 (Tarde) - Formato Móvil en Estadísticas y Gastos, Filtro de Fechas Exactas y Depuración de Balance / Mayor Categoría
+- **Capturas y Requerimientos de Luciano Gómez** (`media_1792683748058_16cfc55e.png` a `media_1792683851714_4eab3bd6.png`):
+  1. *"Para el listado de estadísticas en el teléfono, es incómoda la ventana porque hay que ir y volver horizontalmente para ver toda la lista, así que, que tenga este formato para que sea más cómoda"* (`media_1792683748058_16cfc55e.png`).
+  2. *"Esto tiene que ser un rango de fechas con el día también como tenemos en estadisticas"* (`media_1792683764425_17d064b2.png`).
+  3. Quitar tarjeta KPI de *"MAYOR CATEGORÍA"* en Gastos (`media_1792683808775_f07b0da1.png`).
+  4. *"El balance sacalo"* (quitar pestaña y tabla de Balance Diario) (`media_1792683825673_c8e45bdf.png`).
+  5. *"Y al historial de gastos dale este formato en el teléfono porque pasa lo mismo que es incómodo ver la lista por el scroll horizontal"* (`media_1792683851714_4eab3bd6.png`).
+- **Soluciones Implementadas**:
+  1. **Tarjetas Verticales Móviles en Estadísticas (`/admin/estadisticas`)**:
+     - Se añadió `.mobileTurnosList` en `renderTurnosTable()`, con `@media (max-width: 768px)` que oculta la tabla ancha y muestra tarjetas compactas de alto contraste en fondo `#18181b`.
+     - Fila 1: Cliente y Valor Total.
+     - Fila 2: Fecha/Hora (`01/10/26 · 13:50`) y Seña en verde (`Seña: $XX.XXX`).
+     - Fila 3: Zonas corporales.
+     - Fila 4: Estado de turno (`Siguiente turno`, `Va a avisar`, etc.) y botones de acción directa (`✕ Excluir`, `📅 Agenda`, `👤 Ficha`).
+  2. **Selector de Rango de Fechas por Día en Gastos (`/admin/gastos`)**:
+     - Se reemplazó el selector de mes/año por inputs `Desde` y `Hasta`, con botones rápidos (`Hoy`, `Ayer`, `Esta Semana`, `Este Mes`, `Mes Anterior`) y `🔄 Actualizar`.
+     - En `GET /api/admin/gastos`, se incorporó soporte para `start` / `desde` y `end` / `hasta`.
+  3. **Eliminación de 'Mayor Categoría'**:
+     - Se removió la 4ª tarjeta KPI de `/admin/gastos`, dejando una grilla simétrica de 3 tarjetas (`Gastos`, `Entradas` y `Balance Neto`).
+  4. **Eliminación del Balance Día a Día**:
+     - Se eliminó el botón de pestaña `📅 Balance Día a Día` y la sección completa de la tabla de balance diario.
+  5. **Historial de Gastos en Móvil Agrupado por Día (`/admin/gastos`)**:
+     - En `@media (max-width: 768px)`, se oculta la tabla y se despliega `.mobileGastosList`.
+     - Agrupado por día con cabecera interactiva plegable: fecha (`5 de junio`) y badge de total del día (`$42.800`).
+     - Ítems individuales con avatar circular e icono temático por categoría (`Insumos`, `Comida y bebidas`, `Servicios`, `Transporte`, `Sueldos`, `Marketing`, `Transferencia`), concepto/observaciones, importe negativo en rojo (`- $18.500`) y hora (`14:32`).
+- **Validación**:
+  - Compilación local validada con Turbopack (`npm run build`: 47/47 rutas en 21.1s, 0 errores).

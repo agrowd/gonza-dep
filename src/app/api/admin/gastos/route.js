@@ -17,7 +17,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
 
     // Current date in Argentina UTC-3
-    // Argentina local date (UTC-3)
     const now = new Date();
     const todayStr = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Argentina/Buenos_Aires',
@@ -27,38 +26,67 @@ export async function GET(request) {
     }).format(now);
     const [currentYear, currentMonth] = todayStr.split('-').map(Number);
 
+    const startParam = searchParams.get('start') || searchParams.get('desde');
+    const endParam = searchParams.get('end') || searchParams.get('hasta');
     const yearParam = searchParams.get('anio') || searchParams.get('year');
     const monthParam = searchParams.get('mes') || searchParams.get('month');
 
-    const year = yearParam ? parseInt(yearParam, 10) : currentYear;
-    const month = monthParam ? parseInt(monthParam, 10) : currentMonth; // 1-12
+    let startOfMonthFecha, endOfMonthFecha;
+    let startOfMonthCreated, endOfMonthCreated;
+    let startOfPrevMonthFecha, endOfPrevMonthFecha;
+    let year = currentYear;
+    let month = currentMonth;
+    let daysInMonth = 30;
+    let monthStr = String(currentMonth).padStart(2, '0');
 
-    // Current month bounds
-    const monthStr = String(month).padStart(2, '0');
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const lastDayStr = String(daysInMonth).padStart(2, '0');
+    if (startParam && endParam) {
+      // Rango personalizado por día
+      startOfMonthFecha = new Date(`${startParam}T00:00:00.000Z`);
+      endOfMonthFecha = new Date(`${endParam}T23:59:59.999Z`);
+      startOfMonthCreated = new Date(`${startParam}T00:00:00.000-03:00`);
+      endOfMonthCreated = new Date(`${endParam}T23:59:59.999-03:00`);
 
-    // Rango fecha mes actual (para fecha de turnos y gastos, normalizados a 00:00:00Z)
-    const startOfMonthFecha = new Date(`${year}-${monthStr}-01T00:00:00.000Z`);
-    const endOfMonthFecha = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999Z`);
+      const [sY, sM] = startParam.split('-').map(Number);
+      year = sY;
+      month = sM;
+      monthStr = String(month).padStart(2, '0');
 
-    // Rango createdAt mes actual (para señas en horario Argentina UTC-3)
-    const startOfMonthCreated = new Date(`${year}-${monthStr}-01T00:00:00.000-03:00`);
-    const endOfMonthCreated = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999-03:00`);
+      // Período anterior equivalente en cantidad de días para comparación de KPI
+      const diffDays = Math.max(1, Math.round((endOfMonthFecha.getTime() - startOfMonthFecha.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const prevEnd = new Date(startOfMonthFecha.getTime() - 1);
+      const prevStart = new Date(prevEnd.getTime() - (diffDays * 24 * 60 * 60 * 1000) + 1);
+      startOfPrevMonthFecha = prevStart;
+      endOfPrevMonthFecha = prevEnd;
+    } else {
+      // Rango mensual tradicional (backward compatibility)
+      year = yearParam ? parseInt(yearParam, 10) : currentYear;
+      month = monthParam ? parseInt(monthParam, 10) : currentMonth; // 1-12
+      monthStr = String(month).padStart(2, '0');
+      daysInMonth = new Date(year, month, 0).getDate();
+      const lastDayStr = String(daysInMonth).padStart(2, '0');
 
-    // Previous month bounds (for comparison)
-    let prevYear = year;
-    let prevMonth = month - 1;
-    if (prevMonth === 0) {
-      prevMonth = 12;
-      prevYear = year - 1;
+      // Rango fecha mes actual (para fecha de turnos y gastos, normalizados a 00:00:00Z)
+      startOfMonthFecha = new Date(`${year}-${monthStr}-01T00:00:00.000Z`);
+      endOfMonthFecha = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999Z`);
+
+      // Rango createdAt mes actual (para señas en horario Argentina UTC-3)
+      startOfMonthCreated = new Date(`${year}-${monthStr}-01T00:00:00.000-03:00`);
+      endOfMonthCreated = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999-03:00`);
+
+      // Previous month bounds (for comparison)
+      let prevYear = year;
+      let prevMonth = month - 1;
+      if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear = year - 1;
+      }
+      const prevMonthStr = String(prevMonth).padStart(2, '0');
+      const daysInPrevMonth = new Date(prevYear, prevMonth, 0).getDate();
+      const prevLastDayStr = String(daysInPrevMonth).padStart(2, '0');
+
+      startOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000Z`);
+      endOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999Z`);
     }
-    const prevMonthStr = String(prevMonth).padStart(2, '0');
-    const daysInPrevMonth = new Date(prevYear, prevMonth, 0).getDate();
-    const prevLastDayStr = String(daysInPrevMonth).padStart(2, '0');
-
-    const startOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000Z`);
-    const endOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999Z`);
     const startOfPrevMonthCreated = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000-03:00`);
     const endOfPrevMonthCreated = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999-03:00`);
 
@@ -230,26 +258,52 @@ export async function GET(request) {
         entradasSenasPorDia[dayNum] = (entradasSenasPorDia[dayNum] || 0) + (Number(t.valorSeña) || 0);
       });
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const g = gastosPorDia[day] || 0;
-      const eTurno = entradasTurnosPorDia[day] || 0;
-      const eSena = entradasSenasPorDia[day] || 0;
-      const eTotal = eTurno + eSena;
-      const bal = eTotal - g;
+    if (startParam && endParam) {
+      const curDate = new Date(startOfMonthFecha);
+      while (curDate <= endOfMonthFecha) {
+        const dateStr = curDate.toISOString().split('T')[0];
+        const dayNum = curDate.getUTCDate();
+        const g = gastosPorDia[dayNum] || 0;
+        const eTurno = entradasTurnosPorDia[dayNum] || 0;
+        const eSena = entradasSenasPorDia[dayNum] || 0;
+        const eTotal = eTurno + eSena;
+        const bal = eTotal - g;
 
-      const dateStr = `${year}-${monthStr}-${String(day).padStart(2, '0')}`;
-      balanceDiario.push({
-        dia: day,
-        fecha: dateStr,
-        entradasTurnos: eTurno,
-        entradasSenas: eSena,
-        entradas: eTotal,
-        gastos: g,
-        balance: bal
-      });
+        balanceDiario.push({
+          dia: dayNum,
+          fecha: dateStr,
+          entradasTurnos: eTurno,
+          entradasSenas: eSena,
+          entradas: eTotal,
+          gastos: g,
+          balance: bal
+        });
+        curDate.setUTCDate(curDate.getUTCDate() + 1);
+      }
+    } else {
+      for (let day = 1; day <= daysInMonth; day++) {
+        const g = gastosPorDia[day] || 0;
+        const eTurno = entradasTurnosPorDia[day] || 0;
+        const eSena = entradasSenasPorDia[day] || 0;
+        const eTotal = eTurno + eSena;
+        const bal = eTotal - g;
+
+        const dateStr = `${year}-${monthStr}-${String(day).padStart(2, '0')}`;
+        balanceDiario.push({
+          dia: day,
+          fecha: dateStr,
+          entradasTurnos: eTurno,
+          entradasSenas: eSena,
+          entradas: eTotal,
+          gastos: g,
+          balance: bal
+        });
+      }
     }
 
     return NextResponse.json({
+      startDate: startParam || startOfMonthFecha.toISOString().split('T')[0],
+      endDate: endParam || endOfMonthFecha.toISOString().split('T')[0],
       mes: month,
       anio: year,
       totales: {
@@ -262,17 +316,34 @@ export async function GET(request) {
         balanceNeto
       },
       desgloseCategorias,
-      gastos: gastosMes.map(g => ({
-        id: g.id,
-        concepto: g.concepto,
-        monto: Number(g.monto) || 0,
-        fecha: g.fecha.toISOString().split('T')[0],
-        fechaIso: g.fecha.toISOString(),
-        categoriaId: g.categoriaId,
-        categoriaNombre: g.categoria?.nombre || 'General',
-        categoriaColor: g.categoria?.color || '#64748b',
-        observaciones: g.observaciones || ''
-      })),
+      gastos: gastosMes.map(g => {
+        let horaStr = '12:00';
+        try {
+          if (g.createdAt) {
+            horaStr = new Intl.DateTimeFormat('es-AR', {
+              timeZone: 'America/Argentina/Buenos_Aires',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }).format(new Date(g.createdAt));
+          }
+        } catch {
+          horaStr = '12:00';
+        }
+        return {
+          id: g.id,
+          concepto: g.concepto,
+          monto: Number(g.monto) || 0,
+          fecha: g.fecha.toISOString().split('T')[0],
+          fechaIso: g.fecha.toISOString(),
+          createdAt: g.createdAt,
+          hora: horaStr,
+          categoriaId: g.categoriaId,
+          categoriaNombre: g.categoria?.nombre || 'General',
+          categoriaColor: g.categoria?.color || '#64748b',
+          observaciones: g.observaciones || ''
+        };
+      }),
       balanceDiario
     });
   } catch (error) {

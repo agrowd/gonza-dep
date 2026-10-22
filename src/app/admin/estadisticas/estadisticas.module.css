@@ -873,6 +873,11 @@
   cursor: not-allowed;
 }
 
+/* Mobile Turnos List (Image 1) */
+.mobileTurnosList {
+  display: none;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .header {
@@ -896,5 +901,117 @@
 
   .modalGrid {
     grid-template-columns: 1fr;
+  }
+
+  /* Ocultar tabla ancha horizontal en móviles */
+  .tableWrapper {
+    display: none !important;
+  }
+
+  /* Mostrar tarjetas verticales en móviles */
+  .mobileTurnosList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .mobileTurnoCard {
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobileCardTopRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .mobileCardClientName {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+
+  .mobileCardTotalVal {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-align: right;
+  }
+
+  .mobileCardSecondRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+  }
+
+  .mobileCardDateTime {
+    font-size: 0.82rem;
+    color: #9ca3af;
+    font-weight: 500;
+  }
+
+  .mobileCardSenaVal {
+    font-size: 0.82rem;
+    color: #22c55e;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .mobileCardZonas {
+    font-size: 0.85rem;
+    color: #d1d5db;
+    margin: 0.45rem 0 0.5rem 0;
+    line-height: 1.35;
+    font-weight: 500;
+  }
+
+  .mobileCardBottomRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+  }
+
+  .mobileCardStatus {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    font-weight: 500;
+  }
+
+  .mobileCardActions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .mobileCardActionBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #e2e8f0;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .mobileCardActionBtn:active, .mobileCardActionBtn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.25);
   }
 }

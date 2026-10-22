@@ -537,130 +537,216 @@ export default function EstadisticasPage() {
     }
 
     return (
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th className={styles.th}>Acciones</th>
-              <th className={styles.th}>Fecha y Hora</th>
-              <th className={styles.th}>Cliente</th>
-              <th className={styles.th}>Zonas</th>
-              <th className={styles.th}>Estado</th>
-              <th className={styles.th}>Pago / Operador</th>
-              <th className={styles.th}>Valor Turno</th>
-              <th className={styles.th}>Seña / Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activeMetricData.filteredItems.map(item => {
-              let badgeClass = styles.statusSenado;
-              if (item.estado === 'REALIZADO') badgeClass = styles.statusRealizado;
-              else if (item.estado === 'CANCELADO') badgeClass = styles.statusCancelado;
-              else if (item.estado === 'NO_ASISTIO') badgeClass = styles.statusNoAsistio;
+      <>
+        {/* VISTA ESCRITORIO (Tabla horizontal) */}
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.th}>Acciones</th>
+                <th className={styles.th}>Fecha y Hora</th>
+                <th className={styles.th}>Cliente</th>
+                <th className={styles.th}>Zonas</th>
+                <th className={styles.th}>Estado</th>
+                <th className={styles.th}>Pago / Operador</th>
+                <th className={styles.th}>Valor Turno</th>
+                <th className={styles.th}>Seña / Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeMetricData.filteredItems.map(item => {
+                let badgeClass = styles.statusSenado;
+                if (item.estado === 'REALIZADO') badgeClass = styles.statusRealizado;
+                else if (item.estado === 'CANCELADO') badgeClass = styles.statusCancelado;
+                else if (item.estado === 'NO_ASISTIO') badgeClass = styles.statusNoAsistio;
 
-              return (
-                <tr key={item.id} className={styles.tr}>
-                  <td className={styles.td}>
-                    <div className={styles.actionsCell}>
-                      <button
-                        type="button"
-                        className={styles.btnActionX}
-                        title="Excluir registro del cálculo actual"
-                        onClick={() => toggleExcludeId(item.id)}
-                      >
-                        ✕
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.btnActionTurno}
-                        title="Ir al día y hora exacta de este turno en la Agenda"
-                        onClick={() => handleGoToTurno(item)}
-                      >
-                        <CalendarIcon /> Turno
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.btnActionFicha}
-                        title="Ver ficha clínica del cliente sin salir de Estadísticas"
-                        onClick={() => handleOpenFicha(item.clienteId)}
-                      >
-                        <UserIcon /> Ficha
-                      </button>
-                    </div>
-                  </td>
-                  <td className={styles.td}>
-                    <div style={{ fontWeight: 800, color: '#1d1d1d' }}>{formatDateDisplay(item.fecha)}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
-                      {item.horaInicio} - {item.horaFin}
-                    </div>
-                  </td>
-                  <td className={styles.td}>
-                    <div style={{ fontWeight: 800, color: '#1d1d1d' }}>{item.clienteNombre}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
-                      {item.clienteWhatsapp || 'Sin WhatsApp'} • {item.origenCategoria || 'Orgánico'}
-                    </div>
-                  </td>
-                  <td className={styles.td} style={{ maxWidth: '250px' }}>
-                    <div style={{ fontSize: '0.84rem', color: '#1d1d1d', fontWeight: 600, lineHeight: 1.35 }}>
-                      {item.zonasTexto}
-                    </div>
-                    {item.subtipoGanancia && (
-                      <div style={{ fontSize: '0.74rem', color: '#7a1f1e', fontWeight: 700, marginTop: '0.2rem' }}>
-                        • {item.subtipoGanancia}
+                return (
+                  <tr key={item.id} className={styles.tr}>
+                    <td className={styles.td}>
+                      <div className={styles.actionsCell}>
+                        <button
+                          type="button"
+                          className={styles.btnActionX}
+                          title="Excluir registro del cálculo actual"
+                          onClick={() => toggleExcludeId(item.id)}
+                        >
+                          ✕
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.btnActionTurno}
+                          title="Ir al día y hora exacta de este turno en la Agenda"
+                          onClick={() => handleGoToTurno(item)}
+                        >
+                          <CalendarIcon /> Turno
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.btnActionFicha}
+                          title="Ver ficha clínica del cliente sin salir de Estadísticas"
+                          onClick={() => handleOpenFicha(item.clienteId)}
+                        >
+                          <UserIcon /> Ficha
+                        </button>
                       </div>
-                    )}
-                  </td>
-                  <td className={styles.td}>
-                    <span className={`${styles.badgeStatus} ${badgeClass}`}>
-                      {item.estado}
-                    </span>
-                    {item.subEstado && (
-                      <span className={`${styles.badgeStatus} ${styles.statusSubEstado}`}>
-                        {item.subEstado}
-                      </span>
-                    )}
-                    {item.señaEstado && (
-                      <div style={{ fontSize: '0.73rem', color: '#475569', fontWeight: 700, marginTop: '0.25rem' }}>
-                        Seña: {item.señaEstado}
+                    </td>
+                    <td className={styles.td}>
+                      <div style={{ fontWeight: 800, color: '#1d1d1d' }}>{formatDateDisplay(item.fecha)}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                        {item.horaInicio} - {item.horaFin}
                       </div>
-                    )}
-                  </td>
-                  <td className={styles.td}>
-                    <div style={{ fontWeight: 700, color: '#1d1d1d', fontSize: '0.82rem' }}>
-                      💳 {item.metodoPagoLabel || 'Transferencia'}
-                    </div>
-                    <div style={{ fontSize: '0.76rem', color: '#475569', fontWeight: 600 }}>
-                      👤 {item.operadorNombre || 'Gonzalo'}
-                    </div>
-                  </td>
-                  <td className={styles.td}>
-                    <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#1d1d1d' }}>
-                      {formatMoney(
-                        selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
-                          ? item.oportunidadNoConcretada
-                          : item.valorTotal
+                    </td>
+                    <td className={styles.td}>
+                      <div style={{ fontWeight: 800, color: '#1d1d1d' }}>{item.clienteNombre}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
+                        {item.clienteWhatsapp || 'Sin WhatsApp'} • {item.origenCategoria || 'Orgánico'}
+                      </div>
+                    </td>
+                    <td className={styles.td} style={{ maxWidth: '250px' }}>
+                      <div style={{ fontSize: '0.84rem', color: '#1d1d1d', fontWeight: 600, lineHeight: 1.35 }}>
+                        {item.zonasTexto}
+                      </div>
+                      {item.subtipoGanancia && (
+                        <div style={{ fontSize: '0.74rem', color: '#7a1f1e', fontWeight: 700, marginTop: '0.2rem' }}>
+                          • {item.subtipoGanancia}
+                        </div>
                       )}
-                    </div>
-                    {(selectedMetric === 'cancelados' || selectedMetric === 'ausentes') && item.señaRetenida > 0 && (
-                      <div style={{ fontSize: '0.73rem', color: '#b91c1c', fontWeight: 700 }}>
-                        (Turno {formatMoney(item.valorTotal)} - Seña ret. {formatMoney(item.señaRetenida)})
+                    </td>
+                    <td className={styles.td}>
+                      <span className={`${styles.badgeStatus} ${badgeClass}`}>
+                        {item.estado}
+                      </span>
+                      {item.subEstado && (
+                        <span className={`${styles.badgeStatus} ${styles.statusSubEstado}`}>
+                          {item.subEstado}
+                        </span>
+                      )}
+                      {item.señaEstado && (
+                        <div style={{ fontSize: '0.73rem', color: '#475569', fontWeight: 700, marginTop: '0.25rem' }}>
+                          Seña: {item.señaEstado}
+                        </div>
+                      )}
+                    </td>
+                    <td className={styles.td}>
+                      <div style={{ fontWeight: 700, color: '#1d1d1d', fontSize: '0.82rem' }}>
+                        💳 {item.metodoPagoLabel || 'Transferencia'}
                       </div>
-                    )}
-                  </td>
-                  <td className={styles.td}>
-                    <div style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700 }}>
-                      Seña: {formatMoney(item.valorSeña)}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
-                      Saldo: {formatMoney(item.saldoPendiente)}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                      <div style={{ fontSize: '0.76rem', color: '#475569', fontWeight: 600 }}>
+                        👤 {item.operadorNombre || 'Gonzalo'}
+                      </div>
+                    </td>
+                    <td className={styles.td}>
+                      <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#1d1d1d' }}>
+                        {formatMoney(
+                          selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
+                            ? item.oportunidadNoConcretada
+                            : item.valorTotal
+                        )}
+                      </div>
+                      {(selectedMetric === 'cancelados' || selectedMetric === 'ausentes') && item.señaRetenida > 0 && (
+                        <div style={{ fontSize: '0.73rem', color: '#b91c1c', fontWeight: 700 }}>
+                          (Turno {formatMoney(item.valorTotal)} - Seña ret. {formatMoney(item.señaRetenida)})
+                        </div>
+                      )}
+                    </td>
+                    <td className={styles.td}>
+                      <div style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700 }}>
+                        Seña: {formatMoney(item.valorSeña)}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                        Saldo: {formatMoney(item.saldoPendiente)}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* VISTA MÓVIL (Tarjetas oscuras compactas sin scroll horizontal) */}
+        <div className={styles.mobileTurnosList}>
+          {activeMetricData.filteredItems.map(item => {
+            const moneyVal = formatMoney(
+              selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
+                ? item.oportunidadNoConcretada
+                : item.valorTotal
+            );
+
+            // Formatear fecha y hora como "01/10/26 · 13:50"
+            let dateFormatted = item.fecha || '';
+            try {
+              if (item.fecha) {
+                const [y, m, d] = item.fecha.split('T')[0].split('-');
+                const shortYear = y ? y.slice(-2) : '26';
+                dateFormatted = `${d}/${m}/${shortYear}`;
+              }
+            } catch {
+              dateFormatted = item.fecha;
+            }
+            const dateTimeDisplay = `${dateFormatted} · ${item.horaInicio}`;
+            const estadoLabel = item.estadoTurnoLabel || getEstadoTurnoLabel(item);
+
+            return (
+              <div key={item.id} className={styles.mobileTurnoCard}>
+                <div className={styles.mobileCardTopRow}>
+                  <div className={styles.mobileCardClientName}>
+                    {item.clienteNombre}
+                  </div>
+                  <div className={styles.mobileCardTotalVal}>
+                    {moneyVal}
+                  </div>
+                </div>
+
+                <div className={styles.mobileCardSecondRow}>
+                  <div className={styles.mobileCardDateTime}>
+                    {dateTimeDisplay}
+                  </div>
+                  <div className={styles.mobileCardSenaVal}>
+                    Seña: {formatMoney(item.valorSeña)}
+                  </div>
+                </div>
+
+                <div className={styles.mobileCardZonas}>
+                  {item.zonasTexto}
+                </div>
+
+                <div className={styles.mobileCardBottomRow}>
+                  <div className={styles.mobileCardStatus}>
+                    {estadoLabel}
+                  </div>
+                  <div className={styles.mobileCardActions}>
+                    <button
+                      type="button"
+                      className={styles.mobileCardActionBtn}
+                      title="Excluir de cálculo"
+                      onClick={() => toggleExcludeId(item.id)}
+                    >
+                      ✕
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.mobileCardActionBtn}
+                      title="Ir a Agenda"
+                      onClick={() => handleGoToTurno(item)}
+                    >
+                      <CalendarIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.mobileCardActionBtn}
+                      title="Ver Ficha Clínica"
+                      onClick={() => handleOpenFicha(item.clienteId)}
+                    >
+                      <UserIcon />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </>
     );
   };
 

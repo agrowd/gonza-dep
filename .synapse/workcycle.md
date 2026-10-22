@@ -1982,3 +1982,21 @@
   - Compilación exitosa con Turbopack (47/47 rutas) en Producción y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
   - Compilación exitosa con Turbopack (47/47 rutas) en Staging y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
 - [x] Documentar en `.synapse/` y registrar conversación en `chat.md`.
+
+## 📅 Sesión: 22 de Octubre de 2026 (Parte 2 - Tarjetas Móviles en Estadísticas y Gastos, Filtro de Fechas Exactas y Depuración de Balance/Mayor Categoría)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diseñar e implementar el listado de turnos en móvil en `/admin/estadisticas` (`media_1792683748058_16cfc55e.png`):
+  - Formato vertical de tarjetas oscuras compactas (`.mobileTurnosList`, fondo `#18181b`, border radius `14px`, sin scroll horizontal).
+  - Distribución: Nombre de cliente y Total arriba, fecha y hora (`01/10/26 · 13:50`) con Seña en verde debajo, zonas corporales al centro, y estado de turno con botones de acción rápida (`✕`, `📅 Agenda`, `👤 Ficha`).
+  - Ocultar la tabla ancha en `@media (max-width: 768px)` y mostrar tarjetas.
+- [x] Rango de fechas por día en Gastos (`media_1792683764425_17d064b2.png`):
+  - Reemplazar selector rígido de mes/año por inputs `Desde` y `Hasta` con botones rápidos (`Hoy`, `Ayer`, `Esta Semana`, `Este Mes`, `Mes Anterior`) y `🔄 Actualizar`, idéntico a Estadísticas.
+  - Actualizar la API `GET /api/admin/gastos` para recibir `start` y `end` (o `desde` y `hasta`).
+- [x] Eliminar tarjeta "Mayor Categoría" en `/admin/gastos` (`media_1792683808775_f07b0da1.png`).
+- [x] Eliminar pestaña y sección "Balance Día a Día" en `/admin/gastos` (`media_1792683825673_c8e45bdf.png`).
+- [x] Diseñar e implementar el historial de gastos móvil agrupado por día (`media_1792683851714_4eab3bd6.png`):
+  - Tarjetas colapsables por fecha con cabecera: fecha (`5 de junio`) y total del día en badge (`$42.800`).
+  - Ítems individuales con avatar circular e icono pastel temático según categoría (`🛒 Insumos`, `🍴 Comida`, `🏬 Servicios`, `🚗 Transporte`, `👥 Sueldos`, `📣 Marketing`, `⇄ Transferencia`), concepto/observaciones, importe negativo en rojo (`- $18.500`) y hora (`14:32`).
+  - Ocultar la tabla desktop en pantallas `<= 768px` y mostrar la lista agrupada.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).

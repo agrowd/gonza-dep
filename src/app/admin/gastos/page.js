@@ -18,15 +18,71 @@ function formatCurrency(amount) {
   return '$' + num.toLocaleString('es-AR');
 }
 
-export default function GastosPage() {
+function getMonthRange() {
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1); // 1-12
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const start = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const end = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { start, end };
+}
+
+function getCategoryVisuals(nombre, color) {
+  const n = (nombre || '').toLowerCase();
+  if (n.includes('insumo') || n.includes('compra') || n.includes('descartable')) {
+    return { icon: '🛒', bg: '#fee2e2', color: '#ef4444' };
+  }
+  if (n.includes('comida') || n.includes('bebida') || n.includes('almuerzo') || n.includes('cena')) {
+    return { icon: '🍴', bg: '#ffedd5', color: '#f97316' };
+  }
+  if (n.includes('servicio') || n.includes('alquiler') || n.includes('luz') || n.includes('internet') || n.includes('local')) {
+    return { icon: '🏬', bg: '#f3e8ff', color: '#a855f7' };
+  }
+  if (n.includes('transporte') || n.includes('viaje') || n.includes('auto') || n.includes('combustible')) {
+    return { icon: '🚗', bg: '#e0f2fe', color: '#0284c7' };
+  }
+  if (n.includes('sueldo') || n.includes('honorario') || n.includes('personal')) {
+    return { icon: '👥', bg: '#dcfce7', color: '#16a34a' };
+  }
+  if (n.includes('publicidad') || n.includes('marketing') || n.includes('redes') || n.includes('anuncio')) {
+    return { icon: '📣', bg: '#fef9c3', color: '#ca8a04' };
+  }
+  if (n.includes('transferencia') || n.includes('banco')) {
+    return { icon: '⇄', bg: '#ccfbf1', color: '#0d9488' };
+  }
+  if (n.includes('mantenimiento') || n.includes('máquina') || n.includes('maquina')) {
+    return { icon: '🔧', bg: '#fef3c7', color: '#d97706' };
+  }
+  if (n.includes('impuesto') || n.includes('tasa') || n.includes('afip')) {
+    return { icon: '📑', bg: '#fce7f3', color: '#db2777' };
+  }
+  return {
+    icon: '🏷️',
+    bg: `${color || '#64748b'}22`,
+    color: color || '#64748b'
+  };
+}
+
+function formatGroupDayTitle(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d, 12, 0, 0);
+  const day = d;
+  const monthName = dateObj.toLocaleDateString('es-AR', { month: 'long' });
+  return `${day} de ${monthName}`;
+}
+
+export default function GastosPage() {
+  const defaultRange = useMemo(() => getMonthRange(), []);
+  const [startDate, setStartDate] = useState(defaultRange.start);
+  const [endDate, setEndDate] = useState(defaultRange.end);
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [categorias, setCategorias] = useState([]);
-  const [activeTab, setActiveTab] = useState('historial'); // 'historial' | 'balance' | 'categorias'
+  const [activeTab, setActiveTab] = useState('historial'); // 'historial' | 'categorias'
+  const [collapsedDays, setCollapsedDays] = useState(new Set());
 
   // Search & filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,11 +115,13 @@ export default function GastosPage() {
   const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'gasto' | 'categoria', id: string, name: string }
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch gastos data for the selected month
+  // Fetch gastos data for the selected date range
   const fetchGastosData = useCallback(async () => {
+    if (!startDate || !endDate) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/gastos?mes=${selectedMonth}&anio=${selectedYear}`, {
+      const res = await fetch(`/api/admin/gastos?start=${startDate}&end=${endDate}&_t=${Date.now()}`, {
+        cache: 'no-store',
         credentials: 'include'
       });
       if (res.ok) {
@@ -77,7 +135,7 @@ export default function GastosPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear]);
+  }, [startDate, endDate]);
 
   // Fetch categories
   const fetchCategorias = useCallback(async () => {
@@ -97,29 +155,50 @@ export default function GastosPage() {
     fetchCategorias();
   }, [fetchGastosData, fetchCategorias]);
 
-  // Month navigation
-  const handlePrevMonth = () => {
-    if (selectedMonth === 1) {
-      setSelectedMonth(12);
-      setSelectedYear(prev => prev - 1);
-    } else {
-      setSelectedMonth(prev => prev - 1);
-    }
-  };
+  // Presets de fechas
+  const handlePresetDate = (type) => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const d = now.getDate();
 
-  const handleNextMonth = () => {
-    if (selectedMonth === 12) {
-      setSelectedMonth(1);
-      setSelectedYear(prev => prev + 1);
-    } else {
-      setSelectedMonth(prev => prev + 1);
-    }
-  };
+    const formatDateStr = (dateObj) => {
+      const yy = dateObj.getFullYear();
+      const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const dd = String(dateObj.getDate()).padStart(2, '0');
+      return `${yy}-${mm}-${dd}`;
+    };
 
-  const handleToday = () => {
-    const today = new Date();
-    setSelectedMonth(today.getMonth() + 1);
-    setSelectedYear(today.getFullYear());
+    if (type === 'hoy') {
+      const todayStr = formatDateStr(now);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (type === 'ayer') {
+      const yesterday = new Date(y, m, d - 1);
+      const yesterdayStr = formatDateStr(yesterday);
+      setStartDate(yesterdayStr);
+      setEndDate(yesterdayStr);
+    } else if (type === 'semana') {
+      const dayOfWeek = now.getDay() || 7;
+      const monday = new Date(now);
+      monday.setDate(d - dayOfWeek + 1);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      setStartDate(formatDateStr(monday));
+      setEndDate(formatDateStr(sunday));
+    } else if (type === 'mes') {
+      const { start, end } = getMonthRange();
+      setStartDate(start);
+      setEndDate(end);
+    } else if (type === 'mes_anterior') {
+      const prevY = m === 0 ? y - 1 : y;
+      const prevM = m === 0 ? 11 : m - 1;
+      const start = `${prevY}-${String(prevM + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(prevY, prevM + 1, 0).getDate();
+      const end = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      setStartDate(start);
+      setEndDate(end);
+    }
   };
 
   // Filtered gastos list
@@ -136,12 +215,38 @@ export default function GastosPage() {
     });
   }, [data?.gastos, searchQuery, filterCategoria]);
 
+  // Agrupación por día para visualización móvil cómoda
+  const groupedGastosByDay = useMemo(() => {
+    const groups = {};
+    filteredGastos.forEach(g => {
+      const dateKey = g.fecha;
+      if (!groups[dateKey]) {
+        groups[dateKey] = {
+          dateKey,
+          total: 0,
+          items: []
+        };
+      }
+      groups[dateKey].items.push(g);
+      groups[dateKey].total += (Number(g.monto) || 0);
+    });
+
+    return Object.values(groups).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+  }, [filteredGastos]);
+
+  const toggleCollapseDay = (dateKey) => {
+    setCollapsedDays(prev => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      return next;
+    });
+  };
+
   // Handle open create gasto
   const handleOpenCreateGasto = () => {
-    const monthStr = String(selectedMonth).padStart(2, '0');
-    const defaultDate = `${selectedYear}-${monthStr}-01`;
     const todayStr = new Date().toISOString().split('T')[0];
-    const initialDate = todayStr.startsWith(`${selectedYear}-${monthStr}`) ? todayStr : defaultDate;
+    const initialDate = (todayStr >= startDate && todayStr <= endDate) ? todayStr : endDate;
 
     setEditingGasto(null);
     setGastoForm({
@@ -328,51 +433,46 @@ export default function GastosPage() {
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <h2>💸 Gestión de Gastos y Balance</h2>
-          <p>Control mensual de costos operativos, entradas reales y balance financiero</p>
+          <p>Control de egresos operativos, entradas reales y balance financiero</p>
         </div>
 
-        <div className={styles.headerActions}>
-          {/* Month Navigator */}
-          <div className={styles.monthNavigator}>
-            <button
-              onClick={handlePrevMonth}
-              className={styles.navArrowBtn}
-              title="Mes anterior"
-            >
-              ←
-            </button>
-
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
-              className={styles.monthSelect}
-            >
-              {MESES.map((m, idx) => (
-                <option key={idx} value={idx + 1}>{m}</option>
-              ))}
-            </select>
-
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-              className={styles.yearSelect}
-            >
-              {[2025, 2026, 2027, 2028].map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-
-            <button
-              onClick={handleNextMonth}
-              className={styles.navArrowBtn}
-              title="Mes siguiente"
-            >
-              →
-            </button>
+        <div className={styles.controls}>
+          <div className={styles.dateInputGroup}>
+            <label>Desde</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
 
-          <button onClick={handleToday} className={styles.todayBtn}>
-            📅 Mes Actual
+          <div className={styles.dateInputGroup}>
+            <label>Hasta</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.quickPresetsRow}>
+            <button type="button" onClick={() => handlePresetDate('hoy')} className={styles.btnPreset}>Hoy</button>
+            <button type="button" onClick={() => handlePresetDate('ayer')} className={styles.btnPreset}>Ayer</button>
+            <button type="button" onClick={() => handlePresetDate('semana')} className={styles.btnPreset}>Esta Semana</button>
+            <button type="button" onClick={() => handlePresetDate('mes')} className={styles.btnPreset}>Este Mes</button>
+            <button type="button" onClick={() => handlePresetDate('mes_anterior')} className={styles.btnPreset}>Mes Anterior</button>
+          </div>
+
+          <button
+            type="button"
+            className={styles.btnRefresh}
+            onClick={fetchGastosData}
+            title="Recargar datos actualizados en vivo"
+            disabled={loading}
+          >
+            {loading ? '⏳' : '🔄'} Actualizar
           </button>
 
           <button onClick={handleOpenCreateGasto} className={styles.btnPrimary}>
@@ -383,10 +483,10 @@ export default function GastosPage() {
 
       {/* KPI Cards */}
       <div className={styles.kpiGrid}>
-        {/* Gastos del Mes */}
+        {/* Gastos */}
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Gastos del Mes</span>
+            <span className={styles.kpiTitle}>Gastos</span>
             <span className={styles.kpiIcon}>💸</span>
           </div>
           <div className={styles.kpiValue} style={{ color: '#dc2626' }}>
@@ -399,19 +499,19 @@ export default function GastosPage() {
                   {totales.variacionPorcentual > 0 ? `+${totales.variacionPorcentual}%` : `${totales.variacionPorcentual}%`}
                 </span>
                 <span style={{ color: '#475569' }}>
-                  vs mes anterior ({formatCurrency(totales.totalGastosMesAnterior)})
+                  vs período anterior ({formatCurrency(totales.totalGastosMesAnterior)})
                 </span>
               </>
             ) : (
-              <span style={{ color: '#475569' }}>Sin gastos el mes anterior</span>
+              <span style={{ color: '#475569' }}>Sin gastos período anterior</span>
             )}
           </div>
         </div>
 
-        {/* Entradas del Mes */}
+        {/* Entradas */}
         <div className={styles.kpiCard}>
           <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Entradas del Mes</span>
+            <span className={styles.kpiTitle}>Entradas</span>
             <span className={styles.kpiIcon}>💰</span>
           </div>
           <div className={styles.kpiValue} style={{ color: '#16a34a' }}>
@@ -432,27 +532,7 @@ export default function GastosPage() {
             {formatCurrency(totales.balanceNeto)}
           </div>
           <div className={styles.kpiSub} style={{ color: '#475569' }}>
-            {totales.balanceNeto >= 0 ? '🟢 Ganancia neta operativa' : '🔴 Déficit operativo en el mes'}
-          </div>
-        </div>
-
-        {/* Mayor Categoría de Gasto */}
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiHeader}>
-            <span className={styles.kpiTitle}>Mayor Categoría</span>
-            <span className={styles.kpiIcon}>🏷️</span>
-          </div>
-          <div className={styles.kpiValue} style={{ fontSize: '1.45rem', color: '#1d1d1d' }}>
-            {topCategory ? topCategory.nombre : 'Sin gastos'}
-          </div>
-          <div className={styles.kpiSub}>
-            {topCategory ? (
-              <span style={{ color: '#475569' }}>
-                {formatCurrency(topCategory.total)} ({topCategory.porcentaje}% del total)
-              </span>
-            ) : (
-              <span style={{ color: '#475569' }}>0% de gastos</span>
-            )}
+            {totales.balanceNeto >= 0 ? '🟢 Ganancia neta operativa' : '🔴 Déficit operativo en el período'}
           </div>
         </div>
       </div>
@@ -509,12 +589,6 @@ export default function GastosPage() {
           📋 Historial de Gastos ({filteredGastos.length})
         </button>
         <button
-          onClick={() => setActiveTab('balance')}
-          className={`${styles.tabBtn} ${activeTab === 'balance' ? styles.tabBtnActive : ''}`}
-        >
-          📅 Balance Día a Día
-        </button>
-        <button
           onClick={() => setActiveTab('categorias')}
           className={`${styles.tabBtn} ${activeTab === 'categorias' ? styles.tabBtnActive : ''}`}
         >
@@ -551,12 +625,12 @@ export default function GastosPage() {
 
             {loading ? (
               <div className={styles.emptyState}>
-                <p>Cargando gastos del mes...</p>
+                <p>Cargando gastos del período...</p>
               </div>
             ) : filteredGastos.length === 0 ? (
               <div className={styles.emptyState}>
                 <span style={{ fontSize: '2.5rem' }}>🧾</span>
-                <p>No hay gastos registrados en {MESES[selectedMonth - 1]} {selectedYear}.</p>
+                <p>No hay gastos registrados en el período seleccionado.</p>
                 <button
                   onClick={handleOpenCreateGasto}
                   className={styles.btnPrimary}
@@ -566,194 +640,153 @@ export default function GastosPage() {
                 </button>
               </div>
             ) : (
-              <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Concepto</th>
-                      <th>Categoría</th>
-                      <th style={{ textAlign: 'right' }}>Monto</th>
-                      <th>Observaciones</th>
-                      <th style={{ textAlign: 'center' }}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredGastos.map(gasto => {
-                      const [y, m, d] = (gasto.fecha || '').split('-');
-                      const formattedDate = d && m && y ? `${d}/${m}/${y}` : gasto.fecha;
+              <>
+                {/* VISTA ESCRITORIO (Tabla horizontal) */}
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Concepto</th>
+                        <th>Categoría</th>
+                        <th style={{ textAlign: 'right' }}>Monto</th>
+                        <th>Observaciones</th>
+                        <th style={{ textAlign: 'center' }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredGastos.map(gasto => {
+                        const [y, m, d] = (gasto.fecha || '').split('-');
+                        const formattedDate = d && m && y ? `${d}/${m}/${y}` : gasto.fecha;
 
-                      return (
-                        <tr key={gasto.id}>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: '#1d1d1d' }}>
-                            {formattedDate}
-                          </td>
-                          <td style={{ fontWeight: 700, color: '#1d1d1d' }}>
-                            {gasto.concepto}
-                          </td>
-                          <td>
-                            <span
-                              className={styles.categoryBadge}
-                              style={{
-                                background: `${gasto.categoriaColor}22`,
-                                color: '#1d1d1d',
-                                border: `1.5px solid ${gasto.categoriaColor}`
-                              }}
-                            >
-                              <span style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                background: gasto.categoriaColor
-                              }} />
-                              {gasto.categoriaNombre}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'right', fontWeight: 800, color: '#dc2626', fontSize: '0.96rem' }}>
-                            {formatCurrency(gasto.monto)}
-                          </td>
-                          <td style={{ color: '#475569', maxWidth: '280px' }}>
-                            {gasto.observaciones || '—'}
-                          </td>
-                          <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                            <button
-                              onClick={() => handleOpenEditGasto(gasto)}
-                              className={styles.actionBtn}
-                              title="Editar gasto"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget({ type: 'gasto', id: gasto.id, name: gasto.concepto })}
-                              className={styles.actionBtn}
-                              title="Eliminar gasto"
-                            >
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                        return (
+                          <tr key={gasto.id}>
+                            <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: '#1d1d1d' }}>
+                              {formattedDate}
+                            </td>
+                            <td style={{ fontWeight: 700, color: '#1d1d1d' }}>
+                              {gasto.concepto}
+                            </td>
+                            <td>
+                              <span
+                                className={styles.categoryBadge}
+                                style={{
+                                  background: `${gasto.categoriaColor}22`,
+                                  color: '#1d1d1d',
+                                  border: `1.5px solid ${gasto.categoriaColor}`
+                                }}
+                              >
+                                <span style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  background: gasto.categoriaColor
+                                }} />
+                                {gasto.categoriaNombre}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: 800, color: '#dc2626', fontSize: '0.96rem' }}>
+                              {formatCurrency(gasto.monto)}
+                            </td>
+                            <td style={{ color: '#475569', maxWidth: '280px' }}>
+                              {gasto.observaciones || '—'}
+                            </td>
+                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              <button
+                                onClick={() => handleOpenEditGasto(gasto)}
+                                className={styles.actionBtn}
+                                title="Editar gasto"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => setDeleteTarget({ type: 'gasto', id: gasto.id, name: gasto.concepto })}
+                                className={styles.actionBtn}
+                                title="Eliminar gasto"
+                              >
+                                🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-      {/* TAB 2: BALANCE DÍA A DÍA */}
-      {activeTab === 'balance' && (
-        <div className={styles.tableCard}>
-          <div style={{ padding: '1.25rem 1.4rem' }}>
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: '#1d1d1d', fontWeight: 800 }}>
-              Balance Diario de {MESES[selectedMonth - 1]} {selectedYear}
-            </h3>
-
-            {loading ? (
-              <div className={styles.emptyState}>
-                <p>Calculando balance diario...</p>
-              </div>
-            ) : !data?.balanceDiario ? (
-              <div className={styles.emptyState}>
-                <p>Sin datos de balance disponibles.</p>
-              </div>
-            ) : (
-              <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Día</th>
-                      <th>Fecha</th>
-                      <th style={{ textAlign: 'right' }}>Entradas Turnos</th>
-                      <th style={{ textAlign: 'right' }}>Señas Cobradas</th>
-                      <th style={{ textAlign: 'right' }}>Total Entradas</th>
-                      <th style={{ textAlign: 'right' }}>Gastos del Día</th>
-                      <th style={{ textAlign: 'right' }}>Balance del Día</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.balanceDiario.map(diaItem => {
-                      const [y, m, d] = (diaItem.fecha || '').split('-');
-                      const formattedDate = d && m && y ? `${d}/${m}/${y}` : diaItem.fecha;
-
-                      const hasActivity = diaItem.entradas > 0 || diaItem.gastos > 0;
-
-                      return (
-                        <tr
-                          key={diaItem.dia}
-                          style={{
-                            background: hasActivity ? '#fcfbf7' : 'transparent',
-                            opacity: hasActivity ? 1 : 0.7
-                          }}
+                {/* VISTA MÓVIL AGRUPADA POR DÍA (Formato cómodo sin scroll horizontal) */}
+                <div className={styles.mobileGastosList}>
+                  {groupedGastosByDay.map(group => {
+                    const isCollapsed = collapsedDays.has(group.dateKey);
+                    return (
+                      <div key={group.dateKey} className={styles.mobileDayCard}>
+                        <div
+                          className={styles.mobileDayHeader}
+                          onClick={() => toggleCollapseDay(group.dateKey)}
                         >
-                          <td style={{ fontWeight: 800, color: '#7a1f1e' }}>
-                            Día {diaItem.dia}
-                          </td>
-                          <td style={{ whiteSpace: 'nowrap', color: '#1d1d1d' }}>
-                            {formattedDate}
-                          </td>
-                          <td style={{ textAlign: 'right', color: '#475569', fontWeight: 600 }}>
-                            {diaItem.entradasTurnos > 0 ? formatCurrency(diaItem.entradasTurnos) : '—'}
-                          </td>
-                          <td style={{ textAlign: 'right', color: '#475569', fontWeight: 600 }}>
-                            {diaItem.entradasSenas > 0 ? formatCurrency(diaItem.entradasSenas) : '—'}
-                          </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: diaItem.entradas > 0 ? '#16a34a' : '#64748b' }}>
-                            {diaItem.entradas > 0 ? formatCurrency(diaItem.entradas) : '$0'}
-                          </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: diaItem.gastos > 0 ? '#dc2626' : '#64748b' }}>
-                            {diaItem.gastos > 0 ? formatCurrency(diaItem.gastos) : '$0'}
-                          </td>
-                          <td
-                            style={{
-                              textAlign: 'right',
-                              fontWeight: 800,
-                              color: diaItem.balance > 0 ? '#16a34a' : (diaItem.balance < 0 ? '#dc2626' : '#64748b')
-                            }}
-                          >
-                            {formatCurrency(diaItem.balance)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ background: '#f1ede4', fontWeight: 800, borderTop: '2px solid #cbd5e1' }}>
-                      <td colSpan={2} style={{ color: '#1d1d1d', fontSize: '0.96rem' }}>
-                        TOTALES DEL MES
-                      </td>
-                      <td style={{ textAlign: 'right', color: '#1d1d1d' }}>
-                        {formatCurrency(totales.entradasTurnosMes)}
-                      </td>
-                      <td style={{ textAlign: 'right', color: '#1d1d1d' }}>
-                        {formatCurrency(totales.entradasSenasMes)}
-                      </td>
-                      <td style={{ textAlign: 'right', color: '#16a34a', fontSize: '1rem' }}>
-                        {formatCurrency(totales.totalEntradasMes)}
-                      </td>
-                      <td style={{ textAlign: 'right', color: '#dc2626', fontSize: '1rem' }}>
-                        {formatCurrency(totales.totalGastosMes)}
-                      </td>
-                      <td
-                        style={{
-                          textAlign: 'right',
-                          fontSize: '1.05rem',
-                          color: totales.balanceNeto >= 0 ? '#16a34a' : '#dc2626'
-                        }}
-                      >
-                        {formatCurrency(totales.balanceNeto)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                          <div className={styles.mobileDayTitle}>
+                            {formatGroupDayTitle(group.dateKey)}
+                          </div>
+                          <div className={styles.mobileDayHeaderRight}>
+                            <span className={styles.mobileDayTotalBadge}>
+                              {formatCurrency(group.total)}
+                            </span>
+                            <span className={styles.mobileDayChevron}>
+                              {isCollapsed ? '▾' : '▴'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!isCollapsed && (
+                          <div className={styles.mobileDayItemsList}>
+                            {group.items.map(gasto => {
+                              const visuals = getCategoryVisuals(gasto.categoriaNombre, gasto.categoriaColor);
+                              return (
+                                <div
+                                  key={gasto.id}
+                                  className={styles.mobileGastoItem}
+                                  onClick={() => handleOpenEditGasto(gasto)}
+                                  title="Tocar para editar o eliminar gasto"
+                                >
+                                  <div
+                                    className={styles.mobileGastoAvatar}
+                                    style={{ background: visuals.bg, color: visuals.color }}
+                                  >
+                                    <span>{visuals.icon}</span>
+                                  </div>
+                                  <div className={styles.mobileGastoInfo}>
+                                    <div className={styles.mobileGastoCategory}>
+                                      {gasto.categoriaNombre}
+                                    </div>
+                                    <div className={styles.mobileGastoConcept}>
+                                      {gasto.concepto}
+                                      {gasto.observaciones ? ` • ${gasto.observaciones}` : ''}
+                                    </div>
+                                  </div>
+                                  <div className={styles.mobileGastoAmountCol}>
+                                    <div className={styles.mobileGastoMonto}>
+                                      - {formatCurrency(gasto.monto)}
+                                    </div>
+                                    <div className={styles.mobileGastoHora}>
+                                      {gasto.hora || '12:00'}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
       )}
 
-      {/* TAB 3: CATEGORÍAS */}
+      {/* TAB 2: CATEGORÍAS */}
       {activeTab === 'categorias' && (
         <div className={styles.tableCard}>
           <div style={{ padding: '1.25rem 1.4rem' }}>
