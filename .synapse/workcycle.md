@@ -2000,3 +2000,21 @@
   - Ítems individuales con avatar circular e icono pastel temático según categoría (`🛒 Insumos`, `🍴 Comida`, `🏬 Servicios`, `🚗 Transporte`, `👥 Sueldos`, `📣 Marketing`, `⇄ Transferencia`), concepto/observaciones, importe negativo en rojo (`- $18.500`) y hora (`14:32`).
   - Ocultar la tabla desktop en pantallas `<= 768px` y mostrar la lista agrupada.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+
+## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Reorganizar la cabecera superior de la Agenda Diaria en `/admin/agenda` según el diseño de Luciano (`media_1792690016921_a630cd50.png`):
+  - Fila 1: Título de página `Agenda de turnos`.
+  - Fila 2: Selector de vista `[ Día | Semana | Mes ]` junto con botón píldora `[ 📅 Hoy ]`.
+  - Fila 3: Navegador de fecha píldora amplio `< Miércoles, 21 de octubre de 2026 >` con selección de calendario integrado.
+  - Fila 4: Botonera de acciones rápida: `[ + Nuevo turno ]` (bordo Neocita), `[ ⊘ Bloquear ]`, separador vertical, botón toggle de cancelados y botón de impresión en tarjeta `[ 🖨️ ]`.
+- [x] Invertir el botón "Ocultar Cancelados":
+  - Por defecto los turnos cancelados están ocultos y el botón muestra `👁️ Ver cancelados`.
+  - Al presionar "Ver cancelados", los cancelados se muestran en la agenda y el botón cambia a `🙈 Ocultar cancelados`.
+  - Al presionar "Ocultar cancelados", desaparecen y el botón vuelve a `👁️ Ver cancelados`.
+- [x] Actualizar indicadores financieros del día en la tarjeta del día Neocita (`.neocitaDayHeaderCard`):
+  - Renombrar "Ingreso Estimado" por "Ingreso del día" (reflejando el total proyectado de citas activas del día).
+  - Agregar "Ingreso neto" debajo, calculando el importe acumulado devengado hasta la hora actual (en horario argentino `America/Argentina/Buenos_Aires`, sumando citas con estado `REALIZADO` o cuya `horaInicio` ya haya comenzado o transcurrido).
+  - Mantener "A Pagar Operadores" en caso de existir liquidación de operadores para administradores.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).

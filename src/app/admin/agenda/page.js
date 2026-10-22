@@ -2787,27 +2787,19 @@ export default function AgendaPage() {
 
   return (
     <div>
-      {/* Page Header */}
-      <div className={styles.header}>
-        <div className={styles.titleSection}>
-          <h2>Agenda de Turnos</h2>
+      {/* Page Header Reorganizado (Diseño estético según mockup de Luciano) */}
+      <div className={styles.agendaTopContainer}>
+        {/* Fila 1: Título */}
+        <div className={styles.headerTitleRow}>
+          <h2>Agenda de turnos</h2>
         </div>
-        <div className={styles.controls} style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
-          {/* View Mode Toggle */}
-          <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '20px', overflow: 'hidden', backgroundColor: 'var(--bg-secondary)' }}>
+
+        {/* Fila 2: Selector de Vista (Día / Semana / Mes) + Botón Hoy */}
+        <div className={styles.viewModeRow}>
+          <div className={styles.viewModeGroup}>
             <button 
               onClick={() => { setViewMode('day'); }} 
-              className="btn-toggle"
-              style={{
-                background: viewMode === 'day' ? 'var(--color-gold)' : 'transparent',
-                color: viewMode === 'day' ? '#000' : 'var(--text-primary)',
-                border: 'none',
-                padding: '6px 12px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                fontWeight: 600,
-                transition: 'var(--transition)'
-              }}
+              className={`${styles.viewModeBtn} ${viewMode === 'day' ? styles.viewModeBtnActive : ''}`}
             >
               Día
             </button>
@@ -2822,17 +2814,7 @@ export default function AgendaPage() {
                 setCurrentWeekStart(monday);
                 setViewMode('week');
               }} 
-              className="btn-toggle"
-              style={{
-                background: viewMode === 'week' ? 'var(--color-gold)' : 'transparent',
-                color: viewMode === 'week' ? '#000' : 'var(--text-primary)',
-                border: 'none',
-                padding: '6px 12px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                fontWeight: 600,
-                transition: 'var(--transition)'
-              }}
+              className={`${styles.viewModeBtn} ${viewMode === 'week' ? styles.viewModeBtnActive : ''}`}
             >
               Semana
             </button>
@@ -2841,17 +2823,7 @@ export default function AgendaPage() {
                 resetAgendaScroll();
                 setViewMode('month');
               }} 
-              className="btn-toggle"
-              style={{
-                background: viewMode === 'month' ? 'var(--color-gold)' : 'transparent',
-                color: viewMode === 'month' ? '#000' : 'var(--text-primary)',
-                border: 'none',
-                padding: '6px 12px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                fontWeight: 600,
-                transition: 'var(--transition)'
-              }}
+              className={`${styles.viewModeBtn} ${viewMode === 'month' ? styles.viewModeBtnActive : ''}`}
             >
               Mes
             </button>
@@ -2868,84 +2840,81 @@ export default function AgendaPage() {
                 window.history.replaceState({}, '', window.location.pathname);
               } catch (e) {}
             }}
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-              borderRadius: '20px',
-              padding: '6px 14px',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem'
-            }}
+            className={styles.btnTodayPill}
           >
             📅 Hoy
           </button>
+        </div>
 
-          {/* Toggle Show/Hide Cancelled Appointments */}
-          <button 
-            onClick={() => setShowCancelled(!showCancelled)}
-            style={{
-              background: showCancelled ? 'rgba(239, 83, 80, 0.15)' : 'var(--bg-secondary)',
-              border: showCancelled ? '1px solid #ef5350' : '1px solid var(--border-color)',
-              color: showCancelled ? '#ef5350' : 'var(--text-secondary)',
-              borderRadius: '20px',
-              padding: '6px 12px',
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              transition: 'all 0.2s ease'
+        {/* Fila 3: Navegador de Fecha Amplio (< Miércoles, 21 de octubre de 2026 >) */}
+        <div className={styles.dateNavigatorPill}>
+          <button onClick={handlePrev} className={styles.navArrowBtn} title="Anterior">
+            ‹
+          </button>
+          <div 
+            className={styles.dateNavigatorCenter}
+            onClick={() => {
+              const input = document.getElementById('hiddenDatePickerInput');
+              if (input) {
+                if (input.showPicker) input.showPicker();
+                else input.click();
+              }
             }}
-            title="Mostrar u ocultar turnos cancelados en la grilla visual de la agenda"
+            title="Tocar para elegir fecha en el calendario"
           >
-            {showCancelled ? '👁️ Ver Cancelados' : '🙈 Ocultar Cancelados'}
+            <span className={styles.dateNavigatorText}>
+              {viewMode === 'day' ? getSelectedDayName() : viewMode === 'month' ? getMonthName() : getWeekRangeName()}
+            </span>
+          </div>
+          <button onClick={handleNext} className={styles.navArrowBtn} title="Siguiente">
+            ›
           </button>
 
-          {/* Jump to Date Picker */}
           <input 
+            id="hiddenDatePickerInput"
             type="date"
             value={selectedDate ? toYYYYMMDD(selectedDate) : ''}
             onChange={handleDateChange}
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-              borderRadius: '6px',
-              padding: '6px 10px',
-              fontSize: '0.85rem',
-              outline: 'none'
-            }}
+            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
           />
+        </div>
 
-          <div className={styles.navigationWrapper}>
-            <button onClick={handlePrev} className={styles.navBtnSmall}><PrevIcon /></button>
-            <span className={styles.currentWeekText}>
-              {viewMode === 'day' ? getSelectedDayName() : viewMode === 'month' ? getMonthName() : getWeekRangeName()}
-            </span>
-            <button onClick={handleNext} className={styles.navBtnSmall}><NextIcon /></button>
-          </div>
-          
-          <button 
-            onClick={() => {
-              if (selectedDate) {
-                const dateStr = toYYYYMMDD(selectedDate);
-                window.open(`/admin/agenda/imprimir?fecha=${dateStr}`, '_blank');
-              }
-            }} 
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            🖨️ Imprimir Día
-          </button>
-
+        {/* Fila 4: Botones de Acción (+ Nuevo Turno, Bloquear | Cancelados, Imprimir) */}
+        <div className={styles.agendaActionsRow}>
           {currentUserRole !== 'OPERADOR' && (
             <>
+              <button 
+                onClick={() => {
+                  setIsNextScheduling(false);
+                  setNewTurno({
+                    nombreCompleto: '',
+                    nombre: '',
+                    apellido: '',
+                    whatsapp: '',
+                    email: '',
+                    dni: '',
+                    fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
+                    horaInicio: config.work_start,
+                    horaFin: addMinutesToTime(config.work_start, 30),
+                    selectedZoneIds: [],
+                    valorTotal: '',
+                    valorSeña: '',
+                    descuentoTipo: 'NINGUNO',
+                    descuentoValor: '',
+                    bonificacion: 0,
+                    estado: 'SEÑADO',
+                    observaciones: '',
+                    clienteId: null,
+                    operadorId: '',
+                    metodoPago: 'TRANSFERENCIA'
+                  });
+                  setIsNewOpen(true);
+                }} 
+                className={styles.btnActionNuevoTurno}
+              >
+                + Nuevo turno
+              </button>
+
               <button 
                 onClick={() => {
                   setBlockForm({
@@ -2958,40 +2927,37 @@ export default function AgendaPage() {
                   });
                   setIsBlockModalOpen(true);
                 }} 
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid #f59e0b', color: '#f59e0b' }}
+                className={styles.btnActionBloquear}
               >
-                🚫 Bloquear Horario
+                ⊘ Bloquear
               </button>
-
-              <button onClick={() => {
-                setIsNextScheduling(false);
-                setNewTurno({
-                  nombreCompleto: '',
-                  nombre: '',
-                  apellido: '',
-                  whatsapp: '',
-                  email: '',
-                  dni: '',
-                  fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
-                  horaInicio: config.work_start,
-                  horaFin: addMinutesToTime(config.work_start, 30),
-                  selectedZoneIds: [],
-                  valorTotal: '',
-                  valorSeña: '',
-                  descuentoTipo: 'NINGUNO',
-                  descuentoValor: '',
-                  bonificacion: 0,
-                  estado: 'SEÑADO',
-                  observaciones: '',
-                  clienteId: null,
-                  operadorId: '',
-                  metodoPago: 'TRANSFERENCIA'
-                });
-                setIsNewOpen(true);
-              }} className="btn btn-primary">+ Nuevo Turno</button>
             </>
           )}
+
+          <div className={styles.actionsDivider} />
+
+          {/* Toggle Ver / Ocultar Cancelados (Lógica invertida a pedido de Luciano) */}
+          <button 
+            onClick={() => setShowCancelled(!showCancelled)}
+            className={`${styles.btnActionCancelados} ${showCancelled ? styles.btnActionCanceladosActive : ''}`}
+            title={showCancelled ? "Ocultar turnos cancelados" : "Ver turnos cancelados"}
+          >
+            {showCancelled ? '🙈 Ocultar cancelados' : '👁️ Ver cancelados'}
+          </button>
+
+          {/* Botón Imprimir Icono */}
+          <button 
+            onClick={() => {
+              if (selectedDate) {
+                const dateStr = toYYYYMMDD(selectedDate);
+                window.open(`/admin/agenda/imprimir?fecha=${dateStr}`, '_blank');
+              }
+            }} 
+            className={styles.btnActionImprimir}
+            title="Imprimir hoja de turnos del día"
+          >
+            🖨️
+          </button>
         </div>
       </div>
 
@@ -3144,6 +3110,46 @@ export default function AgendaPage() {
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
               const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
+              // Cálculo de ingreso neto del día hasta la hora actual
+              const nowArg = new Date();
+              const todayArgStr = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Argentina/Buenos_Aires',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+              }).format(nowArg);
+
+              const nowMinutes = (() => {
+                const [h, m] = new Intl.DateTimeFormat('en-GB', {
+                  timeZone: 'America/Argentina/Buenos_Aires',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                }).format(nowArg).split(':').map(Number);
+                return h * 60 + m;
+              })();
+
+              const isSelectedToday = dateStr === todayArgStr;
+              const isSelectedPast = dateStr < todayArgStr;
+
+              const turnosHastaAhora = dayApps.filter(app => {
+                if (app.estado === 'CANCELADO' || app.estado === 'NO_ASISTIO') {
+                  return false;
+                }
+                if (app.estado === 'REALIZADO') return true;
+                if (isSelectedPast) return true;
+                if (isSelectedToday) {
+                  const turnoStartMin = timeToMinutes(app.horaInicio);
+                  return turnoStartMin <= nowMinutes;
+                }
+                return false;
+              });
+
+              const ingresoNetoHastaHora = turnosHastaAhora.reduce((sum, a) => {
+                const val = Math.max(0, Number(a.valorTotal || 0) - Number(a.bonificacion || 0));
+                return sum + val;
+              }, 0);
+
               // Liquidación de Operadores (Desde primer turno hasta último turno con su etiqueta)
               const activeDayApps = dayApps.filter(a => a.estado !== 'CANCELADO');
               const opMap = {};
@@ -3214,29 +3220,44 @@ export default function AgendaPage() {
 
               return (
                 <>
-                  <div className={styles.neocitaDayHeader}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-primary)', textTransform: 'capitalize', fontWeight: 800 }}>
-                        📅 {dayNameLong}
-                      </h3>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        {dayApps.length} turnos agendados {dayBloqueos.length > 0 ? `• ${dayBloqueos.length} bloqueos` : ''}
-                      </span>
+                  <div className={styles.neocitaDayHeaderCard}>
+                    <div className={styles.dayCardTitleRow}>
+                      <span className={styles.dayCardTitleText}>📅 {dayNameLong}</span>
                     </div>
-                    {currentUserRole !== 'OPERADOR' && (
-                      <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Ingreso Estimado</span>
-                          <span style={{ fontWeight: 800, color: 'var(--color-gold)', fontSize: '1.1rem' }}>${totalRevenue.toLocaleString('es-ES')}</span>
-                        </div>
-                        {totalPagarOperadores > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.82rem' }}>
-                            <span style={{ color: '#60a5fa' }}>A Pagar Operadores</span>
-                            <span style={{ fontWeight: 800, color: '#60a5fa', fontSize: '1.1rem' }}>-${totalPagarOperadores.toLocaleString('es-ES')}</span>
-                          </div>
+                    <div className={styles.dayCardBodyRow}>
+                      <div className={styles.dayCardLeftCol}>
+                        <span className={styles.dayCardTurnosCount}>
+                          {dayApps.length} turnos agendados
+                        </span>
+                        {dayBloqueos.length > 0 && (
+                          <span className={styles.dayCardBloqueosCount}>
+                            • {dayBloqueos.length} bloqueos
+                          </span>
                         )}
                       </div>
-                    )}
+
+                      {currentUserRole !== 'OPERADOR' && (
+                        <>
+                          <div className={styles.dayCardDivider} />
+                          <div className={styles.dayCardRightCol}>
+                            <div className={styles.dayCardStatItem}>
+                              <span className={styles.dayCardStatLabel}>Ingreso del día</span>
+                              <span className={styles.dayCardStatValGold}>${totalRevenue.toLocaleString('es-AR')}</span>
+                            </div>
+                            <div className={styles.dayCardStatItem}>
+                              <span className={styles.dayCardStatLabel}>Ingreso neto</span>
+                              <span className={styles.dayCardStatValGreen}>${ingresoNetoHastaHora.toLocaleString('es-AR')}</span>
+                            </div>
+                            {totalPagarOperadores > 0 && (
+                              <div className={styles.dayCardStatItem} style={{ marginTop: '0.2rem' }}>
+                                <span className={styles.dayCardStatLabel} style={{ color: '#2563eb' }}>A Pagar Operadores</span>
+                                <span style={{ fontWeight: 800, color: '#2563eb', fontSize: '1rem' }}>-${totalPagarOperadores.toLocaleString('es-AR')}</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {/* Bloque Informativo de Liquidación de Operadores para Administrador */}

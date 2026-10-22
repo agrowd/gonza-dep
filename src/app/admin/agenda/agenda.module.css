@@ -5,6 +5,322 @@
   margin-bottom: 2rem;
 }
 
+/* =========================================================
+   CONTENEDOR SUPERIOR DE AGENDA REORGANIZADA (Mockup Luciano)
+   ========================================================= */
+.agendaTopContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.15rem;
+}
+
+.headerTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerTitleRow h2 {
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-primary, #1d1d1d);
+  letter-spacing: -0.02em;
+}
+
+/* Fila 2: Selector de Vista y Botón Hoy */
+.viewModeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.viewModeGroup {
+  display: inline-flex;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 24px;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.viewModeBtn {
+  background: transparent;
+  color: #1d1d1d;
+  border: none;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.viewModeBtnActive {
+  background: #7a1f1e !important;
+  color: #ffffff !important;
+}
+
+.btnTodayPill {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #1d1d1d;
+  border-radius: 24px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.btnTodayPill:hover {
+  background: #f8fafc;
+  border-color: #7a1f1e;
+  color: #7a1f1e;
+}
+
+/* Fila 3: Navegador de Fecha Amplio (< Fecha >) */
+.dateNavigatorPill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 24px;
+  padding: 6px 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+.dateNavigatorCenter {
+  flex: 1;
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.dateNavigatorText {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1d1d1d;
+  text-transform: capitalize;
+}
+
+.navArrowBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1d1d1d;
+  cursor: pointer;
+  padding: 2px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.navArrowBtn:hover {
+  background: #f1f5f9;
+  color: #7a1f1e;
+}
+
+/* Fila 4: Botones de Acción */
+.agendaActionsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.btnActionNuevoTurno {
+  background: #7a1f1e;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(122, 31, 30, 0.25);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btnActionNuevoTurno:hover {
+  background: #902423;
+  transform: translateY(-1px);
+}
+
+.btnActionBloquear {
+  background: #ffffff;
+  color: #d97706;
+  border: 1.5px solid #d97706;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnActionBloquear:hover {
+  background: #fffbeb;
+}
+
+.actionsDivider {
+  width: 1px;
+  height: 24px;
+  background-color: #cbd5e1;
+  margin: 0 0.2rem;
+}
+
+.btnActionCancelados {
+  background: #ffffff;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+}
+
+.btnActionCancelados:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.btnActionCanceladosActive {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #f87171 !important;
+}
+
+.btnActionImprimir {
+  background: #ffffff;
+  color: #1d1d1d;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnActionImprimir:hover {
+  background: #f8fafc;
+  border-color: #7a1f1e;
+}
+
+/* Tarjeta del Día (Neocita Day Header Card - Mockup Luciano) */
+.neocitaDayHeaderCard {
+  background-color: #ffffff;
+  border: 1.5px solid #e2dcd3;
+  border-radius: 16px;
+  padding: 1.1rem 1.35rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.dayCardTitleRow {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1d1d1d;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-transform: capitalize;
+}
+
+.dayCardTitleText {
+  color: #1d1d1d;
+}
+
+.dayCardBodyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.dayCardLeftCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dayCardTurnosCount {
+  font-size: 0.95rem;
+  color: #475569;
+  font-weight: 700;
+}
+
+.dayCardBloqueosCount {
+  font-size: 0.8rem;
+  color: #d97706;
+  font-weight: 600;
+}
+
+.dayCardDivider {
+  width: 1px;
+  height: 52px;
+  background-color: #e2e8f0;
+}
+
+.dayCardRightCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.dayCardStatItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.dayCardStatLabel {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.dayCardStatValGold {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #b91c1c;
+  line-height: 1.2;
+}
+
+.dayCardStatValGreen {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #16a34a;
+  line-height: 1.2;
+}
+
 .titleSection {
   display: flex;
   flex-direction: column;
