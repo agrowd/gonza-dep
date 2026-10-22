@@ -2017,9 +2017,9 @@
   - Crear modificador `.calendarContainerDayView` aplicado a `.calendarContainer` cuando `viewMode === 'day'`, eliminando altura fija (`height: calc(100vh - 200px)`), borde exterior y `overflow: auto !important` en móvil que atrapaban la grilla y causaban desplazamiento lateral accidental.
   - Ajustar `.neocitaDayContainer` con `padding: 0.25rem 0 !important` en móvil y `.neocitaTimeCol` con `min-width: 78px !important;` y `font-size: 0.78rem`, otorgando el 75% del ancho de pantalla a `.neocitaBody` para que los nombres, badges y zonas no se corten.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Commit y push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
-- [ ] Documentar en `.synapse/` y registrar conversación en `chat.md`.
+- [x] Commit y push a GitHub (`main` y `staging`) (`bc7a322`).
+- [x] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo (`agenda_db_pre_deploy_20261022_180428.sql`, 7.7 MB).
+- [x] Documentar en `.synapse/decisions.md` (D-125), `.synapse/workcycle.md` y `chat.md`.
 
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
@@ -2055,6 +2055,6 @@
   - Crear modificador `.calendarContainerDayView` aplicado a `.calendarContainer` cuando `viewMode === 'day'`, eliminando altura fija (`height: calc(100vh - 200px)`), borde exterior y `overflow: auto !important` en móvil que atrapaban la grilla y causaban desplazamiento lateral accidental.
   - Ajustar `.neocitaDayContainer` con `padding: 0.25rem 0 !important` en móvil y `.neocitaTimeCol` con `min-width: 78px !important;` y `font-size: 0.78rem`, otorgando el 75% del ancho de pantalla a `.neocitaBody` para que los nombres, badges y zonas no se corten.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Commit y push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
-- [ ] Documentar en `.synapse/` y registrar conversación en `chat.md`.
+- [x] Commit y push a GitHub (`main` y `staging`) (`bc7a322`).
+- [x] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo (`agenda_db_pre_deploy_20261022_180428.sql`, 7.7 MB).
+- [x] Documentar en `.synapse/decisions.md` (D-125), `.synapse/workcycle.md` y `chat.md`.

@@ -924,3 +924,34 @@
     - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
   - Despliegue en Staging en Hostinger VPS (`187.127.9.216`, puerto 3008):
     - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
+
+---
+
+## 📱 Sesión: 22 de Octubre de 2026 (Tarde III) - Ajuste Responsivo Ergonómico Móvil en Agenda Diaria y Erradicación de Quiebres/Desborde
+- **Reporte y Capturas de Luciano Gómez** (`media_1792691504125_82cd9877.png` y `media_1792691512098_6b7d39e7.png`):
+  *"No entra bien el contenido del texto"*
+  1. "INGRESO DEL DÍA" quebraba la palabra "DÍA" a un segundo renglón (`INGRESO DEL` / `DÍA`).
+  2. "7 turnos agendados" quebraba "agendados" a un segundo renglón.
+  3. El título de la fecha en la tarjeta y en la píldora superior (`.dateNavigatorPill`) se quebraba en 2 renglones en pantallas angostas.
+  4. La pantalla tenía un desborde horizontal accidental que permitía desplazar la vista hacia la derecha, cortando las tarjetas y ocultando el borde izquierdo bajo el botón flotante del menú hamburguesa.
+  5. Las tarjetas Neocita tenían una columna horaria muy ancha (`min-width: 105px;`) que comprimía el texto del cliente, zonas y badges.
+- **Soluciones Implementadas**:
+  1. **Erradicación de Quiebres en Métricas**:
+     - Se añadió `white-space: nowrap;` y ajuste tipográfico a `dayCardStatLabel` (`0.68rem`), `dayCardStatValGold` y `dayCardStatValGreen`, garantizando que `INGRESO DEL DÍA` e `INGRESO NETO` permanezcan en una sola línea elegante.
+  2. **Erradicación de Quiebres en Conteo**:
+     - Se fijó `white-space: nowrap;` en `dayCardTurnosCount` (`0.84rem`) y `dayCardBloqueosCount`.
+  3. **Píldora de Navegación de Fecha en Móvil**:
+     - En `.dateNavigatorCenter` se asignó `min-width: 0; overflow: hidden;` y en `.dateNavigatorText` se estableció `font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`, adaptándose perfectamente a cualquier resolución sin quebrar en dos líneas.
+  4. **Erradicación de Desborde y Scroll Horizontal en Vista Diaria**:
+     - Se creó el modificador `.calendarContainerDayView` aplicado a `.calendarContainer` cuando `viewMode === 'day'`, eliminando la altura fija (`height: calc(100vh - 200px)`), borde exterior y el `overflow: auto !important` que generaban scroll lateral indeseado.
+  5. **Optimización de Ancho en Tarjetas Neocita**:
+     - En `.neocitaDayContainer` se fijó `padding: 0.25rem 0 !important` en móvil (eliminando márgenes duplicados con `.contentArea`).
+     - En `.neocitaTimeCol` se redujo el ancho mínimo a `78px` y tipografía horaria a `0.78rem`, otorgando el 75% del ancho de pantalla al cuerpo de la tarjeta (`.neocitaBody`) para que nombres de clientes, badges y zonas no se corten.
+- **Validación y Despliegue**:
+  - Compilación local validada con Turbopack (`npm run build`: 47/47 rutas en 17.6s, 0 errores).
+  - Push a `origin/main` y `origin/staging` (`bc7a322`).
+  - Despliegue en Producción en Hostinger VPS (`187.127.9.216`, puerto 3006):
+    - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261022_180428.sql` (7.7 MB).
+    - Compilación Next.js limpia en VPS y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
+  - Despliegue en Staging en Hostinger VPS (`187.127.9.216`, puerto 3008):
+    - Compilación Next.js limpia en VPS y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
