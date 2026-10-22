@@ -888,3 +888,39 @@
      - Ítems individuales con avatar circular e icono temático por categoría (`Insumos`, `Comida y bebidas`, `Servicios`, `Transporte`, `Sueldos`, `Marketing`, `Transferencia`), concepto/observaciones, importe negativo en rojo (`- $18.500`) y hora (`14:32`).
 - **Validación**:
   - Compilación local validada con Turbopack (`npm run build`: 47/47 rutas en 21.1s, 0 errores).
+
+---
+
+## 📅 Sesión: 22 de Octubre de 2026 (Tarde II) - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto
+- **Captura y Requerimientos de Luciano Gómez** (`media_1792690016921_a630cd50.png`):
+  1. *"A la agenda diaria reordenala así, así queda más linda visualmente"*
+  2. *"El 'Ocultar Cancelados' Invertí el botón, que al poner 'Ver cancelados' aparezcan, y al poner 'Ocultar Cancelados' desaparezcan"*
+  3. *"Al ingreso estimado cambia el título por 'Ingreso del día' Y abajo pone otro que sea 'Ingreso neto' que tendrá el valor neto del día hasta el horario que sea"*
+- **Soluciones Implementadas**:
+  1. **Reorganización Estética de la Cabecera de la Agenda Diaria (`/admin/agenda`)**:
+     - Estructurada en 4 filas conforme al diseño propuesto:
+       - **Fila 1**: Título de página principal `Agenda de turnos`.
+       - **Fila 2**: Selector de vista `[ Día | Semana | Mes ]` en cápsula blanca con borde redondeado y píldora activa en bordó, junto al botón píldora independiente `[ 📅 Hoy ]`.
+       - **Fila 3**: Barra de navegación de fecha amplia tipo cápsula (`.dateNavigatorPill`): flecha izquierda `< `, fecha central en negrita (`Miércoles, 21 de octubre de 2026`) con selector de fecha `input[type="date"]` superpuesto, y flecha derecha ` >`.
+       - **Fila 4**: Botonera de acciones agrupadas: `[ + Nuevo turno ]` con fondo bordó `#7a1f1e`, botón `[ ⊘ Bloquear ]` con borde ámbar, divisor vertical gris, botón toggle de cancelados y botón de impresión en tarjeta `[ 🖨️ ]`.
+  2. **Inversión Lógica del Botón de Turnos Cancelados**:
+     - Con los cancelados ocultos (estado predeterminado), el botón indica `👁️ Ver cancelados`.
+     - Al cliquearlo, se muestran los turnos cancelados en la grilla y el botón cambia a `🙈 Ocultar cancelados` con fondo suave rojizo (`#fef2f2`).
+     - Al volver a cliquearlo, los cancelados desaparecen de la vista y el botón vuelve a su estado inicial `👁️ Ver cancelados`.
+  3. **Tarjeta de Resumen Neocita del Día con Ingreso del Día e Ingreso Neto (`.neocitaDayHeaderCard`)**:
+     - Reemplazado el encabezado por una tarjeta refinada con borde `#e2dcd3` y sombra suave:
+       - Cabecera: `📅 {dayNameLong}`.
+       - Columna izquierda: `{dayApps.length} turnos agendados` (y bloqueos si existen).
+       - Divisor vertical tenue.
+       - Columna derecha:
+         - **`Ingreso del día`**: Monto total proyectado de citas activas del día (`$totalRevenue`).
+         - **`Ingreso neto`**: Valor acumulado de los turnos devengados hasta la hora actual (en huso horario de Argentina `America/Argentina/Buenos_Aires`), computando turnos con estado `REALIZADO` o cuya hora de inicio ya haya pasado para el día de hoy, descontando bonificaciones y excluyendo cancelados/ausentes.
+         - **`A Pagar Operadores`**: Muestra la liquidación pendiente si hubiese operadores asignados.
+- **Validación y Despliegue**:
+  - Compilación local validada con Turbopack (`npm run build`: 47/47 rutas en 23.1s, 0 errores).
+  - Push exitoso a `origin/main` y `origin/staging` (`a39b711`).
+  - Despliegue en Producción en Hostinger VPS (`187.127.9.216`, puerto 3006):
+    - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261022_174152.sql` (7.7 MB).
+    - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
+  - Despliegue en Staging en Hostinger VPS (`187.127.9.216`, puerto 3008):
+    - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).

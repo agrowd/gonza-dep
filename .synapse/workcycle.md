@@ -2000,6 +2000,12 @@
   - Ítems individuales con avatar circular e icono pastel temático según categoría (`🛒 Insumos`, `🍴 Comida`, `🏬 Servicios`, `🚗 Transporte`, `👥 Sueldos`, `📣 Marketing`, `⇄ Transferencia`), concepto/observaciones, importe negativo en rojo (`- $18.500`) y hora (`14:32`).
   - Ocultar la tabla desktop en pantallas `<= 768px` y mostrar la lista agrupada.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [x] Commit y push a GitHub en `main` y `staging` (`a39b711`).
+- [x] Despliegue en Servidor VPS Hostinger (`187.127.9.216`):
+  - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261022_174152.sql` (7.7 MB).
+  - Compilación en VPS en Producción (puerto 3006) y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
+  - Compilación en VPS en Staging (puerto 3008) y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
+- [x] Documentar en `.synapse/decisions.md` (D-124), `.synapse/workcycle.md` y `chat.md`.
 
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
@@ -2018,3 +2024,9 @@
   - Agregar "Ingreso neto" debajo, calculando el importe acumulado devengado hasta la hora actual (en horario argentino `America/Argentina/Buenos_Aires`, sumando citas con estado `REALIZADO` o cuya `horaInicio` ya haya comenzado o transcurrido).
   - Mantener "A Pagar Operadores" en caso de existir liquidación de operadores para administradores.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [x] Commit y push a GitHub en `main` y `staging` (`a39b711`).
+- [x] Despliegue en Servidor VPS Hostinger (`187.127.9.216`):
+  - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261022_174152.sql` (7.7 MB).
+  - Compilación en VPS en Producción (puerto 3006) y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
+  - Compilación en VPS en Staging (puerto 3008) y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
+- [x] Documentar en `.synapse/decisions.md` (D-124), `.synapse/workcycle.md` y `chat.md`.
