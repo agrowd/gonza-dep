@@ -2963,7 +2963,11 @@ export default function AgendaPage() {
 
       {/* Week/Day Calendar Grid */}
       {/* Week/Day/Month Calendar Grid */}
-      <div ref={calendarRef} className={styles.calendarContainer} style={viewMode === 'month' ? { height: 'auto', minHeight: 'auto', overflowX: 'visible' } : {}}>
+      <div 
+        ref={calendarRef} 
+        className={`${styles.calendarContainer} ${viewMode === 'day' ? styles.calendarContainerDayView : ''}`} 
+        style={viewMode === 'month' ? { height: 'auto', minHeight: 'auto', overflowX: 'visible' } : {}}
+      >
         {viewMode === 'month' ? (
           <>
             {/* Month Header */}

@@ -2007,6 +2007,20 @@
   - Compilación en VPS en Staging (puerto 3008) y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
 - [x] Documentar en `.synapse/decisions.md` (D-124), `.synapse/workcycle.md` y `chat.md`.
 
+## 📅 Sesión: 22 de Octubre de 2026 (Parte 4 - Ajuste Ergonómico Responsivo Móvil en Agenda Diaria y Erradicación de Quiebres/Desborde)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver reporte de Luciano Gómez (`media_1792691504125_82cd9877.png` y `media_1792691512098_6b7d39e7.png`): "No entra bien el contenido del texto":
+  - Fijar `white-space: nowrap;` y escala tipográfica en `dayCardStatLabel` (`0.68rem`) para evitar que `INGRESO DEL DÍA` e `INGRESO NETO` se partan en 2 renglones.
+  - Fijar `white-space: nowrap;` en `dayCardTurnosCount` (`0.84rem`) para que `X turnos agendados` permanezca en un solo renglón.
+  - En la píldora de fecha (`.dateNavigatorPill`), añadir `min-width: 0; overflow: hidden;` en el contenedor y `font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;` en `dateNavigatorText`, impidiendo que el texto quiebre en dos líneas.
+  - Crear modificador `.calendarContainerDayView` aplicado a `.calendarContainer` cuando `viewMode === 'day'`, eliminando altura fija (`height: calc(100vh - 200px)`), borde exterior y `overflow: auto !important` en móvil que atrapaban la grilla y causaban desplazamiento lateral accidental.
+  - Ajustar `.neocitaDayContainer` con `padding: 0.25rem 0 !important` en móvil y `.neocitaTimeCol` con `min-width: 78px !important;` y `font-size: 0.78rem`, otorgando el 75% del ancho de pantalla a `.neocitaBody` para que los nombres, badges y zonas no se corten.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Commit y push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
+- [ ] Documentar en `.synapse/` y registrar conversación en `chat.md`.
+
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
 ### 🎯 Tareas en curso / Objetivos
@@ -2030,3 +2044,17 @@
   - Compilación en VPS en Producción (puerto 3006) y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
   - Compilación en VPS en Staging (puerto 3008) y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
 - [x] Documentar en `.synapse/decisions.md` (D-124), `.synapse/workcycle.md` y `chat.md`.
+
+## 📅 Sesión: 22 de Octubre de 2026 (Parte 4 - Ajuste Ergonómico Responsivo Móvil en Agenda Diaria y Erradicación de Quiebres/Desborde)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver reporte de Luciano Gómez (`media_1792691504125_82cd9877.png` y `media_1792691512098_6b7d39e7.png`): "No entra bien el contenido del texto":
+  - Fijar `white-space: nowrap;` y escala tipográfica en `dayCardStatLabel` (`0.68rem`) para evitar que `INGRESO DEL DÍA` e `INGRESO NETO` se partan en 2 renglones.
+  - Fijar `white-space: nowrap;` en `dayCardTurnosCount` (`0.84rem`) para que `X turnos agendados` permanezca en un solo renglón.
+  - En la píldora de fecha (`.dateNavigatorPill`), añadir `min-width: 0; overflow: hidden;` en el contenedor y `font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;` en `dateNavigatorText`, impidiendo que el texto quiebre en dos líneas.
+  - Crear modificador `.calendarContainerDayView` aplicado a `.calendarContainer` cuando `viewMode === 'day'`, eliminando altura fija (`height: calc(100vh - 200px)`), borde exterior y `overflow: auto !important` en móvil que atrapaban la grilla y causaban desplazamiento lateral accidental.
+  - Ajustar `.neocitaDayContainer` con `padding: 0.25rem 0 !important` en móvil y `.neocitaTimeCol` con `min-width: 78px !important;` y `font-size: 0.78rem`, otorgando el 75% del ancho de pantalla a `.neocitaBody` para que los nombres, badges y zonas no se corten.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Commit y push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
+- [ ] Documentar en `.synapse/` y registrar conversación en `chat.md`.

@@ -100,9 +100,11 @@
 
 .dateNavigatorCenter {
   flex: 1;
+  min-width: 0;
   text-align: center;
   cursor: pointer;
   padding: 4px 8px;
+  overflow: hidden;
 }
 
 .dateNavigatorText {
@@ -110,6 +112,10 @@
   font-weight: 800;
   color: #1d1d1d;
   text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .navArrowBtn {
@@ -272,12 +278,14 @@
   font-size: 0.95rem;
   color: #475569;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .dayCardBloqueosCount {
   font-size: 0.8rem;
   color: #d97706;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .dayCardDivider {
@@ -305,6 +313,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .dayCardStatValGold {
@@ -312,6 +321,7 @@
   font-weight: 800;
   color: #b91c1c;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .dayCardStatValGreen {
@@ -319,6 +329,19 @@
   font-weight: 800;
   color: #16a34a;
   line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Modificador de contenedor en Vista Diaria */
+.calendarContainerDayView {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  box-shadow: none !important;
 }
 
 .titleSection {
@@ -1451,6 +1474,244 @@
     left: 0;
     z-index: 15;
     background-color: var(--bg-secondary) !important;
+  }
+
+  /* Contenedores en vista diaria en móvil (Desactiva overflow y borde para evitar desborde horizontal) */
+  .calendarContainerDayView {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-x: hidden !important;
+    box-shadow: none !important;
+  }
+
+  .agendaTopContainer {
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .headerTitleRow h2 {
+    font-size: 1.35rem;
+  }
+
+  .viewModeRow {
+    gap: 0.45rem;
+  }
+
+  .viewModeBtn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .btnTodayPill {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Date Navigator Pill en móvil */
+  .dateNavigatorPill {
+    padding: 4px 6px;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 20px;
+  }
+
+  .dateNavigatorCenter {
+    padding: 2px 4px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .dateNavigatorText {
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 1.3;
+  }
+
+  .navArrowBtn {
+    font-size: 1.25rem;
+    padding: 2px 6px;
+  }
+
+  /* Botones de acción en móvil */
+  .agendaActionsRow {
+    gap: 0.45rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .btnActionNuevoTurno {
+    font-size: 0.78rem;
+    padding: 7px 12px;
+  }
+
+  .btnActionBloquear {
+    font-size: 0.78rem;
+    padding: 7px 10px;
+  }
+
+  .actionsDivider {
+    display: none !important;
+  }
+
+  .btnActionCancelados {
+    font-size: 0.76rem;
+    padding: 7px 10px;
+  }
+
+  .btnActionImprimir {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+  }
+
+  /* Tarjeta Neocita del Día en móvil */
+  .neocitaDayHeaderCard {
+    padding: 0.75rem 0.85rem !important;
+    gap: 0.5rem !important;
+    border-radius: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .dayCardTitleRow {
+    font-size: 0.95rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.25 !important;
+  }
+
+  .dayCardTitleText {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .dayCardBodyRow {
+    gap: 0.4rem !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .dayCardLeftCol {
+    gap: 0.15rem !important;
+    min-width: 0 !important;
+  }
+
+  .dayCardTurnosCount {
+    font-size: 0.84rem !important;
+    white-space: nowrap !important;
+  }
+
+  .dayCardBloqueosCount {
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+  }
+
+  .dayCardDivider {
+    height: 42px !important;
+    margin: 0 0.2rem !important;
+  }
+
+  .dayCardRightCol {
+    gap: 0.2rem !important;
+    min-width: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .dayCardStatLabel {
+    font-size: 0.68rem !important;
+    white-space: nowrap !important;
+    letter-spacing: 0 !important;
+  }
+
+  .dayCardStatValGold {
+    font-size: 1.12rem !important;
+    white-space: nowrap !important;
+  }
+
+  .dayCardStatValGreen {
+    font-size: 1.02rem !important;
+    white-space: nowrap !important;
+  }
+
+  .neocitaDayContainer {
+    padding: 0.25rem 0 !important;
+    gap: 0.65rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Tarjetas de Turno Neocita en móvil */
+  .neocitaCard {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+
+  .neocitaTimeCol {
+    min-width: 78px !important;
+    max-width: 82px !important;
+    padding: 0.6rem 0.25rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .neocitaTimeRange {
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .neocitaDurationBadge {
+    font-size: 0.62rem !important;
+    padding: 1px 4px !important;
+    margin-top: 3px !important;
+    white-space: nowrap !important;
+  }
+
+  .neocitaSessionBadge {
+    font-size: 0.62rem !important;
+    padding: 1px 4px !important;
+    margin-top: 3px !important;
+    white-space: nowrap !important;
+  }
+
+  .neocitaBody {
+    padding: 0.6rem 0.65rem !important;
+    min-width: 0 !important;
+    gap: 0.35rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .neocitaTopRow {
+    gap: 0.25rem !important;
+  }
+
+  .neocitaClientName {
+    font-size: 0.92rem !important;
+    word-break: break-word !important;
+  }
+
+  .neocitaZones {
+    font-size: 0.78rem !important;
+    line-height: 1.25 !important;
+    word-break: break-word !important;
   }
 }
 
