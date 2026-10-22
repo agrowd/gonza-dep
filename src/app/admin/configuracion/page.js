@@ -70,6 +70,7 @@ export default function ConfiguracionPage() {
     email_reminder_7days_subject: '',
     email_reminder_7days_body: '',
     wtsp_va_a_avisar_template: '',
+    wtsp_mantenimiento_template: '',
     email_va_a_avisar_subject: '',
     email_va_a_avisar_body: '',
     wtsp_birthday_template: '',
@@ -168,6 +169,7 @@ export default function ConfiguracionPage() {
             email_reminder_7days_subject: data.email_reminder_7days_subject || '',
             email_reminder_7days_body: data.email_reminder_7days_body || '',
             wtsp_va_a_avisar_template: data.wtsp_va_a_avisar_template || '',
+            wtsp_mantenimiento_template: data.wtsp_mantenimiento_template || '',
             email_va_a_avisar_subject: data.email_va_a_avisar_subject || '',
             email_va_a_avisar_body: data.email_va_a_avisar_body || '',
             wtsp_birthday_template: data.wtsp_birthday_template || '',
@@ -274,20 +276,21 @@ export default function ConfiguracionPage() {
   // 5.1 CRUD Zone: Submit inline edit
   const handleSaveInlineZone = async (e, zoneId) => {
     e.preventDefault();
-    if (!zoneForm.nombre || !zoneForm.precioBase || !zoneForm.duracionMinutos || !zoneForm.señaBase) {
-      showToast('Por favor, completa todos los campos.', 'error');
+    if (!zoneForm.nombre || !zoneForm.duracionMinutos) {
+      showToast('Por favor, completa todos los campos requeridos.', 'error');
       return;
     }
 
     try {
+      const calculatedSena = Math.round(Number(zoneForm.precioBase || 0) * 0.5);
       const res = await fetch(`/api/zonas/${zoneId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre: zoneForm.nombre,
-          precioBase: Number(zoneForm.precioBase),
+          precioBase: Number(zoneForm.precioBase || 0),
           duracionMinutos: Number(zoneForm.duracionMinutos),
-          señaBase: Number(zoneForm.señaBase)
+          señaBase: calculatedSena
         })
       });
 
@@ -310,20 +313,21 @@ export default function ConfiguracionPage() {
     e.preventDefault();
     
     // Basic validation
-    if (!zoneForm.nombre || !zoneForm.precioBase || !zoneForm.duracionMinutos || !zoneForm.señaBase) {
-      showToast('Por favor, completa todos los campos.', 'error');
+    if (!zoneForm.nombre || !zoneForm.duracionMinutos) {
+      showToast('Por favor, completa todos los campos requeridos.', 'error');
       return;
     }
 
     try {
+      const calculatedSena = Math.round(Number(zoneForm.precioBase || 0) * 0.5);
       const res = await fetch('/api/zonas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre: zoneForm.nombre,
-          precioBase: Number(zoneForm.precioBase),
+          precioBase: Number(zoneForm.precioBase || 0),
           duracionMinutos: Number(zoneForm.duracionMinutos),
-          señaBase: Number(zoneForm.señaBase)
+          señaBase: calculatedSena
         })
       });
 
@@ -823,27 +827,27 @@ export default function ConfiguracionPage() {
                                     />
                                   </div>
                                   <div className={styles.formGroup} style={{ margin: 0 }}>
-                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Precio Base ($)</label>
+                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Precio Base ($) (Automático Web)</label>
                                     <input 
                                       type="number" 
                                       className={styles.input} 
                                       value={zoneForm.precioBase}
-                                      onChange={(e) => setZoneForm({ ...zoneForm, precioBase: e.target.value })}
-                                      required 
-                                      min="0"
-                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                      readOnly
+                                      disabled
+                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                                      title="El precio se toma automáticamente de la web y no se puede modificar manualmente"
                                     />
                                   </div>
                                   <div className={styles.formGroup} style={{ margin: 0 }}>
-                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Seña Requerida ($)</label>
+                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Seña (50% Automático)</label>
                                     <input 
                                       type="number" 
                                       className={styles.input} 
-                                      value={zoneForm.señaBase}
-                                      onChange={(e) => setZoneForm({ ...zoneForm, señaBase: e.target.value })}
-                                      required 
-                                      min="0"
-                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                      value={Math.round(Number(zoneForm.precioBase || 0) * 0.5)}
+                                      readOnly
+                                      disabled
+                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                                      title="La seña se calcula automáticamente como la mitad (50%) del valor de la zona"
                                     />
                                   </div>
                                   <div className={styles.formGroup} style={{ margin: 0 }}>
@@ -1061,6 +1065,17 @@ export default function ConfiguracionPage() {
                   value={configs.wtsp_va_a_avisar_template}
                   onChange={(e) => setConfigs({ ...configs, wtsp_va_a_avisar_template: e.target.value })}
                   placeholder="¡Hola [Nombre]! Te escribimos de Gonzalo Depilación Masculina para consultar sobre tu próxima sesión..."
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>🛠️ Mensaje de Mantenimiento / Finalizado por WhatsApp (Enviado automáticamente 2,5 meses después)</label>
+                <textarea 
+                  className={`${styles.input} ${styles.textarea}`}
+                  value={configs.wtsp_mantenimiento_template}
+                  onChange={(e) => setConfigs({ ...configs, wtsp_mantenimiento_template: e.target.value })}
+                  placeholder="¡Hola [Nombre]! Te escribimos de Gonzalo Depilación ✨ Ya pasaron dos meses y medio desde tu última sesión de tratamiento..."
                   required
                 />
               </div>
@@ -1667,28 +1682,30 @@ export default function ConfiguracionPage() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Precio Base (ARS)</label>
+                  <label className={styles.label}>Precio Base (ARS) (Automático Web)</label>
                   <input 
                     type="number" 
                     className={styles.input} 
                     value={zoneForm.precioBase}
-                    onChange={(e) => setZoneForm({ ...zoneForm, precioBase: e.target.value })}
-                    placeholder="Ej: 35000"
-                    min="0"
-                    required
+                    readOnly
+                    disabled
+                    placeholder="Tomado automáticamente de la web"
+                    style={{ opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                    title="El precio se toma automáticamente de la web y no se puede modificar manualmente"
                   />
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Seña Requerida (ARS)</label>
+                  <label className={styles.label}>Seña Requerida (ARS) (50% Automático)</label>
                   <input 
                     type="number" 
                     className={styles.input} 
-                    value={zoneForm.señaBase}
-                    onChange={(e) => setZoneForm({ ...zoneForm, señaBase: e.target.value })}
-                    placeholder="Ej: 8500"
-                    min="0"
-                    required
+                    value={Math.round(Number(zoneForm.precioBase || 0) * 0.5)}
+                    readOnly
+                    disabled
+                    placeholder="50% del valor de la zona"
+                    style={{ opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                    title="La seña se calcula automáticamente como la mitad del precio base"
                   />
                 </div>
 

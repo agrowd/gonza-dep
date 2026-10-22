@@ -235,6 +235,33 @@ export async function POST(request) {
 
     const isModelA = summary.model === 'A';
 
+    function getEstadoTurnoLabel(item) {
+      if (!item) return '-';
+      if (item.estadoTurnoLabel) return item.estadoTurnoLabel;
+      if (item.subtipoGanancia) {
+        if (item.subtipoGanancia.includes('siguiente') && !item.subtipoGanancia.includes('sin siguiente')) {
+          return 'Turno siguiente';
+        }
+        if (item.subtipoGanancia.includes('sin siguiente')) {
+          return 'Realizado (Sin sig. turno)';
+        }
+        if (item.subtipoGanancia.includes('nuevo')) {
+          return 'Turno nuevo (Señado)';
+        }
+      }
+      if (item.subEstado === 'SIGUIENTE_TURNO') return 'Turno siguiente';
+      if (item.subEstado === 'VA_A_AVISAR') return 'Va a avisar';
+      if (item.subEstado === 'MANTENIMIENTO') return 'Mantenimiento';
+      if (item.subEstado === 'FINALIZADO') return 'Finalizó';
+      if (item.estado === 'SEÑADO') return 'Señado';
+      if (item.estado === 'REPROGRAMADO') return 'Reprogramado';
+      if (item.estado === 'PENDIENTE_AUTORIZACION') return 'Pendiente aut.';
+      if (item.estado === 'CANCELADO') return 'Cancelado';
+      if (item.estado === 'NO_ASISTIO') return 'Ausente';
+      if (item.estado === 'REALIZADO') return 'Realizado';
+      return item.ultimoEstadoLabel || item.estado || '-';
+    }
+
     // Shared Strings registry (strictly compatible with all mobile viewers)
     const sharedStrings = [];
     const sharedStringMap = new Map();
@@ -301,7 +328,7 @@ export async function POST(request) {
           'Tipo de pago',
           'Valor final',
           'Seña aplicada',
-          'Saldo del turno',
+          'Estado de turno',
           'Zonas',
           'Operador'
         ]
@@ -335,7 +362,7 @@ export async function POST(request) {
       if (isModelA) {
         const vFinal = Number(item.valorTotal || 0);
         const vSena = Number(item.valorSeña || 0);
-        const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
+        const estadoTurno = getEstadoTurnoLabel(item);
 
         pushRow(currentRow, 19, [
           { col: 1, type: 's', value: formatDateDisplay(item.fecha), style: sCenter },
@@ -345,7 +372,7 @@ export async function POST(request) {
           { col: 5, type: 's', value: item.metodoPagoLabel || 'Transferencia', style: sText },
           { col: 6, type: 'n', value: vFinal, style: sCurr },
           { col: 7, type: 'n', value: vSena, style: sCurr },
-          { col: 8, type: 'n', value: vSaldo, style: sCurr },
+          { col: 8, type: 's', value: estadoTurno, style: sCenter },
           { col: 9, type: 's', value: item.zonasTexto || '-', style: sText },
           { col: 10, type: 's', value: item.operadorNombre || 'Gonzalo', style: sText }
         ]);
@@ -467,7 +494,7 @@ export async function POST(request) {
     }
 
     const lastRow = currentRow - 1;
-    const colWidths = [15, 11, 28, 19, 22, 16, 16, 16, 28, 16];
+    const colWidths = [15, 11, 28, 19, 22, 16, 16, 24, 28, 16];
     const colsXml = colWidths
       .map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`)
       .join('');

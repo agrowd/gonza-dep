@@ -515,6 +515,7 @@ function ClientesPageContent() {
   const fromPage = searchParams.get('from');
   const dateParam = searchParams.get('date');
   const viewParam = searchParams.get('view');
+  const turnoIdParam = searchParams.get('turnoId');
 
   // Fetch individual profile details
   const loadClientData = (clientId) => {
@@ -626,6 +627,7 @@ function ClientesPageContent() {
       const params = [];
       if (dateParam) params.push(`date=${dateParam}`);
       if (viewParam) params.push(`view=${viewParam}`);
+      if (turnoIdParam) params.push(`turnoId=${turnoIdParam}`);
       params.push('fromAgendaReturn=true');
       const queryStr = params.length > 0 ? `?${params.join('&')}` : '';
       router.push(`/admin/agenda${queryStr}`);
@@ -1689,7 +1691,10 @@ function ClientesPageContent() {
                         <input
                           type="date"
                           value={editNotes.fechaNacimiento || ''}
+                          disabled={currentUserRole === 'OPERADOR'}
                           onChange={(e) => setEditNotes({ ...editNotes, fechaNacimiento: e.target.value })}
+                          style={currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' } : {}}
+                          title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la fecha de nacimiento' : ''}
                         />
                       </div>
 
@@ -1940,7 +1945,10 @@ function ClientesPageContent() {
                         <input
                           type="date"
                           value={editNotes.fechaPrimerTurno || ''}
+                          disabled={currentUserRole === 'OPERADOR'}
                           onChange={(e) => setEditNotes({ ...editNotes, fechaPrimerTurno: e.target.value })}
+                          style={currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' } : {}}
+                          title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la fecha del primer turno' : ''}
                         />
                       </div>
                       <div className={styles.inputGroup}>
@@ -1954,7 +1962,10 @@ function ClientesPageContent() {
                           type="number"
                           min="0"
                           max="999"
+                          disabled={currentUserRole === 'OPERADOR'}
                           value={((selectedClient?.turnos || []).filter(t => t.estado === 'REALIZADO').length) + (Number(editNotes.sesionesPrevias) || 0)}
+                          style={currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' } : {}}
+                          title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la cantidad de sesiones' : ''}
                           onChange={(e) => {
                             const val = Math.max(0, parseInt(e.target.value, 10) || 0);
                             const sis = (selectedClient?.turnos || []).filter(t => t.estado === 'REALIZADO').length;
@@ -1968,6 +1979,9 @@ function ClientesPageContent() {
                         <input
                           type="number"
                           value={editNotes.sesionesPrevias ?? 0}
+                          disabled={currentUserRole === 'OPERADOR'}
+                          style={currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' } : {}}
+                          title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar las sesiones previas' : ''}
                           onChange={(e) => setEditNotes({ ...editNotes, sesionesPrevias: Math.max(0, parseInt(e.target.value, 10) || 0) })}
                           min="0"
                           max="999"

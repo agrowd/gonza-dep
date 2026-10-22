@@ -29,7 +29,7 @@ const METRIC_DEFINITIONS = [
   {
     id: 'senados',
     label: '📌 Turnos Señados / Confirmados',
-    valueLabel: 'Total Proyectado en Turnos Señados',
+    valueLabel: 'Total de Señas (Turnos Señados)',
     isDanger: false,
     hasAvg: true,
     excelModel: 'A',
@@ -279,6 +279,33 @@ export default function EstadisticasPage() {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
+  const getEstadoTurnoLabel = (item) => {
+    if (!item) return '-';
+    if (item.estadoTurnoLabel) return item.estadoTurnoLabel;
+    if (item.subtipoGanancia) {
+      if (item.subtipoGanancia.includes('siguiente') && !item.subtipoGanancia.includes('sin siguiente')) {
+        return 'Turno siguiente';
+      }
+      if (item.subtipoGanancia.includes('sin siguiente')) {
+        return 'Realizado (Sin sig. turno)';
+      }
+      if (item.subtipoGanancia.includes('nuevo')) {
+        return 'Turno nuevo (Señado)';
+      }
+    }
+    if (item.subEstado === 'SIGUIENTE_TURNO') return 'Turno siguiente';
+    if (item.subEstado === 'VA_A_AVISAR') return 'Va a avisar';
+    if (item.subEstado === 'MANTENIMIENTO') return 'Mantenimiento';
+    if (item.subEstado === 'FINALIZADO') return 'Finalizó';
+    if (item.estado === 'SEÑADO') return 'Señado';
+    if (item.estado === 'REPROGRAMADO') return 'Reprogramado';
+    if (item.estado === 'PENDIENTE_AUTORIZACION') return 'Pendiente aut.';
+    if (item.estado === 'CANCELADO') return 'Cancelado';
+    if (item.estado === 'NO_ASISTIO') return 'Ausente';
+    if (item.estado === 'REALIZADO') return 'Realizado';
+    return item.ultimoEstadoLabel || item.estado || '-';
+  };
+
   // ==========================================
   // CÁLCULO DINÁMICO DE ITEMS Y TOTALES (CON EXCLUSIÓN 'X' Y FILTROS)
   // ==========================================
@@ -328,6 +355,8 @@ export default function EstadisticasPage() {
         totalMoney += Number(item.oportunidadNoConcretada ?? item.valorTotal ?? 0);
       } else if (selectedMetric === 'gananciaNeta') {
         totalMoney += Number(item.ingresoCobradoPeriodo ?? item.valorTotal ?? 0);
+      } else if (selectedMetric === 'senados') {
+        totalMoney += Number(item.valorSeña || 0);
       } else {
         totalMoney += Number(item.valorTotal || 0);
       }
@@ -1021,7 +1050,7 @@ export default function EstadisticasPage() {
                           <th>Tipo de pago</th>
                           <th>Valor final</th>
                           <th>Seña aplicada</th>
-                          <th>Saldo del turno</th>
+                          <th>Estado de turno</th>
                           <th>Zonas</th>
                           <th>Operador</th>
                         </tr>
@@ -1037,7 +1066,7 @@ export default function EstadisticasPage() {
                           activeMetricData.filteredItems.map(item => {
                             const vFinal = Number(item.valorTotal || 0);
                             const vSena = Number(item.valorSeña || 0);
-                            const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
+                            const estadoTurno = getEstadoTurnoLabel(item);
                             return (
                               <tr key={item.id}>
                                 <td style={{ textAlign: 'center' }}>{formatDateDisplay(item.fecha)}</td>
@@ -1047,7 +1076,7 @@ export default function EstadisticasPage() {
                                 <td>{item.metodoPagoLabel || 'Transferencia'}</td>
                                 <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(vFinal)}</td>
                                 <td style={{ textAlign: 'right' }}>{formatMoney(vSena)}</td>
-                                <td style={{ textAlign: 'right' }}>{formatMoney(vSaldo)}</td>
+                                <td style={{ textAlign: 'center', fontWeight: 600, color: '#7a1f1e' }}>{estadoTurno}</td>
                                 <td>{item.zonasTexto}</td>
                                 <td>{item.operadorNombre || 'Gonzalo'}</td>
                               </tr>

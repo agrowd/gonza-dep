@@ -62,9 +62,11 @@ export async function GET(request, { params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const sessionUser = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!sessionCookie || !sessionUser) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    const isOperator = sessionUser.rol === 'OPERADOR';
 
     if (!id) {
       return NextResponse.json({ error: 'ID de turno requerido' }, { status: 400 });
@@ -112,9 +114,11 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const sessionUser = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!sessionCookie || !sessionUser) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    const isOperator = sessionUser.rol === 'OPERADOR';
 
     const body = await request.json();
     const {
@@ -373,14 +377,16 @@ export async function PUT(request, { params }) {
       }
       clientUpdateData.frecuencia = newFreq;
     }
-    if (body.fechaPrimerTurno !== undefined) {
-      clientUpdateData.fechaPrimerTurno = body.fechaPrimerTurno ? new Date(body.fechaPrimerTurno) : null;
-    }
-    if (body.fechaNacimiento !== undefined) {
-      clientUpdateData.fechaNacimiento = body.fechaNacimiento ? new Date(body.fechaNacimiento) : null;
-    }
-    if (body.sesionesPrevias !== undefined && !isNaN(Number(body.sesionesPrevias))) {
-      clientUpdateData.sesionesPrevias = Number(body.sesionesPrevias);
+    if (!isOperator) {
+      if (body.fechaPrimerTurno !== undefined) {
+        clientUpdateData.fechaPrimerTurno = body.fechaPrimerTurno ? new Date(body.fechaPrimerTurno) : null;
+      }
+      if (body.fechaNacimiento !== undefined) {
+        clientUpdateData.fechaNacimiento = body.fechaNacimiento ? new Date(body.fechaNacimiento) : null;
+      }
+      if (body.sesionesPrevias !== undefined && !isNaN(Number(body.sesionesPrevias))) {
+        clientUpdateData.sesionesPrevias = Number(body.sesionesPrevias);
+      }
     }
     
     if (Object.keys(clientUpdateData).length > 0 && oldTurn.clienteId) {
@@ -858,9 +864,11 @@ export async function DELETE(request, { params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const sessionUser = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!sessionCookie || !sessionUser) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    const isOperator = sessionUser.rol === 'OPERADOR';
 
     await prisma.turno.delete({
       where: { id }

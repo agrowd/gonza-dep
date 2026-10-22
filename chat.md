@@ -814,3 +814,42 @@
   - Compilación local Turbopack: 47/47 rutas en 22.5s con 0 errores.
   - Commits pusheados a `main` y `staging`.
   - Despliegue con backup de base de datos a Producción Hostinger (puerto 3006).
+
+---
+
+## 📅 Sesión: 22 de Octubre de 2026 - Ajustes de Excel, Restricciones Clínicas para Operador, Flujo y Scroll en Agenda, Automatizaciones WhatsApp y Zonas Bloqueadas
+- **Captura y Requerimientos de Luciano Gómez** (`media_1792683551556_02a50384.png`):
+  1. *"La columna de saldo cambiarla por 'Estado de turno' así sabemos si ese cliente tiene un siguiente turno, si es Realizado, si es Señado, etc.."*
+  2. *"Para el perfil de operador, que no pueda modificar los datos de Primer turno, cantidad de sesiones y cumpleaños, pero que si las pueda ver"*
+  3. *"Vi que arreglaste lo de que al entrar en una ficha en la agenda diaria y salir, guarde el scroll, está perfecto, pero que cuando cierro la ficha de un cliente, vuelva a la info del turno, y que después al cerrar la info del turno me guarde el scroll para volver a la agenda, así no se saltea"*
+  4. *"Pero en la agenda mensual y semanal, no mantenga el scroll, porque al movernos de semana/mes, la pantalla baja también, solo debería ser para la agenda diaria eso, no las demás"*
+  5. *"El sistema manda el mensaje automático de 'Va a avisar' (según las semanas que tenga en su ficha) y de mantenimiento y finalizado? (2,5meses después) Porque hasta ahora no ha salido ninguno y ya pasaron unas cuantas semanas"*
+  6. *"En la estadistica de los turnos señados, que aparece en total proyectado, el valor que aparece debería ser solo el de las señas, no el del turno completos, debería ser total de señas"*
+  7. *"En configuración, en Zonas de Depilación, que no se puedan modificar el valor de cada zona (ya que lo toma de la web) no la seña (que sería la mitad del valor de la zona) así que ambos son valores automáticos"*
+- **Soluciones Implementadas**:
+  1. **Columna "Estado de turno" en Excel y Vista Previa (Modelo A)**:
+     - En `src/app/api/admin/estadisticas/exportar-excel/route.js` y `src/app/admin/estadisticas/page.js`, se reemplazó el encabezado `Saldo del turno` por `Estado de turno`.
+     - Se integró el helper `getEstadoTurnoLabel(item)` determinando con precisión: `Turno siguiente`, `Realizado (Sin sig. turno)`, `Turno nuevo (Señado)`, `Va a avisar`, `Mantenimiento`, `Finalizó`, `Señado`, `Reprogramado`, etc.
+  2. **Restricción de Edición Clínica para Rol Operador**:
+     - En `src/app/admin/clientes/page.js` y en el modal de turno de `src/app/admin/agenda/page.js`, cuando el usuario tiene rol `OPERADOR` los inputs de `Fecha Primer Turno`, `Cantidad de Sesiones` (total y previas) y `Cumpleaños` (Día/Mes) quedan deshabilitados en modo solo lectura (`disabled`, cursor `not-allowed`).
+     - En `src/app/api/admin/clientes/[id]/route.js` y `src/app/api/admin/turnos/[id]/route.js`, se valida el token de sesión y si `session.rol === 'OPERADOR'`, se ignoran las actualizaciones de `fechaPrimerTurno`, `sesionesPrevias` y `fechaNacimiento`.
+  3. **Flujo de Modales en Agenda Diaria y Retorno sin Saltearse**:
+     - En `src/app/admin/agenda/page.js`, al hacer clic en `📁 Ficha Cliente` se pasa `&turnoId=${selectedTurno.id}` en la URL hacia `/admin/clientes`.
+     - En `src/app/admin/clientes/page.js` (`handleCloseProfile`), se retorna a `/admin/agenda` propagando `&turnoId=${turnoIdParam}`.
+     - Al volver a la agenda, se abre automáticamente la ventana modal con la información del turno, y al cerrar el turno se restaura la posición exacta del scroll.
+  4. **Scroll Restringido Estrictamente a Vista Diaria**:
+     - En `src/app/admin/agenda/page.js`, `captureAgendaScroll` y `restoreAgendaScroll` se limitaron a `viewMode === 'day'`.
+     - Se implementó `resetAgendaScroll()` al conmutar a `Semana` o `Mes`, y en las funciones `handlePrev` / `handleNext`, evitando que la vista semanal y mensual desciendan automáticamente.
+  5. **Automatización Integral de WhatsApp ("Va a avisar" y "Mantenimiento / Finalizado")**:
+     - Se identificó la causa de no envío: falta de lógica de despacho WhatsApp para `VA_A_AVISAR`, template en blanco/punto en BD, y un error `nowLocal is not defined` en el cron de las 10:00 AM en `src/lib/whatsapp.js`.
+     - Se implementaron las dos rutinas en `checkAndSendReminders`:
+       - `VA_A_AVISAR`: Detecta clientes activos cuyo último turno realizado tiene `subEstado === 'VA_A_AVISAR'`. Si la fecha actual superó la frecuencia en semanas (`fechaTurno + frecuencia*7`), no tienen turno posterior agendado y no se envió notificación en este ciclo, envía WhatsApp con `wtsp_va_a_avisar_template`.
+       - `MANTENIMIENTO / FINALIZADO`: Detecta clientes con `estado === 'FINALIZADO'` o última cita `subEstado in ['FINALIZADO', 'MANTENIMIENTO']`. Cumplidos los 75 días (2,5 meses) sin turno posterior, despacha WhatsApp con `wtsp_mantenimiento_template` (y correo electrónico si corresponde).
+     - Se añadió `wtsp_mantenimiento_template` a `Configuracion` (API y formulario de administración).
+  6. **Métrica Turnos Señados (Total de Señas)**:
+     - En `src/app/api/admin/estadisticas/route.js`, se cambió `totalSenados` para calcular la suma de `valorSeña` en vez de `valorTotal`.
+     - En `src/app/admin/estadisticas/page.js`, se actualizó la definición de la métrica a "Total de Señas (Turnos Señados)" y el cómputo de `totalMoney` suma `valorSeña`.
+  7. **Zonas de Depilación con Precio y Seña Bloqueados**:
+     - En `src/app/admin/configuracion/page.js`, se deshabilitaron los campos de `Precio Base` y `Seña Requerida` (50% automático) tanto en la edición inline de la grilla como en el modal de creación, indicando que son valores automáticos sincronizados.
+- **Validación y Despliegue**:
+  - Compilación local validada con Turbopack (`npm run build`: 47/47 rutas en 89s, 0 errores).

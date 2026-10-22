@@ -726,122 +726,259 @@ export async function checkAndSendReminders(force = false) {
     }
 
     // ==========================================
-    // AUTOMATED MAINTENANCE REMINDERS (75 DAYS)
+    // 2B. AUTOMATED WHATSAPP "VA A AVISAR" (By Client Frequency)
     // ==========================================
-    console.log('[Reminder Cron] Checking finished appointments for 75-day maintenance reminders...');
+    try {
+      console.log('[Reminder Cron] Checking clients for automated "Va a avisar" WhatsApp reminders...');
+      const vaAAvisarConfig = await prisma.configuracion.findUnique({ where: { key: 'wtsp_va_a_avisar_template' } });
+      const rawVaAAvisarTpl = vaAAvisarConfig?.value?.trim();
+      const vaAAvisarTemplate = (rawVaAAvisarTpl && rawVaAAvisarTpl !== '.')
+        ? rawVaAAvisarTpl
+        : "¡Hola [Nombre]! Te escribimos de Gonzalo Depilación Masculina ✨ Nos quedó pendiente coordinar tu próxima sesión tras tu última visita. ¿Cómo venís de tiempos esta semana o la próxima para coordinar un turno? ¡Avisanos cuando puedas!";
 
-    const maintTargetDate = new Date(Date.UTC(argToday.getUTCFullYear(), argToday.getUTCMonth(), argToday.getUTCDate()));
-    maintTargetDate.setUTCDate(maintTargetDate.getUTCDate() - 75);
-
-    const maintStartRange = new Date(maintTargetDate);
-    maintStartRange.setUTCHours(0, 0, 0, 0);
-
-    const maintEndRange = new Date(maintTargetDate);
-    maintEndRange.setUTCHours(23, 59, 59, 999);
-
-    const finishedTurnos = await prisma.turno.findMany({
-      where: {
-        fecha: {
-          gte: maintStartRange,
-          lte: maintEndRange
+      const eligibleVaAAvisarClients = await prisma.cliente.findMany({
+        where: {
+          enviarNotificaciones: true,
+          bloqueado: false,
+          estado: 'ACTIVO'
         },
-        estado: 'REALIZADO'
-      },
-      include: {
-        cliente: true
-      }
-    });
-
-    console.log(`[Reminder Cron] Found ${finishedTurnos.length} finished turnos on target maintenance date.`);
-
-    for (const t of finishedTurnos) {
-      if (!t.cliente || !t.cliente.email || t.cliente.estado !== 'FINALIZADO') continue;
-      if (!canSendNotification(t.cliente, 'EMAIL', 'MANTENIMIENTO')) {
-        console.log(`[Reminder Cron] Maintenance email disabled for client ${t.cliente?.nombreCompleto}. Skipping.`);
-        continue;
-      }
-
-      // Check if client has any newer turnos
-      const newerTurno = await prisma.turno.findFirst({
-        where: {
-          clienteId: t.clienteId,
-          fecha: {
-            gt: t.fecha
+        include: {
+          turnos: {
+            where: { estado: { in: ['REALIZADO', 'SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'] } },
+            orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }]
           }
         }
       });
 
-      if (newerTurno) {
-        console.log(`[Reminder Cron] Client ${t.cliente.nombreCompleto} has newer turnos. Skipping maintenance.`);
-        continue;
-      }
+      for (const cl of eligibleVaAAvisarClients) {
+        if (!cl.whatsapp || !canSendNotification(cl, 'WHATSAPP', 'RECORDATORIO')) continue;
 
-      // Check if a maintenance email was already sent
-      const alreadySent = await prisma.notificacion.findFirst({
+        const completedTurnos = cl.turnos.filter(t => t.estado === 'REALIZADO');
+        if (completedTurnos.length === 0) continue;
+        const lastTurno = completedTurnos[0];
+
+        // Check if last completed turno was marked as VA_A_AVISAR
+        if (lastTurno.subEstado !== 'VA_A_AVISAR') continue;
+
+        // Check if client already booked an active appointment after that lastTurno
+        const lastTurnoTime = new Date(lastTurno.fecha).getTime();
+        const hasFutureTurno = cl.turnos.some(t => {
+          if (['CANCELADO', 'NO_ASISTIO', 'BLOQUEADO'].includes(t.estado)) return false;
+          return new Date(t.fecha).getTime() > lastTurnoTime;
+        });
+        if (hasFutureTurno) continue;
+
+        // Target date based on frequency (weeks)
+        const freqWeeks = Number(cl.frecuencia || 4);
+        const targetDate = new Date(lastTurnoTime + (freqWeeks * 7 * 24 * 60 * 60 * 1000));
+        
+        // Only trigger if today has arrived at or passed targetDate
+        if (argToday < targetDate) continue;
+
+        // Prevent sending on archaic turnos older than 90 days
+        const maxThreshold = new Date(argToday.getTime() - (90 * 24 * 60 * 60 * 1000));
+        if (new Date(lastTurno.fecha) < maxThreshold) continue;
+
+        // Check if already sent since lastTurno.fecha
+        const alreadySent = await prisma.notificacion.findFirst({
+          where: {
+            clienteId: cl.id,
+            canal: 'WHATSAPP',
+            fechaEnvio: { gte: lastTurno.fecha },
+            mensaje: { contains: '[VA_A_AVISAR]' }
+          }
+        });
+        if (alreadySent) continue;
+
+        const firstName = cl.nombreCompleto?.split(' ')[0] || cl.nombreCompleto || 'estimado';
+        const rawMsg = vaAAvisarTemplate
+          .replaceAll('[Nombre]', firstName)
+          .replaceAll('{cliente}', cl.nombreCompleto || '')
+          .replaceAll('[FechaTurno]', lastTurno.fecha ? new Date(lastTurno.fecha).toLocaleDateString('es-AR') : '');
+
+        try {
+          console.log(`[Reminder Cron] Sending automated "Va a avisar" WhatsApp to ${cl.nombreCompleto} (${cl.whatsapp})...`);
+          await sendWhatsAppMessage(cl.whatsapp, rawMsg);
+
+          await prisma.notificacion.create({
+            data: {
+              clienteId: cl.id,
+              turnoId: lastTurno.id,
+              canal: 'WHATSAPP',
+              mensaje: `[VA_A_AVISAR] ${rawMsg}`,
+              estado: 'ENVIADO'
+            }
+          });
+
+          await new Promise(r => setTimeout(r, 2000));
+        } catch (err) {
+          console.error(`[Reminder Cron] Failed to send automated "Va a avisar" WhatsApp to ${cl.nombreCompleto}:`, err);
+          await prisma.notificacion.create({
+            data: {
+              clienteId: cl.id,
+              turnoId: lastTurno.id,
+              canal: 'WHATSAPP',
+              mensaje: `[VA_A_AVISAR_FALLIDO] ${rawMsg} (Error: ${err.message})`,
+              estado: 'FALLIDO'
+            }
+          });
+        }
+      }
+    } catch (vaErr) {
+      console.error('[Reminder Cron] Error in "Va a avisar" automated routine:', vaErr);
+    }
+
+    // ==========================================
+    // 2C. AUTOMATED MAINTENANCE / FINALIZADO REMINDERS (75 DAYS / 2.5 MONTHS)
+    // ==========================================
+    try {
+      console.log('[Reminder Cron] Checking clients for 75-day maintenance WhatsApp & email reminders...');
+      const maintConf = await prisma.configuracion.findUnique({ where: { key: 'wtsp_mantenimiento_template' } });
+      const rawMaintTpl = maintConf?.value?.trim();
+      const wtspMaintTemplate = (rawMaintTpl && rawMaintTpl !== '.')
+        ? rawMaintTpl
+        : "¡Hola [Nombre]! Te escribimos de Gonzalo Depilación ✨ Ya pasaron dos meses y medio desde tu última sesión de tratamiento. Te recomendamos realizar tu sesión de mantenimiento para conservar los mejores resultados a largo plazo. ¿Te gustaría que coordinemos un turno para estos días?";
+
+      const eligibleMaintClients = await prisma.cliente.findMany({
         where: {
-          clienteId: t.clienteId,
-          mensaje: {
-            contains: 'mantenimiento'
-          },
-          canal: 'EMAIL',
-          estado: 'ENVIADO'
+          enviarNotificaciones: true,
+          bloqueado: false,
+          OR: [
+            { estado: 'FINALIZADO' },
+            { notifMantenimiento: true }
+          ]
+        },
+        include: {
+          turnos: {
+            where: { estado: { in: ['REALIZADO', 'SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'] } },
+            orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }]
+          }
         }
       });
 
-      if (alreadySent) {
-        console.log(`[Reminder Cron] Maintenance email already sent before to ${t.cliente.nombreCompleto}. Skipping.`);
-        continue;
-      }
+      for (const cl of eligibleMaintClients) {
+        if (cl.notifMantenimiento === false) continue;
 
-      // Load config templates
-      const subjectConf = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_subject' } });
-      const bodyConf = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_body' } });
+        const completedTurnos = cl.turnos.filter(t => t.estado === 'REALIZADO');
+        if (completedTurnos.length === 0) continue;
+        const lastTurno = completedTurnos[0];
 
-      const subjectTemplate = subjectConf?.value || '¡Te extrañamos! Es hora de tu mantenimiento de depilación láser';
-      const bodyTemplate = bodyConf?.value || 'Hola {cliente}, te recomendamos realizar una sesión de mantenimiento para tus zonas: {zonas}.';
+        // Eligible if client is marked FINALIZADO or last turno has subEstado FINALIZADO / MANTENIMIENTO
+        const isEligibleState = cl.estado === 'FINALIZADO' || lastTurno.subEstado === 'FINALIZADO' || lastTurno.subEstado === 'MANTENIMIENTO';
+        if (!isEligibleState) continue;
 
-      let zonesText = '';
-      try {
-        const parsed = JSON.parse(t.zonas);
-        zonesText = parsed.map(z => z.nombre).join(', ');
-      } catch (e) {
-        zonesText = t.zonas;
-      }
+        // Check if client already booked an active appointment after that lastTurno
+        const lastTurnoTime = new Date(lastTurno.fecha).getTime();
+        const hasFutureTurno = cl.turnos.some(t => {
+          if (['CANCELADO', 'NO_ASISTIO', 'BLOQUEADO'].includes(t.estado)) return false;
+          return new Date(t.fecha).getTime() > lastTurnoTime;
+        });
+        if (hasFutureTurno) continue;
 
-      const parseEmailTemplate = (template, clientName, zonesText) => {
-        return template
-          .replaceAll('{cliente}', clientName)
-          .replaceAll('{zonas}', zonesText);
-      };
+        // Target date: 75 days after last session (2.5 months)
+        const targetMaintDate = new Date(lastTurnoTime + (75 * 24 * 60 * 60 * 1000));
+        if (argToday < targetMaintDate) continue;
 
-      const parsedSubject = parseEmailTemplate(subjectTemplate, t.cliente.nombreCompleto, zonesText);
-      const parsedBody = parseEmailTemplate(bodyTemplate, t.cliente.nombreCompleto, zonesText);
+        // Prevent spam on ancient appointments older than 180 days
+        const maxThreshold = new Date(argToday.getTime() - (180 * 24 * 60 * 60 * 1000));
+        if (new Date(lastTurno.fecha) < maxThreshold) continue;
 
-      try {
-        console.log(`[Reminder Cron] Sending maintenance email to ${t.cliente.nombreCompleto}...`);
-        await sendMaintenanceEmail(t.cliente.email, parsedSubject, parsedBody);
-
-        await prisma.notificacion.create({
-          data: {
-            clienteId: t.cliente.id,
-            turnoId: t.id,
-            canal: 'EMAIL',
-            mensaje: `Correo de mantenimiento automático enviado. Asunto: "${parsedSubject}"`,
-            estado: 'ENVIADO'
+        // Check if WhatsApp was already sent since lastTurno.fecha
+        const alreadySentWtsp = await prisma.notificacion.findFirst({
+          where: {
+            clienteId: cl.id,
+            canal: 'WHATSAPP',
+            fechaEnvio: { gte: lastTurno.fecha },
+            mensaje: { contains: '[MANTENIMIENTO]' }
           }
         });
-      } catch (err) {
-        console.error(`[Reminder Cron] Failed to send maintenance email to ${t.cliente.nombreCompleto}:`, err);
-        await prisma.notificacion.create({
-          data: {
-            clienteId: t.cliente.id,
-            turnoId: t.id,
-            canal: 'EMAIL',
-            mensaje: `Error al enviar correo de mantenimiento automático: ${err.message}`,
-            estado: 'FALLIDO'
+
+        const firstName = cl.nombreCompleto?.split(' ')[0] || cl.nombreCompleto || 'estimado';
+        let zonesText = '';
+        try {
+          const parsed = JSON.parse(lastTurno.zonas);
+          zonesText = Array.isArray(parsed) ? parsed.map(z => z.nombre || z.name || '').filter(Boolean).join(', ') : (lastTurno.zonas || '');
+        } catch (e) {
+          zonesText = lastTurno.zonas || '';
+        }
+
+        // Dispatch WhatsApp if not sent and client has WhatsApp
+        if (!alreadySentWtsp && cl.whatsapp && canSendNotification(cl, 'WHATSAPP', 'MANTENIMIENTO')) {
+          const rawWtspMsg = wtspMaintTemplate
+            .replaceAll('[Nombre]', firstName)
+            .replaceAll('{cliente}', cl.nombreCompleto || '')
+            .replaceAll('{zonas}', zonesText);
+
+          try {
+            console.log(`[Reminder Cron] Sending automated maintenance WhatsApp to ${cl.nombreCompleto} (${cl.whatsapp})...`);
+            await sendWhatsAppMessage(cl.whatsapp, rawWtspMsg);
+
+            await prisma.notificacion.create({
+              data: {
+                clienteId: cl.id,
+                turnoId: lastTurno.id,
+                canal: 'WHATSAPP',
+                mensaje: `[MANTENIMIENTO] ${rawWtspMsg}`,
+                estado: 'ENVIADO'
+              }
+            });
+
+            await new Promise(r => setTimeout(r, 2000));
+          } catch (err) {
+            console.error(`[Reminder Cron] Failed to send automated maintenance WhatsApp to ${cl.nombreCompleto}:`, err);
+            await prisma.notificacion.create({
+              data: {
+                clienteId: cl.id,
+                turnoId: lastTurno.id,
+                canal: 'WHATSAPP',
+                mensaje: `[MANTENIMIENTO_FALLIDO] ${rawWtspMsg} (Error: ${err.message})`,
+                estado: 'FALLIDO'
+              }
+            });
           }
-        });
+        }
+
+        // Dispatch Email if not sent and client has Email
+        if (cl.email && canSendNotification(cl, 'EMAIL', 'MANTENIMIENTO')) {
+          const alreadySentEmail = await prisma.notificacion.findFirst({
+            where: {
+              clienteId: cl.id,
+              canal: 'EMAIL',
+              fechaEnvio: { gte: lastTurno.fecha },
+              mensaje: { contains: 'mantenimiento' }
+            }
+          });
+
+          if (!alreadySentEmail) {
+            const subjectConf = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_subject' } });
+            const bodyConf = await prisma.configuracion.findUnique({ where: { key: 'email_maintenance_body' } });
+            const subjectTemplate = subjectConf?.value || '¡Es hora de tu mantenimiento! - Gonzalo Depilación';
+            const bodyTemplate = bodyConf?.value || '¡Hola {cliente}!\n\nHace dos meses y medio finalizaste tu tratamiento de depilación láser.\n\nTe escribimos para invitarte a realizar una sesión de mantenimiento. Mantener los resultados te ayudará a lucir siempre impecable y conservar el efecto del tratamiento a largo plazo.\n\nPodés reservar tu turno ingresando directamente a nuestro sitio web.\n\n¡Te esperamos!';
+
+            const parsedSubject = subjectTemplate.replaceAll('{cliente}', cl.nombreCompleto || '').replaceAll('{zonas}', zonesText);
+            const parsedBody = bodyTemplate.replaceAll('{cliente}', cl.nombreCompleto || '').replaceAll('{zonas}', zonesText);
+
+            try {
+              console.log(`[Reminder Cron] Sending maintenance email to ${cl.nombreCompleto}...`);
+              await sendMaintenanceEmail(cl.email, parsedSubject, parsedBody);
+
+              await prisma.notificacion.create({
+                data: {
+                  clienteId: cl.id,
+                  turnoId: lastTurno.id,
+                  canal: 'EMAIL',
+                  mensaje: `Correo de mantenimiento automático enviado. Asunto: "${parsedSubject}"`,
+                  estado: 'ENVIADO'
+                }
+              });
+            } catch (err) {
+              console.error(`[Reminder Cron] Failed to send maintenance email to ${cl.nombreCompleto}:`, err);
+            }
+          }
+        }
       }
+    } catch (maintErr) {
+      console.error('[Reminder Cron] Error in maintenance automated routine:', maintErr);
     }
 
     // ==========================================
@@ -855,9 +992,9 @@ export async function checkAndSendReminders(force = false) {
         }
       });
 
-      const currentMonth = nowLocal.getMonth() + 1;
-      const currentDay = nowLocal.getDate();
-      const currentYear = nowLocal.getFullYear();
+      const currentMonth = argToday.getUTCMonth() + 1;
+      const currentDay = argToday.getUTCDate();
+      const currentYear = argToday.getUTCFullYear();
       const startOfCurrentYear = new Date(`${currentYear}-01-01T00:00:00.000Z`);
 
       const birthdayClients = allClientsWithBirthday.filter(c => {

@@ -579,9 +579,25 @@ export default function AgendaPage() {
   const savedScrollRef = useRef(null);
   const gridBodyRef = useRef(null);
 
-  // Helper to capture scroll position across all possible scroll containers
+  // Helper to reset scroll position to top when navigating weeks/months or switching views
+  const resetAgendaScroll = () => {
+    if (typeof window === 'undefined') return;
+    const mainEl = document.querySelector('main');
+    const calEl = calendarRef.current;
+    const gridEl = gridBodyRef.current;
+    if (mainEl) mainEl.scrollTop = 0;
+    if (calEl) {
+      calEl.scrollTop = 0;
+      calEl.scrollLeft = 0;
+    }
+    if (gridEl) gridEl.scrollTop = 0;
+    window.scrollTo(0, 0);
+  };
+
+  // Helper to capture scroll position across all possible scroll containers (ONLY FOR DAILY VIEW)
   const captureAgendaScroll = (turnoId = null) => {
     if (typeof window === 'undefined') return;
+    if (viewMode !== 'day') return;
     const mainEl = document.querySelector('main');
     const calEl = calendarRef.current;
     const gridEl = gridBodyRef.current;
@@ -604,9 +620,10 @@ export default function AgendaPage() {
     } catch (e) {}
   };
 
-  // Helper to restore scroll position across all possible scroll containers
+  // Helper to restore scroll position across all possible scroll containers (ONLY FOR DAILY VIEW)
   const restoreAgendaScroll = () => {
     if (typeof window === 'undefined') return;
+    if (viewMode !== 'day') return;
     let data = savedScrollRef.current;
     if (!data || typeof data !== 'object') {
       try {
@@ -614,7 +631,7 @@ export default function AgendaPage() {
         if (stored) data = JSON.parse(stored);
       } catch (e) {}
     }
-    if (!data) return;
+    if (!data || data.view !== 'day') return;
 
     const mainEl = document.querySelector('main');
     const calEl = calendarRef.current;
@@ -645,7 +662,7 @@ export default function AgendaPage() {
 
   // Restore scroll position when closing details modal
   useEffect(() => {
-    if (!isDetailsOpen && savedScrollRef.current) {
+    if (viewMode === 'day' && !isDetailsOpen && savedScrollRef.current) {
       restoreAgendaScroll();
       const t1 = setTimeout(restoreAgendaScroll, 50);
       const t2 = setTimeout(restoreAgendaScroll, 150);
@@ -654,11 +671,11 @@ export default function AgendaPage() {
         clearTimeout(t2);
       };
     }
-  }, [isDetailsOpen]);
+  }, [isDetailsOpen, viewMode]);
 
   // Restore scroll when appointments finish loading (e.g. returning from client profile)
   useEffect(() => {
-    if (!loading && appointments && appointments.length > 0) {
+    if (viewMode === 'day' && !loading && appointments && appointments.length > 0) {
       const stored = typeof window !== 'undefined' ? sessionStorage.getItem('agenda_scroll_state') : null;
       if (stored || savedScrollRef.current) {
         const runRestore = () => restoreAgendaScroll();
@@ -1670,10 +1687,12 @@ export default function AgendaPage() {
       prev.setDate(selectedDate.getDate() - 1);
       setSelectedDate(prev);
     } else if (viewMode === 'month' && selectedDate) {
+      resetAgendaScroll();
       const prev = new Date(selectedDate);
       prev.setMonth(selectedDate.getMonth() - 1);
       setSelectedDate(prev);
     } else if (currentWeekStart) {
+      resetAgendaScroll();
       const prev = new Date(currentWeekStart);
       prev.setDate(currentWeekStart.getDate() - 7);
       setCurrentWeekStart(prev);
@@ -1687,10 +1706,12 @@ export default function AgendaPage() {
       next.setDate(selectedDate.getDate() + 1);
       setSelectedDate(next);
     } else if (viewMode === 'month' && selectedDate) {
+      resetAgendaScroll();
       const next = new Date(selectedDate);
       next.setMonth(selectedDate.getMonth() + 1);
       setSelectedDate(next);
     } else if (currentWeekStart) {
+      resetAgendaScroll();
       const next = new Date(currentWeekStart);
       next.setDate(currentWeekStart.getDate() + 7);
       setCurrentWeekStart(next);
@@ -2792,6 +2813,7 @@ export default function AgendaPage() {
             </button>
             <button 
               onClick={() => {
+                resetAgendaScroll();
                 const target = selectedDate || new Date();
                 const day = target.getDay();
                 const diffToMonday = target.getDate() - day + (day === 0 ? -6 : 1);
@@ -2815,7 +2837,10 @@ export default function AgendaPage() {
               Semana
             </button>
             <button 
-              onClick={() => { setViewMode('month'); }} 
+              onClick={() => {
+                resetAgendaScroll();
+                setViewMode('month');
+              }} 
               className="btn-toggle"
               style={{
                 background: viewMode === 'month' ? 'var(--color-gold)' : 'transparent',
@@ -4485,6 +4510,7 @@ export default function AgendaPage() {
                         <input
                           type="date"
                           value={tempClientFechaPrimerTurno}
+                          disabled={currentUserRole === 'OPERADOR'}
                           onChange={(e) => {
                             setTempClientFechaPrimerTurno(e.target.value);
                             tempClientFechaPrimerTurnoRef.current = e.target.value;
@@ -4503,8 +4529,10 @@ export default function AgendaPage() {
                             fontWeight: 600,
                             textAlign: 'center',
                             boxSizing: 'border-box',
-                            margin: 0
+                            margin: 0,
+                            ...(currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed' } : {})
                           }}
+                          title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la fecha del primer turno' : ''}
                         />
                       </div>
 
@@ -4533,6 +4561,7 @@ export default function AgendaPage() {
                           type="number"
                           min="0"
                           value={tempClientSesionesTotal}
+                          disabled={currentUserRole === 'OPERADOR'}
                           onChange={(e) => handleTotalSesionesChange(e.target.value)}
                           style={{
                             width: '60px',
@@ -4548,8 +4577,10 @@ export default function AgendaPage() {
                             fontWeight: 700,
                             textAlign: 'center',
                             boxSizing: 'border-box',
-                            margin: 0
+                            margin: 0,
+                            ...(currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed' } : {})
                           }}
+                          title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la cantidad de sesiones' : ''}
                         />
                       </div>
 
@@ -4570,6 +4601,7 @@ export default function AgendaPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
                           <select
                             value={tempClientBdayDay}
+                            disabled={currentUserRole === 'OPERADOR'}
                             onChange={(e) => {
                               const dVal = e.target.value;
                               setTempClientBdayDay(dVal);
@@ -4590,9 +4622,11 @@ export default function AgendaPage() {
                               textAlign: 'center',
                               minWidth: '48px',
                               maxWidth: '52px',
-                              cursor: 'pointer',
+                              cursor: currentUserRole === 'OPERADOR' ? 'not-allowed' : 'pointer',
+                              opacity: currentUserRole === 'OPERADOR' ? 0.75 : 1,
                               boxSizing: 'border-box'
                             }}
+                            title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar el cumpleaños' : ''}
                           >
                             <option value="">Día</option>
                             {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
@@ -4602,6 +4636,7 @@ export default function AgendaPage() {
 
                           <select
                             value={tempClientBdayMonth}
+                            disabled={currentUserRole === 'OPERADOR'}
                             onChange={(e) => {
                               const mVal = e.target.value;
                               setTempClientBdayMonth(mVal);
@@ -4622,9 +4657,11 @@ export default function AgendaPage() {
                               textAlign: 'center',
                               minWidth: '54px',
                               maxWidth: '58px',
-                              cursor: 'pointer',
+                              cursor: currentUserRole === 'OPERADOR' ? 'not-allowed' : 'pointer',
+                              opacity: currentUserRole === 'OPERADOR' ? 0.75 : 1,
                               boxSizing: 'border-box'
                             }}
+                            title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar el cumpleaños' : ''}
                           >
                             <option value="">Mes</option>
                             {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((name, i) => (
@@ -4632,7 +4669,7 @@ export default function AgendaPage() {
                             ))}
                           </select>
 
-                          {(tempClientBdayDay || tempClientBdayMonth) && (
+                          {(tempClientBdayDay || tempClientBdayMonth) && currentUserRole !== 'OPERADOR' && (
                             <button
                               type="button"
                               title="Borrar cumpleaños"
@@ -4991,7 +5028,7 @@ export default function AgendaPage() {
                           }
                           captureAgendaScroll(selectedTurno.id);
                           const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
-                          window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}`;
+                          window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}&turnoId=${selectedTurno.id}`;
                         }}
                         className="btn"
                         style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}

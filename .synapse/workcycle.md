@@ -1964,3 +1964,15 @@
   - Eliminar de "Hoy" (21/10) la seña de Pablo Domínguez cobrada a las 21:01 hs de ayer (20/10), reintegrándola a las estadísticas de ayer.
   - Formatear con `Intl.DateTimeFormat` la agrupación diaria de señas en `gastos/route.js` y la validación en `turnos/route.js`.
   - Validar compilación local con Next.js Turbopack (47/47 rutas con 0 errores).
+
+## 📅 Sesión: 22 de Octubre de 2026 (Ajustes de Excel, Operador, Scroll Diario, Automatizaciones WhatsApp y Zonas)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Reemplazar columna "Saldo del turno" por "Estado de turno" en Excel Modelo A (`exportar-excel/route.js`) y tabla de vista previa (`estadisticas/page.js`) a partir de la captura de Luciano Gómez (`media_1792683551556_02a50384.png`).
+- [x] Restringir la modificación de `fechaPrimerTurno`, `sesionesPrevias` y `fechaNacimiento` para el rol `OPERADOR` tanto en la UI (`clientes/page.js` y `agenda/page.js`) como en el backend (`PUT /api/admin/clientes/[id]` y `PUT /api/admin/turnos/[id]`), manteniéndolos visibles.
+- [x] Corregir el flujo de modales en Agenda Diaria: al cerrar la ficha del cliente, retornar a la información del turno (`turnoIdParam`), y al cerrar esta última ventana restaurar la posición exacta del scroll sin saltearse pasos.
+- [x] Restringir la preservación del scroll únicamente a la vista diaria (`viewMode === 'day'`); en vista semanal y mensual no guardar ni forzar scroll down al moverse entre semanas o meses, reseteando la vista al tope (`resetAgendaScroll`).
+- [x] Investigar y habilitar el envío automático de WhatsApp para "Va a avisar" (según las semanas de frecuencia de la ficha) y "Mantenimiento / Finalizado" (75 días / 2,5 meses después) en `src/lib/whatsapp.js`, corrigiendo el bug de `nowLocal` no definido en el cron de las 10:00 AM y agregando la plantilla `wtsp_mantenimiento_template`.
+- [x] En la estadística de turnos señados (`senados`), cambiar el cálculo para que el valor total proyectado muestre el Total de Señas (`valorSeña`) en lugar del valor completo de los turnos en `/api/admin/estadisticas` y `/admin/estadisticas`.
+- [x] En Configuración -> Zonas de Depilación, bloquear la edición manual del precio de cada zona (sincronizado con la web) y la seña requerida (fijada automáticamente en el 50% de la zona).
+- [x] Validar compilación local con Next.js Turbopack (`npm run build`: 47/47 rutas en 89s con 0 errores).

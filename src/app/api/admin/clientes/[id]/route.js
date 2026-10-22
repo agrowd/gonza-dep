@@ -10,9 +10,11 @@ export async function GET(request, { params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const session = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!sessionCookie || !session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    const isOperator = session.rol === 'OPERADOR';
 
     const client = await prisma.cliente.findUnique({
       where: { id },
@@ -43,9 +45,11 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const session = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!sessionCookie || !session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    const isOperator = session.rol === 'OPERADOR';
 
     const body = await request.json();
     const {
@@ -139,9 +143,11 @@ export async function PUT(request, { params }) {
         data: { notasGonzalo }
       });
     }
-    if (fechaPrimerTurno !== undefined) updateData.fechaPrimerTurno = fechaPrimerTurno ? new Date(fechaPrimerTurno) : null;
-    if (fechaNacimiento !== undefined) updateData.fechaNacimiento = fechaNacimiento ? new Date(fechaNacimiento) : null;
-    if (sesionesPrevias !== undefined && !isNaN(Number(sesionesPrevias))) updateData.sesionesPrevias = Number(sesionesPrevias);
+    if (!isOperator) {
+      if (fechaPrimerTurno !== undefined) updateData.fechaPrimerTurno = fechaPrimerTurno ? new Date(fechaPrimerTurno) : null;
+      if (fechaNacimiento !== undefined) updateData.fechaNacimiento = fechaNacimiento ? new Date(fechaNacimiento) : null;
+      if (sesionesPrevias !== undefined && !isNaN(Number(sesionesPrevias))) updateData.sesionesPrevias = Number(sesionesPrevias);
+    }
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
     if (bloqueado !== undefined) updateData.bloqueado = Boolean(bloqueado);
     if (recibioResena !== undefined) updateData.recibioResena = Boolean(recibioResena);
@@ -173,9 +179,11 @@ export async function DELETE(request, { params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const session = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!sessionCookie || !session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    const isOperator = session.rol === 'OPERADOR';
 
     await prisma.cliente.delete({
       where: { id }
