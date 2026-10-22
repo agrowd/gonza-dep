@@ -1976,3 +1976,9 @@
 - [x] En la estadística de turnos señados (`senados`), cambiar el cálculo para que el valor total proyectado muestre el Total de Señas (`valorSeña`) en lugar del valor completo de los turnos en `/api/admin/estadisticas` y `/admin/estadisticas`.
 - [x] En Configuración -> Zonas de Depilación, bloquear la edición manual del precio de cada zona (sincronizado con la web) y la seña requerida (fijada automáticamente en el 50% de la zona).
 - [x] Validar compilación local con Next.js Turbopack (`npm run build`: 47/47 rutas en 89s con 0 errores).
+- [x] Generar commit y push a repositorios remotos `origin/main` y `origin/staging` (`ec2dac4`).
+- [x] Desplegar en Producción y Staging en Hostinger VPS (`187.127.9.216`, puertos 3006 y 3008):
+  - Backup preventivo de PostgreSQL generado con éxito (`agenda_db_pre_deploy_20261022_163850.sql`, 7.7MB).
+  - Compilación exitosa con Turbopack (47/47 rutas) en Producción y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
+  - Compilación exitosa con Turbopack (47/47 rutas) en Staging y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
+- [x] Documentar en `.synapse/` y registrar conversación en `chat.md`.

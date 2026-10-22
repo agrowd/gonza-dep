@@ -853,3 +853,8 @@
      - En `src/app/admin/configuracion/page.js`, se deshabilitaron los campos de `Precio Base` y `Seña Requerida` (50% automático) tanto en la edición inline de la grilla como en el modal de creación, indicando que son valores automáticos sincronizados.
 - **Validación y Despliegue**:
   - Compilación local validada con Turbopack (`npm run build`: 47/47 rutas en 89s, 0 errores).
+  - Cambios commiteados y pusheados a `main` y `staging` en GitHub (`ec2dac4`).
+  - Despliegue en Servidor VPS Hostinger (`187.127.9.216`):
+    - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261022_163850.sql` (7.7 MB).
+    - Compilación en VPS en Producción (47/47 rutas) y reinicio limpio de PM2 `gonzalo-agenda` (HTTP 200 OK).
+    - Compilación en VPS en Staging (47/47 rutas) y reinicio limpio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
