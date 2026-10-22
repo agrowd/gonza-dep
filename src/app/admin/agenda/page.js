@@ -3114,42 +3114,9 @@ export default function AgendaPage() {
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
               const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
-              // Cálculo de ingreso neto del día hasta la hora actual
-              const nowArg = new Date();
-              const todayArgStr = new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'America/Argentina/Buenos_Aires',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-              }).format(nowArg);
-
-              const nowMinutes = (() => {
-                const [h, m] = new Intl.DateTimeFormat('en-GB', {
-                  timeZone: 'America/Argentina/Buenos_Aires',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                }).format(nowArg).split(':').map(Number);
-                return h * 60 + m;
-              })();
-
-              const isSelectedToday = dateStr === todayArgStr;
-              const isSelectedPast = dateStr < todayArgStr;
-
-              const turnosHastaAhora = dayApps.filter(app => {
-                if (app.estado === 'CANCELADO' || app.estado === 'NO_ASISTIO') {
-                  return false;
-                }
-                if (app.estado === 'REALIZADO') return true;
-                if (isSelectedPast) return true;
-                if (isSelectedToday) {
-                  const turnoStartMin = timeToMinutes(app.horaInicio);
-                  return turnoStartMin <= nowMinutes;
-                }
-                return false;
-              });
-
-              const ingresoNetoHastaHora = turnosHastaAhora.reduce((sum, a) => {
+              // Cálculo de ingreso neto: estrictamente turnos REALIZADOS del día (alineado 100% con Ganancia Neta de Estadísticas)
+              const turnosRealizados = dayApps.filter(app => app.estado === 'REALIZADO');
+              const ingresoNeto = turnosRealizados.reduce((sum, a) => {
                 const val = Math.max(0, Number(a.valorTotal || 0) - Number(a.bonificacion || 0));
                 return sum + val;
               }, 0);
@@ -3250,7 +3217,7 @@ export default function AgendaPage() {
                             </div>
                             <div className={styles.dayCardStatItem}>
                               <span className={styles.dayCardStatLabel}>Ingreso neto</span>
-                              <span className={styles.dayCardStatValGreen}>${ingresoNetoHastaHora.toLocaleString('es-AR')}</span>
+                              <span className={styles.dayCardStatValGreen}>${ingresoNeto.toLocaleString('es-AR')}</span>
                             </div>
                             {totalPagarOperadores > 0 && (
                               <div className={styles.dayCardStatItem} style={{ marginTop: '0.2rem' }}>

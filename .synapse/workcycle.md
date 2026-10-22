@@ -2021,6 +2021,18 @@
 - [x] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo (`agenda_db_pre_deploy_20261022_180428.sql`, 7.7 MB).
 - [x] Documentar en `.synapse/decisions.md` (D-125), `.synapse/workcycle.md` y `chat.md`.
 
+## 📅 Sesión: 22 de Octubre de 2026 (Parte 5 - Corrección de 'Ingreso Neto' en Agenda: Restricción Estricta a Turnos REALIZADOS)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver inconsistencia reportada por Luciano Gómez (`media_1792696351188_63519e35.png`): "El valor neto nosé porque me da 199.000 en la agenda cuando en estadísticas da 65.000. Debería ser el 65 porque solo hubo un turno hoy":
+  - Eliminar la lógica basada en el reloj de la hora de inicio (`turnoStartMin <= nowMinutes`).
+  - Restringir el cómputo de "Ingreso neto" estrictamente a turnos en estado `REALIZADO` (`dayApps.filter(app => app.estado === 'REALIZADO')`), alineándolo de manera exacta con la Ganancia Neta de `/admin/estadisticas`.
+  - Asegurar que turnos en estado `SEÑADO`, `REPROGRAMADO` o `CANCELADO` no se sumen al ingreso neto hasta que no se ejecuten y marquen como realizados.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Commit y push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
+- [ ] Registrar en `chat.md` y `.synapse/decisions.md`.
+
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
 ### 🎯 Tareas en curso / Objetivos
@@ -2058,3 +2070,15 @@
 - [x] Commit y push a GitHub (`main` y `staging`) (`bc7a322`).
 - [x] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo (`agenda_db_pre_deploy_20261022_180428.sql`, 7.7 MB).
 - [x] Documentar en `.synapse/decisions.md` (D-125), `.synapse/workcycle.md` y `chat.md`.
+
+## 📅 Sesión: 22 de Octubre de 2026 (Parte 5 - Corrección de 'Ingreso Neto' en Agenda: Restricción Estricta a Turnos REALIZADOS)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver inconsistencia reportada por Luciano Gómez (`media_1792696351188_63519e35.png`): "El valor neto nosé porque me da 199.000 en la agenda cuando en estadísticas da 65.000. Debería ser el 65 porque solo hubo un turno hoy":
+  - Eliminar la lógica basada en el reloj de la hora de inicio (`turnoStartMin <= nowMinutes`).
+  - Restringir el cómputo de "Ingreso neto" estrictamente a turnos en estado `REALIZADO` (`dayApps.filter(app => app.estado === 'REALIZADO')`), alineándolo de manera exacta con la Ganancia Neta de `/admin/estadisticas`.
+  - Asegurar que turnos en estado `SEÑADO`, `REPROGRAMADO` o `CANCELADO` no se sumen al ingreso neto hasta que no se ejecuten y marquen como realizados.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Commit y push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
+- [ ] Registrar en `chat.md` y `.synapse/decisions.md`.
