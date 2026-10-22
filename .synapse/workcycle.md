@@ -2029,9 +2029,9 @@
   - Restringir el cómputo de "Ingreso neto" estrictamente a turnos en estado `REALIZADO` (`dayApps.filter(app => app.estado === 'REALIZADO')`), alineándolo de manera exacta con la Ganancia Neta de `/admin/estadisticas`.
   - Asegurar que turnos en estado `SEÑADO`, `REPROGRAMADO` o `CANCELADO` no se sumen al ingreso neto hasta que no se ejecuten y marquen como realizados.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Commit y push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
-- [ ] Registrar en `chat.md` y `.synapse/decisions.md`.
+- [x] Commit y push a GitHub (`main` y `staging`) (`844a4e6`).
+- [x] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo (`agenda_db_pre_deploy_20261022_192321.sql`, 7.7 MB).
+- [x] Registrar en `chat.md` y `.synapse/decisions.md` (D-126).
 
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
@@ -2079,6 +2079,6 @@
   - Restringir el cómputo de "Ingreso neto" estrictamente a turnos en estado `REALIZADO` (`dayApps.filter(app => app.estado === 'REALIZADO')`), alineándolo de manera exacta con la Ganancia Neta de `/admin/estadisticas`.
   - Asegurar que turnos en estado `SEÑADO`, `REPROGRAMADO` o `CANCELADO` no se sumen al ingreso neto hasta que no se ejecuten y marquen como realizados.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Commit y push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo.
-- [ ] Registrar en `chat.md` y `.synapse/decisions.md`.
+- [x] Commit y push a GitHub (`main` y `staging`) (`844a4e6`).
+- [x] Desplegar en Producción y Staging en Hostinger VPS con backup preventivo (`agenda_db_pre_deploy_20261022_192321.sql`, 7.7 MB).
+- [x] Registrar en `chat.md` y `.synapse/decisions.md` (D-126).

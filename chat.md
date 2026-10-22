@@ -955,3 +955,29 @@
     - Compilación Next.js limpia en VPS y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
   - Despliegue en Staging en Hostinger VPS (`187.127.9.216`, puerto 3008):
     - Compilación Next.js limpia en VPS y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
+
+---
+
+## 💰 Sesión: 22 de Octubre de 2026 (Tarde IV) - Corrección Contable de 'Ingreso Neto' en Agenda Diaria
+- **Reporte de Luciano Gómez / Gonzalo Siri** (`media_1792696351188_63519e35.png`):
+  *"El valor neto nosé porque me da 199.000 en la agenda cuando en estadísticas da 65.000. Debería ser el 65 porque solo hubo un turno hoy"*
+- **Causa Raíz Diagnosticada**:
+  - En la Agenda Diaria (`src/app/admin/agenda/page.js`), el cálculo de `ingresoNetoHastaHora` evaluaba `turnoStartMin <= nowMinutes` (es decir, citas cuya hora programada de inicio ya hubiera pasado en el reloj local).
+  - A las 15:51 hs, sumaba indebidamente:
+    - Alejandro Iñiguez (14:00): $65.000 (único turno REALIZADO).
+    - Fabrizio Resera (15:00): $25.000 (cancelado).
+    - Jorge Mc Carthy (15:30): $109.000 (aún en estado `SEÑADO`, marcado como realizado recién a las 16:10 hs).
+    - Total acumulado erróneo: $199.000 ($65k + $25k + $109k).
+  - En Estadísticas (`Ganancia Neta`), en cambio, solo se contabilizan citas en estado `REALIZADO` (`isCompletedSession`), arrojando con exactitud $65.000.
+- **Solución Implementada**:
+  - Se eliminó completamente la lógica temporal basada en el reloj de `horaInicio`.
+  - Se restringió `ingresoNeto` a considerar **estrictamente** los turnos del día con `estado === 'REALIZADO'`, deduciendo bonificaciones si las hubiere.
+  - Ningún turno `SEÑADO`, `REPROGRAMADO` o `CANCELADO` suma a `Ingreso neto` hasta que el operador o administrador confirme su realización.
+- **Validación y Despliegue**:
+  - Compilación local validada con Turbopack (`npm run build`: 47/47 rutas en 36.4s, 0 errores).
+  - Push a `origin/main` y `origin/staging` (`844a4e6`).
+  - Despliegue en Producción en Hostinger VPS (`187.127.9.216`, puerto 3006):
+    - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261022_192321.sql` (7.7 MB).
+    - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
+  - Despliegue en Staging en Hostinger VPS (`187.127.9.216`, puerto 3008):
+    - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
