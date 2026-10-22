@@ -17,24 +17,34 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
 
     // Current date in Argentina UTC-3
+    // Argentina local date (UTC-3)
     const now = new Date();
-    const offsetBuenosAires = -3;
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+    const [currentYear, currentMonth] = todayStr.split('-').map(Number);
 
     const yearParam = searchParams.get('anio') || searchParams.get('year');
     const monthParam = searchParams.get('mes') || searchParams.get('month');
 
-    const year = yearParam ? parseInt(yearParam, 10) : nowLocal.getFullYear();
-    const month = monthParam ? parseInt(monthParam, 10) : nowLocal.getMonth() + 1; // 1-12
+    const year = yearParam ? parseInt(yearParam, 10) : currentYear;
+    const month = monthParam ? parseInt(monthParam, 10) : currentMonth; // 1-12
 
     // Current month bounds
     const monthStr = String(month).padStart(2, '0');
     const daysInMonth = new Date(year, month, 0).getDate();
     const lastDayStr = String(daysInMonth).padStart(2, '0');
 
-    const startOfMonth = new Date(`${year}-${monthStr}-01T00:00:00.000Z`);
-    const endOfMonth = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999Z`);
+    // Rango fecha mes actual (para fecha de turnos y gastos, normalizados a 00:00:00Z)
+    const startOfMonthFecha = new Date(`${year}-${monthStr}-01T00:00:00.000Z`);
+    const endOfMonthFecha = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999Z`);
+
+    // Rango createdAt mes actual (para señas en horario Argentina UTC-3)
+    const startOfMonthCreated = new Date(`${year}-${monthStr}-01T00:00:00.000-03:00`);
+    const endOfMonthCreated = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999-03:00`);
 
     // Previous month bounds (for comparison)
     let prevYear = year;
@@ -47,8 +57,10 @@ export async function GET(request) {
     const daysInPrevMonth = new Date(prevYear, prevMonth, 0).getDate();
     const prevLastDayStr = String(daysInPrevMonth).padStart(2, '0');
 
-    const startOfPrevMonth = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000Z`);
-    const endOfPrevMonth = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999Z`);
+    const startOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000Z`);
+    const endOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999Z`);
+    const startOfPrevMonthCreated = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000-03:00`);
+    const endOfPrevMonthCreated = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999-03:00`);
 
     // Fetch in parallel:
     // 1. Gastos del mes actual
@@ -66,8 +78,8 @@ export async function GET(request) {
       prisma.gasto.findMany({
         where: {
           fecha: {
-            gte: startOfMonth,
-            lte: endOfMonth
+            gte: startOfMonthFecha,
+            lte: endOfMonthFecha
           }
         },
         include: {
@@ -81,24 +93,24 @@ export async function GET(request) {
       prisma.gasto.findMany({
         where: {
           fecha: {
-            gte: startOfPrevMonth,
-            lte: endOfPrevMonth
+            gte: startOfPrevMonthFecha,
+            lte: endOfPrevMonthFecha
           }
         }
       }),
       prisma.turno.findMany({
         where: {
           fecha: {
-            gte: startOfMonth,
-            lte: endOfMonth
+            gte: startOfMonthFecha,
+            lte: endOfMonthFecha
           }
         }
       }),
       prisma.turno.findMany({
         where: {
           createdAt: {
-            gte: startOfMonth,
-            lte: endOfMonth
+            gte: startOfMonthCreated,
+            lte: endOfMonthCreated
           }
         }
       }),
@@ -208,7 +220,13 @@ export async function GET(request) {
       .filter(t => (Number(t.valorSeña) || 0) > 0 && t.estado !== 'CANCELADO')
       .forEach(t => {
         const d = new Date(t.createdAt);
-        const dayNum = d.getUTCDate();
+        const dayNum = parseInt(
+          new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Argentina/Buenos_Aires',
+            day: 'numeric'
+          }).format(d),
+          10
+        );
         entradasSenasPorDia[dayNum] = (entradasSenasPorDia[dayNum] || 0) + (Number(t.valorSeña) || 0);
       });
 

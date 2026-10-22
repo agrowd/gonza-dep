@@ -1958,3 +1958,9 @@
   - Desplegar en VPS Producción (`187.127.9.216`, puerto 3006).
   - Backup de base de datos generado exitosamente (`agenda_db_pre_deploy_20261021_234455.sql`, 7.7MB).
   - Verificación en vivo en producción HTTP 200 OK y endpoint de estadísticas operativo.
+- [x] Corregir cierre prematuro de día a las 21:00 hs (UTC-3) reportado por Luciano (`media_1792627741804_fc1be337.png`):
+  - En `estadisticas/route.js` y `gastos/route.js`, separar las consultas de fecha normalizada (`fecha`: `00:00:00Z` a `23:59:59Z`) de las consultas de señas con timestamp real (`createdAt`: `00:00:00-03:00` a `23:59:59-03:00`).
+  - Evitar que acciones ocurridas entre las 21:00 hs y las 24:00 hs en Argentina caigan en el día siguiente UTC.
+  - Eliminar de "Hoy" (21/10) la seña de Pablo Domínguez cobrada a las 21:01 hs de ayer (20/10), reintegrándola a las estadísticas de ayer.
+  - Formatear con `Intl.DateTimeFormat` la agrupación diaria de señas en `gastos/route.js` y la validación en `turnos/route.js`.
+  - Validar compilación local con Next.js Turbopack (47/47 rutas con 0 errores).

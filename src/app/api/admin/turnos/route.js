@@ -25,16 +25,23 @@ function formatDate(date) {
 
 function isPastDateTime(fechaStr, horaInicio) {
   const now = new Date();
-  const offsetBuenosAires = -3;
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
-  const todayStr = nowLocal.toISOString().split('T')[0];
+  const todayStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(now);
+  const timeStr = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(now);
   
   if (fechaStr < todayStr) return true;
   if (fechaStr === todayStr) {
     const [hours, minutes] = horaInicio.split(':').map(Number);
-    const nowHours = nowLocal.getHours();
-    const nowMinutes = nowLocal.getMinutes();
+    const [nowHours, nowMinutes] = timeStr.split(':').map(Number);
     if (hours < nowHours || (hours === nowHours && minutes < nowMinutes)) {
       return true;
     }

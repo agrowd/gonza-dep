@@ -566,3 +566,10 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 **Solución:** Se añadió `useCallback` a los imports de React en `src/app/admin/estadisticas/page.js`.
 **Commit:** `8710a41`
 **Estado:** ✅ FIXED
+
+## ERR-55: Cierre de día prematuro a las 21:00 hs por desfasaje UTC en queries de señas (`createdAt`) (21/10/2026)
+**Síntoma:** En `/admin/estadisticas`, al filtrar por "Hoy" (21/10/2026), figuraba Pablo Domínguez en Ganancia Neta con fecha de turno 12/11/2026 y seña de $26.000 (`media_1792627741804_fc1be337.png`), a pesar de haberse atendido ayer (20/10). Luciano reportó: *"Yo sospecho que el sistema tiene mal el horario de cierre de día, por eso toma este cliente como hoy, tipo cierra el día alrededor de las 21:00 y no a las 24:00"*.
+**Root Cause:** El servidor VPS corre en hora UTC. En `estadisticas/route.js` y `gastos/route.js`, las consultas sobre `createdAt` (`turnosCreatedPeriodo`) se hacían contra `00:00:00Z` a `23:59:59Z`. En Argentina (`UTC-3`), las 21:00 hs corresponden a las 00:00 UTC del día siguiente. Todo turno agendado después de las 21:00 hs (como el próximo turno de Pablo agendado a las 21:01 hs del 20/10 con `createdAt = 2026-10-21 00:01:39 UTC`) caía dentro del rango de "Hoy" en lugar de "Ayer".
+**Solución:** Se diferenciaron los rangos de consulta de Prisma: 1) Campo `fecha` (normalizado en UTC): `[YYYY-MM-DDT00:00:00.000Z, YYYY-MM-DDT23:59:59.999Z]`; 2) Campo `createdAt` (timestamps reales UTC): se evalúa con el huso oficial de Argentina `[YYYY-MM-DDT00:00:00.000-03:00, YYYY-MM-DDT23:59:59.999-03:00]`. De esta forma, el cierre de día opera estrictamente a las 24:00 hs (medianoche argentina). En `gastos/route.js`, el agrupador diario de señas se formateó con `Intl.DateTimeFormat` en `America/Argentina/Buenos_Aires`.
+**Commit:** `d9cfa42`
+**Estado:** ✅ FIXED

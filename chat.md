@@ -795,3 +795,22 @@
   - Se importó `useCallback` de `'react'`, se compiló localmente con Turbopack (47/47 rutas OK) y se desplegó de inmediato al VPS de producción.
   - Backup de base de datos generado: `agenda_db_pre_deploy_20261021_234455.sql` (7.7MB).
   - Verificado en vivo en `https://agenda.depilacionparahombres.com/admin/estadisticas` respondiendo 200 OK sin errores de cliente.
+
+---
+
+## 🕒 Sesión: 21 de Octubre de 2026 (Noche 2) - Corrección de Cierre de Día a las 24:00 hs vs 21:00 hs (UTC-3)
+- **Reporte y Captura de Luciano**: `media_1792627741804_fc1be337.png` (*"En el listado de hoy, aparece Pablo Domínguez, que tuvo su turno ayer. Yo sospecho que el sistema tiene mal el horario de cierre de día, por eso toma este cliente como hoy, tipo cierra el día alrededor de las 21:00 y no a las 24:00"*).
+- **Causa Raíz Forense**:
+  - El VPS corre en hora UTC (`GMT+0000`). En `estadisticas/route.js` y `gastos/route.js`, el filtrado de señas (`turnosCreatedPeriodo`, `createdAt`) utilizaba límites de medianoche UTC (`00:00:00Z` a `23:59:59Z`).
+  - Como Argentina es `UTC-3`, las 21:00 hs en Argentina son las 00:00 UTC (inicio del día siguiente).
+  - Cuando Pablo Domínguez terminó su turno a las 21:00 hs del 20/10 y agendó su siguiente cita para el 12/11 a las 21:01 hs, el registro guardó `createdAt = 2026-10-21 00:01:39 UTC`. Al consultar "Hoy" (21/10), el servidor lo incluía como seña ingresada hoy en lugar de ayer.
+- **Solución Implementada**:
+  - Se dividieron las consultas en dos rangos precisos:
+    1. Rango para `fecha` (normalizado en UTC): `[YYYY-MM-DDT00:00:00.000Z, YYYY-MM-DDT23:59:59.999Z]`.
+    2. Rango para `createdAt` (timestamps reales): evaluados estrictamente en huso argentino `[YYYY-MM-DDT00:00:00.000-03:00, YYYY-MM-DDT23:59:59.999-03:00]` (`03:00:00Z` a `02:59:59.999Z` del día siguiente).
+  - En `gastos/route.js`, se utilizó `Intl.DateTimeFormat` con `America/Argentina/Buenos_Aires` para la agrupación de señas por día.
+  - En `turnos/route.js`, `isPastDateTime` se migró a `Intl.DateTimeFormat` sin depender de offset manual.
+- **Validación y Despliegue**:
+  - Compilación local Turbopack: 47/47 rutas en 22.5s con 0 errores.
+  - Commits pusheados a `main` y `staging`.
+  - Despliegue con backup de base de datos a Producción Hostinger (puerto 3006).

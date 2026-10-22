@@ -133,11 +133,20 @@ export async function GET(request) {
 
     // Argentina local date (UTC-3)
     const now = new Date();
-    const offsetBuenosAires = -3;
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const nowLocal = new Date(utc + (3600000 * offsetBuenosAires));
-    const todayStr = nowLocal.toISOString().split('T')[0];
-    const currentHourMin = `${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}`;
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+    const currentHourMin = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(now);
+
+    const [currentYear, currentMonth] = todayStr.split('-').map(Number);
 
     const { searchParams } = new URL(request.url);
     const yearParam = searchParams.get('year');
@@ -145,40 +154,57 @@ export async function GET(request) {
     const startParam = searchParams.get('start');
     const endParam = searchParams.get('end');
 
-    let startOfPeriod, endOfPeriod;
+    let startPeriodStr, endPeriodStr;
     let year, month;
 
     if (startParam && endParam) {
-      startOfPeriod = new Date(startParam + 'T00:00:00');
-      endOfPeriod = new Date(endParam + 'T23:59:59.999');
-      year = startOfPeriod.getFullYear();
-      month = startOfPeriod.getMonth() + 1;
+      startPeriodStr = startParam;
+      endPeriodStr = endParam;
+      const parts = startParam.split('-').map(Number);
+      year = parts[0];
+      month = parts[1];
     } else {
-      year = yearParam ? parseInt(yearParam, 10) : nowLocal.getFullYear();
-      month = monthParam ? parseInt(monthParam, 10) : nowLocal.getMonth() + 1;
+      year = yearParam ? parseInt(yearParam, 10) : currentYear;
+      month = monthParam ? parseInt(monthParam, 10) : currentMonth;
       const monthStr = String(month).padStart(2, '0');
-      startOfPeriod = new Date(`${year}-${monthStr}-01T00:00:00`);
       const lastDayOfMonth = new Date(year, month, 0).getDate();
       const lastDayStr = String(lastDayOfMonth).padStart(2, '0');
-      endOfPeriod = new Date(`${year}-${monthStr}-${lastDayStr}T23:59:59.999`);
+      startPeriodStr = `${year}-${monthStr}-01`;
+      endPeriodStr = `${year}-${monthStr}-${lastDayStr}`;
     }
 
-    // Quick range dates (Argentina time)
-    const startOfToday = new Date(todayStr + 'T00:00:00');
-    const endOfToday = new Date(todayStr + 'T23:59:59.999');
+    // 1. Rango para 'fecha' (almacenado como fecha normalizada a las 00:00:00.000Z en PostgreSQL)
+    const startFechaPeriodo = new Date(`${startPeriodStr}T00:00:00.000Z`);
+    const endFechaPeriodo = new Date(`${endPeriodStr}T23:59:59.999Z`);
 
-    // Current week (Monday to Sunday)
-    const dayOfWeek = nowLocal.getDay();
-    const diffToMonday = nowLocal.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const mondayDate = new Date(nowLocal);
-    mondayDate.setDate(diffToMonday);
-    const mondayStr = mondayDate.toISOString().split('T')[0];
-    const sundayDate = new Date(mondayDate);
-    sundayDate.setDate(mondayDate.getDate() + 6);
-    const sundayStr = sundayDate.toISOString().split('T')[0];
+    // 2. Rango para 'createdAt' (timestamps reales UTC en zona horaria Argentina UTC-3)
+    // El día en Argentina arranca a las 00:00:00-03:00 (03:00:00Z) y cierra a las 23:59:59.999-03:00 (02:59:59.999Z del día siguiente)
+    // Esto evita que turnos agendados o realizados después de las 21:00 hs (00:00 UTC) se salten al día siguiente
+    const startCreatedPeriodo = new Date(`${startPeriodStr}T00:00:00.000-03:00`);
+    const endCreatedPeriodo = new Date(`${endPeriodStr}T23:59:59.999-03:00`);
 
-    const startOfWeek = new Date(mondayStr + 'T00:00:00');
-    const endOfWeek = new Date(sundayStr + 'T23:59:59.999');
+    // Rangos para 'Hoy' (Argentina)
+    const startFechaToday = new Date(`${todayStr}T00:00:00.000Z`);
+    const endFechaToday = new Date(`${todayStr}T23:59:59.999Z`);
+    const startCreatedToday = new Date(`${todayStr}T00:00:00.000-03:00`);
+    const endCreatedToday = new Date(`${todayStr}T23:59:59.999-03:00`);
+
+    // Rangos para 'Esta Semana' (Lunes a Domingo en Argentina)
+    const [y, m, d] = todayStr.split('-').map(Number);
+    const todayDateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    const dayOfWeek = todayDateObj.getUTCDay();
+    const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+    const mondayObj = new Date(todayDateObj);
+    mondayObj.setUTCDate(todayDateObj.getUTCDate() + diffToMonday);
+    const mondayStr = mondayObj.toISOString().split('T')[0];
+    const sundayObj = new Date(mondayObj);
+    sundayObj.setUTCDate(mondayObj.getUTCDate() + 6);
+    const sundayStr = sundayObj.toISOString().split('T')[0];
+
+    const startFechaSemana = new Date(`${mondayStr}T00:00:00.000Z`);
+    const endFechaSemana = new Date(`${sundayStr}T23:59:59.999Z`);
+    const startCreatedSemana = new Date(`${mondayStr}T00:00:00.000-03:00`);
+    const endCreatedSemana = new Date(`${sundayStr}T23:59:59.999-03:00`);
 
     // Parallel DB Queries
     const [
@@ -192,29 +218,29 @@ export async function GET(request) {
       zonasCatalog
     ] = await Promise.all([
       prisma.turno.findMany({
-        where: { fecha: { gte: startOfPeriod, lte: endOfPeriod } },
+        where: { fecha: { gte: startFechaPeriodo, lte: endFechaPeriodo } },
         include: { cliente: true, operador: true },
         orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }]
       }),
       prisma.turno.findMany({
-        where: { createdAt: { gte: startOfPeriod, lte: endOfPeriod } },
+        where: { createdAt: { gte: startCreatedPeriodo, lte: endCreatedPeriodo } },
         include: { cliente: true, operador: true },
         orderBy: [{ createdAt: 'asc' }]
       }),
       prisma.turno.findMany({
-        where: { fecha: { gte: startOfToday, lte: endOfToday } },
+        where: { fecha: { gte: startFechaToday, lte: endFechaToday } },
         include: { cliente: true, operador: true }
       }),
       prisma.turno.findMany({
-        where: { createdAt: { gte: startOfToday, lte: endOfToday } },
+        where: { createdAt: { gte: startCreatedToday, lte: endCreatedToday } },
         include: { cliente: true, operador: true }
       }),
       prisma.turno.findMany({
-        where: { fecha: { gte: startOfWeek, lte: endOfWeek } },
+        where: { fecha: { gte: startFechaSemana, lte: endFechaSemana } },
         include: { cliente: true, operador: true }
       }),
       prisma.turno.findMany({
-        where: { createdAt: { gte: startOfWeek, lte: endOfWeek } },
+        where: { createdAt: { gte: startCreatedSemana, lte: endCreatedSemana } },
         include: { cliente: true, operador: true }
       }),
       prisma.cliente.findMany({
@@ -621,8 +647,8 @@ export async function GET(request) {
 
     return NextResponse.json({
       selectedPeriod: {
-        start: startOfPeriod.toISOString().split('T')[0],
-        end: endOfPeriod.toISOString().split('T')[0],
+        start: startPeriodStr,
+        end: endPeriodStr,
         year,
         month
       },
