@@ -53,7 +53,12 @@ export async function GET() {
       wtsp_birthday_template: configs.wtsp_birthday_template || "¡Feliz cumpleaños [Nombre]! 🎉🎂 Desde Gonzalo Depilación te deseamos que pases un excelente día. Para festejarlo, tenés un beneficio especial reservado en tu próxima sesión. ¡Que lo disfrutes mucho!",
       email_birthday_subject: configs.email_birthday_subject || "¡Muy Feliz Cumpleaños! 🎉🎂 - Gonzalo Depilación",
       email_birthday_body: configs.email_birthday_body || "¡Hola {cliente}!\n\nDe parte de todo el equipo de Gonzalo Depilación, queremos desearte un muy feliz cumpleaños 🎉🎂.\n\nEsperamos que disfrutes tu día al máximo. Como agradecimiento por tu confianza, tenés una bonificación especial reservada para tu próxima sesión.\n\n¡Felicidades!",
-      global_notifications_enabled: configs.global_notifications_enabled || "true"
+      global_notifications_enabled: configs.global_notifications_enabled || "true",
+      seña_retencion_horas: configs.seña_retencion_horas || "72",
+      recordatorio_horas: configs.recordatorio_horas || "48",
+      mensaje_previo_dias: configs.mensaje_previo_dias || "7",
+      duracion_formula: configs.duracion_formula || "ZONA_MAX_MAS_TERCIO",
+      canales_adquisicion: configs.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"])
     };
 
     return NextResponse.json(fullConfigs);

@@ -20,6 +20,9 @@ export async function GET(request, { params }) {
       where: { id },
       include: {
         turnos: {
+          include: {
+            operador: { select: { id: true, nombre: true } }
+          },
           orderBy: { fecha: 'desc' }
         },
         notificaciones: {

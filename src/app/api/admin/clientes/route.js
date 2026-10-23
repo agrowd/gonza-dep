@@ -36,6 +36,9 @@ export async function GET(request) {
       where: whereClause,
       include: {
         turnos: {
+          include: {
+            operador: { select: { id: true, nombre: true } }
+          },
           orderBy: { fecha: 'desc' }
         }
       },

@@ -8,7 +8,7 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
@@ -22,13 +22,22 @@ export async function GET() {
     }
 
     const isAdmin = session.rol === 'ADMIN';
+    const { searchParams } = new URL(request.url);
+    const soloActivos = searchParams.get('soloActivos') === 'true';
+
+    const where = {};
+    if (soloActivos) {
+      where.activo = true;
+    }
 
     const usuarios = await prisma.usuario.findMany({
+      where,
       select: {
         id: true,
         usuario: true,
         nombre: true,
         rol: true,
+        activo: true,
         fechaNacimiento: true,
         vacacionesInicio: true,
         vacacionesFin: true,
@@ -113,13 +122,15 @@ export async function POST(request) {
         vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
         vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null,
         comisionTipo: comisionTipo || 'POR_TURNO',
-        comisionValor: comisionValor !== undefined && comisionValor !== '' ? Number(comisionValor) : 0
+        comisionValor: comisionValor !== undefined && comisionValor !== '' ? Number(comisionValor) : 0,
+        activo: body.activo !== undefined ? Boolean(body.activo) : true
       },
       select: {
         id: true,
         usuario: true,
         nombre: true,
         rol: true,
+        activo: true,
         email: true,
         telefono: true,
         fechaNacimiento: true,

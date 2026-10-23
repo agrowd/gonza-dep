@@ -19,9 +19,10 @@ function isZeroAdditionalZone(zone) {
  * 
  * @param {Array} selectedZones - Array of zones selected: [{ nombre, precioBase, duracionMinutos, señaBase }]
  * @param {boolean} isNewClient - True if it's the client's first session
+ * @param {string} formulaType - 'ZONA_MAX_MAS_TERCIO', 'ZONA_MAX_MAS_10MIN', 'ZONA_MAX_MAS_MITAD'
  * @returns {Object} { valorTotal, valorSeña, duracionMinutos }
  */
-export function calculateTurnDetails(selectedZones, isNewClient = false) {
+export function calculateTurnDetails(selectedZones, isNewClient = false, formulaType = 'ZONA_MAX_MAS_TERCIO') {
   if (!selectedZones || selectedZones.length === 0) {
     return {
       valorTotal: 0,
@@ -35,7 +36,6 @@ export function calculateTurnDetails(selectedZones, isNewClient = false) {
   const valorSeña = selectedZones.reduce((sum, zone) => sum + (zone.señaBase || 0), 0);
 
   // 2. Select base zone (the longest zone).
-  // In case of a tie in duration, prefer a non-zero-additional zone as base so the zero-additional rule benefits the client.
   let baseZoneIndex = -1;
   let maxDuration = -1;
 
@@ -54,28 +54,48 @@ export function calculateTurnDetails(selectedZones, isNewClient = false) {
   }
 
   const baseDuration = maxDuration > 0 ? maxDuration : 0;
-
-  // 3. Add 10 min per additional zone, with 0 min for Axilas, Hombros and Genitales
   let additionalDurationSum = 0;
-  for (let i = 0; i < selectedZones.length; i++) {
-    if (i === baseZoneIndex) continue;
 
-    if (isZeroAdditionalZone(selectedZones[i])) {
-      additionalDurationSum += 0;
-    } else {
-      additionalDurationSum += 10;
+  if (formulaType === 'ZONA_MAX_MAS_10MIN') {
+    // Regla D-105: +10 min por zona adicional salvo axilas, hombros y genitales (0 min)
+    for (let i = 0; i < selectedZones.length; i++) {
+      if (i === baseZoneIndex) continue;
+      if (isZeroAdditionalZone(selectedZones[i])) {
+        additionalDurationSum += 0;
+      } else {
+        additionalDurationSum += 10;
+      }
+    }
+  } else if (formulaType === 'ZONA_MAX_MAS_MITAD') {
+    // Regla Clásica: +50% de las demás zonas
+    for (let i = 0; i < selectedZones.length; i++) {
+      if (i === baseZoneIndex) continue;
+      const dur = selectedZones[i].duracionMinutos || selectedZones[i].duracion || 0;
+      additionalDurationSum += dur * 0.5;
+    }
+  } else {
+    // Default 'ZONA_MAX_MAS_TERCIO' (Mejoras AppWeb líneas 193-202):
+    // Tiempo de zona más larga + 1/3 de las demás zonas
+    for (let i = 0; i < selectedZones.length; i++) {
+      if (i === baseZoneIndex) continue;
+      const dur = selectedZones[i].duracionMinutos || selectedZones[i].duracion || 0;
+      additionalDurationSum += (dur / 3);
+    }
+    // Si hay 4 zonas o más en total, restar 10 minutos
+    if (selectedZones.length >= 4) {
+      additionalDurationSum -= 10;
     }
   }
 
   let totalDuration = baseDuration + additionalDurationSum;
 
-  // 4. Add new client bonus
+  // Add new client bonus (+10 min)
   if (isNewClient) {
     totalDuration += 10;
   }
 
-  // 5. Round up to nearest multiple of 10
-  const duracionMinutos = Math.ceil(totalDuration / 10) * 10;
+  // Round up to nearest multiple of 10 minutes
+  const duracionMinutos = Math.max(10, Math.ceil(totalDuration / 10) * 10);
 
   return {
     valorTotal,

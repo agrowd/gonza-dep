@@ -3800,8 +3800,8 @@ export default function AgendaPage() {
                         onChange={(e) => setEditTurno(prev => ({ ...prev, operadorId: e.target.value }))}
                       >
                         <option value="">Gonzalo (Por defecto)</option>
-                        {operadores.map(op => (
-                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
+                        {operadores.filter(op => op.activo !== false || op.id === editTurno.operadorId).map(op => (
+                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : ''}</option>
                         ))}
                       </select>
                     </div>
@@ -4288,8 +4288,8 @@ export default function AgendaPage() {
                         }}
                       >
                         <option value="">Gonzalo (Por defecto)</option>
-                        {operadores.map(op => (
-                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
+                        {operadores.filter(op => op.activo !== false || op.id === editTurno.operadorId).map(op => (
+                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : ''}</option>
                         ))}
                       </select>
                     ) : (
@@ -5890,7 +5890,7 @@ export default function AgendaPage() {
                       onChange={(e) => setNewTurno(prev => ({ ...prev, operadorId: e.target.value }))}
                     >
                       <option value="">Gonzalo (Por defecto)</option>
-                      {operadores.map(op => (
+                      {operadores.filter(op => op.activo !== false).map(op => (
                         <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
                       ))}
                     </select>

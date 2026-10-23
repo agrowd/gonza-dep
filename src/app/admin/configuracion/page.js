@@ -75,10 +75,16 @@ export default function ConfiguracionPage() {
     email_va_a_avisar_body: '',
     wtsp_birthday_template: '',
     email_birthday_subject: '',
-    email_birthday_body: ''
+    email_birthday_body: '',
+    seña_retencion_horas: '72',
+    recordatorio_horas: '48',
+    mensaje_previo_dias: '7',
+    duracion_formula: 'ZONA_MAX_MAS_TERCIO',
+    canales_adquisicion: JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"])
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
+  const [newChannelInput, setNewChannelInput] = useState('');
 
   // Promociones State
   const [promociones, setPromociones] = useState([]);
@@ -174,7 +180,12 @@ export default function ConfiguracionPage() {
             email_va_a_avisar_body: data.email_va_a_avisar_body || '',
             wtsp_birthday_template: data.wtsp_birthday_template || '',
             email_birthday_subject: data.email_birthday_subject || '',
-            email_birthday_body: data.email_birthday_body || ''
+            email_birthday_body: data.email_birthday_body || '',
+            seña_retencion_horas: data.seña_retencion_horas || '72',
+            recordatorio_horas: data.recordatorio_horas || '48',
+            mensaje_previo_dias: data.mensaje_previo_dias || '7',
+            duracion_formula: data.duracion_formula || 'ZONA_MAX_MAS_TERCIO',
+            canales_adquisicion: data.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"])
           });
         }
       })
@@ -591,6 +602,36 @@ export default function ConfiguracionPage() {
     }
   };
 
+  // --- PARAMETERS HANDLERS ---
+  const getParsedCanales = () => {
+    try {
+      const arr = JSON.parse(configs.canales_adquisicion || '[]');
+      if (Array.isArray(arr) && arr.length > 0) return arr;
+    } catch {
+      // fallback
+    }
+    return ["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"];
+  };
+
+  const handleAddChannel = () => {
+    if (!newChannelInput.trim()) return;
+    const clean = newChannelInput.trim().toUpperCase().replace(/\s+/g, '_');
+    const current = getParsedCanales();
+    if (current.includes(clean)) {
+      showToast('Ese canal ya está agregado en la lista.', 'error');
+      return;
+    }
+    const updated = [...current, clean];
+    setConfigs(prev => ({ ...prev, canales_adquisicion: JSON.stringify(updated) }));
+    setNewChannelInput('');
+  };
+
+  const handleRemoveChannel = (channelToRemove) => {
+    const current = getParsedCanales();
+    const updated = current.filter(c => c !== channelToRemove);
+    setConfigs(prev => ({ ...prev, canales_adquisicion: JSON.stringify(updated) }));
+  };
+
   // --- USUARIOS Y OPERADORES HANDLERS ---
   const handleOpenNewUser = () => {
     setEditingUser(null);
@@ -601,6 +642,7 @@ export default function ConfiguracionPage() {
       rol: 'OPERADOR',
       email: '',
       telefono: '',
+      activo: true,
       fechaNacimiento: '',
       vacacionesInicio: '',
       vacacionesFin: '',
@@ -619,6 +661,7 @@ export default function ConfiguracionPage() {
       rol: u.rol || 'OPERADOR',
       email: u.email || '',
       telefono: u.telefono || '',
+      activo: u.activo !== false,
       fechaNacimiento: u.fechaNacimiento ? u.fechaNacimiento.slice(0, 10) : '',
       vacacionesInicio: u.vacacionesInicio ? u.vacacionesInicio.slice(0, 10) : '',
       vacacionesFin: u.vacacionesFin ? u.vacacionesFin.slice(0, 10) : '',
@@ -626,6 +669,26 @@ export default function ConfiguracionPage() {
       comisionValor: u.comisionValor !== undefined && u.comisionValor !== null ? u.comisionValor : ''
     });
     setIsUserModalOpen(true);
+  };
+
+  const handleToggleUserActive = async (u) => {
+    const nextActivo = u.activo === false ? true : false;
+    try {
+      const res = await fetch(`/api/admin/usuarios/${u.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: nextActivo })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(nextActivo ? `Operador ${u.nombre} reactivado/desbloqueado.` : `Operador ${u.nombre} bloqueado.`);
+        fetchUsers();
+      } else {
+        showToast(data.error || 'Error al cambiar estado del usuario.', 'error');
+      }
+    } catch {
+      showToast('Error de red al actualizar estado.', 'error');
+    }
   };
 
   const handleSaveUser = async (e) => {
@@ -665,13 +728,17 @@ export default function ConfiguracionPage() {
     }
   };
 
-  const handleDeleteUser = async (id) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este usuario?')) return;
+  const handleDeleteUser = async (u) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar o bloquear al operador/usuario ${u.nombre}?`)) return;
     try {
-      const res = await fetch(`/api/admin/usuarios/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/usuarios/${u.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok) {
-        showToast('Usuario eliminado con éxito.');
+        if (data.action === 'BLOCKED') {
+          showToast(data.message || 'El operador tiene turnos en su historial y fue bloqueado.', 'info');
+        } else {
+          showToast(data.message || 'Usuario eliminado con éxito.');
+        }
         fetchUsers();
       } else {
         showToast(data.error || 'Error al eliminar usuario.', 'error');
@@ -686,7 +753,7 @@ export default function ConfiguracionPage() {
       {/* Header */}
       <div className={styles.header}>
         <h2>Configuración del Sistema</h2>
-        <p>Administra las zonas de depilación, los horarios hábiles de atención y las plantillas de mensajes.</p>
+        <p>Administra las zonas de depilación, los horarios de atención, las plantillas y los parámetros operativos.</p>
       </div>
 
       {/* Mobile Dropdown Selector (como en Estadísticas) */}
@@ -707,6 +774,7 @@ export default function ConfiguracionPage() {
           <option value="zones">📍 Zonas de Depilación</option>
           <option value="hours">🕒 Horarios Laborales</option>
           <option value="templates">✉️ Mensajes y Plantillas</option>
+          <option value="parametros">⚙️ Parámetros del Sistema</option>
           <option value="promos">🎁 Promociones y Cupones</option>
           <option value="users">👥 Usuarios y Operadores</option>
         </select>
@@ -731,6 +799,12 @@ export default function ConfiguracionPage() {
           onClick={() => setActiveTab('templates')}
         >
           Mensajes y Plantillas
+        </button>
+        <button 
+          className={`${styles.tab} ${activeTab === 'parametros' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('parametros')}
+        >
+          ⚙️ Parámetros
         </button>
         <button 
           className={`${styles.tab} ${activeTab === 'promos' ? styles.tabActive : ''}`}
@@ -1344,6 +1418,178 @@ export default function ConfiguracionPage() {
         </div>
       )}
 
+      {/* Tab Content: Parameters Management */}
+      {activeTab === 'parametros' && (
+        <div className={styles.sectionCard}>
+          <div className={styles.sectionTitle}>
+            <span>⚙️ Parámetros Generales del Sistema</span>
+          </div>
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+            Configura los plazos de pérdida de seña, la antelación de avisos y recordatorios por WhatsApp y correo, la fórmula de cálculo de tiempo para turnos y los canales de adquisición de clientes.
+          </p>
+
+          <form onSubmit={handleSaveConfigs}>
+            {/* 1. Plazo de Pérdida de Seña */}
+            <div className={styles.paramGroup}>
+              <div className={styles.paramGroupTitle}>
+                <span>⏱️ Plazo de Pérdida de Seña (Horas antes)</span>
+              </div>
+              <p className={styles.paramGroupDesc}>
+                Horas mínimas de antelación requeridas para cancelar o reprogramar un turno conservando la seña abonada. Si el cliente cancela o reprograma con menos antelación que este plazo, la seña se retiene.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                <input 
+                  type="number"
+                  className={styles.input}
+                  style={{ maxWidth: '140px' }}
+                  value={configs.seña_retencion_horas || '72'}
+                  onChange={(e) => setConfigs({ ...configs, seña_retencion_horas: e.target.value })}
+                  min="1"
+                  max="168"
+                  required
+                />
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>horas (Por defecto: 72 hs = 3 días hábiles)</span>
+              </div>
+            </div>
+
+            {/* 2. Antelación de Recordatorio de WhatsApp */}
+            <div className={styles.paramGroup}>
+              <div className={styles.paramGroupTitle}>
+                <span>📲 Antelación de Recordatorio de WhatsApp (Horas antes)</span>
+              </div>
+              <p className={styles.paramGroupDesc}>
+                Horas antes del turno en las que el cron automático despachará el recordatorio interactivo de WhatsApp al cliente.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                <input 
+                  type="number"
+                  className={styles.input}
+                  style={{ maxWidth: '140px' }}
+                  value={configs.recordatorio_horas || '48'}
+                  onChange={(e) => setConfigs({ ...configs, recordatorio_horas: e.target.value })}
+                  min="1"
+                  max="168"
+                  required
+                />
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>horas antes del turno (Ej: 48 hs o 24 hs)</span>
+              </div>
+            </div>
+
+            {/* 3. Antelación de Aviso Previo */}
+            <div className={styles.paramGroup}>
+              <div className={styles.paramGroupTitle}>
+                <span>✉️ Antelación de Aviso Previo por Correo (Días antes)</span>
+              </div>
+              <p className={styles.paramGroupDesc}>
+                Días de anticipación para el envío del aviso previo por correo electrónico de preparación para el turno.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                <input 
+                  type="number"
+                  className={styles.input}
+                  style={{ maxWidth: '140px' }}
+                  value={configs.mensaje_previo_dias || '7'}
+                  onChange={(e) => setConfigs({ ...configs, mensaje_previo_dias: e.target.value })}
+                  min="1"
+                  max="30"
+                  required
+                />
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>días antes del turno (Ej: 7 días = 1 semana, o 4 días)</span>
+              </div>
+            </div>
+
+            {/* 4. Fórmula para Cálculo de Tiempo de Turnos */}
+            <div className={styles.paramGroup}>
+              <div className={styles.paramGroupTitle}>
+                <span>📐 Regla de Cálculo de Duración de Turnos</span>
+              </div>
+              <p className={styles.paramGroupDesc}>
+                Fórmula para determinar la duración en minutos de un turno al combinar múltiples zonas de depilación.
+              </p>
+              <div style={{ marginTop: '0.4rem' }}>
+                <select 
+                  className={styles.input}
+                  style={{ maxWidth: '650px', width: '100%' }}
+                  value={configs.duracion_formula || 'ZONA_MAX_MAS_TERCIO'}
+                  onChange={(e) => setConfigs({ ...configs, duracion_formula: e.target.value })}
+                >
+                  <option value="ZONA_MAX_MAS_TERCIO">
+                    ⭐ Zona más larga + ⅓ del resto (si son 4+ zonas resta 10 min, redondeo a 10 min) [Recomendada]
+                  </option>
+                  <option value="ZONA_MAX_MAS_10MIN">
+                    Zona más larga + 10 min por zona adicional (Axilas, Hombros y Genitales 0 min)
+                  </option>
+                  <option value="ZONA_MAX_MAS_MITAD">
+                    Zona más larga + 50% de las demás zonas (Fórmula Clásica)
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {/* 5. Canales de Obtención / Adquisición de Clientes */}
+            <div className={styles.paramGroup}>
+              <div className={styles.paramGroupTitle}>
+                <span>📊 Canales de Obtención de Clientes</span>
+              </div>
+              <p className={styles.paramGroupDesc}>
+                Gestiona los canales disponibles para registrar el origen de los clientes (campañas, redes, recomendaciones, etc.).
+              </p>
+              <div className={styles.channelsGrid}>
+                {getParsedCanales().map((canal) => (
+                  <span key={canal} className={styles.channelTag}>
+                    <span>{canal}</span>
+                    <button 
+                      type="button" 
+                      className={styles.channelTagDeleteBtn}
+                      onClick={() => handleRemoveChannel(canal)}
+                      title={`Eliminar canal ${canal}`}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                <input 
+                  type="text"
+                  className={styles.input}
+                  style={{ maxWidth: '240px' }}
+                  value={newChannelInput}
+                  onChange={(e) => setNewChannelInput(e.target.value)}
+                  placeholder="Nuevo canal (ej: TIKTOK)"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddChannel();
+                    }
+                  }}
+                />
+                <button 
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleAddChannel}
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                >
+                  + Agregar Canal
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={savingConfigs}
+                style={{ padding: '0.75rem 2rem', fontSize: '0.95rem' }}
+              >
+                {savingConfigs ? 'Guardando...' : '💾 Guardar Parámetros'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Tab Content 4: Promociones y Cupones Management */}
       {activeTab === 'promos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -1571,89 +1817,111 @@ export default function ConfiguracionPage() {
           ) : users.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay usuarios registrados.</div>
           ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.th}>Nombre</th>
-                    <th className={styles.th}>Usuario de Acceso</th>
-                    <th className={styles.th}>Rol / Permisos</th>
-                    <th className={styles.th}>Comisión</th>
-                    <th className={styles.th}>Cumpleaños / Vacaciones</th>
-                    <th className={styles.th}>Contacto</th>
-                    <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map(u => (
-                    <tr key={u.id} className={styles.tr}>
-                      <td className={styles.td} style={{ fontWeight: 600 }}>{u.nombre}</td>
-                      <td className={styles.td} style={{ color: 'var(--text-secondary)' }}>@{u.usuario}</td>
-                      <td className={styles.td}>
-                        {u.rol === 'ADMIN' && (
-                          <span className={styles.roleBadgeAdmin}>👑 Administrador</span>
-                        )}
-                        {u.rol === 'OPERADOR' && (
-                          <span className={styles.roleBadgeOperador}>✂️ Operador</span>
-                        )}
-                        {u.rol === 'RECEPCION' && (
-                          <span className={styles.roleBadgeRecepcion}>📋 Recepción</span>
-                        )}
-                      </td>
-                      <td className={styles.td}>
-                        {u.comisionValor ? (
-                          <span style={{ fontWeight: 600, color: 'var(--color-gold)' }}>
-                            {u.comisionTipo === 'PORCENTAJE'
-                              ? `${u.comisionValor}% por turno`
-                              : (u.comisionTipo === 'POR_HORA' || u.comisionTipo === 'POR_DIA')
-                              ? `$${Number(u.comisionValor).toLocaleString('es-AR')} / hora`
-                              : `$${Number(u.comisionValor).toLocaleString('es-AR')} / turno`}
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-secondary)' }}>Sin comisión</span>
-                        )}
-                      </td>
-                      <td className={styles.td} style={{ fontSize: '0.85rem' }}>
-                        {u.fechaNacimiento && (
-                          <div>🎂 {new Date(u.fechaNacimiento).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                        )}
-                        {u.vacacionesInicio && u.vacacionesFin && (
-                          <div style={{ color: '#60a5fa', marginTop: '0.2rem' }}>
-                            🏖️ {new Date(u.vacacionesInicio).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })} al {new Date(u.vacacionesFin).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
-                          </div>
-                        )}
-                        {!u.fechaNacimiento && !u.vacacionesInicio && (
-                          <span style={{ color: 'var(--text-secondary)' }}>-</span>
-                        )}
-                      </td>
-                      <td className={styles.td} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        <div>{u.telefono || '-'}</div>
-                        <div style={{ fontSize: '0.8rem' }}>{u.email || ''}</div>
-                      </td>
-                      <td className={styles.td} style={{ textAlign: 'right' }}>
-                        <div className={styles.actionCell} style={{ justifyContent: 'flex-end', gap: '0.5rem' }}>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '0.35rem 0.65rem' }} 
-                            onClick={() => handleOpenEditUser(u)}
-                            title="Editar usuario"
-                          >
-                            <EditIcon />
-                          </button>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
-                            onClick={() => handleDeleteUser(u.id)}
-                            title="Eliminar usuario"
-                          >
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className={styles.userCardsGrid}>
+              {users.map(u => (
+                <div key={u.id} className={`${styles.userCard} ${u.activo === false ? styles.userCardBlocked : ''}`}>
+                  <div className={styles.userCardHeader}>
+                    <div>
+                      <div className={styles.userCardName}>{u.nombre}</div>
+                      <div className={styles.userCardHandle}>@{u.usuario}</div>
+                    </div>
+                    <div>
+                      {u.rol === 'ADMIN' && (
+                        <span className={styles.roleBadgeAdmin}>👑 Admin</span>
+                      )}
+                      {u.rol === 'OPERADOR' && (
+                        <span className={styles.roleBadgeOperador}>✂️ Operador</span>
+                      )}
+                      {u.rol === 'RECEPCION' && (
+                        <span className={styles.roleBadgeRecepcion}>📋 Recepción</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={styles.userCardRate}>
+                    {u.comisionValor ? (
+                      u.comisionTipo === 'PORCENTAJE'
+                        ? `${u.comisionValor}% por turno`
+                        : (u.comisionTipo === 'POR_HORA' || u.comisionTipo === 'POR_DIA')
+                        ? `$${Number(u.comisionValor).toLocaleString('es-AR')} / hora`
+                        : `$${Number(u.comisionValor).toLocaleString('es-AR')} / turno`
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 400 }}>Sin comisión</span>
+                    )}
+                  </div>
+
+                  <div className={styles.userCardDetails}>
+                    {u.fechaNacimiento && (
+                      <div className={styles.userCardDetailItem}>
+                        <span>🎂</span>
+                        <span>{new Date(u.fechaNacimiento).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                      </div>
+                    )}
+                    {u.vacacionesInicio && u.vacacionesFin && (
+                      <div className={styles.userCardDetailItem} style={{ color: '#60a5fa' }}>
+                        <span>🏖️</span>
+                        <span>{new Date(u.vacacionesInicio).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })} al {new Date(u.vacacionesFin).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}</span>
+                      </div>
+                    )}
+                    <div className={styles.userCardDetailItem}>
+                      <span>📞</span>
+                      <span>{u.telefono || 'Sin teléfono'}</span>
+                    </div>
+                    {u.email && (
+                      <div className={styles.userCardDetailItem}>
+                        <span>✉️</span>
+                        <span style={{ wordBreak: 'break-all' }}>{u.email}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.userCardFooter}>
+                    <div>
+                      {u.activo === false ? (
+                        <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '9999px', backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #f87171' }}>
+                          🔒 Inactivo / Bloqueado
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '9999px', backgroundColor: 'rgba(34, 197, 94, 0.12)', color: '#16a34a', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                          🟢 Activo
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.userCardActions}>
+                      {u.activo === false && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', color: '#16a34a', borderColor: 'rgba(22, 163, 74, 0.3)' }}
+                          onClick={() => handleToggleUserActive(u)}
+                          title="Desbloquear / Activar operador"
+                        >
+                          🔓 Desbloquear
+                        </button>
+                      )}
+                      <button 
+                        type="button"
+                        className="btn btn-secondary" 
+                        style={{ padding: '0.35rem 0.65rem' }} 
+                        onClick={() => handleOpenEditUser(u)}
+                        title="Editar usuario"
+                      >
+                        <EditIcon />
+                      </button>
+                      <button 
+                        type="button"
+                        className="btn btn-secondary" 
+                        style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
+                        onClick={() => handleDeleteUser(u)}
+                        title="Eliminar o Bloquear usuario"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -2093,6 +2361,20 @@ export default function ConfiguracionPage() {
                       step="any"
                     />
                   </div>
+                </div>
+
+                {/* Estado del Usuario / Operador */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: userForm.activo !== false ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)', borderRadius: '8px', border: userForm.activo !== false ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)' }}>
+                  <input 
+                    type="checkbox" 
+                    id="userActivo"
+                    checked={userForm.activo !== false}
+                    onChange={(e) => setUserForm({ ...userForm, activo: e.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#16a34a' }}
+                  />
+                  <label htmlFor="userActivo" style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: userForm.activo !== false ? '#16a34a' : '#ef4444' }}>
+                    {userForm.activo !== false ? '🟢 Operador Activo (Visible en selectores de agendado)' : '🔒 Operador Bloqueado / Inactivo (Oculto en selectores)'}
+                  </label>
                 </div>
               </div>
               <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '0.75rem' }}>

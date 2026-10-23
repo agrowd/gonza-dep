@@ -30,6 +30,7 @@ export async function PUT(request, context) {
       rol,
       email,
       telefono,
+      activo,
       fechaNacimiento,
       vacacionesInicio,
       vacacionesFin,
@@ -43,6 +44,7 @@ export async function PUT(request, context) {
     }
 
     const updateData = {};
+    if (activo !== undefined) updateData.activo = Boolean(activo);
     if (nombre !== undefined && nombre.trim()) updateData.nombre = nombre.trim();
     if (rol !== undefined) {
       const validRoles = ['ADMIN', 'OPERADOR', 'RECEPCION'];
@@ -90,6 +92,7 @@ export async function PUT(request, context) {
         usuario: true,
         nombre: true,
         rol: true,
+        activo: true,
         email: true,
         telefono: true,
         fechaNacimiento: true,
@@ -130,16 +133,41 @@ export async function DELETE(request, context) {
 
     // Prevent deleting the last ADMIN
     const userToDelete = await prisma.usuario.findUnique({ where: { id } });
-    if (userToDelete && userToDelete.rol === 'ADMIN') {
+    if (!userToDelete) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    if (userToDelete.rol === 'ADMIN') {
       const adminCount = await prisma.usuario.count({ where: { rol: 'ADMIN' } });
       if (adminCount <= 1) {
         return NextResponse.json({ error: 'No se puede eliminar el único administrador del sistema' }, { status: 400 });
       }
     }
 
+    // Regla de negocio: Si tiene turnos asociados en su historial, no se elimina físicamente: se bloquea/desactiva
+    const turnosCount = await prisma.turno.count({ where: { operadorId: id } });
+
+    if (turnosCount > 0) {
+      await prisma.usuario.update({
+        where: { id },
+        data: { activo: false }
+      });
+
+      return NextResponse.json({
+        success: true,
+        action: 'BLOCKED',
+        message: `El operador tiene ${turnosCount} turno(s) asociados en el historial. Por integridad de los registros, fue bloqueado y no aparecerá en los selectores al agendar nuevos turnos.`
+      });
+    }
+
+    // Si NO tiene turnos asociados, se elimina físicamente
     await prisma.usuario.delete({ where: { id } });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      action: 'DELETED',
+      message: 'Operador eliminado correctamente del sistema.'
+    });
   } catch (error) {
     console.error('Error deleting usuario:', error);
     return NextResponse.json({ error: 'Error al eliminar usuario' }, { status: 500 });

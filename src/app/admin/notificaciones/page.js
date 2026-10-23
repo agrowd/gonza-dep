@@ -408,92 +408,100 @@ export default function NotificacionesPage() {
               No hay turnos programados o pendientes de recordatorio en esta semana.
             </div>
           ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.th} style={{ width: '40px' }}></th>
-                    <th className={styles.th}>Cliente</th>
-                    <th className={styles.th}>Turno</th>
-                    <th className={styles.th}>Estado Envíos</th>
-                    <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {turnos.map((t) => {
-                    const isSelected = selectedTurnoIds.includes(t.id);
-                    const lastNotif = t.cliente.lastNotification;
-                    const parsedZones = JSON.parse(t.zonas || '[]');
+            <div className={styles.notifCardsList}>
+              {turnos.map((t) => {
+                const isSelected = selectedTurnoIds.includes(t.id);
+                const lastNotif = t.cliente.lastNotification;
+                let parsedZones = [];
+                try {
+                  parsedZones = JSON.parse(t.zonas || '[]');
+                } catch {
+                  parsedZones = [];
+                }
+                const zonasText = parsedZones.length > 0 ? parsedZones.map(z => z.nombre).join(', ') : (t.zonas || 'Sin zonas');
 
-                    return (
-                      <tr key={t.id} className={styles.tr}>
-                        <td className={styles.td}>
-                          <input 
-                            type="checkbox" 
-                            className={styles.checkbox}
-                            checked={isSelected}
-                            onChange={(e) => handleSelectOne(t.id, e.target.checked)}
-                          />
-                        </td>
-                        <td className={styles.td}>
-                          <div className={styles.clientInfo}>
-                            <span className={styles.clientName}>{t.cliente.nombreCompleto}</span>
-                            <span className={styles.clientWtsp}>{t.cliente.whatsapp}</span>
-                          </div>
-                        </td>
-                        <td className={styles.td}>
-                          <div className={styles.datetime}>
-                            <span className={styles.date} style={{ textTransform: 'capitalize' }}>
-                              {formatTurnoDate(t.fecha)}
+                return (
+                  <div 
+                    key={t.id} 
+                    className={`${styles.notifCard} ${isSelected ? styles.notifCardSelected : ''}`}
+                  >
+                    {/* Checkbox Columna Izquierda */}
+                    <div className={styles.notifCardCheckCol}>
+                      <input 
+                        type="checkbox" 
+                        className={styles.checkbox}
+                        checked={isSelected}
+                        onChange={(e) => handleSelectOne(t.id, e.target.checked)}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    {/* Contenido Principal */}
+                    <div className={styles.notifCardMain}>
+                      <div className={styles.notifClientHeader}>
+                        <span className={styles.notifClientName}>{t.cliente.nombreCompleto}</span>
+                        <span className={styles.notifClientPhone}>{t.cliente.whatsapp}</span>
+                      </div>
+
+                      <div className={styles.notifDetailsList}>
+                        <div className={styles.notifDetailItem}>
+                          <span style={{ fontSize: '0.95rem' }}>📅</span>
+                          <span style={{ textTransform: 'capitalize' }}>{formatTurnoDate(t.fecha)}</span>
+                        </div>
+                        <div className={styles.notifDetailItem}>
+                          <span style={{ fontSize: '0.95rem' }}>🕒</span>
+                          <span>{t.horaInicio} a {t.horaFin}</span>
+                        </div>
+                        <div className={styles.notifDetailItem}>
+                          <span style={{ fontSize: '0.95rem' }}>🏷️</span>
+                          <span style={{ wordBreak: 'break-word' }}>{zonasText}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Columna Derecha: Estado y Botones de Acción */}
+                    <div className={styles.notifCardRight}>
+                      <div className={styles.notifStatusCol}>
+                        {!lastNotif ? (
+                          <span className={`${styles.statusLabel} ${styles.statusNone}`}>Pendiente</span>
+                        ) : lastNotif.estado === 'ENVIADO' ? (
+                          <>
+                            <span className={`${styles.statusLabel} ${styles.statusSent}`}>Enviado</span>
+                            <span className={styles.lastSentText} style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                              {new Date(lastNotif.fechaEnvio).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                             </span>
-                            <span className={styles.time}>
-                              {t.horaInicio} a {t.horaFin} ({parsedZones.map(z=>z.nombre).join(', ')})
-                            </span>
-                          </div>
-                        </td>
-                        <td className={styles.td}>
-                          <div className={styles.notificationStatus}>
-                            {!lastNotif ? (
-                              <span className={`${styles.statusLabel} ${styles.statusNone}`}>Sin enviar</span>
-                            ) : lastNotif.estado === 'ENVIADO' ? (
-                              <>
-                                <span className={`${styles.statusLabel} ${styles.statusSent}`}>Enviado</span>
-                                <span className={styles.lastSentText}>
-                                  {new Date(lastNotif.fechaEnvio).toLocaleDateString()}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <span className={`${styles.statusLabel} ${styles.statusFailed}`}>Fallido</span>
-                                <span className={styles.lastSentText}>Reintentar</span>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                        <td className={styles.td} style={{ textAlign: 'right' }}>
-                          <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
-                            <button 
-                              className={`${styles.btnAction} ${styles.btnPreview}`}
-                              onClick={() => openPreview(t.previewText)}
-                              title="Ver vista previa del mensaje"
-                            >
-                              <EyeIcon />
-                            </button>
-                            <button 
-                              className="btn btn-primary"
-                              style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '6px' }}
-                              disabled={wppStatus !== 'CONNECTED' || sendingReminders}
-                              onClick={() => handleSendReminders([t.id])}
-                            >
-                              <SendIcon />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </>
+                        ) : (
+                          <>
+                            <span className={`${styles.statusLabel} ${styles.statusFailed}`}>Fallido</span>
+                            <span className={styles.lastSentText} style={{ fontSize: '0.72rem', color: '#ef4444' }}>Reintentar</span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className={styles.notifActionsRow}>
+                        <button 
+                          type="button"
+                          className={styles.btnActionIconOutlined}
+                          onClick={() => openPreview(t.previewText)}
+                          title="Ver vista previa del mensaje de WhatsApp"
+                        >
+                          <EyeIcon />
+                        </button>
+                        <button 
+                          type="button"
+                          className={styles.btnActionSendBordo}
+                          disabled={wppStatus !== 'CONNECTED' || sendingReminders}
+                          onClick={() => handleSendReminders([t.id])}
+                          title={wppStatus !== 'CONNECTED' ? 'Conecta WhatsApp para despachar recordatorios' : 'Enviar recordatorio por WhatsApp'}
+                        >
+                          <SendIcon />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

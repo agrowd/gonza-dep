@@ -22,6 +22,7 @@ model Usuario {
   vacacionesFin    DateTime?
   comisionTipo     String?   @default("POR_TURNO") // "POR_TURNO", "POR_DIA", "PORCENTAJE"
   comisionValor    Float?    @default(0)
+  activo           Boolean   @default(true)
   turnos           Turno[]
   createdAt        DateTime  @default(now())
 }

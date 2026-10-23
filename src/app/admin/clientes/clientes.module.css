@@ -674,3 +674,139 @@
   }
 }
 
+/* ========================================================
+   Clean Cards List Layout (Diseño Tarjetas Gonzalo Siri)
+   ======================================================== */
+.cardsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 1rem;
+}
+
+.clientCard {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.clientCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(var(--color-primary-rgb), 0.35);
+}
+
+.clientCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.clientCardName {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.clientCardMenuBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1.35rem;
+  line-height: 1;
+  border-radius: 6px;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.clientCardMenuBtn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.clientCardContact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.clientContactItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  word-break: break-all;
+}
+
+.clientCardBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.badgePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.22rem 0.65rem;
+  border-radius: 9999px;
+  transition: all 0.15s ease;
+  user-select: none;
+  cursor: pointer;
+}
+
+.badgeNotifActive {
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badgeNotifInactive {
+  background-color: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.badgeResenaActive {
+  background-color: rgba(234, 179, 8, 0.14);
+  color: #ca8a04;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+}
+
+.badgeResenaInactive {
+  background-color: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.badgeCanal {
+  background-color: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  cursor: default;
+}
+
+
