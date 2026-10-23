@@ -927,6 +927,52 @@
 
 ---
 
+## 🚀 Sesión: 23 de Octubre de 2026 - Reestructuración de Clientes y Notificaciones en Tarjetas, Pestaña Parámetros, Operador en Historial y Borrado vs Bloqueo de Operadores
+
+### Requerimientos de Luciano Gómez y Gonzalo Siri (`media_1792758540623_f9a74296.png` a `media_1792758613417_083c2ad9.png`):
+1. **Reestructurar Listado de Clientes (`/admin/clientes`) en Formato Tarjetas Limpias**:
+   - Se reemplazó la tabla de clientes por un listado vertical de tarjetas blancas estilizadas (`.clientCard`):
+     - Nombre en negrita/mayúsculas con badge `🚫 Bloqueado` (si aplica) y botón de menú `⋮`.
+     - Contacto con icono WhatsApp verde `+54 9 ...` e icono de sobre para Email.
+     - Fila inferior de badges interactivos: `[ ✓ Notif. ]` (toggle directo de notificaciones sin abrir modal), `[ ⭐️ Reseña ]` (toggle directo de reseña de Google), `[ 📊 {Canal} ]` y estado `[ 🟢 ACTIVO ]` / `[ 🏁 FINALIZADO ]` / `[ 🛠️ MANTENIMIENTO ]`.
+2. **Reestructurar Listado de Notificaciones (`/admin/notificaciones`) en Formato Tarjetas Limpias**:
+   - Se reemplazó la tabla por tarjetas con:
+     - Checkbox a la izquierda para selección y envíos masivos.
+     - Nombre del cliente en negrita y teléfono debajo.
+     - Badge de estado `[ Enviado ]` en verde con fecha de envío debajo (`20/10/2026`) o `[ Pendiente ]` en naranja.
+     - Detalles de turno con iconos: 📅 `{Fecha}`, 🕒 `{Horario}`, 🏷️ `{Zonas}`.
+     - Botones de acción rápida: ver detalle `[ 👁️ ]` y despachar WhatsApp en bordó `#7a1f1e` `[ ✈️ ]`.
+3. **Mostrar Operador en el Historial de Turnos de la Ficha del Cliente (`/admin/clientes`)**:
+   - En la pestaña `Historial`, al lado del estado del turno (`SEÑADO` / `REALIZADO`), se agregó el badge `👤 {t.operador?.nombre || 'Gonzalo'}`.
+   - En las APIs `/api/admin/clientes` y `/api/admin/clientes/[id]` se incluyó la relación `operador: { select: { id: true, nombre: true } }`.
+4. **Incorporar Pestaña "Parámetros" en Configuración (`/admin/configuracion`)**:
+   - Se sumó la pestaña `parametros` en el dropdown mobile y en la botonera desktop.
+   - Parámetros operativos:
+     - Plazo de pérdida de seña (horas antes, default `72` hs).
+     - Antelación de recordatorio de WhatsApp (horas antes, default `48` hs).
+     - Antelación de aviso previo por correo (días antes, default `7` días).
+     - Regla de cálculo de duración de turnos: selector con la fórmula recomendada `ZONA_MAX_MAS_TERCIO` (zona más larga + ⅓ del resto, -10 min con 4+ zonas, redondeo a 10 min), además de la fórmula estándar de 10 min y clásica de 50%.
+     - Canales de obtención de clientes: gestor interactivo de tags para agregar y eliminar canales de marketing.
+5. **Lógica de Borrado vs Bloqueo de Operadores (`/api/admin/usuarios/[id]` y `/admin/configuracion`)**:
+   - Se añadió el campo `activo Boolean @default(true)` a `Usuario` en Prisma.
+   - En `DELETE /api/admin/usuarios/[id]`: si el operador tiene turnos asociados (`turnosCount > 0`), no se elimina físicamente: se bloquea/desactiva (`activo: false`) y se excluye de los selectores al agendar nuevos turnos, preservando la integridad del historial. Si no tiene turnos, se elimina físicamente.
+   - En `/admin/configuracion` (pestaña Usuarios): se rediseñaron los usuarios en tarjetas según el mockup (`media_1792758613417_083c2ad9.png`) con badge `🟢 Activo` o `🔒 Inactivo / Bloqueado`, tarifa `$ / hora`, cumpleaños, contacto, botones editar, eliminar/bloquear y botón de desbloquear.
+   - En `/admin/agenda` se filtraron los operadores para que los bloqueados no aparezcan en nuevos turnos.
+
+### Validación y Despliegue en Servidores:
+- **Compilación local**: `npm run build` con Turbopack exitosa (47/47 rutas en 61s, 0 errores).
+- **Control de Versiones**: Commits y push a `origin/main` y `origin/staging` (`d153f58`).
+- **Despliegue en Staging** (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`):
+  - Sincronización de base de datos PostgreSQL `agenda_db_staging`.
+  - Compilación Next.js en servidor y reinicio de PM2 (HTTP 200 OK).
+- **Despliegue en Producción** (`http://187.127.9.216:3006`, PM2 `gonzalo-agenda`):
+  - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261023_130738.sql` (7.8 MB).
+  - Sincronización de base de datos PostgreSQL `agenda_db`.
+  - Compilación Next.js en servidor y reinicio de PM2 (HTTP 200 OK).
+
+
+---
+
 ## 📱 Sesión: 22 de Octubre de 2026 (Tarde III) - Ajuste Responsivo Ergonómico Móvil en Agenda Diaria y Erradicación de Quiebres/Desborde
 - **Reporte y Capturas de Luciano Gómez** (`media_1792691504125_82cd9877.png` y `media_1792691512098_6b7d39e7.png`):
   *"No entra bien el contenido del texto"*
@@ -981,3 +1027,49 @@
     - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda` (HTTP 200 OK).
   - Despliegue en Staging en Hostinger VPS (`187.127.9.216`, puerto 3008):
     - Compilación Next.js limpia en servidor y reinicio de PM2 `gonzalo-agenda-staging` (HTTP 200 OK).
+
+---
+
+## 🚀 Sesión: 23 de Octubre de 2026 - Reestructuración de Clientes y Notificaciones en Tarjetas, Pestaña Parámetros, Operador en Historial y Borrado vs Bloqueo de Operadores
+
+### Requerimientos de Luciano Gómez y Gonzalo Siri (`media_1792758540623_f9a74296.png` a `media_1792758613417_083c2ad9.png`):
+1. **Reestructurar Listado de Clientes (`/admin/clientes`) en Formato Tarjetas Limpias**:
+   - Se reemplazó la tabla de clientes por un listado vertical de tarjetas blancas estilizadas (`.clientCard`):
+     - Nombre en negrita/mayúsculas con badge `🚫 Bloqueado` (si aplica) y botón de menú `⋮`.
+     - Contacto con icono WhatsApp verde `+54 9 ...` e icono de sobre para Email.
+     - Fila inferior de badges interactivos: `[ ✓ Notif. ]` (toggle directo de notificaciones sin abrir modal), `[ ⭐️ Reseña ]` (toggle directo de reseña de Google), `[ 📊 {Canal} ]` y estado `[ 🟢 ACTIVO ]` / `[ 🏁 FINALIZADO ]` / `[ 🛠️ MANTENIMIENTO ]`.
+2. **Reestructurar Listado de Notificaciones (`/admin/notificaciones`) en Formato Tarjetas Limpias**:
+   - Se reemplazó la tabla por tarjetas con:
+     - Checkbox a la izquierda para selección y envíos masivos.
+     - Nombre del cliente en negrita y teléfono debajo.
+     - Badge de estado `[ Enviado ]` en verde con fecha de envío debajo (`20/10/2026`) o `[ Pendiente ]` en naranja.
+     - Detalles de turno con iconos: 📅 `{Fecha}`, 🕒 `{Horario}`, 🏷️ `{Zonas}`.
+     - Botones de acción rápida: ver detalle `[ 👁️ ]` y despachar WhatsApp en bordó `#7a1f1e` `[ ✈️ ]`.
+3. **Mostrar Operador en el Historial de Turnos de la Ficha del Cliente (`/admin/clientes`)**:
+   - En la pestaña `Historial`, al lado del estado del turno (`SEÑADO` / `REALIZADO`), se agregó el badge `👤 {t.operador?.nombre || 'Gonzalo'}`.
+   - En las APIs `/api/admin/clientes` y `/api/admin/clientes/[id]` se incluyó la relación `operador: { select: { id: true, nombre: true } }`.
+4. **Incorporar Pestaña "Parámetros" en Configuración (`/admin/configuracion`)**:
+   - Se sumó la pestaña `parametros` en el dropdown mobile y en la botonera desktop.
+   - Parámetros operativos:
+     - Plazo de pérdida de seña (horas antes, default `72` hs).
+     - Antelación de recordatorio de WhatsApp (horas antes, default `48` hs).
+     - Antelación de aviso previo por correo (días antes, default `7` días).
+     - Regla de cálculo de duración de turnos: selector con la fórmula recomendada `ZONA_MAX_MAS_TERCIO` (zona más larga + ⅓ del resto, -10 min con 4+ zonas, redondeo a 10 min), además de la fórmula estándar de 10 min y clásica de 50%.
+     - Canales de obtención de clientes: gestor interactivo de tags para agregar y eliminar canales de marketing.
+5. **Lógica de Borrado vs Bloqueo de Operadores (`/api/admin/usuarios/[id]` y `/admin/configuracion`)**:
+   - Se añadió el campo `activo Boolean @default(true)` a `Usuario` en Prisma.
+   - En `DELETE /api/admin/usuarios/[id]`: si el operador tiene turnos asociados (`turnosCount > 0`), no se elimina físicamente: se bloquea/desactiva (`activo: false`) y se excluye de los selectores al agendar nuevos turnos, preservando la integridad del historial. Si no tiene turnos, se elimina físicamente.
+   - En `/admin/configuracion` (pestaña Usuarios): se rediseñaron los usuarios en tarjetas según el mockup (`media_1792758613417_083c2ad9.png`) con badge `🟢 Activo` o `🔒 Inactivo / Bloqueado`, tarifa `$ / hora`, cumpleaños, contacto, botones editar, eliminar/bloquear y botón de desbloquear.
+   - En `/admin/agenda` se filtraron los operadores para que los bloqueados no aparezcan en nuevos turnos.
+
+### Validación y Despliegue en Servidores:
+- **Compilación local**: `npm run build` con Turbopack exitosa (47/47 rutas en 61s, 0 errores).
+- **Control de Versiones**: Commits y push a `origin/main` y `origin/staging` (`d153f58`).
+- **Despliegue en Staging** (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`):
+  - Sincronización de base de datos PostgreSQL `agenda_db_staging`.
+  - Compilación Next.js en servidor y reinicio de PM2 (HTTP 200 OK).
+- **Despliegue en Producción** (`http://187.127.9.216:3006`, PM2 `gonzalo-agenda`):
+  - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261023_130738.sql` (7.8 MB).
+  - Sincronización de base de datos PostgreSQL `agenda_db`.
+  - Compilación Next.js en servidor y reinicio de PM2 (HTTP 200 OK).
+
