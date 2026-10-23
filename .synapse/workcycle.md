@@ -2085,9 +2085,9 @@
   4. **Despacho de Saludo de Cumpleaños Únicamente por Email (NO WhatsApp)**:
      - En el cron diario de las 10:00 AM (`src/lib/whatsapp.js`), suprimir el envío de mensajes por WhatsApp (`sendWhatsAppMessage`) y restringir el saludo automatizado exclusivamente a correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`).
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
-- [ ] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.
+- [x] Push a GitHub (`main` y `staging`).
+- [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [x] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.
 
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
@@ -2191,6 +2191,6 @@
   4. **Despacho de Saludo de Cumpleaños Únicamente por Email (NO WhatsApp)**:
      - En el cron diario de las 10:00 AM (`src/lib/whatsapp.js`), suprimir el envío de mensajes por WhatsApp (`sendWhatsAppMessage`) y restringir el saludo automatizado exclusivamente a correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`).
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
-- [ ] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.
+- [x] Push a GitHub (`main` y `staging`).
+- [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [x] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.
