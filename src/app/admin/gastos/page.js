@@ -246,7 +246,7 @@ export default function GastosPage() {
   // Handle open create gasto
   const handleOpenCreateGasto = () => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const initialDate = (todayStr >= startDate && todayStr <= endDate) ? todayStr : endDate;
+    const initialDate = (todayStr >= startDate && todayStr <= endDate) ? todayStr : (endDate || todayStr);
 
     setEditingGasto(null);
     setGastoForm({
@@ -258,7 +258,17 @@ export default function GastosPage() {
     });
     setGastoError('');
     setShowGastoModal(true);
+    if (!categorias || categorias.length === 0) {
+      fetchCategorias();
+    }
   };
+
+  // Sync category if loaded while modal is open
+  useEffect(() => {
+    if (showGastoModal && !gastoForm.categoriaId && categorias.length > 0) {
+      setGastoForm(prev => ({ ...prev, categoriaId: prev.categoriaId || categorias[0].id }));
+    }
+  }, [showGastoModal, categorias, gastoForm.categoriaId]);
 
   // Handle open edit gasto
   const handleOpenEditGasto = (gasto) => {
@@ -437,32 +447,26 @@ export default function GastosPage() {
         </div>
 
         <div className={styles.controls}>
-          <div className={styles.dateInputGroup}>
-            <label>Desde</label>
-            <input
-              type="date"
-              className={styles.dateInput}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
+          <div className={styles.dateInputsRow}>
+            <div className={styles.dateInputGroup}>
+              <label>Desde</label>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
 
-          <div className={styles.dateInputGroup}>
-            <label>Hasta</label>
-            <input
-              type="date"
-              className={styles.dateInput}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-
-          <div className={styles.quickPresetsRow}>
-            <button type="button" onClick={() => handlePresetDate('hoy')} className={styles.btnPreset}>Hoy</button>
-            <button type="button" onClick={() => handlePresetDate('ayer')} className={styles.btnPreset}>Ayer</button>
-            <button type="button" onClick={() => handlePresetDate('semana')} className={styles.btnPreset}>Esta Semana</button>
-            <button type="button" onClick={() => handlePresetDate('mes')} className={styles.btnPreset}>Este Mes</button>
-            <button type="button" onClick={() => handlePresetDate('mes_anterior')} className={styles.btnPreset}>Mes Anterior</button>
+            <div className={styles.dateInputGroup}>
+              <label>Hasta</label>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <button

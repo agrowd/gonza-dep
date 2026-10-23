@@ -319,7 +319,21 @@ export async function POST(request) {
     currentRow++;
 
     // 4. Row 4: Main Table Header (#1F2D3D Dark Navy with White Bold Text)
-    const headers = isModelA
+    const isModelC = summary.model === 'C';
+    const headers = isModelC
+      ? [
+          'Día Cumpleaños',
+          'Mes',
+          'Cliente',
+          'Edad',
+          'WhatsApp',
+          'Email',
+          'Canal de Origen',
+          'Estado',
+          'Notif. Email',
+          'Notif. WhatsApp'
+        ]
+      : isModelA
       ? [
           'Fecha de turno',
           'Hora',
@@ -359,7 +373,20 @@ export async function POST(request) {
       const sCenter = isEven ? 7 : 8;
       const sCurr = isEven ? 9 : 10;
 
-      if (isModelA) {
+      if (isModelC) {
+        pushRow(currentRow, 19, [
+          { col: 1, type: 's', value: String(item.diaCumple || item.diaMesCompact || '-'), style: sCenter },
+          { col: 2, type: 's', value: item.mesCumple || '-', style: sCenter },
+          { col: 3, type: 's', value: item.clienteNombre || '-', style: sText },
+          { col: 4, type: 's', value: item.edad ? `${item.edad} años` : '-', style: sCenter },
+          { col: 5, type: 's', value: item.whatsapp || '-', style: sCenter },
+          { col: 6, type: 's', value: item.email || '-', style: sText },
+          { col: 7, type: 's', value: item.canalAdquisicion || 'Orgánico', style: sText },
+          { col: 8, type: 's', value: item.estado || 'Activo', style: sCenter },
+          { col: 9, type: 's', value: item.notifEmail ? 'Activo' : 'Inactivo', style: sCenter },
+          { col: 10, type: 's', value: item.notifWhatsapp ? 'Activo' : 'Inactivo', style: sCenter }
+        ]);
+      } else if (isModelA) {
         const vFinal = Number(item.valorTotal || 0);
         const vSena = Number(item.valorSeña || 0);
         const estadoTurno = getEstadoTurnoLabel(item);
@@ -415,7 +442,32 @@ export async function POST(request) {
     currentRow++;
 
     // 8. Summary Body Rows
-    if (isModelA) {
+    if (isModelC) {
+      const modelCRows = [
+        { leftLabel: 'Cantidad de cumpleañeros', leftVal: summary.cantidadCumpleaneros || items.length, rightLabel: 'Canal de envío', rightVal: 'Únicamente por Email' },
+        { leftLabel: 'Clientes con Email activo', leftVal: summary.conEmail || 0, rightLabel: 'Horario del cron', rightVal: '10:00 AM (Día de cumpleaños)' },
+        { leftLabel: 'Clientes con WhatsApp registrado', leftVal: summary.conWpp || 0, rightLabel: 'Plantilla de saludo', rightVal: 'email_birthday_body' }
+      ];
+
+      for (const r of modelCRows) {
+        const rowCells = [];
+        rowCells.push(
+          { col: 1, type: 's', value: r.leftLabel, style: 13 },
+          { col: 2, type: 'empty', style: 13 },
+          { col: 3, type: typeof r.leftVal === 'number' ? 'n' : 's', value: r.leftVal, style: 14 }
+        );
+        merges.push(`A${currentRow}:B${currentRow}`);
+
+        rowCells.push(
+          { col: 6, type: 's', value: r.rightLabel, style: 13 },
+          { col: 7, type: 'empty', style: 13 },
+          { col: 8, type: 's', value: r.rightVal, style: 13 }
+        );
+        merges.push(`F${currentRow}:G${currentRow}`);
+        pushRow(currentRow, 19, rowCells);
+        currentRow++;
+      }
+    } else if (isModelA) {
       const modelARows = [
         { leftLabel: 'Cantidad de turnos', leftVal: summary.cantidadTurnos || 0, rightLabel: 'Valor total de turnos', rightVal: summary.valorTotalTurnos || 0 },
         { leftLabel: 'Cantidad de clientes únicos', leftVal: summary.cantidadClientesUnicos || 0, rightLabel: 'Total de señas aplicadas', rightVal: summary.totalSenasAplicadas || 0 },

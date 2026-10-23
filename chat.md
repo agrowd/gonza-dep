@@ -970,6 +970,27 @@
   - Sincronización de base de datos PostgreSQL `agenda_db`.
   - Compilación Next.js en servidor y reinicio de PM2 (HTTP 200 OK).
 
+---
+
+## 🚀 Sesión: 23 de Octubre de 2026 (Parte 2) - Carga de Gastos, Nivelación de Fechas, Exclusión de Zonas Otros, Métrica Cumpleañeros en Estadísticas y Saludo Solo por Email
+
+### Requerimientos de Luciano Gómez y Gonzalo Siri (`media_1792764624166_f317bcec.png` y `media_1792764667140_afec6706.png`):
+1. **Carga de Nuevo Gasto y Nivelación de Fechas (`/admin/gastos`)**:
+   - Corrección de error de runtime (`prevYear is not defined`) en `src/app/api/admin/gastos/route.js` que impedía cargar y guardar gastos nuevos arrojando HTTP 500 al filtrar por rango de fechas (`start`/`end`).
+   - Auto-seeding y categoría por defecto garantizada en `POST /api/admin/gastos`.
+   - Eliminación de los botones rápidos de preset (`[ Hoy ] [ Ayer ] [ Esta Semana ] ...`) según la captura anotada en rojo.
+   - Nivelación horizontal de los campos `Desde` y `Hasta` en grilla responsive (`.dateInputsRow`) con altura homogénea de 42px idéntica a los botones de acción (`+ Nuevo Gasto`, `Actualizar`).
+2. **Exclusión de Zonas "Otros" en Estadísticas (`/admin/estadisticas`)**:
+   - Exclusión de las píldoras de filtro y del gráfico histograma de todas las zonas de texto libre que comiencen con "Otros:" (`!z.nombre.toLowerCase().startsWith('otros')`), eliminando el desborde y ruido visual reportado.
+3. **Métrica de Clientes Cumpleañeros en Rango en Estadísticas (`/admin/estadisticas`)**:
+   - Incorporación de la métrica `🎂 Clientes que Cumplen Años en el Período` al selector desplegable de estadísticas.
+   - Filtrado en backend por día y mes de nacimiento (`fechaNacimiento`) en el rango seleccionado, calculando edad, datos de contacto y estado.
+   - Tarjetas KPI, tabla desktop, tarjetas móviles con botones directos `[ 💬 WhatsApp ]` y `[ 👤 Ficha ]`, y exportación a Excel Modelo C (`INFORME DE CLIENTES CUMPLEAÑEROS`).
+   - Visualización directa del listado en la pantalla principal debajo del banner sin requerir abrir el modal.
+4. **Despacho de Saludos de Cumpleaños Estrictamente por Email (NO WhatsApp)**:
+   - En la rutina automática diaria de las 10:00 AM (`src/lib/whatsapp.js`), se eliminó el envío de WhatsApp para cumpleaños (`sendWhatsAppMessage`) y se concentró el saludo al 100% por correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`) con diseño corporativo oscuro.
+
+
 
 ---
 
@@ -1072,4 +1093,25 @@
   - Backup preventivo de PostgreSQL generado: `agenda_db_pre_deploy_20261023_130738.sql` (7.8 MB).
   - Sincronización de base de datos PostgreSQL `agenda_db`.
   - Compilación Next.js en servidor y reinicio de PM2 (HTTP 200 OK).
+
+---
+
+## 🚀 Sesión: 23 de Octubre de 2026 (Parte 2) - Carga de Gastos, Nivelación de Fechas, Exclusión de Zonas Otros, Métrica Cumpleañeros en Estadísticas y Saludo Solo por Email
+
+### Requerimientos de Luciano Gómez y Gonzalo Siri (`media_1792764624166_f317bcec.png` y `media_1792764667140_afec6706.png`):
+1. **Carga de Nuevo Gasto y Nivelación de Fechas (`/admin/gastos`)**:
+   - Corrección de error de runtime (`prevYear is not defined`) en `src/app/api/admin/gastos/route.js` que impedía cargar y guardar gastos nuevos arrojando HTTP 500 al filtrar por rango de fechas (`start`/`end`).
+   - Auto-seeding y categoría por defecto garantizada en `POST /api/admin/gastos`.
+   - Eliminación de los botones rápidos de preset (`[ Hoy ] [ Ayer ] [ Esta Semana ] ...`) según la captura anotada en rojo.
+   - Nivelación horizontal de los campos `Desde` y `Hasta` en grilla responsive (`.dateInputsRow`) con altura homogénea de 42px idéntica a los botones de acción (`+ Nuevo Gasto`, `Actualizar`).
+2. **Exclusión de Zonas "Otros" en Estadísticas (`/admin/estadisticas`)**:
+   - Exclusión de las píldoras de filtro y del gráfico histograma de todas las zonas de texto libre que comiencen con "Otros:" (`!z.nombre.toLowerCase().startsWith('otros')`), eliminando el desborde y ruido visual reportado.
+3. **Métrica de Clientes Cumpleañeros en Rango en Estadísticas (`/admin/estadisticas`)**:
+   - Incorporación de la métrica `🎂 Clientes que Cumplen Años en el Período` al selector desplegable de estadísticas.
+   - Filtrado en backend por día y mes de nacimiento (`fechaNacimiento`) en el rango seleccionado, calculando edad, datos de contacto y estado.
+   - Tarjetas KPI, tabla desktop, tarjetas móviles con botones directos `[ 💬 WhatsApp ]` y `[ 👤 Ficha ]`, y exportación a Excel Modelo C (`INFORME DE CLIENTES CUMPLEAÑEROS`).
+   - Visualización directa del listado en la pantalla principal debajo del banner sin requerir abrir el modal.
+4. **Despacho de Saludos de Cumpleaños Estrictamente por Email (NO WhatsApp)**:
+   - En la rutina automática diaria de las 10:00 AM (`src/lib/whatsapp.js`), se eliminó el envío de WhatsApp para cumpleaños (`sendWhatsAppMessage`) y se concentró el saludo al 100% por correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`) con diseño corporativo oscuro.
+
 

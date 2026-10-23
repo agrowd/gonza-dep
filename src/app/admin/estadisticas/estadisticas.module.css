@@ -42,10 +42,19 @@
   gap: 0.85rem;
 }
 
+.dateInputsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 360px;
+}
+
 .dateInputGroup {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  width: 100%;
 }
 
 .dateInputGroup label {
@@ -66,6 +75,9 @@
   font-size: 0.9rem;
   font-weight: 600;
   outline: none;
+  height: 42px;
+  box-sizing: border-box;
+  width: 100%;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -888,6 +900,21 @@
   .controls {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .dateInputsRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .btnRefresh {
+    width: 100%;
+    justify-content: center;
   }
 
   .kpiGrid {

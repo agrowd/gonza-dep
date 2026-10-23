@@ -1,7 +1,7 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import prisma from './db.js';
-import { sendMaintenanceEmail, sendWhatsAppDisconnectAlertEmail, sendWhatsAppReconnectedAlertEmail, sendReminder7DaysEmail } from './email.js';
+import { sendMaintenanceEmail, sendWhatsAppDisconnectAlertEmail, sendWhatsAppReconnectedAlertEmail, sendReminder7DaysEmail, sendBirthdayEmail } from './email.js';
 import { canSendNotification } from './notifications.js';
 import fs from 'fs';
 
@@ -982,7 +982,7 @@ export async function checkAndSendReminders(force = false) {
     }
 
     // ==========================================
-    // 3. AUTOMATED BIRTHDAY GREETINGS (10:00 AM)
+    // 3. AUTOMATED BIRTHDAY GREETINGS (10:00 AM) - ÚNICAMENTE POR MAIL (NO WPP)
     // ==========================================
     try {
       const allClientsWithBirthday = await prisma.cliente.findMany({
@@ -1004,18 +1004,24 @@ export async function checkAndSendReminders(force = false) {
       });
 
       if (birthdayClients.length > 0) {
-        console.log(`[Reminder Cron] Found ${birthdayClients.length} clients with birthday today (${currentDay}/${currentMonth})!`);
-
-        const bdayConf = await prisma.configuracion.findUnique({ where: { key: 'wtsp_birthday_template' } });
-        const bdayTemplate = bdayConf?.value || '¡Feliz cumpleaños [Nombre]! 🎉🎂 Desde Gonzalo Depilación te deseamos que pases un excelente día. Para festejarlo, tenés un beneficio especial reservado en tu próxima sesión. ¡Que lo disfrutes mucho!';
+        console.log(`[Reminder Cron] Found ${birthdayClients.length} clients with birthday today (${currentDay}/${currentMonth})! Sending greetings strictly via EMAIL...`);
 
         for (const c of birthdayClients) {
-          if (!canSendNotification(c, 'WHATSAPP', 'ALTA')) continue;
+          if (!c.email || !c.email.trim()) {
+            console.log(`[Reminder Cron] Client ${c.nombreCompleto} has birthday today but no email address configured. Skipping.`);
+            continue;
+          }
 
-          // Check if already greeted this year
+          if (!canSendNotification(c, 'EMAIL', 'ALTA')) {
+            console.log(`[Reminder Cron] Notifications via EMAIL disabled for client ${c.nombreCompleto}. Skipping.`);
+            continue;
+          }
+
+          // Check if already greeted via email this year
           const alreadyGreeted = await prisma.notificacion.findFirst({
             where: {
               clienteId: c.id,
+              canal: 'EMAIL',
               mensaje: { contains: 'cumpleaños' },
               fechaEnvio: { gte: startOfCurrentYear },
               estado: 'ENVIADO'
@@ -1023,33 +1029,29 @@ export async function checkAndSendReminders(force = false) {
           });
 
           if (alreadyGreeted) {
-            console.log(`[Reminder Cron] Client ${c.nombreCompleto} was already greeted for their birthday this year. Skipping.`);
+            console.log(`[Reminder Cron] Client ${c.nombreCompleto} was already greeted via EMAIL for their birthday this year. Skipping.`);
             continue;
           }
 
-          const msg = bdayTemplate
-            .replaceAll('[Nombre]', c.nombreCompleto.split(' ')[0] || c.nombreCompleto)
-            .replaceAll('{cliente}', c.nombreCompleto);
-
           try {
-            console.log(`[Reminder Cron] Sending birthday greeting to ${c.nombreCompleto}...`);
-            await sendWhatsAppMessage(c.whatsapp, msg);
+            console.log(`[Reminder Cron] Sending birthday greeting email to ${c.nombreCompleto} (${c.email})...`);
+            await sendBirthdayEmail(c.email, c.nombreCompleto);
 
             await prisma.notificacion.create({
               data: {
                 clienteId: c.id,
-                canal: 'WHATSAPP',
-                mensaje: `Saludo de cumpleaños automático enviado: "${msg}"`,
+                canal: 'EMAIL',
+                mensaje: `Correo de cumpleaños automático enviado con éxito a ${c.email}`,
                 estado: 'ENVIADO'
               }
             });
           } catch (err) {
-            console.error(`[Reminder Cron] Failed to send birthday greeting to ${c.nombreCompleto}:`, err);
+            console.error(`[Reminder Cron] Failed to send birthday greeting email to ${c.nombreCompleto}:`, err);
             await prisma.notificacion.create({
               data: {
                 clienteId: c.id,
-                canal: 'WHATSAPP',
-                mensaje: `Error al enviar saludo de cumpleaños: ${err.message}`,
+                canal: 'EMAIL',
+                mensaje: `Error al enviar correo de cumpleaños a ${c.email}: ${err.message}`,
                 estado: 'FALLIDO'
               }
             });
@@ -1057,7 +1059,7 @@ export async function checkAndSendReminders(force = false) {
         }
       }
     } catch (bdayErr) {
-      console.error('[Reminder Cron] Error processing birthday greetings:', bdayErr);
+      console.error('[Reminder Cron] Error processing birthday greetings via email:', bdayErr);
     }
 
     if (!hasWppErrors) {

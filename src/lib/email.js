@@ -730,6 +730,60 @@ export async function sendReminder7DaysEmail(clientEmail, clientName, turnDetail
 }
 
 /**
+ * Sends an automated birthday greeting email to the client.
+ */
+export async function sendBirthdayEmail(clientEmail, clientName, customSubject, customBody) {
+  const { transporter, from, bcc } = getMailConfig();
+
+  let subjectTemplate = customSubject;
+  let bodyTemplate = customBody;
+
+  if (!subjectTemplate || !bodyTemplate) {
+    try {
+      const subjectConfig = await prisma.configuracion.findUnique({ where: { key: 'email_birthday_subject' } });
+      const bodyConfig = await prisma.configuracion.findUnique({ where: { key: 'email_birthday_body' } });
+      if (!subjectTemplate) subjectTemplate = subjectConfig?.value;
+      if (!bodyTemplate) bodyTemplate = bodyConfig?.value;
+    } catch (e) {
+      console.error('Error loading email_birthday config from DB:', e);
+    }
+  }
+
+  const defaultSubject = '¡Muy Feliz Cumpleaños! 🎉🎂 - Gonzalo Depilación';
+  const defaultBody = "¡Hola {cliente}!\n\nDe parte de todo el equipo de Gonzalo Depilación, queremos desearte un muy feliz cumpleaños 🎉🎂.\n\nEsperamos que disfrutes tu día al máximo. Como agradecimiento por tu confianza, tenés una bonificación especial reservada para tu próxima sesión.\n\n¡Felicidades!";
+
+  const cleanName = clientName || 'Cliente';
+  const firstName = cleanName.split(' ')[0] || cleanName;
+
+  const rawSubject = (subjectTemplate || defaultSubject)
+    .replaceAll('{cliente}', cleanName)
+    .replaceAll('[Nombre]', firstName);
+
+  const rawBody = (bodyTemplate || defaultBody)
+    .replaceAll('{cliente}', cleanName)
+    .replaceAll('[Nombre]', firstName);
+
+  const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, cleanName, {});
+  const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, cleanName, {});
+  const formattedBodyHtml = formatEmailParagraphs(bodyTextReplaced);
+
+  const htmlContent = buildDarkTemplateEmailHtml({
+    subject,
+    clientName: cleanName,
+    formattedBodyHtml,
+    includeGreeting: false
+  });
+
+  await transporter.sendMail({
+    from,
+    to: clientEmail,
+    bcc,
+    subject,
+    html: htmlContent
+  });
+}
+
+/**
  * Sends an administrative alert email when WhatsApp service disconnects or requires re-linking.
  */
 export async function sendWhatsAppDisconnectAlertEmail(reason = '', details = '') {

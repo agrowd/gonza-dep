@@ -645,6 +645,86 @@ export async function GET(request) {
     };
 
     // ==========================================
+    // 12. CUMPLEAÑOS DE CLIENTES EN EL PERÍODO
+    // ==========================================
+    const itemsCumpleanos = [];
+    const MESES_NOMBRES = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    const [startYearPeriod, startMonthPeriod, startDayPeriod] = startPeriodStr.split('-').map(Number);
+    const [endYearPeriod, endMonthPeriod, endDayPeriod] = endPeriodStr.split('-').map(Number);
+
+    allClients.forEach(c => {
+      if (!c.fechaNacimiento) return;
+      const bDate = new Date(c.fechaNacimiento);
+      if (isNaN(bDate.getTime())) return;
+
+      const birthMonth = bDate.getUTCMonth() + 1; // 1-12
+      const birthDay = bDate.getUTCDate();       // 1-31
+      const birthYear = bDate.getUTCFullYear();
+
+      // Verificar si el cumpleaños cae dentro del rango de fechas del período
+      for (let y = startYearPeriod; y <= endYearPeriod; y++) {
+        let safeDay = birthDay;
+        if (birthMonth === 2 && birthDay === 29) {
+          const isLeap = (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+          if (!isLeap) safeDay = 28;
+        }
+
+        const mStr = String(birthMonth).padStart(2, '0');
+        const dStr = String(safeDay).padStart(2, '0');
+        const candidateDateStr = `${y}-${mStr}-${dStr}`;
+
+        if (candidateDateStr >= startPeriodStr && candidateDateStr <= endPeriodStr) {
+          let edad = null;
+          if (birthYear > 1900 && birthYear !== 2000) {
+            edad = y - birthYear;
+          }
+
+          const mesNombre = MESES_NOMBRES[birthMonth - 1] || '';
+          const fechaCumpleDisplay = `${safeDay} de ${mesNombre}`;
+          const diaMesCompact = `${String(safeDay).padStart(2, '0')}/${mStr}`;
+
+          itemsCumpleanos.push({
+            id: `cumple-${c.id}-${y}`,
+            clienteId: c.id,
+            clienteNombre: c.nombreCompleto || 'Cliente',
+            whatsapp: c.whatsapp || '',
+            email: c.email || '',
+            fechaNacimiento: c.fechaNacimiento,
+            fechaCumpleanosPeriodo: candidateDateStr,
+            fechaCumpleanosDisplay: fechaCumpleDisplay,
+            diaMesCompact,
+            diaCumple: safeDay,
+            mesCumple: mesNombre,
+            edad,
+            canalAdquisicion: c.canalAdquisicion || 'ORGANICO',
+            estado: c.estado || 'ACTIVO',
+            notifEmail: Boolean(c.notifEmail && c.enviarNotificaciones),
+            notifWhatsapp: Boolean(c.notifWhatsapp && c.enviarNotificaciones),
+            turnosCount: (c.turnos || []).length,
+            // Campos de compatibilidad con grilla y tarjetas
+            fecha: candidateDateStr,
+            horaInicio: '00:00',
+            valorTotal: 0,
+            valorSeña: 0,
+            saldoPendiente: 0,
+            zonasTexto: `Cumpleaños: ${fechaCumpleDisplay}`,
+            estadoTurnoLabel: `🎂 Cumple ${diaMesCompact}`,
+            ultimoEstadoLabel: c.estado === 'ACTIVO' ? 'Activo' : 'Inactivo',
+            operadorNombre: 'Gonzalo'
+          });
+          break;
+        }
+      }
+    });
+
+    // Ordenar cronológicamente por día de cumpleaños dentro del período
+    itemsCumpleanos.sort((a, b) => a.fechaCumpleanosPeriodo.localeCompare(b.fechaCumpleanosPeriodo));
+
+    // ==========================================
     // ESTADÍSTICAS GENERALES (RENOVADAS)
     // ==========================================
     const turnosTotalesPeriodo = turnosPeriodo.length;
@@ -779,7 +859,11 @@ export async function GET(request) {
           histograma: histogramaZonas,
           catalog: zonasCatalog.map(z => z.nombre)
         },
-        operador: operadorData
+        operador: operadorData,
+        cumpleanos: {
+          count: itemsCumpleanos.length,
+          items: itemsCumpleanos
+        }
       },
       // Estadísticas Generales (Renovadas)
       generales: {

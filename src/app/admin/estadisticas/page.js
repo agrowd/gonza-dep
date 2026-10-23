@@ -106,6 +106,15 @@ const METRIC_DEFINITIONS = [
     hasAvg: true,
     excelModel: null,
     description: 'Análisis detallado por zona corporal, frecuencia de aplicación e ingresos.'
+  },
+  {
+    id: 'cumpleanos',
+    label: '🎂 Clientes que Cumplen Años en el Período',
+    valueLabel: 'Total Cumpleañeros',
+    isDanger: false,
+    hasAvg: false,
+    excelModel: 'C',
+    description: 'Clientes registrados que cumplen años dentro del rango de fechas seleccionado (según día y mes de nacimiento).'
   }
 ];
 
@@ -324,7 +333,7 @@ export default function EstadisticasPage() {
 
     if (selectedMetric === 'zonas') {
       const seenTurnoIds = new Set();
-      const hist = av.zonas?.histograma || [];
+      const hist = (av.zonas?.histograma || []).filter(z => !z.nombre.toLowerCase().startsWith('otros'));
       hist.forEach(zGroup => {
         if (selectedZonesFilter.length > 0 && !selectedZonesFilter.includes(zGroup.nombre)) {
           return;
@@ -341,6 +350,8 @@ export default function EstadisticasPage() {
       rawItems = selectedCanalesFilter.length > 0
         ? baseItems.filter(i => selectedCanalesFilter.includes(i.canalAdquisicion || 'ORGANICO'))
         : baseItems;
+    } else if (selectedMetric === 'cumpleanos') {
+      rawItems = av.cumpleanos?.items || [];
     } else {
       rawItems = av[selectedMetric]?.items || [];
     }
@@ -448,6 +459,22 @@ export default function EstadisticasPage() {
       };
     }
 
+    if (currentMetricDef.excelModel === 'C' || selectedMetric === 'cumpleanos') {
+      let conEmail = 0;
+      let conWpp = 0;
+      items.forEach(item => {
+        if (item.notifEmail) conEmail++;
+        if (item.whatsapp) conWpp++;
+      });
+      return {
+        model: 'C',
+        title: 'INFORME DE CUMPLEAÑOS DE CLIENTES EN EL PERÍODO',
+        cantidadCumpleaneros: items.length,
+        conEmail,
+        conWpp
+      };
+    }
+
     // Modelo B: Cancelaciones y Seguimiento
     let clientesAusentes = 0;
     let clientesVaAAvisar = 0;
@@ -541,20 +568,145 @@ export default function EstadisticasPage() {
         {/* VISTA ESCRITORIO (Tabla horizontal) */}
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Acciones</th>
-                <th className={styles.th}>Fecha y Hora</th>
-                <th className={styles.th}>Cliente</th>
-                <th className={styles.th}>Zonas</th>
-                <th className={styles.th}>Estado</th>
-                <th className={styles.th}>Pago / Operador</th>
-                <th className={styles.th}>Valor Turno</th>
-                <th className={styles.th}>Seña / Saldo</th>
-              </tr>
-            </thead>
+            {selectedMetric === 'cumpleanos' ? (
+              <thead>
+                <tr>
+                  <th className={styles.th}>Acciones</th>
+                  <th className={styles.th}>🎂 Fecha Cumpleaños</th>
+                  <th className={styles.th}>Cliente</th>
+                  <th className={styles.th}>Edad</th>
+                  <th className={styles.th}>WhatsApp</th>
+                  <th className={styles.th}>Email</th>
+                  <th className={styles.th}>Notificación de Saludo</th>
+                  <th className={styles.th}>Canal / Estado</th>
+                </tr>
+              </thead>
+            ) : (
+              <thead>
+                <tr>
+                  <th className={styles.th}>Acciones</th>
+                  <th className={styles.th}>Fecha y Hora</th>
+                  <th className={styles.th}>Cliente</th>
+                  <th className={styles.th}>Zonas</th>
+                  <th className={styles.th}>Estado</th>
+                  <th className={styles.th}>Pago / Operador</th>
+                  <th className={styles.th}>Valor Turno</th>
+                  <th className={styles.th}>Seña / Saldo</th>
+                </tr>
+              </thead>
+            )}
             <tbody>
               {activeMetricData.filteredItems.map(item => {
+                if (selectedMetric === 'cumpleanos') {
+                  const cleanWpp = (item.whatsapp || '').replace(/\D/g, '');
+                  const wppLink = cleanWpp ? `https://wa.me/${cleanWpp}` : null;
+                  return (
+                    <tr key={item.id} className={styles.tr}>
+                      <td className={styles.td}>
+                        <div className={styles.actionsCell}>
+                          <button
+                            type="button"
+                            className={styles.btnActionX}
+                            title="Excluir del cálculo"
+                            onClick={() => toggleExcludeId(item.id)}
+                          >
+                            ✕
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.btnActionFicha}
+                            title="Ver ficha clínica del cliente"
+                            onClick={() => handleOpenFicha(item.clienteId)}
+                          >
+                            <UserIcon /> Ficha
+                          </button>
+                          {wppLink && (
+                            <a
+                              href={wppLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.btnActionTurno}
+                              style={{ textDecoration: 'none', background: '#15803d', borderColor: '#15803d', color: '#fff' }}
+                              title="Abrir chat de WhatsApp"
+                            >
+                              💬 Wpp
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 800, color: '#7a1f1e', fontSize: '0.98rem' }}>
+                          🎂 {item.fechaCumpleanosDisplay}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
+                          Día {item.diaCumple} de {item.mesCumple}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 800, color: '#1d1d1d' }}>{item.clienteNombre}</div>
+                        <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600 }}>
+                          {item.turnosCount || 0} turnos históricos
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 700, color: '#1d1d1d' }}>
+                          {item.edad ? `${item.edad} años` : '-'}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 700, color: '#1d1d1d', fontSize: '0.86rem' }}>
+                          📱 {item.whatsapp || 'Sin WhatsApp'}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 600, color: '#1d1d1d', fontSize: '0.84rem' }}>
+                          ✉️ {item.email || 'Sin Email'}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        {item.notifEmail ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            background: '#dcfce7',
+                            color: '#15803d'
+                          }}>
+                            ✓ Email Activo
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            background: '#fee2e2',
+                            color: '#b91c1c'
+                          }}>
+                            ✕ Email Apagado
+                          </span>
+                        )}
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                          Envío auto. 10:00 AM
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 700, color: '#1d1d1d', fontSize: '0.82rem' }}>
+                          {CANAL_LABELS[item.canalAdquisicion] || item.canalAdquisicion || 'Orgánico'}
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: item.estado === 'ACTIVO' ? '#15803d' : '#64748b', fontWeight: 700 }}>
+                          {item.estado === 'ACTIVO' ? '🟢 Activo' : '🔒 Inactivo'}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
                 let badgeClass = styles.statusSenado;
                 if (item.estado === 'REALIZADO') badgeClass = styles.statusRealizado;
                 else if (item.estado === 'CANCELADO') badgeClass = styles.statusCancelado;
@@ -667,6 +819,72 @@ export default function EstadisticasPage() {
         {/* VISTA MÓVIL (Tarjetas oscuras compactas sin scroll horizontal) */}
         <div className={styles.mobileTurnosList}>
           {activeMetricData.filteredItems.map(item => {
+            if (selectedMetric === 'cumpleanos') {
+              const cleanWpp = (item.whatsapp || '').replace(/\D/g, '');
+              const wppLink = cleanWpp ? `https://wa.me/${cleanWpp}` : null;
+              return (
+                <div key={item.id} className={styles.mobileTurnoCard}>
+                  <div className={styles.mobileCardTopRow}>
+                    <div className={styles.mobileCardClientName}>
+                      {item.clienteNombre}
+                    </div>
+                    <div className={styles.mobileCardTotalVal} style={{ color: '#d4a54d' }}>
+                      🎂 {item.diaMesCompact || item.fechaCumpleanosDisplay}
+                    </div>
+                  </div>
+
+                  <div className={styles.mobileCardSecondRow}>
+                    <div className={styles.mobileCardDateTime}>
+                      {item.fechaCumpleanosDisplay}
+                    </div>
+                    <div className={styles.mobileCardSenaVal} style={{ color: '#93c5fd' }}>
+                      {item.edad ? `${item.edad} años` : 'Cumpleaños'}
+                    </div>
+                  </div>
+
+                  <div className={styles.mobileCardZonas} style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>
+                    📱 {item.whatsapp || 'Sin WhatsApp'} &nbsp;•&nbsp; ✉️ {item.email || 'Sin Email'}
+                  </div>
+
+                  <div className={styles.mobileCardBottomRow}>
+                    <div className={styles.mobileCardStatus} style={{ fontSize: '0.76rem' }}>
+                      {item.notifEmail ? '✉️ Email activo (10:00 hs)' : '✕ Email apagado'}
+                    </div>
+                    <div className={styles.mobileCardActions}>
+                      <button
+                        type="button"
+                        className={styles.mobileCardActionBtn}
+                        title="Excluir de cálculo"
+                        onClick={() => toggleExcludeId(item.id)}
+                      >
+                        ✕
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.mobileCardActionBtn}
+                        title="Ver Ficha Clínica"
+                        onClick={() => handleOpenFicha(item.clienteId)}
+                      >
+                        <UserIcon />
+                      </button>
+                      {wppLink && (
+                        <a
+                          href={wppLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.mobileCardActionBtn}
+                          style={{ textDecoration: 'none', background: '#15803d', borderColor: '#15803d', color: '#fff' }}
+                          title="Contactar por WhatsApp"
+                        >
+                          💬
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             const moneyVal = formatMoney(
               selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
                 ? item.oportunidadNoConcretada
@@ -760,24 +978,26 @@ export default function EstadisticasPage() {
         </div>
 
         <div className={styles.controls}>
-          <div className={styles.dateInputGroup}>
-            <label>Desde</label>
-            <input
-              type="date"
-              className={styles.dateInput}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
+          <div className={styles.dateInputsRow}>
+            <div className={styles.dateInputGroup}>
+              <label>Desde</label>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
 
-          <div className={styles.dateInputGroup}>
-            <label>Hasta</label>
-            <input
-              type="date"
-              className={styles.dateInput}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <div className={styles.dateInputGroup}>
+              <label>Hasta</label>
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <button
@@ -850,37 +1070,60 @@ export default function EstadisticasPage() {
           {/* 3 TARJETAS KPI DE LA MÉTRICA SELECCIONADA */}
           <div className={styles.kpiGrid}>
             <div className={styles.kpiCard}>
-              <div className={styles.kpiLabel}>Cantidad de Registros</div>
-              <div className={styles.kpiValue}>{activeMetricData.count}</div>
+              <div className={styles.kpiLabel}>
+                {selectedMetric === 'cumpleanos' ? 'Cumpleañeros en el Período' : 'Cantidad de Registros'}
+              </div>
+              <div className={styles.kpiValue} style={{ color: selectedMetric === 'cumpleanos' ? '#d4a54d' : undefined }}>
+                {activeMetricData.count}
+              </div>
               <div className={styles.kpiSub}>
                 {excludedIds.size > 0
                   ? `${excludedIds.size} excluido(s) manualmente con [X]`
-                  : 'Total contabilizado en el período'}
+                  : selectedMetric === 'cumpleanos'
+                    ? 'Clientes con cumpleaños en este rango'
+                    : 'Total contabilizado en el período'}
               </div>
             </div>
 
             <div className={`${styles.kpiCard} ${currentMetricDef.isDanger ? styles.kpiCardDanger : ''}`}>
-              <div className={styles.kpiLabel}>{currentMetricDef.valueLabel}</div>
+              <div className={styles.kpiLabel}>
+                {selectedMetric === 'cumpleanos' ? 'Rango Evaluado' : currentMetricDef.valueLabel}
+              </div>
               <div
                 className={styles.kpiValue}
-                style={{ color: currentMetricDef.isDanger ? '#dc2626' : '#7a1f1e' }}
+                style={{
+                  color: selectedMetric === 'cumpleanos' ? '#7a1f1e' : (currentMetricDef.isDanger ? '#dc2626' : '#7a1f1e'),
+                  fontSize: selectedMetric === 'cumpleanos' ? '1.35rem' : undefined
+                }}
               >
-                {formatMoney(activeMetricData.totalMoney)}
+                {selectedMetric === 'cumpleanos'
+                  ? `${formatDateDisplay(startDate)} al ${formatDateDisplay(endDate)}`
+                  : formatMoney(activeMetricData.totalMoney)}
               </div>
               <div className={styles.kpiSub}>
-                {selectedMetric === 'gananciaNeta'
-                  ? `Saldos sesiones: ${formatMoney(data.avanzadas?.gananciaNeta?.entradasTurnos)} + Señas: ${formatMoney(data.avanzadas?.gananciaNeta?.entradasSenas)}`
-                  : 'Se actualiza en vivo al filtrar o excluir filas'}
+                {selectedMetric === 'cumpleanos'
+                  ? 'Filtro por día y mes de nacimiento'
+                  : selectedMetric === 'gananciaNeta'
+                    ? `Saldos sesiones: ${formatMoney(data.avanzadas?.gananciaNeta?.entradasTurnos)} + Señas: ${formatMoney(data.avanzadas?.gananciaNeta?.entradasSenas)}`
+                    : 'Se actualiza en vivo al filtrar o excluir filas'}
               </div>
             </div>
 
-            {currentMetricDef.hasAvg && (
+            {selectedMetric === 'cumpleanos' ? (
+              <div className={`${styles.kpiCard} ${styles.kpiCardInfo}`}>
+                <div className={styles.kpiLabel}>Canal de Saludo</div>
+                <div className={styles.kpiValue} style={{ fontSize: '1.25rem', color: '#15803d' }}>
+                  ✉️ Solo por Email
+                </div>
+                <div className={styles.kpiSub}>Envío automático diario a las 10:00 AM</div>
+              </div>
+            ) : currentMetricDef.hasAvg ? (
               <div className={`${styles.kpiCard} ${styles.kpiCardInfo}`}>
                 <div className={styles.kpiLabel}>Ticket Promedio</div>
                 <div className={styles.kpiValue}>{formatMoney(activeMetricData.avgTicket)}</div>
                 <div className={styles.kpiSub}>Promedio por turno / cliente en esta métrica</div>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* DESGLOSE DE LOS 3 CONCEPTOS DE GANANCIA NETA (CAPTURA 10.PNG DE LUCIANO) */}
@@ -933,16 +1176,18 @@ export default function EstadisticasPage() {
                   >
                     Todas las Zonas
                   </button>
-                  {(data.avanzadas.zonas.histograma || []).map(z => (
-                    <button
-                      type="button"
-                      key={z.nombre}
-                      className={`${styles.pillBtn} ${selectedZonesFilter.includes(z.nombre) ? styles.pillBtnActive : ''}`}
-                      onClick={() => toggleZoneFilter(z.nombre)}
-                    >
-                      {z.nombre} ({z.total})
-                    </button>
-                  ))}
+                  {(data.avanzadas.zonas.histograma || [])
+                    .filter(z => !z.nombre.toLowerCase().startsWith('otros'))
+                    .map(z => (
+                      <button
+                        type="button"
+                        key={z.nombre}
+                        className={`${styles.pillBtn} ${selectedZonesFilter.includes(z.nombre) ? styles.pillBtnActive : ''}`}
+                        onClick={() => toggleZoneFilter(z.nombre)}
+                      >
+                        {z.nombre} ({z.total})
+                      </button>
+                    ))}
                 </div>
               </div>
 
@@ -955,7 +1200,8 @@ export default function EstadisticasPage() {
                 </div>
                 <div className={styles.barsContainer}>
                   {(() => {
-                    const list = data.avanzadas.zonas.histograma || [];
+                    const list = (data.avanzadas.zonas.histograma || [])
+                      .filter(z => !z.nombre.toLowerCase().startsWith('otros'));
                     const maxCount = Math.max(1, ...list.map(i => i.total));
                     return list
                       .filter(z => selectedZonesFilter.length === 0 || selectedZonesFilter.includes(z.nombre))
@@ -1044,6 +1290,11 @@ export default function EstadisticasPage() {
               </button>
             </div>
           )}
+
+          {/* LISTADO PRINCIPAL DE REGISTROS (TABLA EN DESKTOP / TARJETAS EN MOBILE) */}
+          <div style={{ marginTop: '1.25rem' }}>
+            {renderTurnosTable()}
+          </div>
         </>
       )}
 

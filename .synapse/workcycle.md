@@ -2066,6 +2066,29 @@
 - [x] Desplegar en Producción con backup preventivo de PostgreSQL `agenda_db_pre_deploy_20261023_130738.sql` (7.8 MB) (`http://187.127.9.216:3006`, PM2 `gonzalo-agenda`, HTTP 200 OK).
 - [x] Documentar en `.synapse/decisions.md` (D-127), `.synapse/workcycle.md` y `chat.md`.
 
+## 📅 Sesión: 23 de Octubre de 2026 (Parte 2 - Gastos: Nivelación y Carga, Estadísticas: Exclusión Zonas Otros y Métrica Cumpleañeros, y Saludos Exclusivos por Email)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver los 4 requerimientos solicitados con capturas de WhatsApp (`media_1792764624166_f317bcec.png` y `media_1792764667140_afec6706.png`):
+  1. **Nuevo Gasto y Nivelación de Fechas (`/admin/gastos`)**:
+     - Subsanar error de runtime en `src/app/api/admin/gastos/route.js` provocado por la variable `prevYear` fuera de alcance cuando se recibían `start` y `end`, que arrojaba HTTP 500 al consultar y guardar gastos.
+     - Agregar auto-seeding y categoría fallback en `POST /api/admin/gastos`.
+     - Eliminar botones rápidos de preset (`[ Hoy ] [ Ayer ] [ Esta Semana ] ...`) tachados en rojo en `media_1792764624166_f317bcec.png`.
+     - Nivelar horizontalmente los inputs de fecha `Desde` y `Hasta` en una grilla responsive de 2 columnas (`.dateInputsRow`, altura 42px idéntica a los botones de acción).
+  2. **Exclusión de Zonas "Otros" en Estadísticas (`/admin/estadisticas`)**:
+     - Ocultar de las píldoras de filtro y del histograma todas las zonas que comienzan con "Otros:" (`!z.nombre.toLowerCase().startsWith('otros')`), eliminando el ruido visual de zonas puntuales de texto libre.
+  3. **Métrica de Clientes Cumpleañeros en Rango en Estadísticas (`/admin/estadisticas`)**:
+     - Incorporar la métrica `🎂 Clientes que Cumplen Años en el Período` al selector de métricas.
+     - Calcular en backend los clientes cuyo día y mes de nacimiento caen en el intervalo `Desde` - `Hasta`, calculando edad (si año != 2000), contacto y permisos.
+     - Implementar tarjetas KPI, tabla de escritorio dedicada, tarjetas móviles con botones directos `[ 💬 WhatsApp ]` y `[ 👤 Ficha ]`, y exportación a Excel Modelo C.
+     - Renderizar directamente la tabla de registros en la vista principal debajo del banner sin requerir abrir el modal.
+  4. **Despacho de Saludo de Cumpleaños Únicamente por Email (NO WhatsApp)**:
+     - En el cron diario de las 10:00 AM (`src/lib/whatsapp.js`), suprimir el envío de mensajes por WhatsApp (`sendWhatsAppMessage`) y restringir el saludo automatizado exclusivamente a correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`).
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [ ] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.
+
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
 ### 🎯 Tareas en curso / Objetivos
@@ -2148,3 +2171,26 @@
 - [x] Desplegar en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`, HTTP 200 OK).
 - [x] Desplegar en Producción con backup preventivo de PostgreSQL `agenda_db_pre_deploy_20261023_130738.sql` (7.8 MB) (`http://187.127.9.216:3006`, PM2 `gonzalo-agenda`, HTTP 200 OK).
 - [x] Documentar en `.synapse/decisions.md` (D-127), `.synapse/workcycle.md` y `chat.md`.
+
+## 📅 Sesión: 23 de Octubre de 2026 (Parte 2 - Gastos: Nivelación y Carga, Estadísticas: Exclusión Zonas Otros y Métrica Cumpleañeros, y Saludos Exclusivos por Email)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver los 4 requerimientos solicitados con capturas de WhatsApp (`media_1792764624166_f317bcec.png` y `media_1792764667140_afec6706.png`):
+  1. **Nuevo Gasto y Nivelación de Fechas (`/admin/gastos`)**:
+     - Subsanar error de runtime en `src/app/api/admin/gastos/route.js` provocado por la variable `prevYear` fuera de alcance cuando se recibían `start` y `end`, que arrojaba HTTP 500 al consultar y guardar gastos.
+     - Agregar auto-seeding y categoría fallback en `POST /api/admin/gastos`.
+     - Eliminar botones rápidos de preset (`[ Hoy ] [ Ayer ] [ Esta Semana ] ...`) tachados en rojo en `media_1792764624166_f317bcec.png`.
+     - Nivelar horizontalmente los inputs de fecha `Desde` y `Hasta` en una grilla responsive de 2 columnas (`.dateInputsRow`, altura 42px idéntica a los botones de acción).
+  2. **Exclusión de Zonas "Otros" en Estadísticas (`/admin/estadisticas`)**:
+     - Ocultar de las píldoras de filtro y del histograma todas las zonas que comienzan con "Otros:" (`!z.nombre.toLowerCase().startsWith('otros')`), eliminando el ruido visual de zonas puntuales de texto libre.
+  3. **Métrica de Clientes Cumpleañeros en Rango en Estadísticas (`/admin/estadisticas`)**:
+     - Incorporar la métrica `🎂 Clientes que Cumplen Años en el Período` al selector de métricas.
+     - Calcular en backend los clientes cuyo día y mes de nacimiento caen en el intervalo `Desde` - `Hasta`, calculando edad (si año != 2000), contacto y permisos.
+     - Implementar tarjetas KPI, tabla de escritorio dedicada, tarjetas móviles con botones directos `[ 💬 WhatsApp ]` y `[ 👤 Ficha ]`, y exportación a Excel Modelo C.
+     - Renderizar directamente la tabla de registros en la vista principal debajo del banner sin requerir abrir el modal.
+  4. **Despacho de Saludo de Cumpleaños Únicamente por Email (NO WhatsApp)**:
+     - En el cron diario de las 10:00 AM (`src/lib/whatsapp.js`), suprimir el envío de mensajes por WhatsApp (`sendWhatsAppMessage`) y restringir el saludo automatizado exclusivamente a correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`).
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [ ] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.

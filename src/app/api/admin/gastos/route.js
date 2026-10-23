@@ -87,8 +87,6 @@ export async function GET(request) {
       startOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000Z`);
       endOfPrevMonthFecha = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999Z`);
     }
-    const startOfPrevMonthCreated = new Date(`${prevYear}-${prevMonthStr}-01T00:00:00.000-03:00`);
-    const endOfPrevMonthCreated = new Date(`${prevYear}-${prevMonthStr}-${prevLastDayStr}T23:59:59.999-03:00`);
 
     // Fetch in parallel:
     // 1. Gastos del mes actual
@@ -372,15 +370,46 @@ export async function POST(request) {
       return NextResponse.json({ error: 'El monto debe ser un número positivo.' }, { status: 400 });
     }
 
-    if (!categoriaId) {
-      return NextResponse.json({ error: 'Debe seleccionar una categoría para el gasto.' }, { status: 400 });
+    // Asegurar que existan categorías en la base de datos
+    let targetCategoriaId = categoriaId;
+    let categoryExists = null;
+
+    if (targetCategoriaId) {
+      categoryExists = await prisma.categoriaGasto.findUnique({
+        where: { id: targetCategoriaId }
+      });
     }
 
-    const categoryExists = await prisma.categoriaGasto.findUnique({
-      where: { id: categoriaId }
-    });
     if (!categoryExists) {
-      return NextResponse.json({ error: 'La categoría seleccionada no existe.' }, { status: 400 });
+      // Si la categoría enviada no existe o vino vacía, buscar la primera disponible
+      let firstCat = await prisma.categoriaGasto.findFirst({
+        orderBy: { nombre: 'asc' }
+      });
+
+      // Si no hay ninguna categoría registrada, crear las categorías por defecto
+      if (!firstCat) {
+        const DEFAULT_CATEGORIAS = [
+          { nombre: 'Insumos y Descartables', color: '#0284c7' },
+          { nombre: 'Servicios y Alquiler', color: '#8b5cf6' },
+          { nombre: 'Mantenimiento y Máquinas', color: '#f59e0b' },
+          { nombre: 'Publicidad y Marketing', color: '#10b981' },
+          { nombre: 'Sueldos y Honorarios', color: '#ef4444' },
+          { nombre: 'Impuestos y Tasas', color: '#ec4899' },
+          { nombre: 'Otros Gastos', color: '#64748b' }
+        ];
+        for (const cat of DEFAULT_CATEGORIAS) {
+          firstCat = await prisma.categoriaGasto.create({ data: cat }).catch(() => null);
+        }
+        if (!firstCat) {
+          firstCat = await prisma.categoriaGasto.findFirst();
+        }
+      }
+
+      if (firstCat) {
+        targetCategoriaId = firstCat.id;
+      } else {
+        return NextResponse.json({ error: 'Debe crear o seleccionar una categoría para el gasto.' }, { status: 400 });
+      }
     }
 
     let parsedFecha;
@@ -395,7 +424,7 @@ export async function POST(request) {
         concepto: concepto.trim(),
         monto: numericMonto,
         fecha: parsedFecha,
-        categoriaId,
+        categoriaId: targetCategoriaId,
         observaciones: observaciones?.trim() || null
       },
       include: {
