@@ -2113,9 +2113,9 @@
      - Actualizar la regla para que los mensajes automáticos de "Va a avisar" se despachen exactamente **1 semana antes** de la fecha del próximo turno (`última sesión + (frecuencia - 1) semanas`).
      - Mantener los mensajes automáticos de "Mantenimiento" a los **75 días (2,5 meses)** de su última sesión.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
-- [ ] Documentar en `.synapse/decisions.md` (D-129), `.synapse/workcycle.md` y `chat.md`.
+- [x] Push a GitHub (`main` y `staging`).
+- [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [x] Documentar en `.synapse/decisions.md` (D-129), `.synapse/workcycle.md` y `chat.md`.
 
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
@@ -2247,6 +2247,6 @@
      - Actualizar la regla para que los mensajes automáticos de "Va a avisar" se despachen exactamente **1 semana antes** de la fecha del próximo turno (`última sesión + (frecuencia - 1) semanas`).
      - Mantener los mensajes automáticos de "Mantenimiento" a los **75 días (2,5 meses)** de su última sesión.
 - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-- [ ] Push a GitHub (`main` y `staging`).
-- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
-- [ ] Documentar en `.synapse/decisions.md` (D-129), `.synapse/workcycle.md` y `chat.md`.
+- [x] Push a GitHub (`main` y `staging`).
+- [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [x] Documentar en `.synapse/decisions.md` (D-129), `.synapse/workcycle.md` y `chat.md`.
