@@ -1171,3 +1171,27 @@
 
 
 
+---
+
+## 🚀 Sesión: 23 de Octubre de 2026 (Parte 4) - Ganancia Neta: Corrección de Ingreso Real y Seña para Turnos Sin Próximo Turno (Caso Jorge Mc Carthy)
+
+### Diagnóstico y Requerimiento de Luciano Gómez (`media_1792769292809_8224aa12.png`):
+> *"Acá en el valor neto del turno de Jorge en el Excel y acá está mal, le marcamos el turno como 'Mantenimiento' osea que no agendo siguiente turno, así que no tuvo que aplicar la seña en la cuenta porque solo pago el restante de su sesión. El sistema lo tomo como que se hizo otro turno o nose"*
+
+### Causa Raíz:
+- Jorge Mc Carthy se atendió el 22/10/2026 (`valorTotal = $109.000`). Su seña de $67.000 había sido pagada y contabilizada el 05/10/2026 cuando reservó el turno. En la sesión del 22/10 abonó únicamente el saldo pendiente de **$42.000**, y como pasó a estado *Mantenimiento*, no agendó un nuevo turno con seña.
+- El backend en `itemsGananciaNeta` ya calculaba correctamente $42.000 como ingreso real de esa fila, y el total de la jornada daba exactamente **$362.000** (como mostraba el título del modal).
+- Sin embargo, en el frontend (`src/app/admin/estadisticas/page.js`) y en la exportación (`src/app/api/admin/estadisticas/exportar-excel/route.js`), las tarjetas móviles, la tabla desktop y las columnas de Excel renderizaban incondicionalmente `item.valorTotal` ($109.000) e `item.valorSeña` ($67.000), dando la apariencia falsa de que Jorge había dejado una nueva seña o que habían ingresado $109.000 en el período.
+
+### Solución Implementada:
+1. **Propiedades Contables en Backend (`src/app/api/admin/estadisticas/route.js`)**:
+   - Se añadieron `señaCobradaPeriodo` y `saldoCobradoPeriodo` en `formatTurnoItem`.
+   - Para turnos sin siguiente turno, `señaCobradaPeriodo = 0` (o seña del turno si fue creado en el período) y `saldoCobradoPeriodo = saldo` ($42.000 para Jorge).
+2. **Frontend de Estadísticas (`src/app/admin/estadisticas/page.js`)**:
+   - Cuando `selectedMetric === 'gananciaNeta'`, la tarjeta móvil y la tabla desktop muestran el ingreso real ingresado en el período (`item.ingresoCobradoPeriodo`, $42.000 para Jorge) y en el detalle de seña reflejan `Saldo cobrado: $42.000 (Sin nuevo turno)` con seña en $0, erradicando la falsa seña verde de $67.000.
+   - En el cálculo de `excelSummary`, para Ganancia Neta, `vFinal` toma `item.ingresoCobradoPeriodo`, `vSena` toma `item.señaCobradaPeriodo` y `vSaldo` toma `item.saldoCobradoPeriodo`, cuadrando matemáticamente el resumen del período en **$362.000**.
+   - En el modal de listado ampliado y modal de Excel, los encabezados y filas reflejan `Ingreso real` y `Seña cobrada`.
+3. **Exportación a Excel (`src/app/api/admin/estadisticas/exportar-excel/route.js`)**:
+   - Cuando la métrica es Ganancia Neta, los encabezados de columna se adaptan a `Ingreso real` y `Seña cobrada`.
+   - Los valores de las celdas reflejan `item.ingresoCobradoPeriodo` ($42.000 para Jorge) y `item.señaCobradaPeriodo` ($0 para Jorge).
+   - En el cuadro inferior de resumen: `Ingreso total real` ($362.000), `Total señas cobradas` y `Total saldos cobrados`.

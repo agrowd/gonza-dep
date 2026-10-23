@@ -402,6 +402,8 @@ export default function EstadisticasPage() {
       let valorEfectivo = 0;
       let valorTransferencia = 0;
 
+      const isGN = selectedMetric === 'gananciaNeta';
+
       items.forEach(item => {
         if (item.clienteId) {
           uniqueClientIds.add(item.clienteId);
@@ -409,9 +411,15 @@ export default function EstadisticasPage() {
             clientOriginMap.set(item.clienteId, item.origenCategoria || 'Orgánico');
           }
         }
-        const vFinal = Number(item.valorTotal || 0);
-        const vSena = Number(item.valorSeña || 0);
-        const vSaldo = Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
+        const vFinal = isGN
+          ? Number(item.ingresoCobradoPeriodo ?? item.valorTotal ?? 0)
+          : Number(item.valorTotal || 0);
+        const vSena = isGN
+          ? Number(item.señaCobradaPeriodo ?? 0)
+          : Number(item.valorSeña || 0);
+        const vSaldo = isGN
+          ? Number(item.saldoCobradoPeriodo ?? Math.max(0, vFinal - vSena))
+          : Number(item.saldoPendiente ?? Math.max(0, vFinal - vSena));
 
         valorTotalTurnos += vFinal;
         totalSenasAplicadas += vSena;
@@ -590,8 +598,12 @@ export default function EstadisticasPage() {
                   <th className={styles.th}>Zonas</th>
                   <th className={styles.th}>Estado</th>
                   <th className={styles.th}>Pago / Operador</th>
-                  <th className={styles.th}>Valor Turno</th>
-                  <th className={styles.th}>Seña / Saldo</th>
+                  <th className={styles.th}>
+                    {selectedMetric === 'gananciaNeta' ? 'Ingreso Real' : 'Valor Turno'}
+                  </th>
+                  <th className={styles.th}>
+                    {selectedMetric === 'gananciaNeta' ? 'Seña / Saldo' : 'Seña / Saldo'}
+                  </th>
                 </tr>
               </thead>
             )}
@@ -792,7 +804,9 @@ export default function EstadisticasPage() {
                         {formatMoney(
                           selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
                             ? item.oportunidadNoConcretada
-                            : item.valorTotal
+                            : selectedMetric === 'gananciaNeta'
+                              ? item.ingresoCobradoPeriodo
+                              : item.valorTotal
                         )}
                       </div>
                       {(selectedMetric === 'cancelados' || selectedMetric === 'ausentes') && item.señaRetenida > 0 && (
@@ -800,14 +814,32 @@ export default function EstadisticasPage() {
                           (Turno {formatMoney(item.valorTotal)} - Seña ret. {formatMoney(item.señaRetenida)})
                         </div>
                       )}
+                      {selectedMetric === 'gananciaNeta' && item.subtipoGanancia?.includes('sin siguiente') && (
+                        <div style={{ fontSize: '0.73rem', color: '#15803d', fontWeight: 700 }}>
+                          (Solo saldo en sesión)
+                        </div>
+                      )}
                     </td>
                     <td className={styles.td}>
-                      <div style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700 }}>
-                        Seña: {formatMoney(item.valorSeña)}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
-                        Saldo: {formatMoney(item.saldoPendiente)}
-                      </div>
+                      {selectedMetric === 'gananciaNeta' ? (
+                        <>
+                          <div style={{ fontSize: '0.8rem', color: (item.señaCobradaPeriodo || 0) > 0 ? '#15803d' : '#64748b', fontWeight: 700 }}>
+                            Seña: {formatMoney(item.señaCobradaPeriodo || 0)}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                            Saldo: {formatMoney(item.saldoCobradoPeriodo || 0)}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700 }}>
+                            Seña: {formatMoney(item.valorSeña)}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                            Saldo: {formatMoney(item.saldoPendiente)}
+                          </div>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -885,10 +917,13 @@ export default function EstadisticasPage() {
               );
             }
 
+            const isGN = selectedMetric === 'gananciaNeta';
             const moneyVal = formatMoney(
               selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
                 ? item.oportunidadNoConcretada
-                : item.valorTotal
+                : isGN
+                  ? (item.ingresoCobradoPeriodo ?? item.valorTotal)
+                  : item.valorTotal
             );
 
             // Formatear fecha y hora como "01/10/26 · 13:50"
@@ -921,7 +956,15 @@ export default function EstadisticasPage() {
                     {dateTimeDisplay}
                   </div>
                   <div className={styles.mobileCardSenaVal}>
-                    Seña: {formatMoney(item.valorSeña)}
+                    {isGN ? (
+                      item.subtipoGanancia?.includes('sin siguiente')
+                        ? `Saldo cobrado: ${formatMoney(item.saldoCobradoPeriodo ?? item.ingresoCobradoPeriodo)}`
+                        : item.subtipoGanancia?.includes('nuevo')
+                          ? `Seña cobrada: ${formatMoney(item.señaCobradaPeriodo ?? item.ingresoCobradoPeriodo)}`
+                          : `Saldo: ${formatMoney(item.saldoCobradoPeriodo || 0)} · Seña sig.: ${formatMoney(item.señaCobradaPeriodo || 0)}`
+                    ) : (
+                      `Seña: ${formatMoney(item.valorSeña)}`
+                    )}
                   </div>
                 </div>
 
@@ -1385,8 +1428,8 @@ export default function EstadisticasPage() {
                           <th>Cliente</th>
                           <th>Origen</th>
                           <th>Tipo de pago</th>
-                          <th>Valor final</th>
-                          <th>Seña aplicada</th>
+                          <th>{selectedMetric === 'gananciaNeta' ? 'Ingreso real' : 'Valor final'}</th>
+                          <th>{selectedMetric === 'gananciaNeta' ? 'Seña cobrada' : 'Seña aplicada'}</th>
                           <th>Estado de turno</th>
                           <th>Zonas</th>
                           <th>Operador</th>
@@ -1401,8 +1444,9 @@ export default function EstadisticasPage() {
                           </tr>
                         ) : (
                           activeMetricData.filteredItems.map(item => {
-                            const vFinal = Number(item.valorTotal || 0);
-                            const vSena = Number(item.valorSeña || 0);
+                            const isGN = selectedMetric === 'gananciaNeta';
+                            const vFinal = isGN ? Number(item.ingresoCobradoPeriodo ?? item.valorTotal ?? 0) : Number(item.valorTotal || 0);
+                            const vSena = isGN ? Number(item.señaCobradaPeriodo ?? 0) : Number(item.valorSeña || 0);
                             const estadoTurno = getEstadoTurnoLabel(item);
                             return (
                               <tr key={item.id}>
@@ -1503,23 +1547,23 @@ export default function EstadisticasPage() {
                     <table className={styles.excelSummaryTable}>
                       <tbody>
                         <tr>
-                          <td>Valor total de turnos</td>
+                          <td>{selectedMetric === 'gananciaNeta' ? 'Ingreso total real' : 'Valor total de turnos'}</td>
                           <td>{formatMoney(excelSummary.valorTotalTurnos)}</td>
                         </tr>
                         <tr>
-                          <td>Total de señas aplicadas</td>
+                          <td>{selectedMetric === 'gananciaNeta' ? 'Total señas cobradas' : 'Total de señas aplicadas'}</td>
                           <td>{formatMoney(excelSummary.totalSenasAplicadas)}</td>
                         </tr>
                         <tr>
-                          <td>Total de saldos</td>
+                          <td>{selectedMetric === 'gananciaNeta' ? 'Total saldos cobrados' : 'Total de saldos'}</td>
                           <td>{formatMoney(excelSummary.totalSaldos)}</td>
                         </tr>
                         <tr>
-                          <td>Valor en efectivo</td>
+                          <td>{selectedMetric === 'gananciaNeta' ? 'Ingresos en efectivo' : 'Valor en efectivo'}</td>
                           <td>{formatMoney(excelSummary.valorEfectivo)}</td>
                         </tr>
                         <tr>
-                          <td>Valor en transferencia</td>
+                          <td>{selectedMetric === 'gananciaNeta' ? 'Ingresos en transferencia' : 'Valor en transferencia'}</td>
                           <td>{formatMoney(excelSummary.valorTransferencia)}</td>
                         </tr>
                         <tr>

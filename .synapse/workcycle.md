@@ -2250,3 +2250,28 @@
 - [x] Push a GitHub (`main` y `staging`).
 - [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
 - [x] Documentar en `.synapse/decisions.md` (D-129), `.synapse/workcycle.md` y `chat.md`.
+
+
+## 📅 Sesión: 23 de Octubre de 2026 (Parte 4 - Ganancia Neta: Corrección de Ingreso Real y Seña para Turnos Sin Próximo Turno - Caso Jorge Mc Carthy)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver la discrepancia contable reportada con captura de WhatsApp (`media_1792769292809_8224aa12.png`):
+  1. **Diagnóstico Contable y Forense**:
+     - Turno de Jorge Mc Carthy (`aedfaf7a-d528-47ec-a2e7-6ea59c755402`): realizado el 22/10/2026, agendado previamente el 05/10/2026.
+     - Montos reales del turno: Valor total $109.000, Seña pagada el 05/10: $67.000, Saldo pendiente pagado en sesión: $42.000.
+     - Sub-estado asignado: `MANTENIMIENTO` (no agendó siguiente cita, no dejó seña adicional en la cuenta).
+     - El backend ya computaba correctamente $42.000 de ingreso real para el total de la jornada ($362.000).
+     - **Causa Raíz**: En `src/app/admin/estadisticas/page.js` y `src/app/api/admin/estadisticas/exportar-excel/route.js`, el frontend renderizaba `item.valorTotal` ($109.000) e `item.valorSeña` ($67.000) de forma estática en la tarjeta móvil, en la tabla desktop y en el Excel, en lugar del ingreso real devengado en el período (`item.ingresoCobradoPeriodo`), dando la falsa impresión de que Jorge había dejado una nueva seña o generado $109.000 en el día.
+  2. **Ajuste en Backend (`src/app/api/admin/estadisticas/route.js`)**:
+     - Se incorporaron las propiedades explícitas `señaCobradaPeriodo` y `saldoCobradoPeriodo` en `formatTurnoItem`.
+     - Para turnos sin siguiente turno, `señaCobradaPeriodo` es 0 (o el monto de su propia seña si fue agendado en el período) y `saldoCobradoPeriodo` es su saldo cobrado ($42.000 para Jorge).
+  3. **Ajuste en Frontend (`src/app/admin/estadisticas/page.js`)**:
+     - En `excelSummary`, para `selectedMetric === 'gananciaNeta'`, `vFinal` toma `item.ingresoCobradoPeriodo`, `vSena` toma `item.señaCobradaPeriodo` y `vSaldo` toma `item.saldoCobradoPeriodo`, cuadrando matemáticamente el total del resumen en $362.000.
+     - En la tabla de escritorio y tarjetas móviles, se muestra `formatMoney(item.ingresoCobradoPeriodo)` ($42.000) y `Saldo cobrado: $42.000 (Sin nuevo turno)` con seña en $0, erradicando la falsa seña verde de $67.000.
+     - En el modal de listado ampliado y modal de Excel, los encabezados y filas reflejan `Ingreso real` y `Seña cobrada`.
+  4. **Ajuste en Exportación a Excel (`src/app/api/admin/estadisticas/exportar-excel/route.js`)**:
+     - Cuando la métrica es Ganancia Neta, las columnas se titulan `Ingreso real` y `Seña cobrada`, los valores numéricos reflejan `item.ingresoCobradoPeriodo` y `item.señaCobradaPeriodo`, y el resumen inferior muestra `Ingreso total real: $362.000`, `Total señas cobradas` y `Total saldos cobrados`.
+- [x] Validar compilación local (`npm run build`: 46/46 rutas exitosas con 0 errores).
+- [ ] Push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [ ] Documentar en `.synapse/decisions.md` (D-130), `.synapse/workcycle.md` y `chat.md`.

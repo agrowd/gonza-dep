@@ -144,6 +144,8 @@ function formatTurnoItem(t, extra = {}) {
     valorSeña: extra.overrideValorSeña !== undefined ? extra.overrideValorSeña : valorSeña,
     saldoPendiente: extra.overrideSaldo !== undefined ? extra.overrideSaldo : saldoDelTurno,
     ingresoCobradoPeriodo: extra.ingresoCobradoPeriodo !== undefined ? Number(extra.ingresoCobradoPeriodo) : (extra.overrideValorTotal !== undefined ? Number(extra.overrideValorTotal) : valorTotal),
+    señaCobradaPeriodo: extra.señaCobradaPeriodo !== undefined ? Number(extra.señaCobradaPeriodo) : 0,
+    saldoCobradoPeriodo: extra.saldoCobradoPeriodo !== undefined ? Number(extra.saldoCobradoPeriodo) : 0,
     estado: t.estado,
     subEstado: t.subEstado || null,
     señaEstado: t.señaEstado || null,
@@ -414,6 +416,8 @@ export async function GET(request) {
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
             ingresoCobradoPeriodo: ingresoTotalFila,
+            señaCobradaPeriodo: senaSiguiente + senaPropiaEnPeriodo,
+            saldoCobradoPeriodo: saldo,
             subtipoGanancia: `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + Seña próx. $${senaSiguiente.toLocaleString('es-AR')})`
           })
         );
@@ -425,6 +429,8 @@ export async function GET(request) {
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
             ingresoCobradoPeriodo: ingresoTotalFila,
+            señaCobradaPeriodo: senaPropiaEnPeriodo,
+            saldoCobradoPeriodo: saldo,
             subtipoGanancia: fueCreadoEnPeriodo
               ? 'Turno realizado en período (Seña + Saldo)'
               : 'Turno sin siguiente (Solo Saldo cobrado)'
@@ -446,6 +452,8 @@ export async function GET(request) {
             overrideValorSeña: vSena,
             overrideSaldo: 0,
             ingresoCobradoPeriodo: vSena,
+            señaCobradaPeriodo: vSena,
+            saldoCobradoPeriodo: 0,
             subtipoGanancia: 'Turno nuevo (Seña cobrada en el período)'
           })
         );

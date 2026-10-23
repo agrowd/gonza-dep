@@ -234,6 +234,7 @@ export async function POST(request) {
     } = body;
 
     const isModelA = summary.model === 'A';
+    const isGananciaNeta = selectedMetric === 'gananciaNeta' || summary.title?.includes('GANANCIA NETA');
 
     function getEstadoTurnoLabel(item) {
       if (!item) return '-';
@@ -340,8 +341,8 @@ export async function POST(request) {
           'Cliente',
           'Origen',
           'Tipo de pago',
-          'Valor final',
-          'Seña aplicada',
+          isGananciaNeta ? 'Ingreso real' : 'Valor final',
+          isGananciaNeta ? 'Seña cobrada' : 'Seña aplicada',
           'Estado de turno',
           'Zonas',
           'Operador'
@@ -387,8 +388,12 @@ export async function POST(request) {
           { col: 10, type: 's', value: item.notifWhatsapp ? 'Activo' : 'Inactivo', style: sCenter }
         ]);
       } else if (isModelA) {
-        const vFinal = Number(item.valorTotal || 0);
-        const vSena = Number(item.valorSeña || 0);
+        const vFinal = isGananciaNeta
+          ? Number(item.ingresoCobradoPeriodo ?? item.valorTotal ?? 0)
+          : Number(item.valorTotal || 0);
+        const vSena = isGananciaNeta
+          ? Number(item.señaCobradaPeriodo ?? 0)
+          : Number(item.valorSeña || 0);
         const estadoTurno = getEstadoTurnoLabel(item);
 
         pushRow(currentRow, 19, [
@@ -469,11 +474,11 @@ export async function POST(request) {
       }
     } else if (isModelA) {
       const modelARows = [
-        { leftLabel: 'Cantidad de turnos', leftVal: summary.cantidadTurnos || 0, rightLabel: 'Valor total de turnos', rightVal: summary.valorTotalTurnos || 0 },
-        { leftLabel: 'Cantidad de clientes únicos', leftVal: summary.cantidadClientesUnicos || 0, rightLabel: 'Total de señas aplicadas', rightVal: summary.totalSenasAplicadas || 0 },
-        { leftLabel: 'Clientes de Orgánico', leftVal: summary.clientesOrganico || 0, rightLabel: 'Total de saldos', rightVal: summary.totalSaldos || 0 },
-        { leftLabel: 'Clientes de Redes sociales', leftVal: summary.clientesRedes || 0, rightLabel: 'Valor en efectivo', rightVal: summary.valorEfectivo || 0 },
-        { leftLabel: 'Clientes de Publicidad', leftVal: summary.clientesPublicidad || 0, rightLabel: 'Valor en transferencia', rightVal: summary.valorTransferencia || 0 },
+        { leftLabel: 'Cantidad de turnos', leftVal: summary.cantidadTurnos || 0, rightLabel: isGananciaNeta ? 'Ingreso total real' : 'Valor total de turnos', rightVal: summary.valorTotalTurnos || 0 },
+        { leftLabel: 'Cantidad de clientes únicos', leftVal: summary.cantidadClientesUnicos || 0, rightLabel: isGananciaNeta ? 'Total señas cobradas' : 'Total de señas aplicadas', rightVal: summary.totalSenasAplicadas || 0 },
+        { leftLabel: 'Clientes de Orgánico', leftVal: summary.clientesOrganico || 0, rightLabel: isGananciaNeta ? 'Total saldos cobrados' : 'Total de saldos', rightVal: summary.totalSaldos || 0 },
+        { leftLabel: 'Clientes de Redes sociales', leftVal: summary.clientesRedes || 0, rightLabel: isGananciaNeta ? 'Ingresos en efectivo' : 'Valor en efectivo', rightVal: summary.valorEfectivo || 0 },
+        { leftLabel: 'Clientes de Publicidad', leftVal: summary.clientesPublicidad || 0, rightLabel: isGananciaNeta ? 'Ingresos en transferencia' : 'Valor en transferencia', rightVal: summary.valorTransferencia || 0 },
         { leftLabel: null, leftVal: null, rightLabel: 'Ticket promedio por cliente', rightVal: summary.ticketPromedioCliente || 0 }
       ];
 
