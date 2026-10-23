@@ -768,9 +768,10 @@ export async function checkAndSendReminders(force = false) {
         });
         if (hasFutureTurno) continue;
 
-        // Target date based on frequency (weeks)
+        // Target date: automated "Va a avisar" is sent 1 week before the next session date (frequency in weeks)
         const freqWeeks = Number(cl.frecuencia || 4);
-        const targetDate = new Date(lastTurnoTime + (freqWeeks * 7 * 24 * 60 * 60 * 1000));
+        const advanceWeeks = Math.max(0, freqWeeks - 1);
+        const targetDate = new Date(lastTurnoTime + (advanceWeeks * 7 * 24 * 60 * 60 * 1000));
         
         // Only trigger if today has arrived at or passed targetDate
         if (argToday < targetDate) continue;

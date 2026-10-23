@@ -990,6 +990,34 @@
 4. **Despacho de Saludos de Cumpleaños Estrictamente por Email (NO WhatsApp)**:
    - En la rutina automática diaria de las 10:00 AM (`src/lib/whatsapp.js`), se eliminó el envío de WhatsApp para cumpleaños (`sendWhatsAppMessage`) y se concentró el saludo al 100% por correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`) con diseño corporativo oscuro.
 
+---
+
+## 🚀 Sesión: 23 de Octubre de 2026 (Parte 3) - Notificaciones: Selector Desplegable, Módulos de Seguimiento "Va a avisar" y "Mantenimiento" con Rango de Fechas y Anticipación de 1 Semana
+
+### Requerimientos de Luciano Gómez y Gonzalo Siri (`media_1792767867459_a69beaae.png`):
+1. **Selector Desplegable Institucional en Notificaciones (`/admin/notificaciones`)**:
+   - Se reemplazaron las pestañas horizontales por un selector `<select>` unificado con borde de marca `#7a1f1e` (`.categoryDropdown`):
+     - `📅 Turnos de la Semana Actual`
+     - `📅 Turnos de la Próxima Semana`
+     - `⏰ Turnos en 2 Días (Recordatorio 48hs)`
+     - `⏳ Clientes "Va a avisar"`
+     - `🛠️ Clientes en "Mantenimiento"`
+2. **Ventanas de Seguimiento "Va a avisar" y "Mantenimiento" con Rango de Fechas**:
+   - Panel de fechas interactivo con selectores `Desde` y `Hasta` (altura 42px), botón `🔄 Actualizar`, selector de criterio (`🔔 Fecha sugerida de envío` / `📅 Fecha de última sesión`) y checkbox `Ver también ya notificados` (desmarcado por defecto para mostrar únicamente los que aún no recibieron el mensaje).
+   - En backend (`GET /api/admin/notificaciones`):
+     - Para `va_a_avisar`: filtra clientes con última sesión realizada (`subEstado === 'VA_A_AVISAR'`), sin turnos activos posteriores y sin mensaje previo `[VA_A_AVISAR]` desde esa sesión.
+     - Para `mantenimiento`: filtra clientes con última sesión realizada en `MANTENIMIENTO`/`FINALIZADO` (o estado de cliente correspondiente), sin turnos activos posteriores y sin mensaje previo `[MANTENIMIENTO]` desde esa sesión.
+3. **Información Requerida del Último Turno en las Tarjetas**:
+   - Cada tarjeta de cliente exhibe: Nombre y WhatsApp, 📅 Fecha de su última sesión, 🏷️ Zonas realizadas, 💵 Valor total cobrado en su último turno, ⏱️ Frecuencia / semanas para el siguiente turno desde esa sesión (`{frecuencia} semanas` con fecha calculada, o `10 semanas / 2,5 meses`), 🔔 Fecha sugerida de aviso (`1 semana antes` o `2,5 meses después`) y estado de notificación.
+4. **Selección Masiva y Despacho Individual**:
+   - Checkbox por tarjeta para marcar/desmarcar individualmente y checkbox "Seleccionar todos".
+   - Botón superior para despacho masivo `[ Enviar Mensajes ({seleccionados}) ]`.
+   - Botones de acción individual por tarjeta: previsualizar mensaje `[ 👁️ ]`, enviar WhatsApp en el acto `[ ✈️ ]` y ver ficha del cliente `[ 👤 ]`.
+5. **Anticipación de Mensajes Automáticos en Cron (`src/lib/whatsapp.js`)**:
+   - En la rutina automática diaria de las 10:00 AM, se actualizó el cálculo para que los mensajes de "Va a avisar" se despachen exactamente **1 semana antes** de la fecha del próximo turno (`última sesión + (frecuencia - 1) semanas`).
+   - Los avisos de "Mantenimiento" se despachan a los **75 días (2,5 meses)** de su última sesión.
+
+
 
 
 ---
@@ -1113,5 +1141,33 @@
    - Visualización directa del listado en la pantalla principal debajo del banner sin requerir abrir el modal.
 4. **Despacho de Saludos de Cumpleaños Estrictamente por Email (NO WhatsApp)**:
    - En la rutina automática diaria de las 10:00 AM (`src/lib/whatsapp.js`), se eliminó el envío de WhatsApp para cumpleaños (`sendWhatsAppMessage`) y se concentró el saludo al 100% por correo electrónico (`sendBirthdayEmail` en `src/lib/email.js`) con diseño corporativo oscuro.
+
+---
+
+## 🚀 Sesión: 23 de Octubre de 2026 (Parte 3) - Notificaciones: Selector Desplegable, Módulos de Seguimiento "Va a avisar" y "Mantenimiento" con Rango de Fechas y Anticipación de 1 Semana
+
+### Requerimientos de Luciano Gómez y Gonzalo Siri (`media_1792767867459_a69beaae.png`):
+1. **Selector Desplegable Institucional en Notificaciones (`/admin/notificaciones`)**:
+   - Se reemplazaron las pestañas horizontales por un selector `<select>` unificado con borde de marca `#7a1f1e` (`.categoryDropdown`):
+     - `📅 Turnos de la Semana Actual`
+     - `📅 Turnos de la Próxima Semana`
+     - `⏰ Turnos en 2 Días (Recordatorio 48hs)`
+     - `⏳ Clientes "Va a avisar"`
+     - `🛠️ Clientes en "Mantenimiento"`
+2. **Ventanas de Seguimiento "Va a avisar" y "Mantenimiento" con Rango de Fechas**:
+   - Panel de fechas interactivo con selectores `Desde` y `Hasta` (altura 42px), botón `🔄 Actualizar`, selector de criterio (`🔔 Fecha sugerida de envío` / `📅 Fecha de última sesión`) y checkbox `Ver también ya notificados` (desmarcado por defecto para mostrar únicamente los que aún no recibieron el mensaje).
+   - En backend (`GET /api/admin/notificaciones`):
+     - Para `va_a_avisar`: filtra clientes con última sesión realizada (`subEstado === 'VA_A_AVISAR'`), sin turnos activos posteriores y sin mensaje previo `[VA_A_AVISAR]` desde esa sesión.
+     - Para `mantenimiento`: filtra clientes con última sesión realizada en `MANTENIMIENTO`/`FINALIZADO` (o estado de cliente correspondiente), sin turnos activos posteriores y sin mensaje previo `[MANTENIMIENTO]` desde esa sesión.
+3. **Información Requerida del Último Turno en las Tarjetas**:
+   - Cada tarjeta de cliente exhibe: Nombre y WhatsApp, 📅 Fecha de su última sesión, 🏷️ Zonas realizadas, 💵 Valor total cobrado en su último turno, ⏱️ Frecuencia / semanas para el siguiente turno desde esa sesión (`{frecuencia} semanas` con fecha calculada, o `10 semanas / 2,5 meses`), 🔔 Fecha sugerida de aviso (`1 semana antes` o `2,5 meses después`) y estado de notificación.
+4. **Selección Masiva y Despacho Individual**:
+   - Checkbox por tarjeta para marcar/desmarcar individualmente y checkbox "Seleccionar todos".
+   - Botón superior para despacho masivo `[ Enviar Mensajes ({seleccionados}) ]`.
+   - Botones de acción individual por tarjeta: previsualizar mensaje `[ 👁️ ]`, enviar WhatsApp en el acto `[ ✈️ ]` y ver ficha del cliente `[ 👤 ]`.
+5. **Anticipación de Mensajes Automáticos en Cron (`src/lib/whatsapp.js`)**:
+   - En la rutina automática diaria de las 10:00 AM, se actualizó el cálculo para que los mensajes de "Va a avisar" se despachen exactamente **1 semana antes** de la fecha del próximo turno (`última sesión + (frecuencia - 1) semanas`).
+   - Los avisos de "Mantenimiento" se despachan a los **75 días (2,5 meses)** de su última sesión.
+
 
 

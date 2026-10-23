@@ -73,11 +73,32 @@ export default function NotificacionesPage() {
     }
   };
 
-  // Reminders List
-  const [week, setWeek] = useState('current'); // 'current' or 'next'
-  const [turnos, setTurnos] = useState([]);
-  const [loadingTurnos, setLoadingTurnos] = useState(true);
-  const [selectedTurnoIds, setSelectedTurnoIds] = useState([]);
+  // Category Selector: 'current' | 'next' | '2days' | 'va_a_avisar' | 'mantenimiento'
+  const [category, setCategory] = useState('current');
+
+  // Date Range Filters for "Va a avisar" & "Mantenimiento"
+  const getInitialDates = () => {
+    const now = new Date();
+    const argNow = new Date(now.getTime() - 3 * 3600 * 1000);
+    const y = argNow.getUTCFullYear();
+    const m = argNow.getUTCMonth();
+    const firstDay = new Date(Date.UTC(y, m, 1));
+    const lastDay = new Date(Date.UTC(y, m + 1, 0));
+    return {
+      start: firstDay.toISOString().split('T')[0],
+      end: lastDay.toISOString().split('T')[0]
+    };
+  };
+
+  const [startDate, setStartDate] = useState(getInitialDates().start);
+  const [endDate, setEndDate] = useState(getInitialDates().end);
+  const [filterBy, setFilterBy] = useState('aviso'); // 'aviso' o 'sesion'
+  const [showAllNotified, setShowAllNotified] = useState(false);
+
+  // List Items
+  const [items, setItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Preview Modal
   const [previewText, setPreviewText] = useState('');
@@ -135,47 +156,68 @@ export default function NotificacionesPage() {
     }
   };
 
-  // 4. Fetch turnos for selected week
-  const fetchRemindersList = () => {
-    setLoadingTurnos(true);
-    fetch(`/api/admin/notificaciones?week=${week}`)
+  // 4. Fetch notifications list for selected category
+  const fetchNotificationsList = () => {
+    setLoadingItems(true);
+    let url = `/api/admin/notificaciones?category=${category}`;
+    if (category === 'va_a_avisar' || category === 'mantenimiento') {
+      url += `&start=${startDate}&end=${endDate}&filterBy=${filterBy}&showAll=${showAllNotified}`;
+    }
+
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         if (!data.error) {
-          setTurnos(data.turnos || []);
-          // Clear selections on week change
-          setSelectedTurnoIds([]);
+          if (category === 'va_a_avisar' || category === 'mantenimiento') {
+            setItems(data.items || []);
+          } else {
+            setItems(data.turnos || []);
+          }
+          setSelectedIds([]);
         }
       })
-      .catch(err => console.error('Error fetching reminders list:', err))
-      .finally(() => setLoadingTurnos(false));
+      .catch(err => console.error('Error fetching notifications list:', err))
+      .finally(() => setLoadingItems(false));
   };
 
   useEffect(() => {
-    fetchRemindersList();
-  }, [week]);
+    fetchNotificationsList();
+  }, [category, showAllNotified]);
+
+  const handleCategoryChange = (newCat) => {
+    setCategory(newCat);
+    setSelectedIds([]);
+  };
 
   // 5. Selectors handlers
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedTurnoIds(turnos.map(t => t.id));
+      setSelectedIds(items.map(t => t.id));
     } else {
-      setSelectedTurnoIds([]);
+      setSelectedIds([]);
     }
   };
 
-  const handleSelectOne = (turnoId, isChecked) => {
+  const handleSelectOne = (id, isChecked) => {
     if (isChecked) {
-      setSelectedTurnoIds([...selectedTurnoIds, turnoId]);
+      setSelectedIds([...selectedIds, id]);
     } else {
-      setSelectedTurnoIds(selectedTurnoIds.filter(id => id !== turnoId));
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
     }
   };
 
   // 6. Action: Send batch WhatsApp messages
   const handleSendReminders = async (idsToSend) => {
     if (idsToSend.length === 0) return;
-    if (!confirm(`¿Deseas enviar ${idsToSend.length} recordatorio(s) de WhatsApp ahora?`)) return;
+    
+    let confirmMsg = `¿Deseas enviar ${idsToSend.length} recordatorio(s) de WhatsApp ahora?`;
+    if (category === 'va_a_avisar') {
+      confirmMsg = `¿Deseas enviar ${idsToSend.length} mensaje(s) de "Va a avisar" por WhatsApp ahora?`;
+    } else if (category === 'mantenimiento') {
+      confirmMsg = `¿Deseas enviar ${idsToSend.length} mensaje(s) de "Mantenimiento" por WhatsApp ahora?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
 
     setSendingReminders(true);
     setSendingResults(null);
@@ -184,7 +226,10 @@ export default function NotificacionesPage() {
       const res = await fetch('/api/admin/notificaciones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ turnoIds: idsToSend })
+        body: JSON.stringify({ 
+          turnoIds: idsToSend,
+          category 
+        })
       });
       const data = await res.json();
 
@@ -194,14 +239,14 @@ export default function NotificacionesPage() {
         setSendingResults({ successes, failures });
         showToast(`Envío finalizado. Éxitos: ${successes.length}. Errores: ${failures.length}.`, failures.length > 0 ? 'error' : 'success');
         
-        // Refresh reminders list (to update status labels)
-        fetchRemindersList();
+        // Refresh list
+        fetchNotificationsList();
       } else {
-        showToast(data.error || 'Error al enviar recordatorios.', 'error');
+        showToast(data.error || 'Error al enviar mensajes.', 'error');
       }
     } catch (error) {
       console.error('Error sending reminders:', error);
-      showToast('Error de conexión al enviar recordatorios.', 'error');
+      showToast('Error de conexión al enviar mensajes.', 'error');
     } finally {
       setSendingReminders(false);
     }
@@ -214,16 +259,28 @@ export default function NotificacionesPage() {
   };
 
   const formatTurnoDate = (dateStr) => {
+    if (!dateStr) return '-';
     const d = new Date(dateStr);
     return d.toLocaleDateString('es-AR', {
-      weekday: 'long',
+      weekday: 'short',
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       timeZone: 'UTC'
     });
   };
 
-  // Formatting variables for client
+  const formatSimpleDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'UTC'
+    });
+  };
+
+  // Status Box Rendering
   const renderWppStatusBox = () => {
     let badgeClass = styles.badgeDisconnected;
     let badgeText = 'Desconectado';
@@ -248,7 +305,6 @@ export default function NotificacionesPage() {
 
         {wppStatus === 'QR_RECEIVED' && (
           <div className={styles.qrWrapper}>
-            {/* img pointing to our PNG qr generator endpoint */}
             <img 
               src={`/api/whatsapp/qr-image?t=${new Date().getTime()}`} 
               alt="Escanear Código QR" 
@@ -262,7 +318,7 @@ export default function NotificacionesPage() {
 
         {wppStatus === 'CONNECTED' && (
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            El sistema está listo para despachar recordatorios automáticos.
+            El sistema está listo para despachar avisos y recordatorios por WhatsApp.
           </div>
         )}
 
@@ -297,12 +353,14 @@ export default function NotificacionesPage() {
     );
   };
 
+  const isFollowUpCategory = category === 'va_a_avisar' || category === 'mantenimiento';
+
   return (
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <h2>Gestión de Notificaciones</h2>
-        <p>Vincula WhatsApp y despacha los recordatorios de turnos semanales a tus clientes.</p>
+        <p>Vincula WhatsApp y despacha los avisos y recordatorios a tus clientes.</p>
       </div>
 
       {/* Grid Layout */}
@@ -349,31 +407,80 @@ export default function NotificacionesPage() {
           </div>
         </div>
 
-        {/* Right Column: Weekly reminders list */}
+        {/* Right Column: Notifications list with Dropdown Selector */}
         <div className={styles.card} style={{ minWidth: 0, width: '100%' }}>
-          <div className={styles.cardTitle}>Listado de Recordatorios Semanales</div>
+          <div className={styles.cardTitle}>Listado de Notificaciones y Avisos</div>
 
-          {/* Week selection tabs */}
-          <div className={styles.tabs}>
-            <button 
-              className={`${styles.tab} ${week === 'current' ? styles.tabActive : ''}`} 
-              onClick={() => setWeek('current')}
+          {/* Desplegable Principal de Selección de Categoría */}
+          <div className={styles.categoryDropdownWrapper}>
+            <select 
+              className={styles.categoryDropdown} 
+              value={category} 
+              onChange={(e) => handleCategoryChange(e.target.value)}
             >
-              Semana Actual
-            </button>
-            <button 
-              className={`${styles.tab} ${week === 'next' ? styles.tabActive : ''}`} 
-              onClick={() => setWeek('next')}
-            >
-              Próxima Semana
-            </button>
-            <button 
-              className={`${styles.tab} ${week === '2days' ? styles.tabActive : ''}`} 
-              onClick={() => setWeek('2days')}
-            >
-              Turnos en 2 Días
-            </button>
+              <option value="current">📅 Turnos de la Semana Actual</option>
+              <option value="next">📅 Turnos de la Próxima Semana</option>
+              <option value="2days">⏰ Turnos en 2 Días (Recordatorio 48hs)</option>
+              <option value="va_a_avisar">⏳ Clientes "Va a avisar"</option>
+              <option value="mantenimiento">🛠️ Clientes en "Mantenimiento"</option>
+            </select>
           </div>
+
+          {/* Panel de Filtro de Rango de Fechas para "Va a avisar" y "Mantenimiento" */}
+          {isFollowUpCategory && (
+            <div className={styles.dateFilterContainer}>
+              <div className={styles.dateFilterHeader}>
+                <div className={styles.filterByGroup}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569' }}>Filtrar por:</span>
+                  <select 
+                    className={styles.filterBySelect} 
+                    value={filterBy} 
+                    onChange={(e) => setFilterBy(e.target.value)}
+                  >
+                    <option value="aviso">🔔 Fecha sugerida de envío (Recomendado)</option>
+                    <option value="sesion">📅 Fecha de última sesión</option>
+                  </select>
+                </div>
+                <label className={styles.showAllLabel}>
+                  <input 
+                    type="checkbox" 
+                    checked={showAllNotified} 
+                    onChange={(e) => setShowAllNotified(e.target.checked)} 
+                  />
+                  <span>Ver también ya notificados</span>
+                </label>
+              </div>
+
+              <div className={styles.dateInputsRow}>
+                <div className={styles.dateGroup}>
+                  <label className={styles.dateLabel}>Desde</label>
+                  <input 
+                    type="date" 
+                    className={styles.dateInput} 
+                    value={startDate} 
+                    onChange={(e) => setStartDate(e.target.value)} 
+                  />
+                </div>
+                <div className={styles.dateGroup}>
+                  <label className={styles.dateLabel}>Hasta</label>
+                  <input 
+                    type="date" 
+                    className={styles.dateInput} 
+                    value={endDate} 
+                    onChange={(e) => setEndDate(e.target.value)} 
+                  />
+                </div>
+                <button 
+                  type="button" 
+                  className={styles.btnRefreshDates} 
+                  onClick={fetchNotificationsList}
+                  title="Actualizar listado de avisos"
+                >
+                  <RefreshIcon /> Actualizar
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Bulk Actions Panel */}
           <div className={styles.massActions}>
@@ -381,36 +488,165 @@ export default function NotificacionesPage() {
               <input 
                 type="checkbox" 
                 className={styles.checkbox}
-                checked={turnos.length > 0 && selectedTurnoIds.length === turnos.length}
+                checked={items.length > 0 && selectedIds.length === items.length}
                 onChange={handleSelectAll}
-                disabled={turnos.length === 0}
+                disabled={items.length === 0}
               />
-              <span>Seleccionar todos ({selectedTurnoIds.length}/{turnos.length})</span>
+              <span>Seleccionar todos ({selectedIds.length}/{items.length})</span>
             </div>
 
             <button 
               className="btn btn-primary"
-              disabled={selectedTurnoIds.length === 0 || wppStatus !== 'CONNECTED' || sendingReminders}
-              onClick={() => handleSendReminders(selectedTurnoIds)}
+              disabled={selectedIds.length === 0 || wppStatus !== 'CONNECTED' || sendingReminders}
+              onClick={() => handleSendReminders(selectedIds)}
               style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', fontSize: '0.85rem' }}
             >
-              {sendingReminders ? 'Enviando...' : `Enviar Recordatorios (${selectedTurnoIds.length})`}
+              {sendingReminders 
+                ? 'Enviando...' 
+                : category === 'va_a_avisar' 
+                  ? `Enviar Aviso "Va a avisar" (${selectedIds.length})` 
+                  : category === 'mantenimiento'
+                    ? `Enviar Aviso "Mantenimiento" (${selectedIds.length})`
+                    : `Enviar Recordatorios (${selectedIds.length})`}
             </button>
           </div>
 
-          {/* Table list */}
-          {loadingTurnos ? (
+          {/* Table / Cards list */}
+          {loadingItems ? (
             <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-gold)' }}>
-              Cargando turnos de la semana...
+              Cargando listado de notificaciones...
             </div>
-          ) : turnos.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className={styles.emptyState}>
-              No hay turnos programados o pendientes de recordatorio en esta semana.
+              {category === 'va_a_avisar' 
+                ? 'No se encontraron clientes con etiqueta "Va a avisar" pendientes de mensaje en este período.' 
+                : category === 'mantenimiento'
+                  ? 'No se encontraron clientes en "Mantenimiento" pendientes de mensaje en este período.'
+                  : 'No hay turnos programados o pendientes de recordatorio en esta semana.'}
             </div>
           ) : (
             <div className={styles.notifCardsList}>
-              {turnos.map((t) => {
-                const isSelected = selectedTurnoIds.includes(t.id);
+              {items.map((t) => {
+                const isSelected = selectedIds.includes(t.id);
+
+                // Render para "Va a avisar" y "Mantenimiento"
+                if (isFollowUpCategory) {
+                  return (
+                    <div 
+                      key={t.id} 
+                      className={`${styles.notifCard} ${isSelected ? styles.notifCardSelected : ''}`}
+                    >
+                      {/* Checkbox Columna Izquierda */}
+                      <div className={styles.notifCardCheckCol}>
+                        <input 
+                          type="checkbox" 
+                          className={styles.checkbox}
+                          checked={isSelected}
+                          onChange={(e) => handleSelectOne(t.id, e.target.checked)}
+                          style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer' }}
+                        />
+                      </div>
+
+                      {/* Contenido Principal */}
+                      <div className={styles.notifCardMain}>
+                        <div className={styles.notifClientHeader}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span className={styles.notifClientName}>{t.cliente.nombreCompleto}</span>
+                            {category === 'va_a_avisar' ? (
+                              <span className={styles.badgeVaAAvisar}>⏳ Va a avisar</span>
+                            ) : (
+                              <span className={styles.badgeMantenimiento}>🛠️ Mantenimiento</span>
+                            )}
+                          </div>
+                          <span className={styles.notifClientPhone}>{t.cliente.whatsapp}</span>
+                        </div>
+
+                        <div className={styles.notifDetailsList}>
+                          <div className={styles.notifDetailItem}>
+                            <span style={{ fontSize: '0.95rem' }}>📅</span>
+                            <span><strong>Última sesión:</strong> {formatSimpleDate(t.fechaUltimaSesion)}</span>
+                          </div>
+                          <div className={styles.notifDetailItem}>
+                            <span style={{ fontSize: '0.95rem' }}>🏷️</span>
+                            <span style={{ wordBreak: 'break-word' }}><strong>Zonas:</strong> {t.zonas}</span>
+                          </div>
+                          <div className={styles.notifDetailItem}>
+                            <span style={{ fontSize: '0.95rem' }}>💵</span>
+                            <span><strong>Valor último turno:</strong> ${(t.valorTotal || 0).toLocaleString('es-AR')}</span>
+                          </div>
+                          <div className={styles.notifDetailItem}>
+                            <span style={{ fontSize: '0.95rem' }}>⏱️</span>
+                            <span>
+                              <strong>Siguiente turno:</strong>{' '}
+                              {category === 'va_a_avisar' 
+                                ? `${t.frecuenciaSemanas} semanas desde esa sesión (${formatSimpleDate(t.fechaSiguienteTurno)})` 
+                                : '10 semanas / 2,5 meses aprox.'}
+                            </span>
+                          </div>
+                          <div className={styles.notifDetailItem}>
+                            <span style={{ fontSize: '0.95rem' }}>🔔</span>
+                            <span>
+                              <strong>Aviso sugerido:</strong> {formatSimpleDate(t.fechaSugeridaAviso)}{' '}
+                              <span className={styles.badgeSuggestedDate}>
+                                {category === 'va_a_avisar' ? '1 semana antes' : '2,5 meses'}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Columna Derecha: Estado y Botones de Acción */}
+                      <div className={styles.notifCardRight}>
+                        <div className={styles.notifStatusCol}>
+                          {!t.alreadyNotified ? (
+                            <span className={`${styles.statusLabel} ${styles.statusNone}`}>Pendiente</span>
+                          ) : (
+                            <>
+                              <span className={`${styles.statusLabel} ${styles.statusSent}`}>Enviado</span>
+                              {t.lastNotification && (
+                                <span className={styles.lastSentText} style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                  {new Date(t.lastNotification.fechaEnvio).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        <div className={styles.notifActionsRow}>
+                          <button 
+                            type="button"
+                            className={styles.btnActionIconOutlined}
+                            onClick={() => openPreview(t.previewText)}
+                            title="Ver vista previa del mensaje de WhatsApp"
+                          >
+                            <EyeIcon />
+                          </button>
+                          <button 
+                            type="button"
+                            className={styles.btnActionSendBordo}
+                            disabled={wppStatus !== 'CONNECTED' || sendingReminders}
+                            onClick={() => handleSendReminders([t.id])}
+                            title={wppStatus !== 'CONNECTED' ? 'Conecta WhatsApp para despachar' : 'Enviar mensaje por WhatsApp'}
+                          >
+                            <SendIcon />
+                          </button>
+                          <a 
+                            href={`/admin/clientes?id=${t.cliente.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.btnActionIconOutlined}
+                            title="Ver ficha de cliente"
+                            style={{ textDecoration: 'none', fontSize: '0.9rem' }}
+                          >
+                            👤
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Render para Turnos Regulares (current, next, 2days)
                 const lastNotif = t.cliente.lastNotification;
                 let parsedZones = [];
                 try {
@@ -418,7 +654,9 @@ export default function NotificacionesPage() {
                 } catch {
                   parsedZones = [];
                 }
-                const zonasText = parsedZones.length > 0 ? parsedZones.map(z => z.nombre).join(', ') : (t.zonas || 'Sin zonas');
+                const zonasText = Array.isArray(parsedZones) && parsedZones.length > 0 
+                  ? parsedZones.map(z => z.nombre || z.name || '').filter(Boolean).join(', ') 
+                  : (t.zonas || 'Sin zonas');
 
                 return (
                   <div 
@@ -450,7 +688,7 @@ export default function NotificacionesPage() {
                         </div>
                         <div className={styles.notifDetailItem}>
                           <span style={{ fontSize: '0.95rem' }}>🕒</span>
-                          <span>{t.horaInicio} a {t.horaFin}</span>
+                          <span>{t.horaInicio} a {t.horaFin} hs</span>
                         </div>
                         <div className={styles.notifDetailItem}>
                           <span style={{ fontSize: '0.95rem' }}>🏷️</span>
@@ -497,6 +735,16 @@ export default function NotificacionesPage() {
                         >
                           <SendIcon />
                         </button>
+                        <a 
+                          href={`/admin/clientes?id=${t.cliente.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.btnActionIconOutlined}
+                          title="Ver ficha de cliente"
+                          style={{ textDecoration: 'none', fontSize: '0.9rem' }}
+                        >
+                          👤
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -520,7 +768,7 @@ export default function NotificacionesPage() {
               <div className={styles.logList}>
                 {sendingResults.successes.map((item, idx) => (
                   <div key={`s-${idx}`} className={`${styles.logItem} ${styles.logSuccess}`}>
-                    ✅ Recordatorio enviado con éxito a {item.cliente}
+                    ✅ Mensaje enviado con éxito a {item.cliente}
                   </div>
                 ))}
                 {sendingResults.failures.map((item, idx) => (
@@ -565,6 +813,7 @@ export default function NotificacionesPage() {
           </div>
         </div>
       )}
+
       {/* Toast Notification */}
       {toast.show && (
         <div style={{

@@ -2089,6 +2089,34 @@
 - [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
 - [x] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.
 
+## 📅 Sesión: 23 de Octubre de 2026 (Parte 3 - Notificaciones: Selector Desplegable, Módulos "Va a avisar" y "Mantenimiento" con Rango de Fechas y Anticipación Automática de 1 Semana)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver los requerimientos solicitados con captura de pantalla (`media_1792767867459_a69beaae.png`):
+  1. **Selector Desplegable en Notificaciones (`/admin/notificaciones`)**:
+     - Reemplazar las pestañas horizontales por un selector desplegable unificado con borde `#7a1f1e` (`.categoryDropdown`):
+       - `📅 Turnos de la Semana Actual`
+       - `📅 Turnos de la Próxima Semana`
+       - `⏰ Turnos en 2 Días (Recordatorio 48hs)`
+       - `⏳ Clientes "Va a avisar"`
+       - `🛠️ Clientes en "Mantenimiento"`
+  2. **Ventanas de Seguimiento "Va a avisar" y "Mantenimiento" con Rango de Fechas**:
+     - Filtro responsive con selectores `Desde` y `Hasta`, botón `🔄 Actualizar`, selector de criterio (`🔔 Fecha sugerida de envío` / `📅 Fecha de última sesión`) y toggle `Ver también ya notificados`.
+     - Consulta en `/api/admin/notificaciones` de clientes con última sesión realizada (`REALIZADO`) en `VA_A_AVISAR` o `MANTENIMIENTO`/`FINALIZADO`, sin citas futuras agendadas y que no hayan recibido previamente el mensaje automático desde su última cita.
+  3. **Visualización Completa de la Ficha del Último Turno**:
+     - Cada tarjeta muestra: Nombre del cliente, WhatsApp, fecha de última sesión, zonas realizadas, valor total, frecuencia y semanas calculadas para el siguiente turno, fecha sugerida de aviso y badge de estado.
+  4. **Selección Masiva e Individual**:
+     - Checkboxes por tarjeta para selección individual y checkbox superior "Seleccionar todos".
+     - Botón superior para despacho masivo `[ Enviar Mensajes ({seleccionados}) ]`.
+     - Botones individuales en cada tarjeta: previsualizar mensaje `[ 👁️ ]`, enviar por WhatsApp en el acto `[ ✈️ ]` y ver ficha del cliente `[ 👤 ]`.
+  5. **Anticipación de Mensajes Automáticos en Cron (`src/lib/whatsapp.js`)**:
+     - Actualizar la regla para que los mensajes automáticos de "Va a avisar" se despachen exactamente **1 semana antes** de la fecha del próximo turno (`última sesión + (frecuencia - 1) semanas`).
+     - Mantener los mensajes automáticos de "Mantenimiento" a los **75 días (2,5 meses)** de su última sesión.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [ ] Documentar en `.synapse/decisions.md` (D-129), `.synapse/workcycle.md` y `chat.md`.
+
 ## 📅 Sesión: 22 de Octubre de 2026 (Parte 3 - Reorganización Visual de Agenda Diaria, Inversión de Toggle de Cancelados e Ingreso del Día / Ingreso Neto)
 
 ### 🎯 Tareas en curso / Objetivos
@@ -2194,3 +2222,31 @@
 - [x] Push a GitHub (`main` y `staging`).
 - [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
 - [x] Documentar en `.synapse/decisions.md` (D-128), `.synapse/workcycle.md` y `chat.md`.
+
+## 📅 Sesión: 23 de Octubre de 2026 (Parte 3 - Notificaciones: Selector Desplegable, Módulos "Va a avisar" y "Mantenimiento" con Rango de Fechas y Anticipación Automática de 1 Semana)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver los requerimientos solicitados con captura de pantalla (`media_1792767867459_a69beaae.png`):
+  1. **Selector Desplegable en Notificaciones (`/admin/notificaciones`)**:
+     - Reemplazar las pestañas horizontales por un selector desplegable unificado con borde `#7a1f1e` (`.categoryDropdown`):
+       - `📅 Turnos de la Semana Actual`
+       - `📅 Turnos de la Próxima Semana`
+       - `⏰ Turnos en 2 Días (Recordatorio 48hs)`
+       - `⏳ Clientes "Va a avisar"`
+       - `🛠️ Clientes en "Mantenimiento"`
+  2. **Ventanas de Seguimiento "Va a avisar" y "Mantenimiento" con Rango de Fechas**:
+     - Filtro responsive con selectores `Desde` y `Hasta`, botón `🔄 Actualizar`, selector de criterio (`🔔 Fecha sugerida de envío` / `📅 Fecha de última sesión`) y toggle `Ver también ya notificados`.
+     - Consulta en `/api/admin/notificaciones` de clientes con última sesión realizada (`REALIZADO`) en `VA_A_AVISAR` o `MANTENIMIENTO`/`FINALIZADO`, sin citas futuras agendadas y que no hayan recibido previamente el mensaje automático desde su última cita.
+  3. **Visualización Completa de la Ficha del Último Turno**:
+     - Cada tarjeta muestra: Nombre del cliente, WhatsApp, fecha de última sesión, zonas realizadas, valor total, frecuencia y semanas calculadas para el siguiente turno, fecha sugerida de aviso y badge de estado.
+  4. **Selección Masiva e Individual**:
+     - Checkboxes por tarjeta para selección individual y checkbox superior "Seleccionar todos".
+     - Botón superior para despacho masivo `[ Enviar Mensajes ({seleccionados}) ]`.
+     - Botones individuales en cada tarjeta: previsualizar mensaje `[ 👁️ ]`, enviar por WhatsApp en el acto `[ ✈️ ]` y ver ficha del cliente `[ 👤 ]`.
+  5. **Anticipación de Mensajes Automáticos en Cron (`src/lib/whatsapp.js`)**:
+     - Actualizar la regla para que los mensajes automáticos de "Va a avisar" se despachen exactamente **1 semana antes** de la fecha del próximo turno (`última sesión + (frecuencia - 1) semanas`).
+     - Mantener los mensajes automáticos de "Mantenimiento" a los **75 días (2,5 meses)** de su última sesión.
+- [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+- [ ] Push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [ ] Documentar en `.synapse/decisions.md` (D-129), `.synapse/workcycle.md` y `chat.md`.
