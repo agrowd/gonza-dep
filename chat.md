@@ -1195,3 +1195,26 @@
    - Cuando la métrica es Ganancia Neta, los encabezados de columna se adaptan a `Ingreso real` y `Seña cobrada`.
    - Los valores de las celdas reflejan `item.ingresoCobradoPeriodo` ($42.000 para Jorge) y `item.señaCobradaPeriodo` ($0 para Jorge).
    - En el cuadro inferior de resumen: `Ingreso total real` ($362.000), `Total señas cobradas` y `Total saldos cobrados`.
+---
+
+## 🚀 Sesión: 25 de Octubre de 2026 (Parte 5) - Hardening de Seguridad VPS: Firewall UFW, Actualizaciones Ubuntu y Backup Diario a Google Drive
+
+### Requerimientos de Gonzalo Siri (`media_1792771139279_08299530.png`):
+> 1) un backup automático diario de la base de la agenda, guardado también fuera del servidor (Google Drive depilaser1925@gmail.com);
+> 2) activar el firewall dejando abiertos solo 22, 80 y 443, porque hoy los puertos 3006/3007/3008 están accesibles desde internet;
+> 3) aplicar las actualizaciones pendientes de Ubuntu en un horario sin turnos.
+
+### Implementación Realizada:
+1. **Firewall UFW Estricto**:
+   - `ufw default deny incoming`, `ufw default allow outgoing`.
+   - Permitidos exclusivamente `22/tcp` (SSH), `80/tcp` (HTTP) y `443/tcp` (HTTPS).
+   - Bloqueados desde internet los puertos internos `3006`, `3007`, `3008` y `5432`.
+   - Verificados los accesos públicos por Nginx y SSL con HTTP 200 OK.
+2. **Actualizaciones de Seguridad (Ubuntu 24.04 Noble)**:
+   - 59 paquetes actualizados sin interrupción de servicios.
+   - PM2 (`gonzalo-agenda`, `gonzalo-agenda-staging`, `ia-gonzadep`), PostgreSQL y Nginx online.
+3. **Backup Diario Off-Site a Google Drive (`depilaser1925@gmail.com`)**:
+   - Configurado `rclone` enlazado con la cuenta `depilaser1925@gmail.com`.
+   - Creado script `/srv/gonzalo-dep/scripts/daily_backup.sh` con compresión `.sql.gz`, subida a carpeta `AgendaBackups/` y purga de más de 30 días.
+   - Ejecutado y verificado el primer backup de prueba en Google Drive (`agenda_db_20261025_175944.sql.gz`, 2.1 MB).
+   - Programado cron diario en `/etc/cron.d/agenda-backup` a las 03:00 AM.

@@ -2275,3 +2275,22 @@
 - [ ] Push a GitHub (`main` y `staging`).
 - [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
 - [ ] Documentar en `.synapse/decisions.md` (D-130), `.synapse/workcycle.md` y `chat.md`.
+
+
+## 📅 Sesión: 25 de Octubre de 2026 (Parte 5 - Hardening de Seguridad VPS, Firewall UFW, Actualizaciones Ubuntu y Backup Diario a Google Drive)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Configuración de Firewall Estricto (UFW):
+  - Política de bloqueo total entrante por defecto (`default deny incoming`).
+  - Habilitados exclusivamente puertos esenciales: `22/tcp` (SSH), `80/tcp` (HTTP) y `443/tcp` (HTTPS).
+  - Bloqueado el acceso público desde internet a los puertos internos `3006`, `3007`, `3008` y `5432` (PostgreSQL).
+  - Verificada la continuidad de Nginx y certificados SSL (200 OK).
+- [x] Actualización de Seguridad del Servidor (Ubuntu Noble 24.04):
+  - Aplicados parches a 59 paquetes críticos del sistema operativo y herramientas de seguridad de Hostinger (`monarx-protect`).
+  - Servicios PM2 (`gonzalo-agenda`, `gonzalo-agenda-staging`, `ia-gonzadep`), PostgreSQL y Nginx online y estables.
+- [x] Implementación de Backup Diario Off-Site a Google Drive:
+  - Autorización OAuth de `rclone` conectada a la cuenta `depilaser1925@gmail.com`.
+  - Script automatizado `/srv/gonzalo-dep/scripts/daily_backup.sh` con dump de PostgreSQL comprimido (`agenda_db_*.sql.gz`), copia a `gdrive:AgendaBackups/` y rotación/purga de copias anteriores a 30 días tanto locales como remotas.
+  - Backup de prueba inicial verificado en Google Drive (`agenda_db_20261025_175944.sql.gz`, 2.1 MB).
+  - Tarea cron configurada en `/etc/cron.d/agenda-backup` programada a las 03:00 AM todos los días.
+- [x] Documentar en `.synapse/decisions.md` (D-131), `.synapse/workcycle.md` y `chat.md`.
