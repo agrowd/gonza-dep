@@ -1218,3 +1218,28 @@
    - Creado script `/srv/gonzalo-dep/scripts/daily_backup.sh` con compresión `.sql.gz`, subida a carpeta `AgendaBackups/` y purga de más de 30 días.
    - Ejecutado y verificado el primer backup de prueba en Google Drive (`agenda_db_20261025_175944.sql.gz`, 2.1 MB).
    - Programado cron diario en `/etc/cron.d/agenda-backup` a las 03:00 AM.
+
+---
+
+## 🚀 Sesión: 26 de Octubre de 2026 (Parte 6) - Cómputo de Señas Cobradas en el Día en el Ingreso Neto de la Agenda Diaria (Caso Juan Carlos Santander)
+
+### Reporte de WhatsApp (`media_1793035435852_2d54a208.png`):
+> *"El viernes también, Gonza hizo una alta de un cliente nuevo que mandó la seña pero en ingreso Neto no apareció la seña abonada"*
+> - Captura de la Agenda del **Viernes, 23 de Octubre de 2026**:
+>   - 0 turnos agendados, + 1 bloqueos (ECO DOPER Santino y traumatología)
+>   - INGRESO DEL DÍA: $0
+>   - INGRESO NETO: $0 (remarcado en verde con flecha por Gonzalo)
+
+### Causa Raíz:
+- El viernes 23/10/2026 se dio de alta a Juan Carlos Santander (`34d95e82-7ee9-47c4-a871-e5b5c77bef22`, `createdAt = 2026-10-23 14:09:02` en Argentina UTC-3) con valor total $150.000 y seña pagada de **$75.000**, para un turno programado para el viernes 06/11/2026 a las 18:00 hs.
+- En la vista diaria de la Agenda (`/admin/agenda`), `GET /api/admin/turnos` solo consultaba citas con `fecha === dateStr`, y el cálculo de `ingresoNeto` únicamente sumaba citas con `estado === 'REALIZADO'`. Al ser un día bloqueado sin sesiones realizadas, `Ingreso neto` mostraba `$0`, ignorando el efectivo/transferencia real de $75.000 que entró a la caja en esa fecha.
+
+### Solución Implementada:
+1. **Endpoint Especializado de Señas del Día (`/api/admin/turnos/senas-dia`)**:
+   - `GET /api/admin/turnos/senas-dia?fecha=YYYY-MM-DD`: consulta en PostgreSQL los turnos con `createdAt` en la fecha oficial argentina (UTC-3), `valorSeña > 0` y estado activo (o cancelado con seña retenida), retornando el total recaudado y el desglose de cada seña.
+2. **Fórmula Unificada de Flujo de Caja (Gonzalo Rule of Cashflow)**:
+   - `Ingreso neto` = Saldos cobrados de turnos realizados hoy (`valorTotal - bonificación - seña previa`) + Señas cobradas hoy (`daySenas.totalSenas`).
+   - Para el viernes 23/10: Saldos de sesiones = $0, Señas cobradas hoy = $75.000. Total Ingreso neto = **$75.000**.
+3. **Desglose Visual Transparente y Bloque Informativo**:
+   - Debajo del valor de `Ingreso neto` se añade el subtítulo informativo: `($75.000 señas del día)` o `($X saldos + $Y señas)`.
+   - Se incorporó un bloque verde suave (`#f0fdf4`) directamente debajo de la tarjeta diaria detallando cada seña percibida en la fecha: nombre del cliente, turno futuro con fecha y hora (`📅 Turno: 06/11/2026 18:00 hs`), badge de estado y monto en verde (`+$75.000`).

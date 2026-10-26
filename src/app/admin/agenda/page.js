@@ -212,6 +212,7 @@ export default function AgendaPage() {
   const [fromStats, setFromStats] = useState(false);
   const [isNextScheduling, setIsNextScheduling] = useState(false);
   const [appointments, setAppointments] = useState([]);
+  const [daySenas, setDaySenas] = useState({ totalSenas: 0, count: 0, turnos: [] });
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCancelled, setShowCancelled] = useState(false);
@@ -1594,11 +1595,19 @@ export default function AgendaPage() {
       return;
     }
 
-    Promise.all([
+    const promises = [
       fetch(`/api/admin/turnos?start=${startStr}&end=${endStr}`).then(res => res.json()),
       fetch(`/api/admin/bloqueos?start=${startStr}&end=${endStr}`).then(res => res.json())
-    ])
-      .then(([turnosData, bloqueosData]) => {
+    ];
+
+    if (viewMode === 'day' && currentUserRole !== 'OPERADOR') {
+      promises.push(
+        fetch(`/api/admin/turnos/senas-dia?fecha=${startStr}`).then(res => res.json())
+      );
+    }
+
+    Promise.all(promises)
+      .then(([turnosData, bloqueosData, senasData]) => {
         if (Array.isArray(turnosData)) {
           const finalTurnos = currentUserRole === 'OPERADOR' && currentUserId
             ? turnosData.filter(t => t.operadorId === currentUserId)
@@ -1607,6 +1616,11 @@ export default function AgendaPage() {
         }
         if (Array.isArray(bloqueosData)) {
           setBloqueos(currentUserRole === 'OPERADOR' ? [] : bloqueosData);
+        }
+        if (senasData && !senasData.error) {
+          setDaySenas(senasData);
+        } else {
+          setDaySenas({ totalSenas: 0, count: 0, turnos: [] });
         }
       })
       .catch(err => console.error('Error fetching appointments or bloqueos:', err))
@@ -3114,12 +3128,19 @@ export default function AgendaPage() {
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
               const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
-              // Cálculo de ingreso neto: estrictamente turnos REALIZADOS del día (alineado 100% con Ganancia Neta de Estadísticas)
+              // Cálculo de ingreso neto: dinero real de caja de la jornada (Gonzalo Rule of Cashflow, alineado 100% con Ganancia Neta de Estadísticas)
+              // 1) Saldos cobrados de turnos REALIZADOS en el día (valorTotal - bonificación - seña previa)
               const turnosRealizados = dayApps.filter(app => app.estado === 'REALIZADO');
-              const ingresoNeto = turnosRealizados.reduce((sum, a) => {
-                const val = Math.max(0, Number(a.valorTotal || 0) - Number(a.bonificacion || 0));
-                return sum + val;
+              const totalSaldosRealizados = turnosRealizados.reduce((sum, a) => {
+                const saldo = Math.max(0, Number(a.valorTotal || 0) - Number(a.bonificacion || 0) - Number(a.valorSeña || 0));
+                return sum + saldo;
               }, 0);
+
+              // 2) Señas cobradas en este día (turnos agendados en esta fecha en timezone UTC-3)
+              const totalSenasCobradasHoy = Number(daySenas?.totalSenas || 0);
+
+              // 3) Ingreso neto total de caja = Saldos de sesiones realizadas + Señas cobradas en el día
+              const ingresoNeto = totalSaldosRealizados + totalSenasCobradasHoy;
 
               // Liquidación de Operadores (Desde primer turno hasta último turno con su etiqueta)
               const activeDayApps = dayApps.filter(a => a.estado !== 'CANCELADO');
@@ -3218,6 +3239,19 @@ export default function AgendaPage() {
                             <div className={styles.dayCardStatItem}>
                               <span className={styles.dayCardStatLabel}>Ingreso neto</span>
                               <span className={styles.dayCardStatValGreen}>${ingresoNeto.toLocaleString('es-AR')}</span>
+                              {totalSenasCobradasHoy > 0 && (
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  color: '#15803d',
+                                  fontWeight: 600,
+                                  whiteSpace: 'nowrap',
+                                  marginTop: '1px'
+                                }}>
+                                  {totalSaldosRealizados > 0
+                                    ? `($${totalSaldosRealizados.toLocaleString('es-AR')} saldos + $${totalSenasCobradasHoy.toLocaleString('es-AR')} señas)`
+                                    : `($${totalSenasCobradasHoy.toLocaleString('es-AR')} señas del día)`}
+                                </span>
+                              )}
                             </div>
                             {totalPagarOperadores > 0 && (
                               <div className={styles.dayCardStatItem} style={{ marginTop: '0.2rem' }}>
@@ -3230,6 +3264,92 @@ export default function AgendaPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Bloque Informativo de Señas Cobradas en la Fecha para Administrador */}
+                  {currentUserRole !== 'OPERADOR' && daySenas?.turnos && daySenas.turnos.length > 0 && (
+                    <div style={{
+                      marginBottom: '1rem',
+                      padding: '0.65rem 0.9rem',
+                      backgroundColor: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '12px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        color: '#166534',
+                        marginBottom: '0.4rem'
+                      }}>
+                        <span>
+                          💵 Señas cobradas en esta fecha ({daySenas.turnos.length}):
+                        </span>
+                        <span style={{ fontSize: '0.92rem', color: '#15803d', fontWeight: 800 }}>
+                          +${totalSenasCobradasHoy.toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        {daySenas.turnos.map(s => {
+                          const fechaTurnoStr = s.fecha
+                            ? new Date(s.fecha).toLocaleDateString('es-AR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                timeZone: 'UTC'
+                              })
+                            : '';
+                          return (
+                            <div
+                              key={s.id}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '0.35rem 0.6rem',
+                                backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(187, 247, 208, 0.7)',
+                                fontSize: '0.78rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 700, color: '#14532d' }}>
+                                  {s.cliente?.nombreCompleto || 'Cliente'}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  color: '#374151',
+                                  backgroundColor: '#e5e7eb',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px'
+                                }}>
+                                  📅 Turno: {fechaTurnoStr} {s.horaInicio} hs
+                                </span>
+                                {s.estado && (
+                                  <span style={{
+                                    fontSize: '0.68rem',
+                                    fontWeight: 600,
+                                    color: s.estado === 'SEÑADO' ? '#15803d' : '#854d0e',
+                                    backgroundColor: s.estado === 'SEÑADO' ? '#dcfce7' : '#fef9c3',
+                                    padding: '1px 5px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    {s.estado}
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontWeight: 800, color: '#15803d', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                                +${Number(s.valorSeña || 0).toLocaleString('es-AR')}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Bloque Informativo de Liquidación de Operadores para Administrador */}
                   {currentUserRole !== 'OPERADOR' && payableOperators.length > 0 && (

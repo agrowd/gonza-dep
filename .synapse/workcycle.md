@@ -2294,3 +2294,24 @@
   - Backup de prueba inicial verificado en Google Drive (`agenda_db_20261025_175944.sql.gz`, 2.1 MB).
   - Tarea cron configurada en `/etc/cron.d/agenda-backup` programada a las 03:00 AM todos los días.
 - [x] Documentar en `.synapse/decisions.md` (D-131), `.synapse/workcycle.md` y `chat.md`.
+
+## 📅 Sesión: 26 de Octubre de 2026 (Parte 6 - Agenda: Cómputo de Señas Cobradas en el Día en el Ingreso Neto Diario - Caso Juan Carlos Santander)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Resolver la discrepancia contable reportada con captura de WhatsApp (`media_1793035435852_2d54a208.png`):
+  1. **Diagnóstico y Forense de Base de Datos**:
+     - En el turno de Juan Carlos Santander (`34d95e82-7ee9-47c4-a871-e5b5c77bef22`): creado el 23/10/2026 a las 14:09:02 hs (UTC-3), valor total $150.000, seña pagada de $75.000, con fecha de turno para el viernes 06/11/2026 a las 18:00 hs.
+     - En la vista diaria de la Agenda (`/admin/agenda`) para el 23/10/2026 figuraban 0 turnos agendados y 1 bloqueo, con `Ingreso del día: $0` e `Ingreso neto: $0`.
+     - **Causa Raíz**: `GET /api/admin/turnos` solo filtraba por `fecha === dateStr`, y el cálculo de `ingresoNeto` sumaba únicamente `turnosRealizados` de ese día, ignorando el flujo de caja real ingresado por señas para turnos futuros.
+  2. **Endpoint Especializado de Señas del Día (`/api/admin/turnos/senas-dia`)**:
+     - Diseñado el endpoint `GET /api/admin/turnos/senas-dia?fecha=YYYY-MM-DD` que consulta en PostgreSQL los turnos con `createdAt` en la fecha oficial argentina (UTC-3), `valorSeña > 0` y estado activo (o cancelado con seña perdida), retornando el total recaudado y el detalle de cada seña con cliente y fecha de turno futuro.
+  3. **Fórmula Unificada de Flujo de Caja (Gonzalo Rule of Cashflow)**:
+     - En la cabecera diaria (`.neocitaDayHeaderCard`), `Ingreso neto` = Saldos cobrados de turnos realizados hoy (`valorTotal - bonificación - seña previa`) + Señas cobradas hoy (`daySenas.totalSenas`).
+     - Para el viernes 23/10: Saldos de sesiones realizadas = $0, Señas cobradas hoy = $75.000. Total Ingreso neto = **$75.000**, alineado 100% con `caja.periodo` / `Ganancia Neta` de `/admin/estadisticas`.
+  4. **Desglose Visual Transparente y Bloque Informativo**:
+     - Debajo del valor verde de Ingreso neto se añade el subtítulo informativo `($75.000 señas del día)` o `($X saldos + $Y señas)`.
+     - Se incorporó un bloque informativo verde suave (`#f0fdf4`) directamente debajo de la cabecera diaria detallando cada seña percibida en la fecha: nombre del cliente, turno futuro con fecha y hora (`📅 Turno: 06/11/2026 18:00 hs`), badge de estado y monto en verde (`+$75.000`).
+- [x] Validar compilación local (`npm run build`: 46/46 rutas exitosas con 0 errores).
+- [ ] Push a GitHub (`main` y `staging`).
+- [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+- [ ] Documentar en `.synapse/decisions.md` (D-132), `.synapse/workcycle.md` y `chat.md`.
