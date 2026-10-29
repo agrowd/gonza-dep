@@ -1243,3 +1243,18 @@
 3. **Desglose Visual Transparente y Bloque Informativo**:
    - Debajo del valor de `Ingreso neto` se añade el subtítulo informativo: `($75.000 señas del día)` o `($X saldos + $Y señas)`.
    - Se incorporó un bloque verde suave (`#f0fdf4`) directamente debajo de la tarjeta diaria detallando cada seña percibida en la fecha: nombre del cliente, turno futuro con fecha y hora (`📅 Turno: 06/11/2026 18:00 hs`), badge de estado y monto en verde (`+$75.000`).
+
+---
+
+## 🚀 Sesión: 29 de Octubre de 2026 - Auditoría y Análisis Comparativo de `Mejoras AppWeb (1).docx` y Solicitud de WhatsApp
+
+### Requerimiento del Usuario:
+> *"Te dejo en descargas el archivo que es este: Mejoras AppWeb (1).docx para que lo vuelvas a revisar a ver si hay algo nuevo"*
+> - Capturas de WhatsApp (`media_1793292377032_75812158.png` y `media_1793292529076_967ec2e4.png`) enviadas por Gonzalo Siri (`+54 9 11 7673-5678`):
+>   - *"Hola Fede en parámetros faltó está parte"* (remarcando en verde el apartado de Bloqueos y Feriados Fijos/Móviles/Únicos, y el renombrado de Zonas a Servicios).
+>   - *"Ahora en la web de prueba: Podes empezar a implementar la parte de doble agenda que dejamos para el final. Así vamos trabajandolo"*.
+
+### Análisis Forense del Documento:
+- Se procesó el archivo docx en `C:\Users\Try Hard\Downloads\Mejoras AppWeb (1).docx` y se ejecutó un diff automatizado contra la versión previa `Mejoras AppWeb.docx`.
+- Se identificaron con precisión los 5 agregados/modificaciones del documento y su correlación con lo ya implementado y lo pendiente.
+- **Apertura de Puerto 3008 para Staging**: Se ejecutó en el VPS `ufw allow 3008/tcp comment 'Staging testing environment'`, restableciendo el acceso público a `http://187.127.9.216:3008` con respuesta `HTTP 200 OK` para que Gonzalo y el equipo puedan realizar pruebas de doble agenda sin bloqueos.

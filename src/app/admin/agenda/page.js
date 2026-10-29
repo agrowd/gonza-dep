@@ -3028,41 +3028,46 @@ export default function AgendaPage() {
                       {date.getDate()}
                     </span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px', width: '100%', overflow: 'hidden' }}>
-                      {dayBloqueos.map(b => (
-                        <div
-                          key={`mb-${b.id}`}
-                          className={`${styles.monthAppBlock} ${styles.stateBloqueado}`}
-                          title={`🔒 ${b.motivo || 'Bloqueo'}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBlockForm({
-                              id: b.id,
-                              fechaStr: getAppDateStr(b.fecha),
-                              horaInicio: b.horaInicio,
-                              horaFin: b.horaFin,
-                              motivo: b.motivo || '',
-                              esDiaCompleto: b.esDiaCompleto
-                            });
-                            setIsBlockModalOpen(true);
-                          }}
-                          style={{
-                            fontSize: '0.68rem',
-                            padding: '2px 4px',
-                            borderRadius: '4px',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            lineHeight: '1.2',
-                            color: '#f59e0b',
-                            border: '1px dashed #f59e0b',
-                            backgroundColor: '#262626'
-                          }}
-                        >
-                          🔒 {b.esDiaCompleto ? 'DÍA BLOQUEADO' : `${b.horaInicio} ${b.motivo || 'Bloqueo'}`}
-                        </div>
-                      ))}
+                      {dayBloqueos.map(b => {
+                        const blockColor = b.color || (b.tipo === 'FIJO' ? '#dc2626' : (b.tipo === 'MOVIL' ? '#d97706' : '#2563eb'));
+                        return (
+                          <div
+                            key={`mb-${b.id}`}
+                            className={`${styles.monthAppBlock} ${styles.stateBloqueado}`}
+                            title={`🔒 ${b.motivo || 'Bloqueo'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBlockForm({
+                                id: b.id,
+                                fechaStr: getAppDateStr(b.fecha),
+                                horaInicio: b.horaInicio,
+                                horaFin: b.horaFin,
+                                motivo: b.motivo || '',
+                                esDiaCompleto: b.esDiaCompleto,
+                                tipo: b.tipo || 'UNICO',
+                                color: blockColor
+                              });
+                              setIsBlockModalOpen(true);
+                            }}
+                            style={{
+                              fontSize: '0.68rem',
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              lineHeight: '1.2',
+                              color: blockColor,
+                              border: `1px dashed ${blockColor}`,
+                              backgroundColor: '#262626'
+                            }}
+                          >
+                            🔒 {b.esDiaCompleto ? 'DÍA BLOQUEADO' : `${b.horaInicio} ${b.motivo || 'Bloqueo'}`}
+                          </div>
+                        );
+                      })}
                       {dayAppointments.slice(0, 4).map(app => {
                         let zonasText = '';
                         try {
@@ -3557,10 +3562,13 @@ export default function AgendaPage() {
 
                           if (entry.type === 'bloqueo') {
                             const b = entry.item;
+                            const blockColor = b.color || (b.tipo === 'FIJO' ? '#dc2626' : (b.tipo === 'MOVIL' ? '#d97706' : '#2563eb'));
+                            const tipoLabel = b.tipo === 'FIJO' ? '🔴 FERIADO FIJO' : (b.tipo === 'MOVIL' ? '🟠 FERIADO MÓVIL' : '🔒 BLOQUEO');
                             return (
                               <div
                                 key={`b-${b.id}`}
                                 className={`${styles.neocitaCard} ${styles.neocitaBlockCard}`}
+                                style={{ borderLeft: `5px solid ${blockColor}` }}
                                 onClick={() => {
                                   setBlockForm({
                                     id: b.id,
@@ -3568,25 +3576,27 @@ export default function AgendaPage() {
                                     horaInicio: b.horaInicio,
                                     horaFin: b.horaFin,
                                     motivo: b.motivo || '',
-                                    esDiaCompleto: b.esDiaCompleto
+                                    esDiaCompleto: b.esDiaCompleto,
+                                    tipo: b.tipo || 'UNICO',
+                                    color: blockColor
                                   });
                                   setIsBlockModalOpen(true);
                                 }}
                               >
-                                <div className={styles.neocitaTimeCol} style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: '#f59e0b40' }}>
-                                  <span className={styles.neocitaTimeRange} style={{ color: '#f59e0b' }}>
+                                <div className={styles.neocitaTimeCol} style={{ backgroundColor: `${blockColor}15`, borderColor: `${blockColor}40` }}>
+                                  <span className={styles.neocitaTimeRange} style={{ color: blockColor }}>
                                     {b.esDiaCompleto ? 'DÍA COMPLETO' : `${b.horaInicio} a ${b.horaFin}`}
                                   </span>
-                                  <span className={styles.neocitaDurationBadge} style={{ color: '#f59e0b', borderColor: '#f59e0b60' }}>
-                                    🔒 BLOQUEO
+                                  <span className={styles.neocitaDurationBadge} style={{ color: blockColor, borderColor: `${blockColor}60` }}>
+                                    {tipoLabel}
                                   </span>
                                 </div>
                                 <div className={styles.neocitaBody}>
                                   <div className={styles.neocitaTopRow}>
-                                    <span className={styles.neocitaClientName} style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span className={styles.neocitaClientName} style={{ color: blockColor, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                       🚫 {b.motivo || 'Bloqueo Administrativo'}
                                     </span>
-                                    <span style={{ fontSize: '0.78rem', color: '#f59e0b', fontWeight: 600 }}>
+                                    <span style={{ fontSize: '0.78rem', color: blockColor, fontWeight: 600 }}>
                                       Haz clic para editar / desbloquear
                                     </span>
                                   </div>
@@ -3754,6 +3764,7 @@ export default function AgendaPage() {
                     {/* Bloqueos absolute positioning */}
                     {dayBloqueos.map(b => {
                       const blockStyle = getBlockStyle(b.horaInicio, b.horaFin, { colIdx: 0, totalCols: 1 });
+                      const blockColor = b.color || (b.tipo === 'FIJO' ? '#dc2626' : (b.tipo === 'MOVIL' ? '#d97706' : '#2563eb'));
                       return (
                         <div
                           key={`wb-${b.id}`}
@@ -3761,9 +3772,9 @@ export default function AgendaPage() {
                           style={{
                             ...blockStyle,
                             zIndex: 8,
-                            borderLeft: '4px solid #f59e0b',
+                            borderLeft: `4px solid ${blockColor}`,
                             backgroundColor: '#262626',
-                            color: '#f59e0b'
+                            color: blockColor
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -3773,7 +3784,9 @@ export default function AgendaPage() {
                               horaInicio: b.horaInicio,
                               horaFin: b.horaFin,
                               motivo: b.motivo || '',
-                              esDiaCompleto: b.esDiaCompleto
+                              esDiaCompleto: b.esDiaCompleto,
+                              tipo: b.tipo || 'UNICO',
+                              color: blockColor
                             });
                             setIsBlockModalOpen(true);
                           }}
@@ -6339,14 +6352,33 @@ export default function AgendaPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>Fecha del Bloqueo *</label>
-                <input
-                  type="date"
-                  value={blockForm.fechaStr}
-                  onChange={(e) => setBlockForm({ ...blockForm, fechaStr: e.target.value })}
-                  required
-                />
+              <div className={styles.inputRow}>
+                <div className={styles.inputGroup} style={{ flex: 1 }}>
+                  <label className={styles.inputLabel}>Tipo de Bloqueo</label>
+                  <select
+                    value={blockForm.tipo || 'UNICO'}
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      let c = '#2563eb';
+                      if (t === 'FIJO') c = '#dc2626';
+                      if (t === 'MOVIL') c = '#d97706';
+                      setBlockForm({ ...blockForm, tipo: t, color: c });
+                    }}
+                  >
+                    <option value="UNICO">🔵 Único (Día específico)</option>
+                    <option value="FIJO">🔴 Fijo Anual (Se repite)</option>
+                    <option value="MOVIL">🟠 Móvil (Reubicable)</option>
+                  </select>
+                </div>
+                <div className={styles.inputGroup} style={{ flex: 1 }}>
+                  <label className={styles.inputLabel}>Fecha del Bloqueo *</label>
+                  <input
+                    type="date"
+                    value={blockForm.fechaStr}
+                    onChange={(e) => setBlockForm({ ...blockForm, fechaStr: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className={styles.inputGroup} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

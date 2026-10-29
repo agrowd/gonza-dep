@@ -129,6 +129,175 @@ export default function ConfiguracionPage() {
     telefono: ''
   });
 
+  // Feriados y Bloqueos State (D-133)
+  const currentYear = new Date().getFullYear();
+  const [selectedFeriadosYear, setSelectedFeriadosYear] = useState(currentYear);
+  const [feriados, setFeriados] = useState([]);
+  const [loadingFeriados, setLoadingFeriados] = useState(false);
+  const [feriadoForm, setFeriadoForm] = useState({
+    fechaStr: new Date().toISOString().split('T')[0],
+    tipo: 'FIJO', // 'FIJO', 'MOVIL', 'UNICO'
+    color: '#dc2626',
+    motivo: '',
+    esDiaCompleto: true,
+    horaInicio: '10:00',
+    horaFin: '20:00'
+  });
+  const [moveModal, setMoveModal] = useState({
+    isOpen: false,
+    feriado: null,
+    nuevaFechaStr: ''
+  });
+
+  // Helpers de Fechas Seguras para Feriados (inmunes a desfasajes de zona horaria)
+  const formatFeriadoDate = (dateVal) => {
+    if (!dateVal) return '-';
+    if (typeof dateVal === 'string' && dateVal.includes('-')) {
+      const parts = dateVal.split('T')[0].split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '-';
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  };
+
+  const getFeriadoDayName = (dateVal) => {
+    if (!dateVal) return '';
+    let d;
+    if (typeof dateVal === 'string' && dateVal.includes('-')) {
+      const parts = dateVal.split('T')[0].split('-');
+      d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+    } else {
+      d = new Date(dateVal);
+    }
+    if (isNaN(d.getTime())) return '';
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return days[d.getDay()];
+  };
+
+  // Fetch Feriados
+  const fetchFeriados = (year = selectedFeriadosYear) => {
+    setLoadingFeriados(true);
+    fetch(`/api/admin/bloqueos?ano=${year}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setFeriados(data);
+        }
+      })
+      .catch(err => console.error('Error fetching feriados:', err))
+      .finally(() => setLoadingFeriados(false));
+  };
+
+  const handleCreateFeriado = async (e) => {
+    e.preventDefault();
+    if (!feriadoForm.fechaStr) {
+      showToast('Selecciona una fecha para el bloqueo', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/bloqueos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feriadoForm)
+      });
+      if (res.ok) {
+        showToast('Feriado o bloqueo registrado con éxito');
+        setFeriadoForm(prev => ({
+          ...prev,
+          motivo: '',
+          esDiaCompleto: true
+        }));
+        fetchFeriados(selectedFeriadosYear);
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al guardar bloqueo', 'error');
+      }
+    } catch (err) {
+      console.error('Error creating feriado:', err);
+      showToast('Error de red al crear bloqueo', 'error');
+    }
+  };
+
+  const handleDeleteFeriado = async (id, isSynthesized, originalId) => {
+    const targetId = originalId || id;
+    if (!confirm('¿Seguro de que deseas eliminar este feriado o bloqueo de la agenda?')) return;
+    try {
+      const res = await fetch(`/api/admin/bloqueos/${targetId}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Feriado o bloqueo eliminado correctamente');
+        fetchFeriados(selectedFeriadosYear);
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al eliminar bloqueo', 'error');
+      }
+    } catch (err) {
+      console.error('Error deleting feriado:', err);
+      showToast('Error de red al eliminar bloqueo', 'error');
+    }
+  };
+
+  const handleOpenMoveModal = (feriado) => {
+    const origDateStr = feriado.fecha ? (typeof feriado.fecha === 'string' ? feriado.fecha.split('T')[0] : new Date(feriado.fecha).toISOString().split('T')[0]) : '';
+    const movedDateStr = feriado.fechaMovida ? (typeof feriado.fechaMovida === 'string' ? feriado.fechaMovida.split('T')[0] : new Date(feriado.fechaMovida).toISOString().split('T')[0]) : origDateStr;
+    setMoveModal({
+      isOpen: true,
+      feriado,
+      nuevaFechaStr: movedDateStr
+    });
+  };
+
+  const handleSaveMoveFeriado = async () => {
+    if (!moveModal.feriado || !moveModal.nuevaFechaStr) return;
+    try {
+      const targetId = moveModal.feriado.originalId || moveModal.feriado.id;
+      const res = await fetch(`/api/admin/bloqueos/${targetId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fechaMovidaStr: moveModal.nuevaFechaStr,
+          originalId: targetId
+        })
+      });
+      if (res.ok) {
+        showToast('Fecha de feriado móvil reubicada exitosamente');
+        setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' });
+        fetchFeriados(selectedFeriadosYear);
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al reubicar fecha', 'error');
+      }
+    } catch (err) {
+      console.error('Error moving feriado:', err);
+      showToast('Error de red al mover feriado', 'error');
+    }
+  };
+
+  const handleResetMoveFeriado = async (feriado) => {
+    if (!confirm('¿Restaurar la fecha original de este feriado móvil?')) return;
+    try {
+      const targetId = feriado.originalId || feriado.id;
+      const res = await fetch(`/api/admin/bloqueos/${targetId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fechaMovidaStr: '',
+          originalId: targetId
+        })
+      });
+      if (res.ok) {
+        showToast('Feriado restaurado a su fecha original');
+        fetchFeriados(selectedFeriadosYear);
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al restaurar fecha', 'error');
+      }
+    } catch (err) {
+      console.error('Error resetting feriado:', err);
+      showToast('Error de red al restaurar fecha', 'error');
+    }
+  };
+
   // 1. Fetch zones
   const fetchZones = () => {
     setLoadingZones(true);
@@ -235,6 +404,7 @@ export default function ConfiguracionPage() {
     fetchPromociones();
     fetchCupones();
     fetchUsers();
+    fetchFeriados();
   }, []);
 
   // 3. Save configurations in bulk
@@ -756,10 +926,10 @@ export default function ConfiguracionPage() {
         <p>Administra las zonas de depilación, los horarios de atención, las plantillas y los parámetros operativos.</p>
       </div>
 
-      {/* Mobile Dropdown Selector (como en Estadísticas) */}
+      {/* Selector Desplegable Unificado de Secciones (Consistente en Desktop y Móvil) */}
       <div className={styles.tabDropdownWrapper}>
         <label className={styles.tabDropdownLabel}>
-          <SettingsIcon /> Seleccionar Ventana / Sección:
+          <SettingsIcon /> Seleccionar Ventana / Sección de Configuración:
         </label>
         <select
           className={styles.tabSelectDropdown}
@@ -769,62 +939,17 @@ export default function ConfiguracionPage() {
             setActiveTab(tab);
             if (tab === 'users') fetchUsers();
             if (tab === 'promos') { fetchPromociones(); fetchCupones(); }
+            if (tab === 'parametros') { fetchFeriados(selectedFeriadosYear); }
           }}
         >
-          <option value="zones">📍 Zonas de Depilación</option>
-          <option value="hours">🕒 Horarios Laborales</option>
-          <option value="templates">✉️ Mensajes y Plantillas</option>
-          <option value="parametros">⚙️ Parámetros del Sistema</option>
-          <option value="promos">🎁 Promociones y Cupones</option>
+          <option value="zones">🏷️ Servicios (Zonas de Depilación)</option>
+          <option value="hours">⏰ Horarios Laborales</option>
+          <option value="templates">💬 Mensajes y Plantillas</option>
           <option value="users">👥 Usuarios y Operadores</option>
+          <option value="parametros">⚙️ Parámetros y Bloqueos de Agenda</option>
+          <option value="promos">🎁 Promociones y Cupones</option>
+          <option value="boxes">📦 Boxes y Cabinas (Próximamente / Staging)</option>
         </select>
-      </div>
-
-      {/* Tabs Selector (Desktop) */}
-      <div className={styles.tabs}>
-        <button 
-          className={`${styles.tab} ${activeTab === 'zones' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('zones')}
-        >
-          Zonas de Depilación
-        </button>
-        <button 
-          className={`${styles.tab} ${activeTab === 'hours' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('hours')}
-        >
-          Horarios Laborales
-        </button>
-        <button 
-          className={`${styles.tab} ${activeTab === 'templates' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('templates')}
-        >
-          Mensajes y Plantillas
-        </button>
-        <button 
-          className={`${styles.tab} ${activeTab === 'parametros' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('parametros')}
-        >
-          ⚙️ Parámetros
-        </button>
-        <button 
-          className={`${styles.tab} ${activeTab === 'promos' ? styles.tabActive : ''}`}
-          onClick={() => {
-            setActiveTab('promos');
-            fetchPromociones();
-            fetchCupones();
-          }}
-        >
-          🎁 Promociones y Cupones
-        </button>
-        <button 
-          className={`${styles.tab} ${activeTab === 'users' ? styles.tabActive : ''}`}
-          onClick={() => {
-            setActiveTab('users');
-            fetchUsers();
-          }}
-        >
-          👥 Usuarios y Operadores
-        </button>
       </div>
 
       {/* Tab Content 1: Zones Management */}
@@ -1587,6 +1712,297 @@ export default function ConfiguracionPage() {
               </button>
             </div>
           </form>
+
+          {/* Submódulo de Bloqueos de Agenda y Feriados Anuales (D-133) */}
+          <div className={styles.bloqueosSectionCard}>
+            <div className={styles.bloqueosTitleRow}>
+              <div className={styles.bloqueosSectionTitle}>
+                <span>📅 Bloqueos de Agenda y Feriados Anuales</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Año a consultar:</span>
+                <select 
+                  className={styles.input} 
+                  style={{ width: 'auto', padding: '0.4rem 0.8rem', fontWeight: 700 }}
+                  value={selectedFeriadosYear}
+                  onChange={(e) => {
+                    const y = parseInt(e.target.value, 10);
+                    setSelectedFeriadosYear(y);
+                    fetchFeriados(y);
+                  }}
+                >
+                  {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.5rem 0 1.25rem 0', lineHeight: '1.5' }}>
+              Bloquea días u horarios en la agenda para feriados o eventos festivos. Los feriados <strong>Fijos</strong> se replican automáticamente todos los años. Los feriados <strong>Móviles</strong> permiten reubicar su fecha con anticipación (ej. feriados puente). Los bloqueos <strong>Únicos</strong> aplican solo a esa fecha específica.
+            </p>
+
+            {/* Formulario de Alta Rápida */}
+            <form onSubmit={handleCreateFeriado} className={styles.bloqueoFormCard}>
+              <div className={styles.bloqueoFormTitle}>
+                <span>➕ Crear Nuevo Bloqueo o Feriado</span>
+              </div>
+
+              <div className={styles.bloqueoFormGrid}>
+                {/* 1. Tipo de Feriado */}
+                <div className={styles.formField}>
+                  <label>Tipo de Bloqueo / Feriado *</label>
+                  <select
+                    className={styles.input}
+                    value={feriadoForm.tipo}
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      let defaultC = '#dc2626';
+                      if (t === 'MOVIL') defaultC = '#d97706';
+                      if (t === 'UNICO') defaultC = '#2563eb';
+                      setFeriadoForm(prev => ({
+                        ...prev,
+                        tipo: t,
+                        color: defaultC
+                      }));
+                    }}
+                    required
+                  >
+                    <option value="FIJO">🔴 Fijo (Se repite todos los años, ej: Navidad)</option>
+                    <option value="MOVIL">🟠 Móvil (Se define o reubica por año, ej: Feriado puente)</option>
+                    <option value="UNICO">🔵 Único (Aplica solo a este día específico)</option>
+                  </select>
+                </div>
+
+                {/* 2. Fecha */}
+                <div className={styles.formField}>
+                  <label>Fecha a Bloquear *</label>
+                  <input
+                    type="date"
+                    className={styles.input}
+                    value={feriadoForm.fechaStr}
+                    onChange={(e) => setFeriadoForm(prev => ({ ...prev, fechaStr: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                {/* 3. Selector de Color */}
+                <div className={styles.formField}>
+                  <label>Color Identificador</label>
+                  <div className={styles.colorSwatches}>
+                    {[
+                      { code: '#dc2626', label: 'Rojo Feriado' },
+                      { code: '#d97706', label: 'Ámbar Móvil' },
+                      { code: '#2563eb', label: 'Azul Único' },
+                      { code: '#7c3aed', label: 'Violeta' },
+                      { code: '#059669', label: 'Esmeralda' },
+                      { code: '#e11d48', label: 'Rosa' }
+                    ].map(col => (
+                      <button
+                        key={col.code}
+                        type="button"
+                        className={`${styles.colorSwatchBtn} ${feriadoForm.color === col.code ? styles.colorSwatchActive : ''}`}
+                        style={{ backgroundColor: col.code }}
+                        onClick={() => setFeriadoForm(prev => ({ ...prev, color: col.code }))}
+                        title={col.label}
+                      />
+                    ))}
+                    <input
+                      type="color"
+                      value={feriadoForm.color || '#dc2626'}
+                      onChange={(e) => setFeriadoForm(prev => ({ ...prev, color: e.target.value }))}
+                      style={{ width: '28px', height: '28px', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                      title="Color personalizado"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Motivo */}
+                <div className={styles.formField} style={{ gridColumn: 'span 2' }}>
+                  <label>Motivo del Bloqueo *</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="Ej: Navidad, Feriado Puente Turístico, Capacitación de Personal"
+                    value={feriadoForm.motivo}
+                    onChange={(e) => setFeriadoForm(prev => ({ ...prev, motivo: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                {/* 5. Día completo o franja */}
+                <div className={styles.formField}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginTop: '0.5rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={feriadoForm.esDiaCompleto}
+                      onChange={(e) => setFeriadoForm(prev => ({ ...prev, esDiaCompleto: e.target.checked }))}
+                    />
+                    <span style={{ fontWeight: 600 }}>Día Completo (Bloquea toda la jornada)</span>
+                  </label>
+                </div>
+
+                {/* 6. Horarios si no es día completo */}
+                {!feriadoForm.esDiaCompleto && (
+                  <>
+                    <div className={styles.formField}>
+                      <label>Hora Inicio</label>
+                      <input
+                        type="time"
+                        className={styles.input}
+                        value={feriadoForm.horaInicio}
+                        onChange={(e) => setFeriadoForm(prev => ({ ...prev, horaInicio: e.target.value }))}
+                        required={!feriadoForm.esDiaCompleto}
+                      />
+                    </div>
+                    <div className={styles.formField}>
+                      <label>Hora Fin</label>
+                      <input
+                        type="time"
+                        className={styles.input}
+                        value={feriadoForm.horaFin}
+                        onChange={(e) => setFeriadoForm(prev => ({ ...prev, horaFin: e.target.value }))}
+                        required={!feriadoForm.esDiaCompleto}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Botón de envío */}
+                <div className={styles.formField} style={{ alignSelf: 'flex-end' }}>
+                  <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem' }}>
+                    + Crear Feriado / Bloqueo
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            {/* Listado de Feriados del Año */}
+            <div className={styles.feriadosFilterHeader}>
+              <div className={styles.feriadosStats}>
+                <span>Feriados cargados para el año {selectedFeriadosYear}:</span>
+                <span className={styles.badgeFijo}>
+                  🔴 {feriados.filter(f => f.tipo === 'FIJO').length} Fijos
+                </span>
+                <span className={styles.badgeMovil}>
+                  🟠 {feriados.filter(f => f.tipo === 'MOVIL').length} Móviles
+                </span>
+                <span className={styles.badgeUnico}>
+                  🔵 {feriados.filter(f => f.tipo === 'UNICO' || !f.tipo).length} Únicos
+                </span>
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                onClick={() => fetchFeriados(selectedFeriadosYear)}
+              >
+                🔄 Actualizar Lista
+              </button>
+            </div>
+
+            {loadingFeriados ? (
+              <p style={{ textAlign: 'center', color: '#64748b', padding: '1.5rem 0' }}>Cargando feriados y bloqueos...</p>
+            ) : feriados.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem 1rem', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                No hay feriados ni bloqueos registrados para el año {selectedFeriadosYear}.
+              </div>
+            ) : (
+              <div className={styles.feriadosTableContainer}>
+                <table className={styles.feriadosTable}>
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Fecha / Día</th>
+                      <th>Motivo</th>
+                      <th>Horario</th>
+                      <th style={{ textAlign: 'right' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feriados.map((f) => {
+                      const isMovil = f.tipo === 'MOVIL';
+                      const isFijo = f.tipo === 'FIJO';
+                      const hasMoved = isMovil && f.fechaMovida;
+                      return (
+                        <tr key={f.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                              <span 
+                                className={styles.colorDot} 
+                                style={{ backgroundColor: f.color || (isFijo ? '#dc2626' : (isMovil ? '#d97706' : '#2563eb')) }} 
+                              />
+                              {isFijo ? (
+                                <span className={styles.badgeFijo}>FIJO (Anual)</span>
+                              ) : isMovil ? (
+                                <span className={styles.badgeMovil}>MÓVIL</span>
+                              ) : (
+                                <span className={styles.badgeUnico}>ÚNICO</span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>
+                              {formatFeriadoDate(f.fecha)} ({getFeriadoDayName(f.fecha)})
+                            </div>
+                            {hasMoved && (
+                              <div className={styles.badgeMovedAlert}>
+                                ➡️ Reubicado al: <strong>{formatFeriadoDate(f.fechaMovida)} ({getFeriadoDayName(f.fechaMovida)})</strong>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                            {f.motivo || 'Sin motivo'}
+                          </td>
+                          <td>
+                            {f.esDiaCompleto ? (
+                              <span style={{ color: '#059669', fontWeight: 600 }}>Día Completo</span>
+                            ) : (
+                              <span style={{ color: '#475569' }}>{f.horaInicio} - {f.horaFin} hs</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div className={styles.actionBtnGroup} style={{ justifyContent: 'flex-end' }}>
+                              {isMovil && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className={styles.actionBtnSmall}
+                                    onClick={() => handleOpenMoveModal(f)}
+                                    title="Reubicar este feriado a otra fecha"
+                                  >
+                                    🗓️ Reubicar
+                                  </button>
+                                  {hasMoved && (
+                                    <button
+                                      type="button"
+                                      className={styles.actionBtnSmall}
+                                      onClick={() => handleResetMoveFeriado(f)}
+                                      title="Restaurar fecha original"
+                                    >
+                                      ↩️ Restaurar
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                className={`${styles.actionBtnSmall} ${styles.actionBtnDanger}`}
+                                onClick={() => handleDeleteFeriado(f.id, f.isSynthesized, f.originalId)}
+                                title="Eliminar este feriado o bloqueo"
+                              >
+                                <TrashIcon /> Eliminar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1927,7 +2343,37 @@ export default function ConfiguracionPage() {
         </div>
       )}
 
-      {/* Zone Create / Edit Modal */}
+      {/* Tab Content 7: Boxes y Cabinas (Fase 3 Staging) */}
+      {activeTab === 'boxes' && (
+        <div className={styles.sectionCard}>
+          <div className={styles.sectionTitle}>
+            <span>📦 Boxes y Cabinas (Entorno de Pruebas / Staging)</span>
+            <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 700 }}>
+              🚀 En Implementación (Fase 3)
+            </span>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+            Esta sección permitirá gestionar la capacidad operativa simultánea del local (Cabina 1 y Cabina 2), asignando automáticamente turnos al box correspondiente o permitiendo seleccionarlo de forma manual.
+          </p>
+          <div style={{ backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '2rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📦 ↔️ 📦</div>
+            <h3 style={{ fontSize: '1.15rem', color: '#1e293b', marginBottom: '0.5rem', fontWeight: 700 }}>Doble Agenda y Boxes Activos en Staging</h3>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '600px', margin: '0 auto 1.5rem auto' }}>
+              El entorno de prueba y staging se encuentra habilitado en <strong>http://187.127.9.216:3008</strong>. La configuración de boxes, nombres de cabinas y asignaciones estará disponible para pruebas aquí.
+            </p>
+            <div style={{ display: 'inline-flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1.25rem', textAlign: 'left', minWidth: '200px' }}>
+                <span style={{ fontWeight: 700, color: '#0f172a', display: 'block' }}>Cabina 1</span>
+                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Capacidad: 1 cliente / Camilla A</span>
+              </div>
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1.25rem', textAlign: 'left', minWidth: '200px' }}>
+                <span style={{ fontWeight: 700, color: '#0f172a', display: 'block' }}>Cabina 2</span>
+                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Capacidad: 1 cliente / Camilla B</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {isZoneModalOpen && (
         <div className="modal-overlay" onClick={() => setIsZoneModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -2382,6 +2828,56 @@ export default function ConfiguracionPage() {
                 <button type="submit" className="btn btn-primary">{editingUser ? 'Guardar Cambios' : 'Crear Usuario'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reubicar Feriado Móvil (D-133) */}
+      {moveModal.isOpen && (
+        <div className="modal-overlay" onClick={() => setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' })}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="modal-header">
+              <h3>🗓️ Reubicar Feriado Móvil</h3>
+              <button 
+                className="modal-close" 
+                onClick={() => setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' })}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <p style={{ color: '#475569', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+                Estás reubicando el feriado <strong>{moveModal.feriado?.motivo}</strong> (fecha original: {formatFeriadoDate(moveModal.feriado?.fecha)}).
+                Selecciona la nueva fecha para la que se moverá (ej. feriado puente):
+              </p>
+              <div className={styles.formField}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>Nueva Fecha Destino *</label>
+                <input
+                  type="date"
+                  className={styles.input}
+                  value={moveModal.nuevaFechaStr}
+                  onChange={(e) => setMoveModal(prev => ({ ...prev, nuevaFechaStr: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' })}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSaveMoveFeriado}
+                disabled={!moveModal.nuevaFechaStr}
+              >
+                💾 Guardar Nueva Fecha
+              </button>
+            </div>
           </div>
         </div>
       )}

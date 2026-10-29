@@ -2295,7 +2295,29 @@
   - Tarea cron configurada en `/etc/cron.d/agenda-backup` programada a las 03:00 AM todos los días.
 - [x] Documentar en `.synapse/decisions.md` (D-131), `.synapse/workcycle.md` y `chat.md`.
 
-## 📅 Sesión: 26 de Octubre de 2026 (Parte 6 - Agenda: Cómputo de Señas Cobradas en el Día en el Ingreso Neto Diario - Caso Juan Carlos Santander)
+## 📅 Sesión: 29 de Octubre de 2026 (Auditoría Integral de `Mejoras AppWeb (1).docx` y Requerimientos de WhatsApp)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Extraer texto completo de `C:\Users\Try Hard\Downloads\Mejoras AppWeb (1).docx` (240 párrafos).
+- [x] Ejecutar script de comparación diferencial (`compare_docx.py`) contra `Mejoras AppWeb.docx` (91 líneas de diff).
+- [x] Analizar capturas de WhatsApp (`media_1793292377032_75812158.png` y `media_1793292529076_967ec2e4.png`).
+- [x] Diagnosticar `ERR_CONNECTION_TIMED_OUT` en `http://187.127.9.216:3008` (causado por la regla estricta UFW de D-131).
+- [x] Habilitar puerto `3008/tcp` en el Firewall UFW (`ufw allow 3008/tcp comment 'Staging testing environment'`). Verificado acceso HTTP 200 OK desde el exterior.
+- [x] Iniciar Fase 1: Bloqueos y Feriados en Parámetros + Selector Desplegable en Configuración:
+  - [x] Actualizar modelo `Bloqueo` en `prisma/schema.prisma` (`tipo`, `color`, `mes`, `dia`, `ano`, `fechaMovida`).
+  - [x] Ejecutar `npx prisma generate` localmente.
+  - [x] Actualizar APIs `GET/POST /api/admin/bloqueos` y `PUT/DELETE /api/admin/bloqueos/[id]` con soporte de síntesis anual para feriados fijos y reubicación de móviles.
+  - [x] Reemplazar pestañas horizontales en `/admin/configuracion` por el selector desplegable institucional con 7 ventanas.
+  - [x] Implementar formulario de alta rápida de feriados con selector de tipo, fecha, paleta de colores, motivo y horario.
+  - [x] Implementar listado anual de feriados cargados con badges identificadores, alerta de reubicado y modal interactivo para mover fechas de móviles.
+  - [x] Adaptar renderizado dinámico en la Agenda (`/admin/agenda`) para colorear tarjetas de bloqueos con `b.color`.
+  - [x] Validar compilación local (`npm run build`: 46/46 rutas exitosas con 0 errores).
+  - [ ] Push a GitHub (`main` y `staging`).
+  - [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+  - [ ] Documentar en `.synapse/decisions.md` (D-133), `.synapse/workcycle.md` y `chat.md`.
+- [ ] Iniciar Fase 2: Renombrar Zonas a Servicios (Estructura Multidisciplinaria).
+- [ ] Iniciar Fase 3: Doble Agenda y Boxes en Staging (`http://187.127.9.216:3008`).
+- [ ] Iniciar Fase 4: Perfil Extendido de Operadores (Dirección y Horarios laborales).
 
 ### 🎯 Tareas en curso / Objetivos
 - [x] Resolver la discrepancia contable reportada con captura de WhatsApp (`media_1793035435852_2d54a208.png`):

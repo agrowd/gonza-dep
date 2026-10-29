@@ -85,13 +85,19 @@ model Turno {
 }
 
 model Bloqueo {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   fecha         DateTime
-  horaInicio    String   // "10:00"
-  horaFin       String   // "20:00"
+  horaInicio    String    // "10:00"
+  horaFin       String    // "20:00"
   motivo        String?
-  esDiaCompleto Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  esDiaCompleto Boolean   @default(false)
+  tipo          String    @default("UNICO") // "FIJO", "MOVIL", "UNICO"
+  color         String?   @default("#dc2626")
+  mes           Int?
+  dia           Int?
+  ano           Int?
+  fechaMovida   DateTime?
+  createdAt     DateTime  @default(now())
 }
 
 model Zona {
