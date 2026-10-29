@@ -1258,3 +1258,42 @@
 - Se procesó el archivo docx en `C:\Users\Try Hard\Downloads\Mejoras AppWeb (1).docx` y se ejecutó un diff automatizado contra la versión previa `Mejoras AppWeb.docx`.
 - Se identificaron con precisión los 5 agregados/modificaciones del documento y su correlación con lo ya implementado y lo pendiente.
 - **Apertura de Puerto 3008 para Staging**: Se ejecutó en el VPS `ufw allow 3008/tcp comment 'Staging testing environment'`, restableciendo el acceso público a `http://187.127.9.216:3008` con respuesta `HTTP 200 OK` para que Gonzalo y el equipo puedan realizar pruebas de doble agenda sin bloqueos.
+
+---
+
+## 🚀 Sesión: 29 de Octubre de 2026 - Fase 1 Desplegada: Selector Desplegable en Configuración + Submódulo de Bloqueos y Feriados (Fijos, Móviles y Únicos)
+
+### Requerimiento Ejecutado:
+> *"opcion 1 y prosegui con todo, que harias entonces? me resumis?"* y *"Procede con todo"*
+
+### Implementación y Despliegue Completado (D-133):
+1. **Selector Desplegable Estandarizado en `/admin/configuracion`**:
+   - Se eliminaron las pestañas horizontales superiores y se reemplazaron por el dropdown estandarizado unificado con borde `#7a1f1e` y fondo blanco, idéntico al de Estadísticas y Notificaciones.
+   - Incluye las 7 secciones institucionales:
+     1. `🏷️ Servicios (Zonas de Depilación)`
+     2. `⏰ Horarios Laborales`
+     3. `💬 Mensajes y Plantillas`
+     4. `👥 Usuarios y Operadores`
+     5. `⚙️ Parámetros y Bloqueos de Agenda`
+     6. `🎁 Promociones y Cupones`
+     7. `📦 Boxes y Cabinas (Próximamente / Staging)`
+2. **Modelo `Bloqueo` Extendido en Prisma**:
+   - Incorporación de `tipo` (`FIJO`, `MOVIL`, `UNICO`), `color` (hexadecimal), `mes`, `dia`, `ano` y `fechaMovida`.
+   - Sincronizado en PostgreSQL (`agenda_db` y `agenda_db_staging`).
+3. **Lógica de Feriados Fijos, Móviles y Únicos**:
+   - `FIJO`: se replica automáticamente todos los años en la fecha (`mes` + `dia`), sintetizándose en la consulta del rango de la agenda sin necesidad de cargarlo manualmente cada año.
+   - `MOVIL`: feriados transferibles (como puentes) que permiten a los operadores reubicar su fecha meses antes (`fechaMovida`), bloqueando la nueva fecha en la agenda y liberando la original.
+   - `UNICO`: bloqueos puntuales para un día específico (médicos, mantenimiento, etc.).
+4. **Submódulo UI en `Configuración > Parámetros`**:
+   - Formulario de alta rápida con selector de tipo, fecha, paleta de colores de marca (`#dc2626`, `#d97706`, `#2563eb`, etc.), motivo, día completo / franja horaria y botón de creación.
+   - Listado anual con selector de año (2025, 2026, 2027, 2028), conteo de feriados por tipo, badges identificadores, alerta de fecha reubicada, modal interactivo de reubicación y eliminación.
+5. **Renderizado Dinámico en la Agenda (`/admin/agenda`)**:
+   - Las tarjetas de bloqueos en vista diaria, semanal y mensual adoptan dinámicamente el color configurado (`b.color`) y exhiben la etiqueta correspondiente (`🔴 FERIADO FIJO`, `🟠 FERIADO MÓVIL`, `🔒 BLOQUEO`).
+   - El modal de bloqueo rápido en la agenda ahora incluye el selector de tipo y color.
+6. **Verificación y Despliegue en Staging y Producción**:
+   - Compilación Next.js local y remota: 46/46 rutas exitosas con 0 errores.
+   - Backup de producción `agenda_db` realizado previo al deploy.
+   - Ambos entornos online:
+     - Staging: `http://187.127.9.216:3008` (HTTP 200 OK)
+     - Producción: `https://agenda.depilacionparahombres.com` (HTTP 200 OK)
+
