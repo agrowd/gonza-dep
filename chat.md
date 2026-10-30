@@ -1,5 +1,38 @@
 # Chat Log - Gonzalo Depilación (gonzalo-dep)
 
+## Sesión: 30 de Octubre de 2026 - Fase 3: Doble Agenda y Boxes en Staging, Submódulo de Bloqueos Anuales y Resolución de Acceso a Web de Prueba
+
+### Diagnóstico de las 3 Capturas del Usuario:
+1. **Captura 1 (WhatsApp Gonzalo - Bloqueos en Parámetros)**:
+   - Gonzalo solicita un apartado de **BLOQUEOS** para poder bloquear días en la agenda (feriados o festivos recurrentes año tras año, o días y horarios específicos), lista anual de feriados cargados con fecha y motivo, tipos de feriado: **Fijo** (ej: Navidad, automático todos los años), **Móvil** (con fecha transferible para mover con anticipación en feriados puente) y **Único** (solo para ese día), cada uno con su color identificador.
+   - **Estado**: **100% implementado y verificado en Configuración > Parámetros y Bloqueos de Agenda** (Decisión D-133). Incluye formulario de alta rápida, selector de tipo, fecha, paleta de colores, día completo o franja horaria, motivo, filtro por año y modal interactivo para reubicar fechas móviles.
+2. **Captura 2 (WhatsApp Gonzalo - Doble Agenda en web de prueba)**:
+   - Gonzalo indica: *"Ahora en la web de prueba podes empezar a implementar la parte de doble agenda que dejamos para el final, así vamos trabajándolo"*.
+   - **Estado**: **Fase 3: Doble Agenda y Boxes implementada y desplegada en Staging**.
+3. **Captura 3 (Navegador Chrome - Timeout en `187.127.9.216:3008`)**:
+   - Error mostrado: `ERR_CONNECTION_TIMED_OUT` en `http://187.127.9.216:3008`.
+   - **Causa Raíz**: El firewall UFW del VPS mantenía bloqueado el puerto 3008 hasta su apertura, y adicionalmente muchos ISPs, celulares y redes corporativas bloquean puertos no estándar (como 3008) generando timeout.
+   - **Solución Implementada**: Se configuró Nginx en el servidor para proxear el puerto 80 estándar hacia Staging (`http://187.127.9.216`). Ahora se puede ingresar directamente por IP limpia sin puerto `:3008`, sin riesgos de bloqueos de red y con respuesta instantánea HTTP 200 OK.
+
+### Requerimientos Implementados en Fase 3 (Doble Agenda y Boxes):
+1. **Modelo `Box` en Prisma**:
+   - `model Box` con campos `id`, `nombre`, `descripcion`, `color`, `esPrincipal`, `activo`, `horaInicio`, `horaFin`, `diasAtencion`, `servicioId` y relaciones con `Turno`, `Bloqueo` y `Servicio`.
+   - Auto-seeding retrocompatible transparente (`ensureDefaultBox`): creación automática de `Box 1 - Principal (Gonzalo)` (`#7a1f1e`, 14:00-22:00) y reasignación de los 571 turnos huérfanos preexistentes sin pérdida de datos.
+2. **APIs Backend de Boxes**:
+   - `GET /api/admin/boxes` y `POST /api/admin/boxes`.
+   - `PUT /api/admin/boxes/[id]` y `DELETE /api/admin/boxes/[id]` con bloqueo de eliminación del box principal y reasignación automática de turnos al box principal.
+3. **Citas Simultáneas en Agenda Paralela**:
+   - `hasOverlappingTurno` en `/api/admin/turnos` y `/api/admin/turnos/[id]` evalúa solapamientos por `boxId`, permitiendo citas simultáneas a la misma hora en cabinas diferentes.
+4. **ABM en Configuración (`/admin/configuracion`)**:
+   - Pestaña `boxes` en el selector desplegable con tarjetas informativas, horarios, servicios y modal interactivo.
+5. **Agenda Multi-Box (`/admin/agenda`)**:
+   - Selector tipo píldora en la cabecera: `[ 🌐 Todos los Boxes (Doble Agenda) ]`, `[ 🔴 Box 1 - Principal (Gonzalo) ]`, etc.
+   - Filtrado reactivo a 60 FPS sin recargas (`visibleAppointments`).
+   - Badges de Box en cada tarjeta Neocita y selector de cabina en alta, edición y detalle interactivo.
+
+---
+
+
 ## Sesión: 29-30 de Octubre de 2026 - Fase 2: Renombrar Zonas a Servicios (Estructura Multidisciplinaria) y Acordeón Desplegable en Agenda
 
 ### Requerimientos Implementados (Fase 2 - Sección 4. Servicios):

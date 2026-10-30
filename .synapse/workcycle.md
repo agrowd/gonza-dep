@@ -2327,14 +2327,16 @@
   - [x] Push a GitHub (`main` y `staging`).
   - [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
   - [x] Documentar en `.synapse/decisions.md` (D-134), `.synapse/workcycle.md` y `chat.md`.
-- [ ] Iniciar Fase 3: Doble Agenda y Boxes en Staging (`http://187.127.9.216:3008`):
-  - [ ] Agregar modelo `Box` en `prisma/schema.prisma` y relación con `Turno` (`boxId`, `box`) y `Servicio` (`servicioId`).
-  - [ ] Ejecutar `npx prisma generate` localmente.
-  - [ ] Implementar APIs de ABM de Boxes (`/api/admin/boxes` y `/api/admin/boxes/[id]`) con auto-seeding de `Box 1 - Principal (Gonzalo)` y vinculación retrocompatible de turnos preexistentes.
-  - [ ] Implementar la interfaz de ABM de Boxes en `/admin/configuracion` (pestaña `boxes` en el selector desplegable) con horarios de atención propios, días habilitados, servicio y color.
-  - [ ] Implementar filtro/selector de Boxes en `/admin/agenda` (con opción "Todos" y boxes individuales), ajustando la grilla horaria al horario del box seleccionado.
-  - [ ] Agregar selector de Box al agendar turno (`newTurno`) y al editar turno (`editTurno`), con herencia en "Siguiente Turno".
-  - [ ] Compilar y desplegar en Staging (`http://187.127.9.216:3008`) y Producción con backup previo.
+- [x] Iniciar Fase 3: Doble Agenda y Boxes en Staging (`http://187.127.9.216:3008` y `http://187.127.9.216`):
+  - [x] Agregar modelo `Box` en `prisma/schema.prisma` y relación con `Turno` (`boxId`, `box`) y `Servicio` (`servicioId`).
+  - [x] Ejecutar `npx prisma generate` localmente.
+  - [x] Implementar APIs de ABM de Boxes (`/api/admin/boxes` y `/api/admin/boxes/[id]`) con auto-seeding de `Box 1 - Principal (Gonzalo)` y vinculación retrocompatible de turnos preexistentes (571 turnos migrados con éxito).
+  - [x] Implementar la interfaz de ABM de Boxes en `/admin/configuracion` (pestaña `boxes` en el selector desplegable) con horarios de atención propios, días habilitados, servicio y color.
+  - [x] Implementar filtro/selector de Boxes en `/admin/agenda` (con opción "Todos" y boxes individuales), ajustando la grilla horaria al horario del box seleccionado y filtrado reactivo a 60 FPS con `visibleAppointments`.
+  - [x] Agregar selector de Box al agendar turno (`newTurno`) y al editar turno (`editTurno`), con herencia en "Siguiente Turno" y detalle interactivo.
+  - [x] Configurar Nginx en VPS para proxear puerto 80 estándar (`http://187.127.9.216`) hacia Staging (puerto 3008) solucionando definitivamente el timeout de firewall en clientes y celulares.
+  - [x] Compilar y desplegar en Staging (`http://187.127.9.216`, PM2 `gonzalo-agenda-staging`).
+  - [x] Documentar en `.synapse/decisions.md` (D-135).
 - [ ] Iniciar Fase 4: Perfil Extendido de Operadores (Dirección y Horarios laborales).
 
 ### 🎯 Tareas en curso / Objetivos
