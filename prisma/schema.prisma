@@ -17,6 +17,11 @@ model Usuario {
   rol       String   @default("ADMIN") // "ADMIN", "OPERADOR", "RECEPCION"
   email            String?
   telefono         String?
+  direccion        String?
+  horaInicio       String?   @default("14:00")
+  horaFin          String?   @default("22:00")
+  diasLaborales    String?   @default("1,2,3,4,5")
+  serviciosIds     String?
   fechaNacimiento  DateTime?
   vacacionesInicio DateTime?
   vacacionesFin    DateTime?

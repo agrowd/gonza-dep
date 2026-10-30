@@ -342,6 +342,60 @@ export default function AgendaPage() {
   // Modals state
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  // Helper para evaluar disponibilidad de operador según horario propio, días, vacaciones y servicios (Fase 4)
+  const isOperatorAvailableForTurno = (op, fechaStr, horaInicio, horaFin, selectedZonas = []) => {
+    if (!op || op.rol === 'ADMIN' || op.nombre?.toLowerCase().includes('gonzalo') || op.usuario?.toLowerCase() === 'gonzalo') {
+      return { available: true };
+    }
+    if (op.activo === false) {
+      return { available: false, reason: 'Bloqueado' };
+    }
+    // 1. Vacaciones
+    if (op.vacacionesInicio && op.vacacionesFin && fechaStr) {
+      const tDate = new Date(fechaStr + 'T12:00:00');
+      const vStart = new Date(op.vacacionesInicio);
+      const vEnd = new Date(op.vacacionesFin);
+      if (tDate >= vStart && tDate <= vEnd) {
+        return { available: false, reason: 'En vacaciones' };
+      }
+    }
+    // 2. Días laborales
+    if (fechaStr && op.diasLaborales) {
+      const dayOfWeek = new Date(fechaStr + 'T12:00:00').getDay().toString();
+      const allowedDays = op.diasLaborales.split(',').map(s => s.trim());
+      if (!allowedDays.includes(dayOfWeek)) {
+        return { available: false, reason: 'No atiende este día' };
+      }
+    }
+    // 3. Rango horario laboral propio
+    if (horaInicio && op.horaInicio && op.horaFin) {
+      const toMins = (h) => {
+        const [hh, mm] = h.split(':').map(Number);
+        return hh * 60 + (mm || 0);
+      };
+      const opStart = toMins(op.horaInicio);
+      const opEnd = toMins(op.horaFin);
+      const tStart = toMins(horaInicio);
+      const tEnd = horaFin ? toMins(horaFin) : tStart + 30;
+      if (tStart < opStart || tEnd > opEnd) {
+        return { available: false, reason: `Horario: ${op.horaInicio}-${op.horaFin}` };
+      }
+    }
+    // 4. Servicios asignados
+    if (selectedZonas && selectedZonas.length > 0 && op.serviciosIds) {
+      try {
+        const allowedIds = Array.isArray(op.serviciosIds) ? op.serviciosIds : JSON.parse(op.serviciosIds);
+        if (allowedIds.length > 0) {
+          const hasUnallowed = selectedZonas.some(z => z.servicioId && !allowedIds.includes(z.servicioId));
+          if (hasUnallowed) {
+            return { available: false, reason: 'Servicio no asignado' };
+          }
+        }
+      } catch (e) {}
+    }
+    return { available: true };
+  };
+
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [nowPosition, setNowPosition] = useState(null);
@@ -4099,9 +4153,20 @@ export default function AgendaPage() {
                         onChange={(e) => setEditTurno(prev => ({ ...prev, operadorId: e.target.value }))}
                       >
                         <option value="">Gonzalo (Por defecto)</option>
-                        {operadores.filter(op => op.activo !== false || op.id === editTurno.operadorId).map(op => (
-                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : ''}</option>
-                        ))}
+                        {operadores.filter(op => op.activo !== false || op.id === editTurno.operadorId).map(op => {
+                          const check = isOperatorAvailableForTurno(op, editTurno.fechaStr, editTurno.horaInicio, editTurno.horaFin, editTurno.selectedZonas);
+                          const isCurrent = op.id === editTurno.operadorId;
+                          return (
+                            <option 
+                              key={op.id} 
+                              value={op.id}
+                              disabled={!check.available && !isCurrent}
+                              style={{ color: (!check.available && !isCurrent) ? '#94a3b8' : 'inherit' }}
+                            >
+                              {op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : (!check.available ? ` [${check.reason}]` : '')}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   )}
@@ -4730,9 +4795,20 @@ export default function AgendaPage() {
                         }}
                       >
                         <option value="">Gonzalo (Por defecto)</option>
-                        {operadores.filter(op => op.activo !== false || op.id === editTurno.operadorId).map(op => (
-                          <option key={op.id} value={op.id}>{op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : ''}</option>
-                        ))}
+                        {operadores.filter(op => op.activo !== false || op.id === selectedTurno.operadorId).map(op => {
+                          const check = isOperatorAvailableForTurno(op, selectedTurno.fecha, selectedTurno.horaInicio, selectedTurno.horaFin, selectedTurno.zonas);
+                          const isCurrent = op.id === selectedTurno.operadorId;
+                          return (
+                            <option 
+                              key={op.id} 
+                              value={op.id}
+                              disabled={!check.available && !isCurrent}
+                              style={{ color: (!check.available && !isCurrent) ? '#94a3b8' : 'inherit' }}
+                            >
+                              {op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : (!check.available ? ` [${check.reason}]` : '')}
+                            </option>
+                          );
+                        })}
                       </select>
                     ) : (
                       <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)' }}>
@@ -6404,9 +6480,19 @@ export default function AgendaPage() {
                       onChange={(e) => setNewTurno(prev => ({ ...prev, operadorId: e.target.value }))}
                     >
                       <option value="">Gonzalo (Por defecto)</option>
-                      {operadores.filter(op => op.activo !== false).map(op => (
-                        <option key={op.id} value={op.id}>{op.nombre} ({op.usuario})</option>
-                      ))}
+                      {operadores.filter(op => op.activo !== false).map(op => {
+                        const check = isOperatorAvailableForTurno(op, newTurno.fecha, newTurno.horaInicio, newTurno.horaFin, newTurno.selectedZonas);
+                        return (
+                          <option 
+                            key={op.id} 
+                            value={op.id}
+                            disabled={!check.available}
+                            style={{ color: check.available ? 'inherit' : '#94a3b8' }}
+                          >
+                            {op.nombre} ({op.usuario}){!check.available ? ` [${check.reason}]` : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 )}

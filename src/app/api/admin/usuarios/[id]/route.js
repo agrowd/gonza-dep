@@ -30,6 +30,11 @@ export async function PUT(request, context) {
       rol,
       email,
       telefono,
+      direccion,
+      horaInicio,
+      horaFin,
+      diasLaborales,
+      serviciosIds,
       activo,
       fechaNacimiento,
       vacacionesInicio,
@@ -52,6 +57,13 @@ export async function PUT(request, context) {
     }
     if (email !== undefined) updateData.email = email ? email.trim() : null;
     if (telefono !== undefined) updateData.telefono = telefono ? telefono.trim() : null;
+    if (direccion !== undefined) updateData.direccion = direccion ? direccion.trim() : null;
+    if (horaInicio !== undefined) updateData.horaInicio = horaInicio || '14:00';
+    if (horaFin !== undefined) updateData.horaFin = horaFin || '22:00';
+    if (diasLaborales !== undefined) updateData.diasLaborales = diasLaborales || '1,2,3,4,5';
+    if (serviciosIds !== undefined) {
+      updateData.serviciosIds = serviciosIds ? (Array.isArray(serviciosIds) ? JSON.stringify(serviciosIds) : String(serviciosIds)) : null;
+    }
 
     if (fechaNacimiento !== undefined) {
       updateData.fechaNacimiento = fechaNacimiento ? new Date(fechaNacimiento) : null;
@@ -93,6 +105,11 @@ export async function PUT(request, context) {
         nombre: true,
         rol: true,
         activo: true,
+        direccion: true,
+        horaInicio: true,
+        horaFin: true,
+        diasLaborales: true,
+        serviciosIds: true,
         email: true,
         telefono: true,
         fechaNacimiento: true,

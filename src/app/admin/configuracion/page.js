@@ -139,7 +139,18 @@ export default function ConfiguracionPage() {
     password: '',
     rol: 'OPERADOR',
     email: '',
-    telefono: ''
+    telefono: '',
+    direccion: '',
+    horaInicio: '14:00',
+    horaFin: '22:00',
+    diasLaborales: '1,2,3,4,5',
+    serviciosIds: '[]',
+    activo: true,
+    fechaNacimiento: '',
+    vacacionesInicio: '',
+    vacacionesFin: '',
+    comisionTipo: 'POR_HORA',
+    comisionValor: ''
   });
 
   // Feriados y Bloqueos State (D-133)
@@ -1046,6 +1057,11 @@ export default function ConfiguracionPage() {
       rol: 'OPERADOR',
       email: '',
       telefono: '',
+      direccion: '',
+      horaInicio: '14:00',
+      horaFin: '22:00',
+      diasLaborales: '1,2,3,4,5',
+      serviciosIds: '[]',
       activo: true,
       fechaNacimiento: '',
       vacacionesInicio: '',
@@ -1065,6 +1081,11 @@ export default function ConfiguracionPage() {
       rol: u.rol || 'OPERADOR',
       email: u.email || '',
       telefono: u.telefono || '',
+      direccion: u.direccion || '',
+      horaInicio: u.horaInicio || '14:00',
+      horaFin: u.horaFin || '22:00',
+      diasLaborales: u.diasLaborales || '1,2,3,4,5',
+      serviciosIds: u.serviciosIds || '[]',
       activo: u.activo !== false,
       fechaNacimiento: u.fechaNacimiento ? u.fechaNacimiento.slice(0, 10) : '',
       vacacionesInicio: u.vacacionesInicio ? u.vacacionesInicio.slice(0, 10) : '',
@@ -2602,12 +2623,47 @@ export default function ConfiguracionPage() {
                       <span>📞</span>
                       <span>{u.telefono || 'Sin teléfono'}</span>
                     </div>
+                    {u.direccion && (
+                      <div className={styles.userCardDetailItem}>
+                        <span>📍</span>
+                        <span>{u.direccion}</span>
+                      </div>
+                    )}
+                    <div className={styles.userCardDetailItem}>
+                      <span>⏰</span>
+                      <span>{formatBoxDays(u.diasLaborales)} de {u.horaInicio || '14:00'} a {u.horaFin || '22:00'} hs</span>
+                    </div>
                     {u.email && (
                       <div className={styles.userCardDetailItem}>
                         <span>✉️</span>
                         <span style={{ wordBreak: 'break-all' }}>{u.email}</span>
                       </div>
                     )}
+                    {/* Servicios Asignados */}
+                    <div style={{ marginTop: '0.4rem', paddingTop: '0.4rem', borderTop: '1px dashed #e2e8f0' }}>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, marginBottom: '0.25rem' }}>Servicios:</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {(() => {
+                          let userSIds = [];
+                          try {
+                            userSIds = u.serviciosIds ? JSON.parse(u.serviciosIds) : [];
+                          } catch {
+                            userSIds = (u.serviciosIds || '').split(',').map(s => s.trim()).filter(Boolean);
+                          }
+                          const assigned = (userSIds && userSIds.length > 0)
+                            ? servicios.filter(s => userSIds.includes(s.id))
+                            : servicios;
+                          if (assigned.length === 0) {
+                            return <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Sin servicios asignados</span>;
+                          }
+                          return assigned.map(s => (
+                            <span key={s.id} style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: 'rgba(122, 31, 30, 0.08)', color: '#7a1f1e', fontWeight: 600 }}>
+                              {s.icono || '⚡'} {s.nombre}
+                            </span>
+                          ));
+                        })()}
+                      </div>
+                    </div>
                   </div>
 
                   <div className={styles.userCardFooter}>
@@ -3256,6 +3312,128 @@ export default function ConfiguracionPage() {
                       placeholder="Ej: operador@ejemplo.com"
                     />
                   </div>
+                </div>
+
+                {/* Dirección / Domicilio */}
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>📍 Dirección / Domicilio (Opcional)</label>
+                  <input 
+                    type="text" 
+                    className={styles.input} 
+                    value={userForm.direccion || ''}
+                    onChange={(e) => setUserForm({ ...userForm, direccion: e.target.value })}
+                    placeholder="Ej: Av. Santa Fe 1234, CABA"
+                  />
+                </div>
+
+                {/* Horario Laboral Propio del Operador */}
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>⏰ Hora Inicio Jornada</label>
+                    <input 
+                      type="time" 
+                      className={styles.input} 
+                      value={userForm.horaInicio || '14:00'}
+                      onChange={(e) => setUserForm({ ...userForm, horaInicio: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>⏰ Hora Fin Jornada</label>
+                    <input 
+                      type="time" 
+                      className={styles.input} 
+                      value={userForm.horaFin || '22:00'}
+                      onChange={(e) => setUserForm({ ...userForm, horaFin: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Días de Trabajo */}
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>📅 Días de Trabajo Semanal</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.25rem' }}>
+                    {[
+                      { val: '1', label: 'Lunes' },
+                      { val: '2', label: 'Martes' },
+                      { val: '3', label: 'Miércoles' },
+                      { val: '4', label: 'Jueves' },
+                      { val: '5', label: 'Viernes' },
+                      { val: '6', label: 'Sábado' },
+                      { val: '0', label: 'Domingo' }
+                    ].map(d => {
+                      const currentDays = (userForm.diasLaborales || '1,2,3,4,5').split(',').map(s => s.trim()).filter(Boolean);
+                      const isChecked = currentDays.includes(d.val);
+                      return (
+                        <label key={d.val} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.65rem', borderRadius: '6px', border: isChecked ? '1px solid #7a1f1e' : '1px solid #cbd5e1', background: isChecked ? 'rgba(122, 31, 30, 0.08)' : '#f8fafc', cursor: 'pointer', fontSize: '0.84rem', fontWeight: isChecked ? 600 : 400 }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked}
+                            onChange={(e) => {
+                              let updated;
+                              if (e.target.checked) {
+                                updated = [...currentDays, d.val];
+                              } else {
+                                updated = currentDays.filter(x => x !== d.val);
+                              }
+                              setUserForm({ ...userForm, diasLaborales: updated.join(',') });
+                            }}
+                            style={{ accentColor: '#7a1f1e' }}
+                          />
+                          <span>{d.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Servicios Asignados */}
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>⚡ Servicios Asignados (Disciplinas que atiende)</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    {servicios.map(s => {
+                      let selectedServicios = [];
+                      try {
+                        selectedServicios = Array.isArray(userForm.serviciosIds) 
+                          ? userForm.serviciosIds 
+                          : (userForm.serviciosIds ? JSON.parse(userForm.serviciosIds) : []);
+                      } catch {
+                        selectedServicios = (userForm.serviciosIds || '').split(',').map(x => x.trim()).filter(Boolean);
+                      }
+                      const isChecked = selectedServicios.length === 0 || selectedServicios.includes(s.id);
+                      return (
+                        <label key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.75rem', borderRadius: '6px', border: isChecked ? '1px solid #7a1f1e' : '1px solid #cbd5e1', background: isChecked ? 'rgba(122, 31, 30, 0.08)' : '#f8fafc', cursor: 'pointer', fontSize: '0.85rem', fontWeight: isChecked ? 600 : 400 }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked}
+                            onChange={(e) => {
+                              let updated;
+                              if (selectedServicios.length === 0) {
+                                if (!e.target.checked) {
+                                  updated = servicios.filter(other => other.id !== s.id).map(other => other.id);
+                                } else {
+                                  updated = [s.id];
+                                }
+                              } else {
+                                if (e.target.checked) {
+                                  updated = [...selectedServicios, s.id];
+                                } else {
+                                  updated = selectedServicios.filter(id => id !== s.id);
+                                }
+                              }
+                              setUserForm({ ...userForm, serviciosIds: JSON.stringify(updated) });
+                            }}
+                            style={{ accentColor: '#7a1f1e' }}
+                          />
+                          <span>{s.icono || '⚡'} {s.nombre}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.25rem', display: 'block' }}>
+                    Selecciona los servicios que puede realizar este operador. Si están todos marcados, podrá realizar cualquier servicio.
+                  </small>
                 </div>
 
                 {/* Cumpleaños */}
