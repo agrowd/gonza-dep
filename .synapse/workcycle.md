@@ -2337,7 +2337,16 @@
   - [x] Configurar Nginx en VPS para proxear puerto 80 estándar (`http://187.127.9.216`) hacia Staging (puerto 3008) solucionando definitivamente el timeout de firewall en clientes y celulares.
   - [x] Compilar y desplegar en Staging (`http://187.127.9.216`, PM2 `gonzalo-agenda-staging`).
   - [x] Documentar en `.synapse/decisions.md` (D-135).
-- [ ] Iniciar Fase 4: Perfil Extendido de Operadores (Dirección y Horarios laborales).
+- [x] Iniciar Fase 4: Perfil Extendido de Operadores (Dirección, Horarios Laborales Propios, Días y Servicios Asignados):
+  - [x] Agregar campos `direccion`, `horaInicio`, `horaFin`, `diasLaborales` y `serviciosIds` al modelo `Usuario` en `prisma/schema.prisma`.
+  - [x] Ejecutar `npx prisma generate` y `prisma db push` localmente.
+  - [x] Actualizar APIs `/api/admin/usuarios` y `/api/admin/usuarios/[id]` para soportar los nuevos campos en `GET`, `POST` y `PUT`.
+  - [x] Rediseñar modal de usuarios en `/admin/configuracion` con inputs de Dirección, selector de Días de Trabajo, Horario Laboral Propio y checkboxes de Servicios Asignados.
+  - [x] Actualizar tarjetas de usuarios en Configuración mostrando Dirección, horario, días y chips con los servicios habilitados.
+  - [x] Implementar helper `isOperatorAvailableForTurno` en `/admin/agenda` validando disponibilidad horaria, días, vacaciones y servicios en `newTurno`, `editTurno` y detalle interactivo.
+  - [x] Compilar (`npm run build`, 47/47 rutas exitosas) y desplegar en Staging VPS (`http://187.127.9.216`, PM2 `gonzalo-agenda-staging`).
+  - [x] Documentar en `.synapse/decisions.md` (D-136).
+- [ ] Validar con el usuario el flujo completo y dar paso al cierre de mejoras.
 
 ### 🎯 Tareas en curso / Objetivos
 - [x] Resolver la discrepancia contable reportada con captura de WhatsApp (`media_1793035435852_2d54a208.png`):

@@ -1,5 +1,29 @@
 # Chat Log - Gonzalo Depilación (gonzalo-dep)
 
+## Sesión: 30 de Octubre de 2026 - Fase 4: Perfil Extendido de Operadores, Horarios Laborales Propios, Días y Servicios Asignados
+
+### Requerimientos Implementados (Fase 4 - Sección 2. ALTA DE PERFILES):
+1. **Esquema de Base de Datos (`model Usuario` en Prisma)**:
+   - Se incorporaron los campos:
+     - `direccion String?`: Domicilio postal / dirección del operador.
+     - `horaInicio String? @default("14:00")` y `horaFin String? @default("22:00")`: Horario laboral propio de atención.
+     - `diasLaborales String? @default("1,2,3,4,5")`: Días de la semana que trabaja el operador (Lunes a Domingo).
+     - `serviciosIds String?`: Array JSON con los IDs de servicios habilitados que realiza el operador.
+2. **APIs Backend de Usuarios (`/api/admin/usuarios` y `/api/admin/usuarios/[id]`)**:
+   - Soporte en `GET`, `POST` y `PUT` para persistir y retornar todos los campos del perfil extendido.
+3. **Frontend en Configuración (`/admin/configuracion`)**:
+   - En la pestaña `users`:
+     - Modal de creación/edición enriquecido con campo Dirección, selector de Días de Trabajo con checkboxes interactivos, selectores de Hora Inicio y Fin de jornada propia, y selector multiselección con checkboxes para los Servicios asignados.
+     - Tarjetas del listado mostrando dirección, rango horario, días semanales y badges temáticos de servicios.
+4. **Validación y Filtrado Inteligente en Agenda (`/admin/agenda`)**:
+   - Se implementó `isOperatorAvailableForTurno`: al seleccionar fecha, hora y zonas para un turno, el sistema verifica que el operador trabaje ese día, que el horario esté dentro de su jornada, que no esté de vacaciones y que tenga asignado el servicio del turno.
+   - En los selectores de operador de Nuevo Turno, Edición y Detalle de cita, se deshabilitan o rotulan con su motivo (`[Fuera de horario]`, `[En vacaciones]`, `[Servicio no asignado]`), manteniendo a Gonzalo siempre disponible como administrador.
+5. **Compilación y Despliegue en Staging**:
+   - Compilación limpia (`npm run build`, 47/47 rutas exitosas).
+   - Base de datos PostgreSQL en Staging sincronizada y PM2 `gonzalo-agenda-staging` reiniciado en `http://187.127.9.216`.
+
+---
+
 ## Sesión: 30 de Octubre de 2026 - Fase 3: Doble Agenda y Boxes en Staging, Submódulo de Bloqueos Anuales y Resolución de Acceso a Web de Prueba
 
 ### Diagnóstico de las 3 Capturas del Usuario:
