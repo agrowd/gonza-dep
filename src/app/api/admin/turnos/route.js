@@ -314,12 +314,21 @@ export async function POST(request) {
           },
           include: { turnos: true }
         });
-      } else if (enviarNotificaciones !== undefined && clientRecord.enviarNotificaciones !== Boolean(enviarNotificaciones)) {
-        await prisma.cliente.update({
-          where: { id: clientRecord.id },
-          data: { enviarNotificaciones: Boolean(enviarNotificaciones) }
-        });
-        clientRecord.enviarNotificaciones = Boolean(enviarNotificaciones);
+      } else {
+        if (enviarNotificaciones !== undefined && clientRecord.enviarNotificaciones !== Boolean(enviarNotificaciones)) {
+          await prisma.cliente.update({
+            where: { id: clientRecord.id },
+            data: { enviarNotificaciones: Boolean(enviarNotificaciones) }
+          });
+          clientRecord.enviarNotificaciones = Boolean(enviarNotificaciones);
+        }
+        if (clientRecord.estado !== 'ACTIVO') {
+          await prisma.cliente.update({
+            where: { id: clientRecord.id },
+            data: { estado: 'ACTIVO' }
+          }).catch(() => {});
+          clientRecord.estado = 'ACTIVO';
+        }
       }
       finalClienteId = clientRecord.id;
     }

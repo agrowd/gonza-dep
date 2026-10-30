@@ -81,6 +81,14 @@ export async function GET(request) {
         });
         if (hasFutureActive) continue;
 
+        // Defensa D-140: si el cliente figura ACTIVO o su turno más reciente fue CANCELADO
+        // posterior a la última sesión, no corresponde sugerir mensaje de mantenimiento
+        if (cl.estado === 'ACTIVO') continue;
+        const mostRecentTurno = cl.turnos[0];
+        if (mostRecentTurno && mostRecentTurno.estado === 'CANCELADO' && new Date(mostRecentTurno.fecha).getTime() >= lastTurnoTime) {
+          continue;
+        }
+
         // Frecuencia en semanas y fechas calculadas
         const freqWeeks = Number(cl.frecuencia || 4);
         const fechaSiguienteTurno = new Date(lastTurnoTime + (freqWeeks * 7 * 24 * 60 * 60 * 1000));
@@ -212,6 +220,14 @@ export async function GET(request) {
           return new Date(t.fecha).getTime() > lastTurnoTime;
         });
         if (hasFutureActive) continue;
+
+        // Defensa D-140: si el cliente figura ACTIVO o su turno más reciente fue CANCELADO
+        // posterior a la última sesión, no corresponde sugerir mensaje de mantenimiento
+        if (cl.estado === 'ACTIVO') continue;
+        const mostRecentTurno = cl.turnos[0];
+        if (mostRecentTurno && mostRecentTurno.estado === 'CANCELADO' && new Date(mostRecentTurno.fecha).getTime() >= lastTurnoTime) {
+          continue;
+        }
 
         // Fecha sugerida de aviso: 75 días (2 meses y medio) después de su última sesión
         const fechaSugeridaAviso = new Date(lastTurnoTime + (75 * 24 * 60 * 60 * 1000));

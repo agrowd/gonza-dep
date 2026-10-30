@@ -10,7 +10,7 @@ import styles from './estadisticas.module.css';
 const METRIC_DEFINITIONS = [
   {
     id: 'realizados',
-    label: '✅ Turnos Realizados',
+    label: 'Turnos Realizados',
     valueLabel: 'Facturación Realizada',
     isDanger: false,
     hasAvg: true,
@@ -19,7 +19,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'gananciaNeta',
-    label: '💰 Ganancia Neta (Ingresos Reales del Período)',
+    label: 'Ganancia Neta (Ingresos Reales del Período)',
     valueLabel: 'Ganancia Neta Ingresada',
     isDanger: false,
     hasAvg: true,
@@ -28,7 +28,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'senados',
-    label: '📌 Turnos Señados / Confirmados',
+    label: 'Turnos Señados / Confirmados',
     valueLabel: 'Total de Señas (Turnos Señados)',
     isDanger: false,
     hasAvg: true,
@@ -37,7 +37,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'cancelados',
-    label: '❌ Turnos Cancelados (Pérdidas)',
+    label: 'Turnos Cancelados (Pérdidas)',
     valueLabel: 'Pérdida por Cancelaciones',
     isDanger: true,
     hasAvg: false,
@@ -46,7 +46,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'ausentes',
-    label: '🚫 Turnos Ausentes (No asistió)',
+    label: 'Turnos Ausentes (No asistió)',
     valueLabel: 'Pérdida por Inasistencias',
     isDanger: true,
     hasAvg: false,
@@ -55,7 +55,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'vaAAvisar',
-    label: '💬 Clientes en "Va a avisar"',
+    label: 'Clientes en "Va a avisar"',
     valueLabel: 'Oportunidad Pendiente (Última Sesión)',
     isDanger: true,
     hasAvg: false,
@@ -64,7 +64,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'mantenimiento',
-    label: '🔄 Clientes en "Mantenimiento"',
+    label: 'Clientes en "Mantenimiento"',
     valueLabel: 'Valor Referencia (Última Sesión)',
     isDanger: false,
     hasAvg: false,
@@ -73,7 +73,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'finalizo',
-    label: '🏁 Clientes que "Finalizaron Tratamiento"',
+    label: 'Clientes que "Finalizaron Tratamiento"',
     valueLabel: 'Valor Referencia (Última Sesión)',
     isDanger: false,
     hasAvg: false,
@@ -82,7 +82,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'nuevos',
-    label: '🆕 Clientes Nuevos en el Período',
+    label: 'Clientes Nuevos en el Período',
     valueLabel: 'Facturación de Clientes Nuevos',
     isDanger: false,
     hasAvg: true,
@@ -91,7 +91,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'sinMarcar',
-    label: '⚠️ Turnos Sin Marcar (Pasados de hora)',
+    label: 'Turnos Sin Marcar (Pasados de hora)',
     valueLabel: 'Monto Pendiente de Cierre',
     isDanger: true,
     hasAvg: false,
@@ -100,7 +100,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'zonas',
-    label: '📍 Zonas Más Demandadas (Histograma y Filtros)',
+    label: 'Zonas Más Demandadas (Histograma y Filtros)',
     valueLabel: 'Facturación de Zonas Seleccionadas',
     isDanger: false,
     hasAvg: true,
@@ -109,7 +109,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'cumpleanos',
-    label: '🎂 Clientes que Cumplen Años en el Período',
+    label: 'Clientes que Cumplen Años en el Período',
     valueLabel: 'Total Cumpleañeros',
     isDanger: false,
     hasAvg: false,

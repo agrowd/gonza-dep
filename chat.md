@@ -1426,3 +1426,26 @@
     - Botones de "Acciones Rápidas" provistos de `touchAction: 'manipulation'`, altura mínima (42px) y protección `WebkitTapHighlightColor`.
     - Agregado un botón ergonómico full-width `[ ✕ Cerrar Ficha ]` (44px) en la parte inferior del modal para cerrar instantáneamente con el pulgar.
     - Protegidos los handlers de backdrop con `if (e.target === e.currentTarget)` en todos los modales.
+
+### 6. Normalización de Clientes Cancelados, Supresión de Emojis y Optimización Móvil en Configuración (D-140)
+- **Problema Reportado por Gonzalo Siri en WhatsApp**:
+  1. *Alan González*: Canceló su turno del 11/11/2026 por autogestión, pero en `/admin/clientes` seguía figurando con el badge `[ 🏁 FINALIZADO ]`, lo que provocaría que a los 75 días el sistema le enviara erróneamente un recordatorio automático de mantenimiento.
+  2. *Bloqueos de Agenda y Emojis*: *"bloqueo de agenda sumalo como otra opción de configuración así no lo perdemos. También sácale el emoji de las opciones, como también al listado de métricas en estadísticas, sácale los emojis"*.
+  3. *Diseño Móvil en Configuración*: *"Acá se ve todo amontonado en el celu, y hacelo sin tanta separación con los bordes"*.
+- **Solución Implementada**:
+  1. **Blindaje Total de Estado de Clientes en Cancelaciones**:
+     - En `src/app/api/reservas/cancelar/route.js`: Al cancelar por autogestión, se resetea automáticamente `cliente.estado = 'ACTIVO'`.
+     - En `src/app/api/admin/turnos/[id]/route.js`: Al cancelar un turno desde el panel administrativo, se resetea `cliente.estado = 'ACTIVO'`.
+     - En `src/app/api/reservas/crear/route.js` y `src/app/api/admin/turnos/route.js`: Al crear cualquier reserva o nuevo turno, se garantiza `cliente.estado = 'ACTIVO'`.
+     - En `src/app/api/admin/clientes/route.js`: Se añadió normalización reactiva en el `GET`. Si un cliente figura como `FINALIZADO` pero su turno más reciente fue `CANCELADO` o tiene turnos activos, se corrige en tiempo real en la base de datos PostgreSQL a `ACTIVO` y se devuelve con estado `ACTIVO`.
+     - En `src/lib/whatsapp.js` y `src/app/api/admin/notificaciones/route.js`: Guardián que impide el envío de recordatorios de mantenimiento a los 75 días si `cl.estado === 'ACTIVO'` o si el turno más reciente fue `CANCELADO`.
+  2. **Eliminación Completa de Emojis**:
+     - En `src/app/admin/configuracion/page.js`: Removidos todos los emojis de las opciones del desplegable `tabSelectDropdown`.
+     - En `src/app/admin/estadisticas/page.js`: Removidos todos los emojis de las 12 métricas en `METRIC_DEFINITIONS`.
+  3. **Independencia de Bloqueos de Agenda**:
+     - Pestaña `bloqueos` dedicada en el desplegable de Configuración.
+     - En la pestaña `parametros`, se sustituyó la duplicación del formulario por un banner informativo con botón `Ir a Bloqueos de Agenda →`.
+  4. **Optimización Móvil Ergonómica en Configuración**:
+     - En `configuracion.module.css`: Eliminada la doble tarjeta anidada. Agregadas reglas `@media (max-width: 600px)` para compactar paddings, apilar campos en una columna, y agrandar swatches a 34px.
+     - En `layout.module.css`: Reducido el padding de `.contentArea` en pantallas móviles a `4.2rem 0.35rem 1.5rem 0.35rem` para aprovechar el 100% del ancho sin márgenes exagerados.
+- **Validación Técnica**: Compilación Next.js Turbopack limpia (47/47 rutas con 0 errores). Desplegado en VPS Staging y Producción.

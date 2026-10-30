@@ -1178,7 +1178,7 @@ export default function ConfiguracionPage() {
     <div className={styles.bloqueosSectionCard}>
             <div className={styles.bloqueosTitleRow}>
               <div className={styles.bloqueosSectionTitle}>
-                <span>📅 Bloqueos de Agenda y Feriados Anuales</span>
+                <span>Bloqueos de Agenda y Feriados Anuales</span>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Año a consultar:</span>
@@ -1206,7 +1206,7 @@ export default function ConfiguracionPage() {
             {/* Formulario de Alta Rápida */}
             <form onSubmit={handleCreateFeriado} className={styles.bloqueoFormCard}>
               <div className={styles.bloqueoFormTitle}>
-                <span>➕ Crear Nuevo Bloqueo o Feriado</span>
+                <span>+ Crear Nuevo Bloqueo o Feriado</span>
               </div>
 
               <div className={styles.bloqueoFormGrid}>
@@ -1229,9 +1229,9 @@ export default function ConfiguracionPage() {
                     }}
                     required
                   >
-                    <option value="FIJO">🔴 Fijo (Se repite todos los años, ej: Navidad)</option>
-                    <option value="MOVIL">🟠 Móvil (Se define o reubica por año, ej: Feriado puente)</option>
-                    <option value="UNICO">🔵 Único (Aplica solo a este día específico)</option>
+                    <option value="FIJO">Fijo (Se repite todos los años, ej: Navidad)</option>
+                    <option value="MOVIL">Móvil (Se define o reubica por año, ej: Feriado puente)</option>
+                    <option value="UNICO">Único (Aplica solo a este día específico)</option>
                   </select>
                 </div>
 
@@ -1491,14 +1491,14 @@ export default function ConfiguracionPage() {
             if (tab === 'boxes') fetchBoxes();
           }}
         >
-          <option value="zones">🏷️ Servicios (Zonas de Depilación)</option>
-          <option value="hours">⏰ Horarios Laborales</option>
-          <option value="templates">💬 Mensajes y Plantillas</option>
-          <option value="users">👥 Usuarios y Operadores</option>
-          <option value="parametros">⚙️ Parámetros Operativos (Seña, Notificaciones, Canales)</option>
-          <option value="bloqueos">📅 Bloqueos de Agenda y Feriados Anuales</option>
-          <option value="promos">🎁 Promociones y Cupones</option>
-          <option value="boxes">📦 Boxes y Cabinas (Agendas Paralelas)</option>
+          <option value="zones">Servicios (Zonas de Depilación)</option>
+          <option value="hours">Horarios Laborales</option>
+          <option value="templates">Mensajes y Plantillas</option>
+          <option value="users">Usuarios y Operadores</option>
+          <option value="parametros">Parámetros Operativos (Seña, Notificaciones, Canales)</option>
+          <option value="bloqueos">Bloqueos de Agenda y Feriados Anuales</option>
+          <option value="promos">Promociones y Cupones</option>
+          <option value="boxes">Boxes y Cabinas (Agendas Paralelas)</option>
         </select>
       </div>
 
@@ -2348,16 +2348,29 @@ export default function ConfiguracionPage() {
             </div>
           </form>
 
-          {/* Submódulo de Bloqueos de Agenda y Feriados Anuales (D-133 & D-137) */}
-          {renderBloqueosSection()}
+          {/* Acceso directo a Bloqueos y Feriados Anuales (D-140) */}
+          <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e293b' }}>Bloqueos de Agenda y Feriados Anuales</div>
+              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Gestioná los feriados fijos, móviles y bloqueos específicos en su sección independiente.</div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setActiveTab('bloqueos');
+                fetchFeriados(selectedFeriadosYear);
+              }}
+              style={{ fontSize: '0.85rem', padding: '0.45rem 0.9rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              Ir a Bloqueos de Agenda →
+            </button>
+          </div>
         </div>
       )}
 
       {/* Tab Content: Bloqueos de Agenda y Feriados Anuales (Dedicado D-137) */}
-      {activeTab === 'bloqueos' && (
-        <div className={styles.sectionCard}>
-          {renderBloqueosSection()}</div>
-      )}
+      {activeTab === 'bloqueos' && renderBloqueosSection()}
 
       {/* Tab Content 4: Promociones y Cupones Management */}
       {activeTab === 'promos' && (

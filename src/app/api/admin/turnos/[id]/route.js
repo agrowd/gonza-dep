@@ -442,6 +442,14 @@ export async function PUT(request, { params }) {
           updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${cancelTag}`.trim() : cancelTag;
         }
       }
+
+      // Al cancelar un turno, el cliente no debe quedar como FINALIZADO para evitar recordatorios de mantenimiento
+      if (oldTurn.clienteId) {
+        await prisma.cliente.update({
+          where: { id: oldTurn.clienteId },
+          data: { estado: 'ACTIVO' }
+        }).catch(err => console.error('Error resetting client status to ACTIVO upon cancellation:', err));
+      }
     } else if (body.señaEstado !== undefined) {
       updateData.señaEstado = body.señaEstado;
     }

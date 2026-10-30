@@ -138,6 +138,9 @@ export async function POST(request) {
       if (!client.fechaNacimiento && fechaNacimiento) {
         updateData.fechaNacimiento = new Date(fechaNacimiento);
       }
+      if (client.estado !== 'ACTIVO') {
+        updateData.estado = 'ACTIVO';
+      }
 
       if (Object.keys(updateData).length > 0) {
         client = await prisma.cliente.update({

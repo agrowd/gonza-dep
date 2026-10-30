@@ -2412,3 +2412,22 @@
     - Se protegieron los clicks de backdrop con `if (e.target === e.currentTarget)` en todos los modales.
 - [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas).
 - [x] **Documentación**: Registrado `D-139 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-57` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 30 de Octubre de 2026 - Normalización de Estado en Cancelaciones, Descarte de Recordatorios Indebidos de Mantenimiento, Supresión de Emojis y Optimización Móvil en Configuración (D-140)
+- [x] **Gestión Reactiva y Normalización de Clientes Cancelados (Caso Alan Gonzalez)**:
+  - En `src/app/api/reservas/cancelar/route.js`: Al cancelar por autogestión, resetear `cliente.estado = 'ACTIVO'`.
+  - En `src/app/api/admin/turnos/[id]/route.js`: Al cancelar turno en panel administrativo, resetear `cliente.estado = 'ACTIVO'`.
+  - En `src/app/api/reservas/crear/route.js` y `src/app/api/admin/turnos/route.js`: Al crear nuevo turno, asegurar `cliente.estado = 'ACTIVO'`.
+  - En `src/app/api/admin/clientes/route.js`: Normalización dinámica en `GET`: si un cliente figura como `FINALIZADO` pero su turno más reciente fue cancelado o tiene turnos activos, actualizar en base de datos PostgreSQL a `ACTIVO` y responder `ACTIVO`.
+  - En `src/lib/whatsapp.js` y `src/app/api/admin/notificaciones/route.js`: Guardián que descarta el envío de recordatorio de mantenimiento (75 días) si `cl.estado === 'ACTIVO'` o si el turno más reciente fue `CANCELADO`.
+- [x] **Eliminación Total de Emojis**:
+  - En `src/app/admin/configuracion/page.js`: Removidos todos los emojis de las opciones del selector de secciones `tabSelectDropdown`.
+  - En `src/app/admin/estadisticas/page.js`: Removidos todos los emojis de las 12 métricas en `METRIC_DEFINITIONS`.
+- [x] **Sección Independiente y Accesible de Bloqueos en Configuración**:
+  - Pestaña `bloqueos` dedicada e independiente en `tabSelectDropdown`.
+  - En la pestaña `parametros`, banner informativo con botón `Ir a Bloqueos de Agenda →` que redirige sin duplicar el formulario completo.
+- [x] **Optimización Ergonómica de Móvil en Configuración y Layout**:
+  - En `configuracion.module.css`: Eliminada la doble tarjeta contenedora en `bloqueos`. Agregadas reglas `@media (max-width: 600px)` para compactar paddings, apilar campos en una columna, y agrandar swatches a 34px.
+  - En `layout.module.css`: Reducido el padding de `.contentArea` en pantallas móviles a `4.2rem 0.35rem 1.5rem 0.35rem` para aprovechar el 100% del ancho sin márgenes exagerados.
+- [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas con 0 errores).
+- [x] **Documentación**: Registrado `D-140 🔒 LOCKED` en `.synapse/decisions.md`.

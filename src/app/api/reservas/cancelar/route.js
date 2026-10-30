@@ -71,6 +71,15 @@ export async function POST(request) {
       include: { cliente: true }
     });
 
+    // Si el cliente estaba en estado FINALIZADO o MANTENIMIENTO, al cancelar su turno
+    // su estado se reestablece a ACTIVO para evitar envíos indebidos de mantenimiento
+    if (updatedTurno.clienteId) {
+      await prisma.cliente.update({
+        where: { id: updatedTurno.clienteId },
+        data: { estado: 'ACTIVO' }
+      }).catch(err => console.error('Error resetting client status to ACTIVO upon cancellation:', err));
+    }
+
     const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
     const notificationsEnabled = clientNotificationsEnabled;
 

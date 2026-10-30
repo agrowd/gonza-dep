@@ -876,6 +876,14 @@ export async function checkAndSendReminders(force = false) {
         });
         if (hasFutureTurno) continue;
 
+        // Defensa D-140: si el cliente figura ACTIVO o su turno más reciente fue CANCELADO
+        // posterior a la última sesión realizada, no corresponde enviar recordatorio de mantenimiento
+        if (cl.estado === 'ACTIVO') continue;
+        const mostRecentTurno = cl.turnos[0];
+        if (mostRecentTurno && mostRecentTurno.estado === 'CANCELADO' && new Date(mostRecentTurno.fecha).getTime() >= lastTurnoTime) {
+          continue;
+        }
+
         // Target date: 75 days after last session (2.5 months)
         const targetMaintDate = new Date(lastTurnoTime + (75 * 24 * 60 * 60 * 1000));
         if (argToday < targetMaintDate) continue;

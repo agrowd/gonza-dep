@@ -278,3 +278,9 @@
     box-sizing: border-box;
   }
 }
+
+@media (max-width: 600px) {
+  .contentArea {
+    padding: 4.2rem 0.35rem 1.5rem 0.35rem;
+  }
+}

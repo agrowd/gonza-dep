@@ -111,6 +111,24 @@ export async function GET(request) {
       clients = clients.filter(c => c.turnos.some(t => t.operadorId === operadorFilter || t.operador?.id === operadorFilter));
     }
 
+    // Normalización reactiva del estado del cliente (D-140):
+    // Si un cliente figura como FINALIZADO, pero su turno más reciente fue CANCELADO
+    // o tiene turnos activos agendados, su estado real y visible debe ser ACTIVO
+    // para evitar falsos badges y no despachar notificaciones erróneas de mantenimiento.
+    clients = clients.map(c => {
+      if (c.estado === 'FINALIZADO' && c.turnos && c.turnos.length > 0) {
+        const latestTurno = c.turnos[0]; // ordenados por fecha: 'desc'
+        if (latestTurno.estado === 'CANCELADO' || ['SEÑADO', 'PENDIENTE_PAGO', 'CONSULTA', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'].includes(latestTurno.estado)) {
+          c.estado = 'ACTIVO';
+          prisma.cliente.update({
+            where: { id: c.id },
+            data: { estado: 'ACTIVO' }
+          }).catch(err => console.error('Error auto-syncing client status to ACTIVO:', err));
+        }
+      }
+      return c;
+    });
+
     return NextResponse.json(clients);
 
   } catch (error) {
