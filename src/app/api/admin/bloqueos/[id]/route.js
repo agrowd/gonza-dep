@@ -63,6 +63,9 @@ export async function PUT(request, { params }) {
   }
 }
 
+export const PATCH = PUT;
+
+
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;

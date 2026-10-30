@@ -573,3 +573,10 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 **Solución:** Se diferenciaron los rangos de consulta de Prisma: 1) Campo `fecha` (normalizado en UTC): `[YYYY-MM-DDT00:00:00.000Z, YYYY-MM-DDT23:59:59.999Z]`; 2) Campo `createdAt` (timestamps reales UTC): se evalúa con el huso oficial de Argentina `[YYYY-MM-DDT00:00:00.000-03:00, YYYY-MM-DDT23:59:59.999-03:00]`. De esta forma, el cierre de día opera estrictamente a las 24:00 hs (medianoche argentina). En `gastos/route.js`, el agrupador diario de señas se formateó con `Intl.DateTimeFormat` en `America/Argentina/Buenos_Aires`.
 **Commit:** `d9cfa42`
 **Estado:** ✅ FIXED
+
+## ERR-56: Crash de cliente en Producción `Can't find variable: useMemo` en `/admin/agenda` (30/10/2026)
+**Síntoma:** Gonzalo reportó de urgencia en WhatsApp con capturas de pantalla de iPhone (`media_1793370988459_19bd61a8.png` y `media_1793371009884_3194f146.png`): Error Boundary *"⚠️ Ocurrió un error en el Panel - Can't find variable: useMemo"* impidiendo abrir la agenda en `https://agenda.depilacionparahombres.com`.
+**Root Cause:** En el commit `0b46dea` (Fase 2 de Servicios), se incorporó `groupedZonesByService = useMemo(...)` en `src/app/admin/agenda/page.js`, pero la línea de importación era `import { useState, useEffect, useRef, useCallback } from 'react'`, omitiendo `useMemo`. En WebKit (Safari iOS), esto detona un `ReferenceError` inmediato al montar el componente en el navegador del cliente.
+**Solución:** Se agregó `useMemo` a la desestructuración de React en `src/app/admin/agenda/page.js`, se validó la compilación estática y se desplegó inmediatamente a Producción (`https://agenda.depilacionparahombres.com`) y Staging (`http://187.127.9.216`), restaurando la operatividad total.
+**Commit:** `787aaf7`
+**Estado:** ✅ FIXED

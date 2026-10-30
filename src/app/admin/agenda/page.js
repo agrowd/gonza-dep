@@ -269,6 +269,7 @@ export default function AgendaPage() {
   const [boxes, setBoxes] = useState([]);
   const [selectedBoxId, setSelectedBoxId] = useState('ALL');
   const [selectedOperadorId, setSelectedOperadorId] = useState('ALL');
+  const lastTurnoAssignment = useRef({ boxId: '', operadorId: '' });
 
   const visibleAppointments = useMemo(() => {
     let list = appointments;
@@ -2731,6 +2732,10 @@ export default function AgendaPage() {
       });
       if (res.ok) {
         setIsNewOpen(false);
+        lastTurnoAssignment.current = {
+          boxId: newTurno.boxId,
+          operadorId: newTurno.operadorId
+        };
         showToast('Turno agendado con éxito.');
         fetchAppointments();
       } else {
@@ -3074,6 +3079,67 @@ export default function AgendaPage() {
           </div>
         )}
 
+        {/* Selector de Operador / Multioperador (D-137) */}
+        {operadores.length > 0 && currentUserRole !== 'OPERADOR' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '4px', maxWidth: '100%', marginTop: '6px' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+              👤 Operador:
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedOperadorId('ALL')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: selectedOperadorId === 'ALL' ? '2px solid #b45309' : '1px solid #cbd5e1',
+                backgroundColor: selectedOperadorId === 'ALL' ? '#b45309' : '#ffffff',
+                color: selectedOperadorId === 'ALL' ? '#ffffff' : '#334155',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: selectedOperadorId === 'ALL' ? '0 2px 6px rgba(180, 83, 9, 0.2)' : 'none'
+              }}
+            >
+              <span>👥</span>
+              <span>Todos los Operadores</span>
+            </button>
+
+            {operadores.map(op => {
+              const isSelected = selectedOperadorId === op.id;
+              return (
+                <button
+                  key={op.id}
+                  type="button"
+                  onClick={() => setSelectedOperadorId(op.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: isSelected ? '2px solid #d97706' : '1px solid #cbd5e1',
+                    backgroundColor: isSelected ? '#d97706' : '#ffffff',
+                    color: isSelected ? '#ffffff' : '#334155',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: isSelected ? '0 2px 6px rgba(217, 119, 6, 0.25)' : 'none'
+                  }}
+                >
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isSelected ? '#ffffff' : '#d97706' }} />
+                  <span>{op.nombre}</span>
+                  {op.rol === 'ADMIN' && <span style={{ opacity: 0.9, fontSize: '0.72rem' }}>⭐</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Fila 4: Botones de Acción (+ Nuevo Turno, Bloquear | Cancelados, Imprimir) */}
         <div className={styles.agendaActionsRow}>
           {currentUserRole !== 'OPERADOR' && (
@@ -3081,6 +3147,12 @@ export default function AgendaPage() {
               <button 
                 onClick={() => {
                   setIsNextScheduling(false);
+                  const defaultBoxId = (selectedBoxId && selectedBoxId !== 'ALL')
+                    ? selectedBoxId
+                    : (lastTurnoAssignment.current.boxId || boxes.find(b => b.esPrincipal)?.id || (boxes[0]?.id || ''));
+                  const defaultOpId = (selectedOperadorId && selectedOperadorId !== 'ALL')
+                    ? selectedOperadorId
+                    : (lastTurnoAssignment.current.operadorId || (operadores[0]?.id || ''));
                   setNewTurno({
                     nombreCompleto: '',
                     nombre: '',
@@ -3100,7 +3172,8 @@ export default function AgendaPage() {
                     estado: 'SEÑADO',
                     observaciones: '',
                     clienteId: null,
-                    operadorId: '',
+                    operadorId: defaultOpId,
+                    boxId: defaultBoxId,
                     metodoPago: 'TRANSFERENCIA'
                   });
                   setIsNewOpen(true);
@@ -3118,7 +3191,8 @@ export default function AgendaPage() {
                     horaInicio: '10:00',
                     horaFin: '11:00',
                     motivo: '',
-                    esDiaCompleto: false
+                    esDiaCompleto: false,
+                    boxId: selectedBoxId !== 'ALL' ? selectedBoxId : ''
                   });
                   setIsBlockModalOpen(true);
                 }} 
@@ -4042,9 +4116,16 @@ export default function AgendaPage() {
                               </div>
                             ) : app.duracionMinutos <= 45 ? (
                               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '2px 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.15', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {app.cliente?.nombreCompleto || 'Cliente'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                  <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.15', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {app.cliente?.nombreCompleto || 'Cliente'}
+                                  </span>
+                                  {app.box && selectedBoxId === 'ALL' && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 4px', borderRadius: '3px', backgroundColor: `${app.box.color || '#7a1f1e'}25`, color: app.box.color || '#f59e0b', border: `1px solid ${app.box.color || '#7a1f1e'}50` }}>
+                                      {app.box.nombre}
+                                    </span>
+                                  )}
+                                </div>
                                 <span className={styles.appTime} style={{ fontSize: '0.7rem', opacity: 0.95, lineHeight: '1.15', marginTop: '1px', fontWeight: '500' }}>
                                   {app.horaInicio} - {app.horaFin}
                                 </span>
@@ -6819,6 +6900,23 @@ export default function AgendaPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+              {boxes.length > 0 && (
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>📦 Agenda / Box a Bloquear</label>
+                  <select
+                    value={blockForm.boxId || ''}
+                    onChange={(e) => setBlockForm({ ...blockForm, boxId: e.target.value })}
+                  >
+                    <option value="">🌐 Bloquear en Todas las Agendas / Boxes</option>
+                    {boxes.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className={styles.inputRow}>
                 <div className={styles.inputGroup} style={{ flex: 1 }}>
                   <label className={styles.inputLabel}>Tipo de Bloqueo</label>

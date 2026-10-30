@@ -2366,3 +2366,25 @@
 - [ ] Push a GitHub (`main` y `staging`).
 - [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
 - [ ] Documentar en `.synapse/decisions.md` (D-132), `.synapse/workcycle.md` y `chat.md`.
+
+
+## Ciclo de Trabajo: 30 de Octubre de 2026 - Doble Agenda Paralela, Multioperador & Bloqueos de Feriados
+
+### 🎯 Tareas Completadas
+- [x] **Solución Urgente a Crash de Producción (`useMemo`)**:
+  - Se corrigió `Can't find variable: useMemo` en `src/app/admin/agenda/page.js`.
+  - Desplegado y verificado en `https://agenda.depilacionparahombres.com` (PM2 `gonzalo-agenda`, HTTP 200 OK).
+  - Documentado en `ERR-56`.
+- [x] **Aclaración y Verificación de Acceso a Staging (`http://187.127.9.216`)**:
+  - Se diagnosticó por qué el navegador mostraba `ERR_CONNECTION_TIMED_OUT` al ingresar `http://187.127.9.216:3008`: redes de telefonía móvil e ISPs residenciales filtran puertos TCP no convencionales como el 3008.
+  - Se constató que Nginx en el puerto estándar 80 (`http://187.127.9.216`) responde en 0 ms con `HTTP 200 OK` y redirige el tráfico a Staging de forma transparente.
+- [x] **Implementación Integral de Doble Agenda Paralela y Multioperador (D-137)**:
+  - **Filtro de Operadores en la Agenda**: Agregada la fila de pills de selección por Operador (`👥 Todos los Operadores`, `👤 Gonzalo ⭐`, etc.) en `/admin/agenda` para Administrador y Recepcionista.
+  - **Persistencia Inteligente de Box y Operador**: Implementado `lastTurnoAssignment` (useRef) para recordar y precargar el Box y Operador del turno anterior al abrir "+ Nuevo Turno".
+  - **Badges de Box en Grilla Horaria**: Al visualizar "Todos los Boxes (Doble Agenda)", cada turno muestra el badge distintivo con el color y nombre de su Box (`Box 1`, `Box 2`) para diferenciar citas paralelas a simple vista.
+  - **Filtro de Operadores en Clientes (`/admin/clientes`)**: Integrado selector por operador asignado en el buscador y adaptada la API para restringir la vista de operadores a sus propios clientes.
+  - **Soporte de Bloqueo por Box o Global en Agenda**: En el modal "⊘ Bloquear", se añadió el selector `📦 Agenda / Box a Bloquear` para bloquear todas las agendas juntas o un Box individual.
+  - **Ruta API `/api/admin/bloqueos/[id]`**: Completado el soporte para métodos `GET`, `PUT`, `PATCH` y `DELETE` con manejo de feriados móviles reubicados.
+  - **Pestaña Dedicada de Bloqueos en Configuración**: Creada la opción directa `📅 Bloqueos de Agenda y Feriados Anuales` en el selector de `/admin/configuracion` (además de estar disponible dentro de Parámetros).
+  - **Doble Box en Staging**: Creado `Box 2 - Cabina 2` en PostgreSQL `agenda_db_staging` y asignados 10 turnos de prueba para verificar de inmediato el filtrado individual y la doble agenda simultánea.
+- [x] **Validación y Compilación**: `npm run build` ejecutado exitosamente (47/47 rutas compiladas).

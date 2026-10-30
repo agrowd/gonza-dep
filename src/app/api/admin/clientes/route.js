@@ -8,7 +8,8 @@ export async function GET(request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('session');
-    if (!sessionCookie || !verifySessionToken(sessionCookie.value)) {
+    const session = sessionCookie ? verifySessionToken(sessionCookie.value) : null;
+    if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
@@ -17,6 +18,8 @@ export async function GET(request) {
     const filter = searchParams.get('filter') || 'all'; // all, new, recurrent, upcoming, no_upcoming, canceled, no_show
     const resenaFilter = searchParams.get('resena') || 'all'; // all, con_resena, sin_resena
     const notifFilter = searchParams.get('notif') || 'all'; // all, activas, pausadas
+    const operadorFilter = searchParams.get('operadorId') || 'ALL';
+
 
     // Query builder
     let whereClause = {};
@@ -100,7 +103,16 @@ export async function GET(request) {
       });
     }
 
+    // Filtro Multioperador / Doble Agenda (D-137)
+    // Los operadores solo ven clientes que hayan tenido turnos asignados a ellos
+    if (session.rol === 'OPERADOR') {
+      clients = clients.filter(c => c.turnos.some(t => t.operadorId === session.id || t.operador?.id === session.id));
+    } else if (operadorFilter && operadorFilter !== 'ALL') {
+      clients = clients.filter(c => c.turnos.some(t => t.operadorId === operadorFilter || t.operador?.id === operadorFilter));
+    }
+
     return NextResponse.json(clients);
+
   } catch (error) {
     console.error('Error fetching clients:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });

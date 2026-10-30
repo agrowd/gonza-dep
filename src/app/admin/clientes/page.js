@@ -64,6 +64,8 @@ function ClientesPageContent() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('history');
   const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [operadores, setOperadores] = useState([]);
+  const [selectedOperadorId, setSelectedOperadorId] = useState('ALL');
 
   // Create client modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -401,9 +403,9 @@ function ClientesPageContent() {
   };
 
   // Fetch clients list
-  const fetchClients = (customSearch = search, customFilter = filter) => {
+  const fetchClients = (customSearch = search, customFilter = filter, customOp = selectedOperadorId) => {
     setLoading(true);
-    fetch(`/api/admin/clientes?search=${encodeURIComponent(customSearch)}&filter=${customFilter}`)
+    fetch(`/api/admin/clientes?search=${encodeURIComponent(customSearch)}&filter=${customFilter}&operadorId=${customOp}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -512,6 +514,13 @@ function ClientesPageContent() {
         }
       })
       .catch(err => console.error('Error fetching global notif config:', err));
+
+    fetch('/api/admin/usuarios')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setOperadores(data);
+      })
+      .catch(err => console.error('Error fetching operators in clientes:', err));
   }, []);
 
   useEffect(() => {
@@ -1170,6 +1179,26 @@ function ClientesPageContent() {
             <option value="resena_sin">Sin Reseña (Pendiente)</option>
           </optgroup>
         </select>
+        {currentUserRole !== 'OPERADOR' && operadores.length > 0 && (
+          <select
+            className={styles.filterSelect}
+            value={selectedOperadorId}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedOperadorId(val);
+              fetchClients(search, filter, val);
+            }}
+            title="Filtrar Clientes por Operador Asignado (D-137)"
+            style={{ minWidth: '180px' }}
+          >
+            <option value="ALL">👤 Todos los Operadores</option>
+            {operadores.map(op => (
+              <option key={op.id} value={op.id}>
+                👤 {op.nombre} {op.rol === 'ADMIN' ? '⭐ (Admin)' : ''}
+              </option>
+            ))}
+          </select>
+        )}
       </form>
 
       {/* List Table */}
