@@ -1376,3 +1376,25 @@
      - Staging: `http://187.127.9.216:3008` (HTTP 200 OK)
      - Producción: `https://agenda.depilacionparahombres.com` (HTTP 200 OK)
 
+
+## Sesión 30/10/2026: Arreglo de Crash en Producción (`useMemo`), Doble Agenda Paralela por Box, Filtro de Operadores y Gestión Integral de Bloqueos (D-137)
+
+### 1. Incidente Crítico Resuelto en Producción (`ERR-56`)
+- **Problema**: Gonzalo reportó en WhatsApp con captura de iPhone (`Can't find variable: useMemo`) que la agenda en producción no abría.
+- **Causa**: Al optimizar con `useMemo` en Fase 2, faltaba importarlo en `src/app/admin/agenda/page.js`, detonando un `ReferenceError` en Safari iOS.
+- **Solución**: Se añadió `useMemo` y se desplegó inmediatamente a Producción (`https://agenda.depilacionparahombres.com`), quedando 100% operativo.
+
+### 2. Acceso a Web de Prueba (Staging)
+- **Diagnóstico del error `ERR_CONNECTION_TIMED_OUT` en `187.127.9.216:3008`**: Determinadas redes móviles y firewalls residenciales filtran puertos TCP no estándar (como el 3008).
+- **Acceso Directo por Puerto 80**: Se configuró Nginx para que la URL directa **`http://187.127.9.216`** (sin `:3008`) reverse-proxee a Staging en el puerto web estándar HTTP, respondiendo al instante (`HTTP 200 OK`) en cualquier dispositivo o red.
+
+### 3. Doble Agenda Paralela por Box & Multioperador (D-137)
+- **Filtro de Operadores en Agenda**: Fila interactiva de pills en `/admin/agenda` (`👥 Todos los Operadores`, `👤 Gonzalo ⭐`, etc.) para conmutar fácilmente entre turnos de cada operador o vista global.
+- **Filtro de Boxes / Cabinas**: Selector para conmutar entre `🌐 Todos los Boxes (Doble Agenda)`, `Box 1 - Principal (Gonzalo)` y `Box 2 - Cabina 2`.
+- **Badges de Box en Grilla Horaria**: Al visualizar la doble agenda ("Todos los Boxes"), las citas paralelas en el mismo horario muestran badges con el nombre y color de su cabina para distinguirlas inmediatamente.
+- **Persistencia Inteligente de Asignación en Carga de Turnos**: En "+ Nuevo Turno", el formulario precarga automáticamente el Box y Operador del turno previo o el filtro activo, agilizando la carga sucesiva sin tener que seleccionarlos una y otra vez.
+- **Selector de Box en Modal de Bloqueos**: Se permite elegir "🌐 Bloquear en Todas las Agendas / Boxes" o seleccionar una cabina específica.
+- **Filtro de Operadores en Clientes (`/admin/clientes`)**: Selector desplegable por operador para Administrador y Recepcionista, y restricción automática para que los operadores solo visualicen a sus propios clientes.
+- **Pestaña Directa de Bloqueos en `/admin/configuracion`**: Creada la opción directa `📅 Bloqueos de Agenda y Feriados Anuales` en el selector de secciones.
+- **Ruta API `/api/admin/bloqueos/[id]`**: Soporte completo para `GET`, `PUT`, `PATCH` y `DELETE` para mover feriados móviles y editar o borrar bloqueos sin errores.
+- **Datos de Prueba en Staging**: Creado `Box 2 - Cabina 2` en PostgreSQL `agenda_db_staging` y asignados 10 turnos de prueba para verificar la doble agenda en vivo.
