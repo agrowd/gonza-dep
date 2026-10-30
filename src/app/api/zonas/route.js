@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
+import { ensureDefaultService } from '@/app/api/admin/servicios/route.js';
 
-// GET: Public list of zones
+// GET: Lista pública de zonas, incluyendo su servicio asociado
 export async function GET() {
   try {
+    await ensureDefaultService();
+
     const zonas = await prisma.zona.findMany({
+      include: {
+        servicio: true
+      },
       orderBy: {
         nombre: 'asc'
       }
@@ -18,7 +24,7 @@ export async function GET() {
   }
 }
 
-// POST: Admin creates a new zone
+// POST: Admin crea una nueva zona/tratamiento asociado a un servicio
 export async function POST(request) {
   try {
     // Verify Admin Session
@@ -29,24 +35,34 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { nombre, precioBase, duracionMinutos, señaBase } = body;
+    const { nombre, precioBase, duracionMinutos, señaBase, servicioId } = body;
 
     if (!nombre || precioBase === undefined || duracionMinutos === undefined || señaBase === undefined) {
       return NextResponse.json({ error: 'Campos incompletos' }, { status: 400 });
     }
 
+    let targetServicioId = servicioId;
+    if (!targetServicioId) {
+      const defaultService = await ensureDefaultService();
+      targetServicioId = defaultService?.id;
+    }
+
     const newZona = await prisma.zona.create({
       data: {
-        nombre,
+        nombre: nombre.trim(),
         precioBase: Number(precioBase),
         duracionMinutos: Number(duracionMinutos),
-        señaBase: Number(señaBase)
+        señaBase: Number(señaBase),
+        servicioId: targetServicioId || null
+      },
+      include: {
+        servicio: true
       }
     });
 
-    return NextResponse.json(newZona);
+    return NextResponse.json(newZona, { status: 201 });
   } catch (error) {
     console.error('Error creating zone:', error);
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno al crear zona' }, { status: 500 });
   }
 }

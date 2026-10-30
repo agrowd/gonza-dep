@@ -2315,7 +2315,18 @@
   - [ ] Push a GitHub (`main` y `staging`).
   - [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
   - [ ] Documentar en `.synapse/decisions.md` (D-133), `.synapse/workcycle.md` y `chat.md`.
-- [ ] Iniciar Fase 2: Renombrar Zonas a Servicios (Estructura Multidisciplinaria).
+- [x] Iniciar y Completar Fase 2: Renombrar Zonas a Servicios (Estructura Multidisciplinaria):
+  - [x] Crear modelo `Servicio` y relación con `Zona` en `prisma/schema.prisma`.
+  - [x] Ejecutar `npx prisma generate` localmente.
+  - [x] Implementar auto-seeding y migración transparente (`ensureDefaultService`) en `/api/admin/servicios` vinculando todas las zonas preexistentes a "Depilación Láser" (⚡).
+  - [x] Implementar APIs `GET/POST /api/admin/servicios` y `PUT/DELETE /api/admin/servicios/[id]`.
+  - [x] Actualizar `/api/zonas` y `/api/zonas/[id]` para admitir `servicioId` y devolver relación `servicio`.
+  - [x] Rediseñar panel en `/admin/configuracion` a "🏷️ Catálogo de Servicios y Zonas" con agrupación por servicio (`.serviceGroupCard`), modales de servicio y zona enriquecidos.
+  - [x] Integrar acordeones desplegables interactivos por servicio en la selección de zonas al crear y editar turnos en `/admin/agenda`.
+  - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
+  - [ ] Push a GitHub (`main` y `staging`).
+  - [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+  - [ ] Documentar en `.synapse/decisions.md` (D-134), `.synapse/workcycle.md` y `chat.md`.
 - [ ] Iniciar Fase 3: Doble Agenda y Boxes en Staging (`http://187.127.9.216:3008`).
 - [ ] Iniciar Fase 4: Perfil Extendido de Operadores (Dirección y Horarios laborales).
 

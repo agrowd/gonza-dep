@@ -214,6 +214,39 @@ export default function AgendaPage() {
   const [appointments, setAppointments] = useState([]);
   const [daySenas, setDaySenas] = useState({ totalSenas: 0, count: 0, turnos: [] });
   const [zones, setZones] = useState([]);
+  const [expandedServices, setExpandedServices] = useState({});
+  const toggleServiceAccordion = (serviceId) => {
+    setExpandedServices(prev => ({
+      ...prev,
+      [serviceId]: !prev[serviceId]
+    }));
+  };
+
+  const groupedZonesByService = useMemo(() => {
+    const groups = new Map();
+    for (const z of zones) {
+      const sId = z.servicio?.id || 'depilacion-laser';
+      const sName = z.servicio?.nombre || 'Depilación Láser';
+      const sIcon = z.servicio?.icono || '⚡';
+      const sOrder = z.servicio?.orden !== undefined ? z.servicio.orden : 0;
+
+      if (!groups.has(sId)) {
+        groups.set(sId, {
+          id: sId,
+          nombre: sName,
+          icono: sIcon,
+          orden: sOrder,
+          zonas: []
+        });
+      }
+      groups.get(sId).zonas.push(z);
+    }
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.orden !== b.orden) return a.orden - b.orden;
+      return a.nombre.localeCompare(b.nombre);
+    });
+  }, [zones]);
+
   const [loading, setLoading] = useState(true);
   const [showCancelled, setShowCancelled] = useState(false);
   const [bloqueos, setBloqueos] = useState([]);
@@ -3975,23 +4008,81 @@ export default function AgendaPage() {
                     </div>
                   </div>
 
-                  {/* Zones Checkboxes */}
+                  {/* Zones Checkboxes Grouped by Services (Fase 2) */}
                   <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                    <label className={styles.inputLabel}>Seleccionar Zonas *</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', opacity: editTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: editTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
-                      {zones.map(z => {
-                        const isChecked = (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id));
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <label className={styles.inputLabel} style={{ margin: 0 }}>Seleccionar Servicios y Zonas *</label>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        {(editTurno.selectedZoneIds?.length || 0) + (editTurno.hasOtros ? 1 : 0)} seleccionadas
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: editTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: editTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
+                      {groupedZonesByService.map(group => {
+                        const selectedInGroup = (editTurno.selectedZoneIds || []).filter(id => group.zonas.some(gz => String(gz.id) === String(id))).length;
+                        const isExpanded = expandedServices[`edit-${group.id}`] !== undefined ? expandedServices[`edit-${group.id}`] : (selectedInGroup > 0 || groupedZonesByService.length === 1);
+
                         return (
-                          <div key={z.id} onClick={() => toggleEditTurnoZone(z.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-                            <input type="checkbox" checked={isChecked} readOnly style={{ width: 'auto' }} />
-                            <span>{z.nombre}</span>
+                          <div 
+                            key={group.id} 
+                            style={{ 
+                              border: selectedInGroup > 0 ? '1.5px solid #7a1f1e' : '1px solid var(--border-color)', 
+                              borderRadius: '8px', 
+                              overflow: 'hidden',
+                              backgroundColor: 'var(--bg-secondary)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div 
+                              onClick={() => toggleServiceAccordion(`edit-${group.id}`)}
+                              style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center', 
+                                padding: '0.65rem 0.85rem', 
+                                cursor: 'pointer',
+                                backgroundColor: selectedInGroup > 0 ? 'rgba(122, 31, 30, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                                userSelect: 'none'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '1.1rem' }}>{group.icono || '⚡'}</span>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{group.nombre}</span>
+                                {selectedInGroup > 0 && (
+                                  <span style={{ backgroundColor: '#7a1f1e', color: '#ffffff', fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '12px' }}>
+                                    {selectedInGroup} {selectedInGroup === 1 ? 'zona' : 'zonas'}
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                                {isExpanded ? '▲ Cerrar' : '▼ Abrir'}
+                              </span>
+                            </div>
+
+                            {isExpanded && (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem', padding: '0.75rem', maxHeight: '180px', overflowY: 'auto', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
+                                {group.zonas.map(z => {
+                                  const isChecked = (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id));
+                                  return (
+                                    <div key={z.id} onClick={() => toggleEditTurnoZone(z.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0' }}>
+                                      <input type="checkbox" checked={isChecked} readOnly style={{ width: 'auto', cursor: 'pointer' }} />
+                                      <span style={{ fontWeight: isChecked ? 700 : 400 }}>{z.nombre}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
+
                       {/* OTROS Checkbox */}
-                      <div onClick={() => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-                        <input type="checkbox" checked={editTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
-                        <span style={{ fontWeight: 'bold' }}>Otros</span>
+                      <div 
+                        onClick={() => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, hasOtros: !prev.hasOtros }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px dashed var(--border-color)', backgroundColor: editTurno.hasOtros ? 'rgba(122, 31, 30, 0.05)' : 'transparent' }}
+                      >
+                        <input type="checkbox" checked={editTurno.hasOtros || false} readOnly style={{ width: 'auto', cursor: 'pointer' }} />
+                        <span style={{ fontWeight: 'bold' }}>+ Agregar Zona Extra no listada (Otros)</span>
                       </div>
                     </div>
                   </div>
@@ -5713,23 +5804,81 @@ export default function AgendaPage() {
                   </div>
                 </div>
 
-                {/* Zones Checkboxes */}
+                {/* Zones Checkboxes Grouped by Services (Fase 2) */}
                 <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                  <label className={styles.inputLabel}>Seleccionar Zonas *</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', opacity: newTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: newTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
-                    {zones.map(z => {
-                      const isChecked = (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id));
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label className={styles.inputLabel} style={{ margin: 0 }}>Seleccionar Servicios y Zonas *</label>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                      {(newTurno.selectedZoneIds?.length || 0) + (newTurno.hasOtros ? 1 : 0)} seleccionadas
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: newTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: newTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
+                    {groupedZonesByService.map(group => {
+                      const selectedInGroup = (newTurno.selectedZoneIds || []).filter(id => group.zonas.some(gz => String(gz.id) === String(id))).length;
+                      const isExpanded = expandedServices[`new-${group.id}`] !== undefined ? expandedServices[`new-${group.id}`] : (selectedInGroup > 0 || groupedZonesByService.length === 1);
+
                       return (
-                        <div key={z.id} onClick={() => toggleNewTurnoZone(z.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-                          <input type="checkbox" checked={isChecked} readOnly style={{ width: 'auto' }} />
-                          <span>{z.nombre}</span>
+                        <div 
+                          key={group.id} 
+                          style={{ 
+                            border: selectedInGroup > 0 ? '1.5px solid #7a1f1e' : '1px solid var(--border-color)', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden',
+                            backgroundColor: 'var(--bg-secondary)',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div 
+                            onClick={() => toggleServiceAccordion(`new-${group.id}`)}
+                            style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              padding: '0.65rem 0.85rem', 
+                              cursor: 'pointer',
+                              backgroundColor: selectedInGroup > 0 ? 'rgba(122, 31, 30, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '1.1rem' }}>{group.icono || '⚡'}</span>
+                              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{group.nombre}</span>
+                              {selectedInGroup > 0 && (
+                                <span style={{ backgroundColor: '#7a1f1e', color: '#ffffff', fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '12px' }}>
+                                  {selectedInGroup} {selectedInGroup === 1 ? 'zona' : 'zonas'}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                              {isExpanded ? '▲ Cerrar' : '▼ Abrir'}
+                            </span>
+                          </div>
+
+                          {isExpanded && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem', padding: '0.75rem', maxHeight: '180px', overflowY: 'auto', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
+                              {group.zonas.map(z => {
+                                const isChecked = (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id));
+                                return (
+                                  <div key={z.id} onClick={() => toggleNewTurnoZone(z.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', padding: '0.2rem 0' }}>
+                                    <input type="checkbox" checked={isChecked} readOnly style={{ width: 'auto', cursor: 'pointer' }} />
+                                    <span style={{ fontWeight: isChecked ? 700 : 400 }}>{z.nombre}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
+
                     {/* OTROS Checkbox */}
-                    <div onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, hasOtros: !prev.hasOtros }))} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-                      <input type="checkbox" checked={newTurno.hasOtros || false} readOnly style={{ width: 'auto' }} />
-                      <span style={{ fontWeight: 'bold' }}>Otros</span>
+                    <div 
+                      onClick={() => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, hasOtros: !prev.hasOtros }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px dashed var(--border-color)', backgroundColor: newTurno.hasOtros ? 'rgba(122, 31, 30, 0.05)' : 'transparent' }}
+                    >
+                      <input type="checkbox" checked={newTurno.hasOtros || false} readOnly style={{ width: 'auto', cursor: 'pointer' }} />
+                      <span style={{ fontWeight: 'bold' }}>+ Agregar Zona Extra no listada (Otros)</span>
                     </div>
                   </div>
                 </div>

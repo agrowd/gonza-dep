@@ -1,5 +1,27 @@
 # Chat Log - Gonzalo Depilación (gonzalo-dep)
 
+## Sesión: 29-30 de Octubre de 2026 - Fase 2: Renombrar Zonas a Servicios (Estructura Multidisciplinaria) y Acordeón Desplegable en Agenda
+
+### Requerimientos Implementados (Fase 2 - Sección 4. Servicios):
+1. **Modelo `Servicio` y Relación con `Zona` en Prisma**:
+   - Se incorporó el modelo `Servicio` (`id`, `nombre`, `descripcion`, `icono`, `activo`, `orden`) y se relacionó con `Zona` (`servicioId String?`, `servicio Servicio?`).
+   - Se preservó compatibilidad total con la base de datos existente mediante auto-seeding y migración transparente (`ensureDefaultService`): se crea automáticamente "Depilación Láser" (⚡) y se asocian todas las zonas huérfanas preexistentes sin alterar precios, duraciones ni historiales.
+2. **APIs Backend de Servicios**:
+   - `GET /api/admin/servicios`: listado ordenado de servicios con conteo de zonas y auto-seeding.
+   - `POST /api/admin/servicios`: alta de nuevo servicio (Masajes, Faciales, etc.).
+   - `PUT /api/admin/servicios/[id]`: edición de nombre, icono, descripción y orden.
+   - `DELETE /api/admin/servicios/[id]`: eliminación segura bloqueando la supresión de Depilación Láser y reasignando zonas a este servicio base.
+   - Adaptadas `/api/zonas` y `/api/zonas/[id]` para admitir `servicioId` e incluir relación `servicio: true`.
+3. **Catálogo de Servicios y Zonas en Configuración (`/admin/configuracion`)**:
+   - Pestaña renombrada a "🏷️ Catálogo de Servicios y Zonas".
+   - Agrupación visual por servicio con tarjetas/acordeones (`.serviceGroupCard`): cabecera con ícono, nombre del servicio, badge de zonas y botones para "+ Agregar Zona a [Servicio]", editar y eliminar servicio.
+   - Modal de servicio (`isServicioModalOpen`) y modal de zona (`isZoneModalOpen`) con selector de servicio asignado.
+4. **Acordeón Desplegable por Servicio en Agenda (`/admin/agenda`)**:
+   - En la creación manual de turnos (`newTurno`) y en la edición/reprogramación (`editTurno`), las zonas se agrupan en acordeones desplegables interactivos por servicio.
+   - Cada cabecera de acordeón exhibe el ícono del servicio, nombre, badge con el conteo de zonas seleccionadas de ese servicio y flecha para expandir/colapsar.
+
+---
+
 ## Sesión: 1 de Octubre de 2026 - Implementación y Despliegue de Ajustes de Interfaz & Ficha (Damián Parapugno & Luciano Gómez)
 
 ### Requerimientos Implementados:

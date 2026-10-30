@@ -37,11 +37,24 @@ export default function ConfiguracionPage() {
     }, 4000);
   };
 
+  // Servicios State (Fase 2 Multidisciplinaria)
+  const [servicios, setServicios] = useState([]);
+  const [loadingServicios, setLoadingServicios] = useState(true);
+  const [isServicioModalOpen, setIsServicioModalOpen] = useState(false);
+  const [editingServicio, setEditingServicio] = useState(null);
+  const [servicioForm, setServicioForm] = useState({
+    nombre: '',
+    descripcion: '',
+    icono: '⚡',
+    orden: 0
+  });
+
   const [zoneForm, setZoneForm] = useState({
     nombre: '',
     precioBase: '',
     duracionMinutos: '',
-    señaBase: ''
+    señaBase: '',
+    servicioId: ''
   });
 
   // Configurations State
@@ -298,6 +311,20 @@ export default function ConfiguracionPage() {
     }
   };
 
+  // 0. Fetch Servicios (Fase 2)
+  const fetchServicios = () => {
+    setLoadingServicios(true);
+    fetch('/api/admin/servicios')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setServicios(data);
+        }
+      })
+      .catch(err => console.error('Error fetching servicios:', err))
+      .finally(() => setLoadingServicios(false));
+  };
+
   // 1. Fetch zones
   const fetchZones = () => {
     setLoadingZones(true);
@@ -399,6 +426,7 @@ export default function ConfiguracionPage() {
   };
 
   useEffect(() => {
+    fetchServicios();
     fetchZones();
     fetchConfigs();
     fetchPromociones();
@@ -431,30 +459,106 @@ export default function ConfiguracionPage() {
     }
   };
 
-  // 4. CRUD Zone: Open creation modal
-  const handleOpenNewZone = () => {
+  // 4. CRUD Servicios (Fase 2 Multidisciplinaria)
+  const handleOpenNewServicio = () => {
+    setEditingServicio(null);
+    setServicioForm({
+      nombre: '',
+      descripcion: '',
+      icono: '💆‍♂️',
+      orden: (servicios.length + 1) * 10
+    });
+    setIsServicioModalOpen(true);
+  };
+
+  const handleOpenEditServicio = (serv) => {
+    setEditingServicio(serv);
+    setServicioForm({
+      nombre: serv.nombre,
+      descripcion: serv.descripcion || '',
+      icono: serv.icono || '⚡',
+      orden: serv.orden || 0
+    });
+    setIsServicioModalOpen(true);
+  };
+
+  const handleSaveServicio = async (e) => {
+    e.preventDefault();
+    if (!servicioForm.nombre.trim()) {
+      showToast('Ingresa el nombre del servicio.', 'error');
+      return;
+    }
+    try {
+      const url = editingServicio ? `/api/admin/servicios/${editingServicio.id}` : '/api/admin/servicios';
+      const method = editingServicio ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(servicioForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(editingServicio ? 'Servicio actualizado correctamente.' : 'Nuevo servicio agregado con éxito.');
+        setIsServicioModalOpen(false);
+        fetchServicios();
+        fetchZones();
+      } else {
+        showToast(data.error || 'Error al guardar el servicio.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving servicio:', err);
+      showToast('Error de red al guardar el servicio.', 'error');
+    }
+  };
+
+  const handleDeleteServicio = async (serv) => {
+    if (serv.nombre.toLowerCase().includes('depilaci')) {
+      showToast('No se puede eliminar el servicio base de Depilación Láser.', 'error');
+      return;
+    }
+    if (!confirm(`¿Estás seguro de que deseas eliminar el servicio "${serv.nombre}"? Sus zonas pasarán a Depilación Láser.`)) return;
+    try {
+      const res = await fetch(`/api/admin/servicios/${serv.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Servicio eliminado correctamente.');
+        fetchServicios();
+        fetchZones();
+      } else {
+        showToast(data.error || 'Error al eliminar servicio.', 'error');
+      }
+    } catch (err) {
+      console.error('Error deleting servicio:', err);
+      showToast('Error de red al eliminar servicio.', 'error');
+    }
+  };
+
+  // 5. CRUD Zone: Open creation modal
+  const handleOpenNewZone = (targetServicioId = null) => {
     setEditingZone(null);
     setZoneForm({
       nombre: '',
       precioBase: '',
       duracionMinutos: '',
-      señaBase: ''
+      señaBase: '',
+      servicioId: targetServicioId || (servicios[0]?.id || '')
     });
     setIsZoneModalOpen(true);
   };
 
-  // 5. CRUD Zone: Open inline edit row
+  // 5.1 CRUD Zone: Open inline edit row
   const handleOpenEditZone = (zone) => {
     setEditingZoneId(zone.id);
     setZoneForm({
       nombre: zone.nombre,
       precioBase: zone.precioBase,
       duracionMinutos: zone.duracionMinutos,
-      señaBase: zone.señaBase
+      señaBase: zone.señaBase,
+      servicioId: zone.servicioId || (servicios[0]?.id || '')
     });
   };
 
-  // 5.1 CRUD Zone: Submit inline edit
+  // 5.2 CRUD Zone: Submit inline edit
   const handleSaveInlineZone = async (e, zoneId) => {
     e.preventDefault();
     if (!zoneForm.nombre || !zoneForm.duracionMinutos) {
@@ -471,7 +575,8 @@ export default function ConfiguracionPage() {
           nombre: zoneForm.nombre,
           precioBase: Number(zoneForm.precioBase || 0),
           duracionMinutos: Number(zoneForm.duracionMinutos),
-          señaBase: calculatedSena
+          señaBase: calculatedSena,
+          servicioId: zoneForm.servicioId || undefined
         })
       });
 
@@ -479,6 +584,7 @@ export default function ConfiguracionPage() {
         setEditingZoneId(null);
         showToast('Zona modificada correctamente.');
         fetchZones();
+        fetchServicios();
       } else {
         const d = await res.json();
         showToast(d.error || 'Error al guardar la zona.', 'error');
@@ -501,21 +607,25 @@ export default function ConfiguracionPage() {
 
     try {
       const calculatedSena = Math.round(Number(zoneForm.precioBase || 0) * 0.5);
-      const res = await fetch('/api/zonas', {
-        method: 'POST',
+      const url = editingZone ? `/api/zonas/${editingZone.id}` : '/api/zonas';
+      const method = editingZone ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre: zoneForm.nombre,
           precioBase: Number(zoneForm.precioBase || 0),
           duracionMinutos: Number(zoneForm.duracionMinutos),
-          señaBase: calculatedSena
+          señaBase: calculatedSena,
+          servicioId: zoneForm.servicioId || null
         })
       });
 
       if (res.ok) {
         setIsZoneModalOpen(false);
-        showToast('Nueva zona agregada con éxito.');
+        showToast(editingZone ? 'Zona modificada con éxito.' : 'Nueva zona agregada con éxito.');
         fetchZones();
+        fetchServicios();
       } else {
         const d = await res.json();
         showToast(d.error || 'Error al guardar la zona.', 'error');
@@ -534,6 +644,7 @@ export default function ConfiguracionPage() {
       if (res.ok) {
         showToast('Zona eliminada correctamente.');
         fetchZones();
+        fetchServicios();
       } else {
         const d = await res.json();
         showToast(d.error || 'No se puede eliminar la zona. Podría estar vinculada a turnos existentes.', 'error');
@@ -952,134 +1063,219 @@ export default function ConfiguracionPage() {
         </select>
       </div>
 
-      {/* Tab Content 1: Zones Management */}
+      {/* Tab Content 1: Servicios y Zonas Management (Fase 2) */}
       {activeTab === 'zones' && (
         <div className={styles.sectionCard}>
           <div className={styles.sectionTitle}>
-            <span>Catálogo de Zonas y Precios</span>
-            <button className="btn btn-primary" onClick={handleOpenNewZone} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
-              <PlusIcon /> Agregar Zona
-            </button>
+            <div>
+              <span>🏷️ Catálogo de Servicios y Zonas</span>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 'normal', margin: '0.35rem 0 0 0', lineHeight: 1.5 }}>
+                Administra los servicios del centro (Depilación Láser, Masajes, Faciales) y las zonas o tratamientos específicos de cada uno.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <button 
+                type="button"
+                className="btn btn-secondary" 
+                onClick={handleOpenNewServicio} 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+              >
+                <span>➕ Nuevo Servicio</span>
+              </button>
+              <button 
+                type="button"
+                className="btn btn-primary" 
+                onClick={() => handleOpenNewZone()} 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+              >
+                <PlusIcon /> Agregar Zona
+              </button>
+            </div>
           </div>
 
-          {loadingZones ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando zonas de la base de datos...</div>
-          ) : zones.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay zonas configuradas. Crea una para comenzar.</div>
+          {loadingServicios ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem', color: '#7a1f1e', fontWeight: 600 }}>Cargando servicios y zonas...</div>
+          ) : servicios.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay servicios configurados. Crea uno para comenzar.</div>
           ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.th}>Zona</th>
-                    <th className={styles.th}>Precio Base</th>
-                    <th className={styles.th}>Seña Requerida</th>
-                    <th className={styles.th}>Duración</th>
-                    <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {zones.map(z => {
-                    const isEditingThisZone = editingZoneId === z.id;
-                    return (
-                      <Fragment key={z.id}>
-                        <tr className={styles.tr}>
-                          <td className={styles.td} data-label="Zona" style={{ fontWeight: 600 }}>{z.nombre}</td>
-                          <td className={styles.td} data-label="Precio Base">{formatMoney(z.precioBase)}</td>
-                          <td className={styles.td} data-label="Seña Requerida">{formatMoney(z.señaBase)}</td>
-                          <td className={styles.td} data-label="Duración">{z.duracionMinutos} min</td>
-                          <td className={styles.td} data-label="Acciones" style={{ textAlign: 'right' }}>
-                            <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '0.35rem 0.65rem' }} 
-                                onClick={() => handleOpenEditZone(z)}
-                                disabled={editingZoneId !== null && editingZoneId !== z.id}
-                              >
-                                <EditIcon />
-                              </button>
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
-                                onClick={() => handleDeleteZone(z.id)}
-                                disabled={editingZoneId !== null}
-                              >
-                                <TrashIcon />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        {isEditingThisZone && (
-                          <tr key={`edit-${z.id}`}>
-                            <td colSpan="5" className={styles.td} style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.04)', padding: '1rem', borderBottom: '2px solid var(--color-gold)' }}>
-                              <form onSubmit={(e) => handleSaveInlineZone(e, z.id)} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
-                                  <div className={styles.formGroup} style={{ margin: 0 }}>
-                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Nombre de la Zona</label>
-                                    <input 
-                                      type="text" 
-                                      className={styles.input} 
-                                      value={zoneForm.nombre}
-                                      onChange={(e) => setZoneForm({ ...zoneForm, nombre: e.target.value })}
-                                      required 
-                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
-                                    />
-                                  </div>
-                                  <div className={styles.formGroup} style={{ margin: 0 }}>
-                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Precio Base ($) (Automático Web)</label>
-                                    <input 
-                                      type="number" 
-                                      className={styles.input} 
-                                      value={zoneForm.precioBase}
-                                      readOnly
-                                      disabled
-                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-                                      title="El precio se toma automáticamente de la web y no se puede modificar manualmente"
-                                    />
-                                  </div>
-                                  <div className={styles.formGroup} style={{ margin: 0 }}>
-                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Seña (50% Automático)</label>
-                                    <input 
-                                      type="number" 
-                                      className={styles.input} 
-                                      value={Math.round(Number(zoneForm.precioBase || 0) * 0.5)}
-                                      readOnly
-                                      disabled
-                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-                                      title="La seña se calcula automáticamente como la mitad (50%) del valor de la zona"
-                                    />
-                                  </div>
-                                  <div className={styles.formGroup} style={{ margin: 0 }}>
-                                    <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Duración (minutos)</label>
-                                    <input 
-                                      type="number" 
-                                      className={styles.input} 
-                                      value={zoneForm.duracionMinutos}
-                                      onChange={(e) => setZoneForm({ ...zoneForm, duracionMinutos: e.target.value })}
-                                      required 
-                                      min="10"
-                                      step="10"
-                                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
-                                    />
-                                  </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
-                                  <button type="button" className="btn btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', height: 'auto' }} onClick={() => setEditingZoneId(null)}>
-                                    Cancelar
-                                  </button>
-                                  <button type="submit" className="btn btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', height: 'auto' }}>
-                                    Modificar
-                                  </button>
-                                </div>
-                              </form>
-                            </td>
-                          </tr>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.25rem' }}>
+              {servicios.map((s) => {
+                const isBase = s.nombre.toLowerCase().includes('depilaci');
+                const sZonas = s.zonas || [];
+                return (
+                  <div key={s.id} className={styles.serviceGroupCard}>
+                    <div className={styles.serviceGroupHeader}>
+                      <div className={styles.serviceGroupTitle}>
+                        <span className={styles.serviceGroupIcon}>{s.icono || '⚡'}</span>
+                        <span>{s.nombre}</span>
+                        <span className={styles.serviceGroupBadge}>
+                          {sZonas.length} {sZonas.length === 1 ? 'zona' : 'zonas'}
+                        </span>
+                        {isBase && (
+                          <span style={{ fontSize: '0.72rem', backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
+                            ⭐ Servicio Principal
+                          </span>
                         )}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      </div>
+                      <div className={styles.serviceGroupActions}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          onClick={() => handleOpenNewZone(s.id)}
+                          title={`Agregar una zona a ${s.nombre}`}
+                        >
+                          <PlusIcon /> Agregar Zona
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '0.35rem 0.65rem' }}
+                          onClick={() => handleOpenEditServicio(s)}
+                          title="Editar información de este servicio"
+                        >
+                          <EditIcon />
+                        </button>
+                        {!isBase && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ padding: '0.35rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                            onClick={() => handleDeleteServicio(s)}
+                            title="Eliminar este servicio"
+                          >
+                            <TrashIcon />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {sZonas.length === 0 ? (
+                      <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.88rem', background: '#fafafa' }}>
+                        No hay zonas ni tratamientos cargados para este servicio. Usa el botón <strong>"+ Agregar Zona"</strong> para cargar el primer tratamiento.
+                      </div>
+                    ) : (
+                      <div className={styles.tableWrapper}>
+                        <table className={styles.table}>
+                          <thead>
+                            <tr>
+                              <th className={styles.th}>Zona / Tratamiento</th>
+                              <th className={styles.th}>Precio Base</th>
+                              <th className={styles.th}>Seña Requerida</th>
+                              <th className={styles.th}>Duración</th>
+                              <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sZonas.map((z) => {
+                              const isEditingThisZone = editingZoneId === z.id;
+                              return (
+                                <Fragment key={z.id}>
+                                  <tr className={styles.tr}>
+                                    <td className={styles.td} data-label="Zona" style={{ fontWeight: 600 }}>{z.nombre}</td>
+                                    <td className={styles.td} data-label="Precio Base">{formatMoney(z.precioBase)}</td>
+                                    <td className={styles.td} data-label="Seña Requerida">{formatMoney(z.señaBase)}</td>
+                                    <td className={styles.td} data-label="Duración">{z.duracionMinutos} min</td>
+                                    <td className={styles.td} data-label="Acciones" style={{ textAlign: 'right' }}>
+                                      <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
+                                        <button 
+                                          className="btn btn-secondary" 
+                                          style={{ padding: '0.35rem 0.65rem' }} 
+                                          onClick={() => handleOpenEditZone(z)}
+                                          disabled={editingZoneId !== null && editingZoneId !== z.id}
+                                        >
+                                          <EditIcon />
+                                        </button>
+                                        <button 
+                                          className="btn btn-secondary" 
+                                          style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
+                                          onClick={() => handleDeleteZone(z.id)}
+                                          disabled={editingZoneId !== null}
+                                        >
+                                          <TrashIcon />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {isEditingThisZone && (
+                                    <tr key={`edit-${z.id}`}>
+                                      <td colSpan="5" className={styles.td} style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.04)', padding: '1rem', borderBottom: '2px solid var(--color-gold)' }}>
+                                        <form onSubmit={(e) => handleSaveInlineZone(e, z.id)} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                              <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Nombre de la Zona</label>
+                                              <input 
+                                                type="text" 
+                                                className={styles.input} 
+                                                value={zoneForm.nombre}
+                                                onChange={(e) => setZoneForm({ ...zoneForm, nombre: e.target.value })}
+                                                required 
+                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                              />
+                                            </div>
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                              <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Precio Base ($)</label>
+                                              <input 
+                                                type="number" 
+                                                className={styles.input} 
+                                                value={zoneForm.precioBase}
+                                                onChange={(e) => {
+                                                  const p = Number(e.target.value);
+                                                  setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round(p * 0.5) });
+                                                }}
+                                                required 
+                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                              />
+                                            </div>
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                              <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Duración (min)</label>
+                                              <input 
+                                                type="number" 
+                                                className={styles.input} 
+                                                value={zoneForm.duracionMinutos}
+                                                onChange={(e) => setZoneForm({ ...zoneForm, duracionMinutos: e.target.value })}
+                                                required 
+                                                min="5" 
+                                                step="5" 
+                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                              />
+                                            </div>
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                              <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Servicio</label>
+                                              <select
+                                                className={styles.input}
+                                                value={zoneForm.servicioId || s.id}
+                                                onChange={(e) => setZoneForm({ ...zoneForm, servicioId: e.target.value })}
+                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                              >
+                                                {servicios.map(srv => (
+                                                  <option key={srv.id} value={srv.id}>{srv.icono} {srv.nombre}</option>
+                                                ))}
+                                              </select>
+                                            </div>
+                                          </div>
+                                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                                            <button type="button" className="btn btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', height: 'auto' }} onClick={() => setEditingZoneId(null)}>
+                                              Cancelar
+                                            </button>
+                                            <button type="submit" className="btn btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', height: 'auto' }}>
+                                              Modificar
+                                            </button>
+                                          </div>
+                                        </form>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </Fragment>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -2378,34 +2574,49 @@ export default function ConfiguracionPage() {
         <div className="modal-overlay" onClick={() => setIsZoneModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div className="modal-header">
-              <h3>{editingZone ? 'Editar Zona de Depilación' : 'Agregar Nueva Zona'}</h3>
+              <h3>{editingZone ? 'Editar Zona o Tratamiento' : 'Agregar Nueva Zona o Tratamiento'}</h3>
               <button className="modal-close" onClick={() => setIsZoneModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleSaveZone}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Nombre de la Zona</label>
+                  <label className={styles.label}>Servicio / Disciplina *</label>
+                  <select
+                    className={styles.input}
+                    value={zoneForm.servicioId}
+                    onChange={(e) => setZoneForm({ ...zoneForm, servicioId: e.target.value })}
+                    required
+                  >
+                    {servicios.map(s => (
+                      <option key={s.id} value={s.id}>{s.icono || '✨'} {s.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nombre de la Zona o Tratamiento *</label>
                   <input 
                     type="text" 
                     className={styles.input} 
                     value={zoneForm.nombre}
                     onChange={(e) => setZoneForm({ ...zoneForm, nombre: e.target.value })}
-                    placeholder="Ej: Piernas Completas"
+                    placeholder="Ej: Espalda Completa, Masaje Descontracturante, Peeling Facial"
                     required
                   />
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Precio Base (ARS) (Automático Web)</label>
+                  <label className={styles.label}>Precio Base (ARS) *</label>
                   <input 
                     type="number" 
                     className={styles.input} 
                     value={zoneForm.precioBase}
-                    readOnly
-                    disabled
-                    placeholder="Tomado automáticamente de la web"
-                    style={{ opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-                    title="El precio se toma automáticamente de la web y no se puede modificar manualmente"
+                    onChange={(e) => {
+                      const p = Number(e.target.value);
+                      setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round(p * 0.5) });
+                    }}
+                    placeholder="Ej: 35000"
+                    required
                   />
                 </div>
 
@@ -2417,29 +2628,102 @@ export default function ConfiguracionPage() {
                     value={Math.round(Number(zoneForm.precioBase || 0) * 0.5)}
                     readOnly
                     disabled
-                    placeholder="50% del valor de la zona"
                     style={{ opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                     title="La seña se calcula automáticamente como la mitad del precio base"
                   />
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Duración (minutos)</label>
+                  <label className={styles.label}>Duración (minutos) *</label>
                   <input 
                     type="number" 
                     className={styles.input} 
                     value={zoneForm.duracionMinutos}
                     onChange={(e) => setZoneForm({ ...zoneForm, duracionMinutos: e.target.value })}
                     placeholder="Ej: 40"
-                    min="10"
-                    step="10"
+                    min="5"
+                    step="5"
                     required
                   />
                 </div>
               </div>
               <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsZoneModalOpen(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">Guardar Cambios</button>
+                <button type="submit" className="btn btn-primary">{editingZone ? 'Guardar Cambios' : 'Crear Zona'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nuevo / Editar Servicio (Fase 2) */}
+      {isServicioModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsServicioModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h3>{editingServicio ? 'Editar Servicio' : '➕ Crear Nuevo Servicio'}</h3>
+              <button className="modal-close" onClick={() => setIsServicioModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleSaveServicio}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nombre del Servicio *</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="Ej: Masajes, Faciales, Barbería"
+                    value={servicioForm.nombre}
+                    onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Ícono Representativo</label>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                    {['⚡', '💆‍♂️', '✨', '🌿', '🧖‍♂️', '✂️', '🧴', '🧘‍♂️'].map(ic => (
+                      <button
+                        key={ic}
+                        type="button"
+                        onClick={() => setServicioForm({ ...servicioForm, icono: ic })}
+                        style={{
+                          fontSize: '1.25rem',
+                          padding: '0.4rem 0.6rem',
+                          borderRadius: '8px',
+                          border: servicioForm.icono === ic ? '2px solid #7a1f1e' : '1px solid #cbd5e1',
+                          background: servicioForm.icono === ic ? '#fee2e2' : '#ffffff',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {ic}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={servicioForm.icono}
+                    onChange={(e) => setServicioForm({ ...servicioForm, icono: e.target.value })}
+                    placeholder="O escribe un emoji o ícono"
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Descripción Breve (Opcional)</label>
+                  <textarea
+                    className={styles.input}
+                    rows="2"
+                    placeholder="Descripción para información del equipo u operadores"
+                    value={servicioForm.descripcion}
+                    onChange={(e) => setServicioForm({ ...servicioForm, descripcion: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsServicioModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">
+                  💾 {editingServicio ? 'Guardar Cambios' : 'Crear Servicio'}
+                </button>
               </div>
             </form>
           </div>

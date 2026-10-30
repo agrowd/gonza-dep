@@ -16,26 +16,27 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json();
-    const { nombre, precioBase, duracionMinutos, señaBase } = body;
+    const { nombre, precioBase, duracionMinutos, señaBase, servicioId } = body;
 
-    if (!nombre || precioBase === undefined || duracionMinutos === undefined || señaBase === undefined) {
-      return NextResponse.json({ error: 'Campos incompletos' }, { status: 400 });
-    }
+    const data = {};
+    if (nombre !== undefined) data.nombre = nombre.trim();
+    if (precioBase !== undefined) data.precioBase = Number(precioBase);
+    if (duracionMinutos !== undefined) data.duracionMinutos = Number(duracionMinutos);
+    if (señaBase !== undefined) data.señaBase = Number(señaBase);
+    if (servicioId !== undefined) data.servicioId = servicioId || null;
 
     const updated = await prisma.zona.update({
       where: { id },
-      data: {
-        nombre,
-        precioBase: Number(precioBase),
-        duracionMinutos: Number(duracionMinutos),
-        señaBase: Number(señaBase)
+      data,
+      include: {
+        servicio: true
       }
     });
 
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating zone:', error);
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno al actualizar zona' }, { status: 500 });
   }
 }
 
@@ -58,6 +59,6 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting zone:', error);
-    return NextResponse.json({ error: 'Error interno o zona vinculada a turnos existentes' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno al eliminar zona' }, { status: 500 });
   }
 }

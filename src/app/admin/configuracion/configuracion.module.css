@@ -622,6 +622,59 @@
 }
 
 /* ========================================================
+   Módulo de Servicios Multidisciplinarios (Fase 2)
+   ======================================================== */
+.serviceGroupCard {
+  background-color: #ffffff;
+  border: 1px solid var(--border-color, #e2dcd3);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.serviceGroupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background-color: #faf8f5;
+  border-bottom: 1px solid var(--border-color, #e2dcd3);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.serviceGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+  flex-wrap: wrap;
+}
+
+.serviceGroupIcon {
+  font-size: 1.3rem;
+}
+
+.serviceGroupBadge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.serviceGroupActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ========================================================
    Submódulo de Bloqueos de Agenda y Feriados Anuales
    ======================================================== */
 .bloqueosSectionCard {

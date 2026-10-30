@@ -100,12 +100,25 @@ model Bloqueo {
   createdAt     DateTime  @default(now())
 }
 
+model Servicio {
+  id          String    @id @default(uuid())
+  nombre      String    @unique
+  descripcion String?
+  icono       String?   @default("⚡")
+  activo      Boolean   @default(true)
+  orden       Int       @default(0)
+  zonas       Zona[]
+  createdAt   DateTime  @default(now())
+}
+
 model Zona {
-  id              String @id @default(uuid())
-  nombre          String @unique
+  id              String    @id @default(uuid())
+  nombre          String    @unique
   precioBase      Float
   duracionMinutos Int
   señaBase        Float
+  servicioId      String?
+  servicio        Servicio? @relation(fields: [servicioId], references: [id])
 }
 
 model Notificacion {
