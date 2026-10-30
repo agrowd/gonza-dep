@@ -4159,7 +4159,14 @@ export default function AgendaPage() {
 
       {/* MODAL 1: Appointment Details */}
       {isDetailsOpen && selectedTurno && (
-        <div className={styles.modalOverlay} onClick={handleCloseDetailsModal}>
+        <div
+          className={styles.modalOverlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseDetailsModal();
+            }
+          }}
+        >
           <div className={`glass-card premium-border ${styles.modalContent}`} onClick={(e) => e.stopPropagation()}>
             {isEditing ? (
               <form onSubmit={handleSaveEditTurno}>
@@ -4167,7 +4174,7 @@ export default function AgendaPage() {
                   <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
                     Editar / Reprogramar Turno
                   </h3>
-                  <button type="button" onClick={handleCloseDetailsModal} className={styles.closeBtn}>&times;</button>
+                  <button type="button" onClick={handleCloseDetailsModal} className={styles.closeBtn} aria-label="Cerrar edición">&times;</button>
                 </div>
                 <div className={styles.detailGrid}>
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
@@ -5613,7 +5620,7 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Actions Panel */}
-                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', paddingBottom: '3.5rem', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', paddingBottom: '2rem', width: '100%', boxSizing: 'border-box' }}>
                   <span className={styles.detailLabel} style={{ display: 'block', marginBottom: '0.5rem' }}>Acciones Rápidas</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', width: '100%', boxSizing: 'border-box' }}>
                     {selectedTurno.clienteId && (
@@ -5628,31 +5635,34 @@ export default function AgendaPage() {
                           window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}&turnoId=${selectedTurno.id}`;
                         }}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#7a1e1e', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}
                       >
                         📁 Ficha Cliente
                       </button>
                     )}
                     {selectedTurno.clienteId && selectedTurno.estado !== 'REALIZADO' && currentUserRole !== 'OPERADOR' && (
                       <button
+                        type="button"
                         onClick={() => handleScheduleNextTurn(selectedTurno)}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}
                       >
                         📅 Siguiente Turno
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && currentUserRole !== 'OPERADOR' && (
                       <button
+                        type="button"
                         onClick={() => handleReprogramarTurno(selectedTurno)}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}
                       >
                         🔄 Reprogramar
                       </button>
                     )}
                     {currentUserRole !== 'OPERADOR' && (
                       <button
+                        type="button"
                         onClick={() => {
                           const hasDiscount = (selectedTurno.bonificacion || 0) > 0;
                           const { preselectedZoneIds, hasOtros, otrosTexto, otrosPrecio } = extractZoneSelection(selectedTurno.zonas, zones);
@@ -5702,53 +5712,53 @@ export default function AgendaPage() {
                           setIsEditing(true);
                         }}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d4a54d', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}
                       >
                         ✏️ Editar Turno
                       </button>
                     )}
                     {selectedTurno.estado === 'PENDIENTE_AUTORIZACION' && currentUserRole !== 'OPERADOR' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         ✓ Aprobar
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         ✓ Realizado
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'FINALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1e40af', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'FINALIZADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1e40af', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         🏁 Finalizar
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'MANTENIMIENTO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'MANTENIMIENTO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#1565c0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         🛠️ Mantenimiento
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'VA_A_AVISAR')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d97706', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'REALIZADO', 'VA_A_AVISAR')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#d97706', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         ⏳ Va a Avisar
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'NO_ASISTIO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'NO_ASISTIO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#ef6c00', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         ❌ No Asistió
                       </button>
                     )}
                     {selectedTurno.estado !== 'REALIZADO' && selectedTurno.estado !== 'CANCELADO' && selectedTurno.estado !== 'BLOQUEADO' && currentUserRole !== 'OPERADOR' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'CANCELADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         ✕ Cancelar
                       </button>
                     )}
                     {(selectedTurno.estado === 'CANCELADO' || selectedTurno.estado === 'NO_ASISTIO') && currentUserRole !== 'OPERADOR' && (
-                      <button onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleUpdateStatus(selectedTurno.id, 'SEÑADO')} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#2e7d32', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         🔄 Reactivar
                       </button>
                     )}
                     {selectedTurno.estado !== 'BLOQUEADO' && currentUserRole !== 'OPERADOR' && (
-                      <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#25D366', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box', textDecoration: 'none' }}>
+                      <a href={getWhatsAppLink(selectedTurno.cliente?.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#25D366', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box', textDecoration: 'none' }}>
                         💬 WhatsApp
                       </a>
                     )}
@@ -5786,7 +5796,7 @@ export default function AgendaPage() {
                           }
                         }}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#eab308', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#eab308', color: '#000', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}
                       >
                         ⭐ Mandar Reseña
                       </button>
@@ -5796,26 +5806,57 @@ export default function AgendaPage() {
                         type="button"
                         onClick={() => window.open(`/admin/recibos/${selectedTurno.id}`, '_blank')}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box' }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#0284c7', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}
                       >
                         📄 Ver Recibo Oficial
                       </button>
                     )}
                     {selectedTurno.cliente?.email && currentUserRole !== 'OPERADOR' && (
                       <button
+                        type="button"
                         onClick={() => handleSendReceipt(selectedTurno.id)}
                         disabled={sendingReceipt[selectedTurno.id]}
                         className="btn"
-                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#5c6bc0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, boxSizing: 'border-box', opacity: sendingReceipt[selectedTurno.id] ? 0.7 : 1 }}
+                        style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#5c6bc0', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', flex: '1 1 calc(50% - 0.5rem)', minWidth: 0, minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box', opacity: sendingReceipt[selectedTurno.id] ? 0.7 : 1 }}
                       >
                         {sendingReceipt[selectedTurno.id] ? 'Enviando...' : '🧾 Recibo Email'}
                       </button>
                     )}
                     {currentUserRole !== 'OPERADOR' && (
-                      <button onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
+                      <button type="button" onClick={() => handleDeleteTurno(selectedTurno.id)} className="btn" style={{ padding: '0.45rem 0.6rem', fontSize: '0.8rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#c62828', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', width: '100%', minHeight: '42px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}>
                         🗑️ Eliminar
                       </button>
                     )}
+                  </div>
+
+                  {/* Botón ergonómico inferior para cerrar la ficha con el pulgar */}
+                  <div style={{ marginTop: '1.25rem', width: '100%', boxSizing: 'border-box' }}>
+                    <button
+                      type="button"
+                      onClick={handleCloseDetailsModal}
+                      className="btn"
+                      style={{
+                        width: '100%',
+                        minHeight: '44px',
+                        padding: '0.65rem 1rem',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'var(--text-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        touchAction: 'manipulation',
+                        WebkitTapHighlightColor: 'transparent',
+                        cursor: 'pointer',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      ✕ Cerrar Ficha
+                    </button>
                   </div>
                 </div>
               </>
@@ -5938,7 +5979,14 @@ export default function AgendaPage() {
 
       {/* MODAL 2: New Manual Turno */}
       {isNewOpen && (
-        <div className={styles.modalOverlay} onClick={handleCloseNewModal}>
+        <div
+          className={styles.modalOverlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseNewModal();
+            }
+          }}
+        >
           <div className={`glass-card premium-border ${styles.modalContent}`} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '550px', width: '100%', boxSizing: 'border-box' }}>
             <div className={styles.modalHeader}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>Agendar Nuevo Turno</h3>
@@ -6896,7 +6944,15 @@ export default function AgendaPage() {
       )}
       {/* BLOQUEO MODAL */}
       {isBlockModalOpen && (
-        <div className={styles.modalOverlay} onClick={() => setIsBlockModalOpen(false)} style={{ zIndex: 10000 }}>
+        <div
+          className={styles.modalOverlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsBlockModalOpen(false);
+            }
+          }}
+          style={{ zIndex: 10000 }}
+        >
           <div className={`glass-card premium-border ${styles.modalContent}`} style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 style={{ fontSize: '1.2rem', color: '#f59e0b', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

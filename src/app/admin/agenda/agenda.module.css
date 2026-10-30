@@ -1056,6 +1056,10 @@
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .closeBtn:hover, .closeBtn:active {
@@ -1136,7 +1140,8 @@
     justify-content: center !important;
     box-sizing: border-box !important;
     overflow: hidden !important; /* CRITICAL: Overlay DOES NOT SCROLL, eliminating the double scroll trap */
-    touch-action: none !important;
+    touch-action: auto !important;
+    -webkit-tap-highlight-color: transparent !important;
     z-index: 2000 !important;
   }
   .modalContent {
@@ -1149,14 +1154,19 @@
     max-height: calc(100dvh - 0.9rem) !important;
     height: auto !important;
     overflow-y: auto !important; /* The ONLY element that scrolls */
-    -webkit-overflow-scrolling: touch !important;
+    -webkit-overflow-scrolling: auto !important;
     overscroll-behavior: contain !important;
     touch-action: pan-y !important;
     position: relative !important;
+    transform: translate3d(0, 0, 0) !important;
     margin: 0 auto !important;
     border-radius: 12px !important;
   }
   .stickyModalHeader {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    transform: translate3d(0, 0, 0) !important;
     margin: -0.85rem -0.75rem 0.85rem -0.75rem !important;
     padding: 0.75rem 0.75rem 0.65rem 0.75rem !important;
     border-top-left-radius: 12px !important;
@@ -1177,11 +1187,19 @@
   }
   .closeBtn {
     font-size: 1.6rem !important;
-    width: 36px !important;
-    height: 36px !important;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    touch-action: manipulation !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
   }
   .inputGroup > input,
   .inputGroup > select,

@@ -1408,3 +1408,21 @@
     - **Oculta** a los clientes que tuvieron turno hoy y solo se fueron con su *"siguiente turno"* agendado (evitando que aparezcan repetidos dos veces en la pantalla).
     - **Muestra únicamente** a los clientes que agendaron un *"nuevo turno"* desde afuera con seña en el día.
     - Si en la fecha todas las señas fueron de turnos siguientes, el bloque verde se oculta por completo, dejando la agenda limpia y sin bulto.
+
+### 5. Corrección de Hit-Testing y Botones en iPhone (D-139, ERR-57)
+- **Problema Reportado por Gonzalo en WhatsApp (`media_1793393752732_bff7542f.png`)**:
+  - Al pulsar botones en la ficha desde su iPhone, el sistema activaba el botón que estaba inmediatamente arriba (por ejemplo, al tocar "Ver Recibo" abría "Editar Turno").
+  - A veces el botón de cerrar (`&times;`) en la esquina superior no respondía, obligándolo a recargar la página.
+- **Causa Raíz en WebKit (iOS Safari)**:
+  - `.modalOverlay` tenía `touch-action: none !important;` y `.modalContent` tenía `-webkit-overflow-scrolling: touch !important;`.
+  - En WebKit iOS, al scrollear hacia abajo, el renderizador visual se desplaza pero el árbol de hit-testing de eventos táctiles del DOM se desincroniza, quedando con coordenadas desfasadas hacia arriba.
+  - Además, `.stickyModalHeader` con `position: sticky` dentro de `-webkit-overflow-scrolling: touch` sufre un bug conocido de WebKit donde su caja táctil se desplaza fuera de pantalla al scrollear, haciendo que el toque en la 'X' superior no coincida con el botón.
+- **Solución Implementada**:
+  - En `agenda.module.css`:
+    - Reemplazado `touch-action: none` en `.modalOverlay` por `touch-action: auto !important; -webkit-tap-highlight-color: transparent !important;`.
+    - Eliminado `-webkit-overflow-scrolling: touch` en favor de scroll nativo asistido por GPU (`transform: translate3d(0, 0, 0) !important;`) sincronizado con el DOM.
+    - Ampliado `.closeBtn` en mobile de 36px a 44x44px (estándar Apple Human Interface Guidelines) con `touch-action: manipulation !important;`.
+  - En `src/app/admin/agenda/page.js`:
+    - Botones de "Acciones Rápidas" provistos de `touchAction: 'manipulation'`, altura mínima (42px) y protección `WebkitTapHighlightColor`.
+    - Agregado un botón ergonómico full-width `[ ✕ Cerrar Ficha ]` (44px) en la parte inferior del modal para cerrar instantáneamente con el pulgar.
+    - Protegidos los handlers de backdrop con `if (e.target === e.currentTarget)` en todos los modales.

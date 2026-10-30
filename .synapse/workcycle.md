@@ -2397,3 +2397,18 @@
   - Si no hay nuevos turnos externos en la fecha, el bloque verde se oculta automáticamente para no duplicar clientes ni generar bulto visual.
 - [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas).
 - [x] **Documentación**: Registrado `D-138 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 30 de Octubre de 2026 - Corrección Crítica de Hit-Testing y Botones en iPhone (D-139, ERR-57)
+- [x] **Diagnóstico y Solución de Desalineación Táctil en Modal de Ficha**:
+  - Gonzalo reportó que al tocar botones en la ficha en su iPhone se activaba el botón superior (ej. pulsar "Ver Recibo" abría "Editar Turno") y a veces no respondía el botón de cerrar la ficha.
+  - Se identificó la causa raíz en WebKit iOS: `touch-action: none !important;` en `.modalOverlay` junto a `-webkit-overflow-scrolling: touch !important;` en `.modalContent`. Al scrollear, la capa gráfica se movía pero el árbol de hit-test quedaba en las coordenadas pre-scroll o desplazadas, y el header sticky (`position: sticky`) perdía su hit-target.
+  - En `agenda.module.css`:
+    - Se cambió `.modalOverlay` a `touch-action: auto !important; -webkit-tap-highlight-color: transparent !important;`.
+    - Se eliminó `-webkit-overflow-scrolling: touch` en favor de scroll nativo acelerado (`transform: translate3d(0,0,0)`).
+    - Se expandió `.closeBtn` en mobile a 44x44px (estándar Apple HIG) con `touch-action: manipulation`.
+  - En `page.js`:
+    - Se dotó a todos los botones de "Acciones Rápidas" de `minHeight: 42px`, `touchAction: 'manipulation'`, `WebkitTapHighlightColor: 'transparent'` y `cursor: 'pointer'`.
+    - Se agregó un botón inferior prominente `[ ✕ Cerrar Ficha ]` (44px) para cerrar instantáneamente con el pulgar.
+    - Se protegieron los clicks de backdrop con `if (e.target === e.currentTarget)` en todos los modales.
+- [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas).
+- [x] **Documentación**: Registrado `D-139 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-57` en `.synapse/errores.md`.
