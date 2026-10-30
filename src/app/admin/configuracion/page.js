@@ -162,6 +162,128 @@ export default function ConfiguracionPage() {
     nuevaFechaStr: ''
   });
 
+  // Boxes State & Handlers (Fase 3)
+  const [boxes, setBoxes] = useState([]);
+  const [loadingBoxes, setLoadingBoxes] = useState(false);
+  const [isBoxModalOpen, setIsBoxModalOpen] = useState(false);
+  const [editingBox, setEditingBox] = useState(null);
+  const [boxForm, setBoxForm] = useState({
+    nombre: '',
+    descripcion: '',
+    color: '#7a1f1e',
+    horaInicio: '14:00',
+    horaFin: '22:00',
+    diasAtencion: '1,2,3,4,5',
+    servicioId: '',
+    activo: true
+  });
+
+  const fetchBoxes = () => {
+    setLoadingBoxes(true);
+    fetch('/api/admin/boxes')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setBoxes(data);
+      })
+      .catch(err => console.error('Error fetching boxes:', err))
+      .finally(() => setLoadingBoxes(false));
+  };
+
+  const handleOpenNewBox = () => {
+    setEditingBox(null);
+    setBoxForm({
+      nombre: '',
+      descripcion: '',
+      color: '#7a1f1e',
+      horaInicio: '14:00',
+      horaFin: '22:00',
+      diasAtencion: '1,2,3,4,5',
+      servicioId: '',
+      activo: true
+    });
+    setIsBoxModalOpen(true);
+  };
+
+  const handleOpenEditBox = (b) => {
+    setEditingBox(b);
+    setBoxForm({
+      nombre: b.nombre || '',
+      descripcion: b.descripcion || '',
+      color: b.color || '#7a1f1e',
+      horaInicio: b.horaInicio || '14:00',
+      horaFin: b.horaFin || '22:00',
+      diasAtencion: b.diasAtencion || '1,2,3,4,5',
+      servicioId: b.servicioId || '',
+      activo: b.activo !== false
+    });
+    setIsBoxModalOpen(true);
+  };
+
+  const handleSaveBox = async (e) => {
+    e.preventDefault();
+    if (!boxForm.nombre.trim()) {
+      showToast('El nombre del box es requerido', 'error');
+      return;
+    }
+    try {
+      const url = editingBox ? `/api/admin/boxes/${editingBox.id}` : '/api/admin/boxes';
+      const method = editingBox ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(boxForm)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar box');
+      showToast(editingBox ? 'Box actualizado con éxito' : 'Box creado con éxito');
+      setIsBoxModalOpen(false);
+      fetchBoxes();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleDeleteBox = async (b) => {
+    if (b.esPrincipal) {
+      showToast('El Box Principal no puede ser eliminado', 'error');
+      return;
+    }
+    if (!confirm(`¿Eliminar el box "${b.nombre}"? Sus turnos asignados se reasignarán automáticamente al Box Principal.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/boxes/${b.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar box');
+      showToast('Box eliminado correctamente');
+      fetchBoxes();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const formatBoxDays = (diasStr) => {
+    if (!diasStr) return 'Lunes a Viernes';
+    const dayMap = {
+      '1': 'Lun',
+      '2': 'Mar',
+      '3': 'Mié',
+      '4': 'Jue',
+      '5': 'Vie',
+      '6': 'Sáb',
+      '0': 'Dom',
+      '7': 'Dom'
+    };
+    const parts = diasStr.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length === 5 && ['1','2','3','4','5'].every(d => parts.includes(d))) {
+      return 'Lunes a Viernes';
+    }
+    if (parts.length === 7) {
+      return 'Toda la semana (Lun a Dom)';
+    }
+    return parts.map(p => dayMap[p] || p).join(', ');
+  };
+
   // Helpers de Fechas Seguras para Feriados (inmunes a desfasajes de zona horaria)
   const formatFeriadoDate = (dateVal) => {
     if (!dateVal) return '-';
@@ -433,6 +555,7 @@ export default function ConfiguracionPage() {
     fetchCupones();
     fetchUsers();
     fetchFeriados();
+    fetchBoxes();
   }, []);
 
   // 3. Save configurations in bulk
@@ -2539,35 +2662,140 @@ export default function ConfiguracionPage() {
         </div>
       )}
 
-      {/* Tab Content 7: Boxes y Cabinas (Fase 3 Staging) */}
+      {/* Tab Content 7: Boxes y Cabinas (Fase 3 Staging & Producción) */}
       {activeTab === 'boxes' && (
         <div className={styles.sectionCard}>
-          <div className={styles.sectionTitle}>
-            <span>📦 Boxes y Cabinas (Entorno de Pruebas / Staging)</span>
-            <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 700 }}>
-              🚀 En Implementación (Fase 3)
-            </span>
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-            Esta sección permitirá gestionar la capacidad operativa simultánea del local (Cabina 1 y Cabina 2), asignando automáticamente turnos al box correspondiente o permitiendo seleccionarlo de forma manual.
-          </p>
-          <div style={{ backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📦 ↔️ 📦</div>
-            <h3 style={{ fontSize: '1.15rem', color: '#1e293b', marginBottom: '0.5rem', fontWeight: 700 }}>Doble Agenda y Boxes Activos en Staging</h3>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '600px', margin: '0 auto 1.5rem auto' }}>
-              El entorno de prueba y staging se encuentra habilitado en <strong>http://187.127.9.216:3008</strong>. La configuración de boxes, nombres de cabinas y asignaciones estará disponible para pruebas aquí.
-            </p>
-            <div style={{ display: 'inline-flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1.25rem', textAlign: 'left', minWidth: '200px' }}>
-                <span style={{ fontWeight: 700, color: '#0f172a', display: 'block' }}>Cabina 1</span>
-                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Capacidad: 1 cliente / Camilla A</span>
-              </div>
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.75rem 1.25rem', textAlign: 'left', minWidth: '200px' }}>
-                <span style={{ fontWeight: 700, color: '#0f172a', display: 'block' }}>Cabina 2</span>
-                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Capacidad: 1 cliente / Camilla B</span>
-              </div>
+          <div className={styles.sectionTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <span style={{ fontSize: '1.25rem', fontWeight: 800 }}>📦 Gestión de Boxes y Cabinas de Atención</span>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px', marginBottom: 0 }}>
+                Configura los boxes y cabinas del centro con horarios propios y servicios asignados para habilitar agendas paralelas e independientes.
+              </p>
             </div>
+            <button
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.6rem 1.1rem', backgroundColor: '#7a1f1e', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+              onClick={handleOpenNewBox}
+            >
+              <PlusIcon /> + Nuevo Box / Cabina
+            </button>
           </div>
+
+          {loadingBoxes ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Cargando boxes...</div>
+          ) : boxes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📦</div>
+              <p style={{ color: '#64748b', fontSize: '0.95rem' }}>No hay boxes configurados todavía.</p>
+              <button
+                className="btn btn-primary"
+                style={{ marginTop: '0.75rem', backgroundColor: '#7a1f1e', color: '#fff' }}
+                onClick={handleOpenNewBox}
+              >
+                + Crear Primer Box
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.5rem' }}>
+              {boxes.map(b => (
+                <div
+                  key={b.id}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '1.25rem',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                    borderLeft: `6px solid ${b.color || '#7a1f1e'}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            borderRadius: '50%',
+                            backgroundColor: b.color || '#7a1f1e',
+                            display: 'inline-block'
+                          }}
+                        />
+                        <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                          {b.nombre}
+                        </h4>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {b.esPrincipal && (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '4px' }}>
+                            ⭐ PRINCIPAL
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, backgroundColor: b.activo ? '#dcfce7' : '#f1f5f9', color: b.activo ? '#166534' : '#64748b', border: `1px solid ${b.activo ? '#bbf7d0' : '#e2e8f0'}`, padding: '2px 8px', borderRadius: '4px' }}>
+                          {b.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {b.descripcion && (
+                      <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.85rem', color: '#64748b', lineHeight: '1.4' }}>
+                        {b.descripcion}
+                      </p>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem', color: '#334155', backgroundColor: '#f8fafc', padding: '0.75rem 0.85rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>🕒</span>
+                        <strong>Horario:</strong>
+                        <span>{b.horaInicio} hs a {b.horaFin} hs</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>📅</span>
+                        <strong>Días:</strong>
+                        <span>{formatBoxDays(b.diasAtencion)}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>🏷️</span>
+                        <strong>Servicio:</strong>
+                        <span>{b.servicio ? `${b.servicio.icono || '⚡'} ${b.servicio.nombre}` : 'Todos los servicios'}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>👥</span>
+                        <strong>Turnos en sistema:</strong>
+                        <span>{b._count?.turnos || 0} turnos</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                      onClick={() => handleOpenEditBox(b)}
+                    >
+                      ✏️ Editar
+                    </button>
+                    {!b.esPrincipal ? (
+                      <button
+                        className="btn btn-outline"
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', color: '#dc2626', borderColor: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                        onClick={() => handleDeleteBox(b)}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                        🔒 Box Principal protegido
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {isZoneModalOpen && (
@@ -3162,6 +3390,188 @@ export default function ConfiguracionPage() {
                 💾 Guardar Nueva Fecha
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Crear / Editar Box (Fase 3) */}
+      {isBoxModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsBoxModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>{editingBox ? 'Editar Box / Cabina' : 'Crear Nuevo Box / Cabina'}</h3>
+              <button className="modal-close" onClick={() => setIsBoxModalOpen(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleSaveBox}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nombre del Box / Cabina *</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={boxForm.nombre}
+                    onChange={(e) => setBoxForm({ ...boxForm, nombre: e.target.value })}
+                    placeholder="Ej: Box 2 - Secundario, Cabina Masajes"
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Descripción / Equipamiento</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={boxForm.descripcion}
+                    onChange={(e) => setBoxForm({ ...boxForm, descripcion: e.target.value })}
+                    placeholder="Ej: Camilla 2, Láser Soprano Titanium"
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Hora de Apertura *</label>
+                    <input
+                      type="time"
+                      className={styles.input}
+                      value={boxForm.horaInicio}
+                      onChange={(e) => setBoxForm({ ...boxForm, horaInicio: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Hora de Cierre *</label>
+                    <input
+                      type="time"
+                      className={styles.input}
+                      value={boxForm.horaFin}
+                      onChange={(e) => setBoxForm({ ...boxForm, horaFin: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Días de Atención Habilitados</label>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    {[
+                      { id: '1', label: 'Lun' },
+                      { id: '2', label: 'Mar' },
+                      { id: '3', label: 'Mié' },
+                      { id: '4', label: 'Jue' },
+                      { id: '5', label: 'Vie' },
+                      { id: '6', label: 'Sáb' },
+                      { id: '0', label: 'Dom' }
+                    ].map(d => {
+                      const selectedDays = (boxForm.diasAtencion || '').split(',').map(s => s.trim());
+                      const isSelected = selectedDays.includes(d.id);
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => {
+                            let newDays;
+                            if (isSelected) {
+                              newDays = selectedDays.filter(x => x !== d.id);
+                            } else {
+                              newDays = [...selectedDays, d.id];
+                            }
+                            setBoxForm({ ...boxForm, diasAtencion: newDays.join(',') });
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: isSelected ? '1.5px solid #7a1f1e' : '1px solid #cbd5e1',
+                            backgroundColor: isSelected ? '#7a1f1e' : '#f8fafc',
+                            color: isSelected ? '#ffffff' : '#334155',
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Servicio Específico Asociado</label>
+                  <select
+                    className={styles.input}
+                    value={boxForm.servicioId}
+                    onChange={(e) => setBoxForm({ ...boxForm, servicioId: e.target.value })}
+                  >
+                    <option value="">✨ Todos los servicios permitidos</option>
+                    {servicios.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.icono || '⚡'} {s.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Color Identificador en la Agenda</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <input
+                      type="color"
+                      value={boxForm.color}
+                      onChange={(e) => setBoxForm({ ...boxForm, color: e.target.value })}
+                      style={{ width: '42px', height: '36px', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', padding: 0 }}
+                    />
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {['#7a1f1e', '#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#475569'].map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setBoxForm({ ...boxForm, color: c })}
+                          style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            backgroundColor: c,
+                            border: boxForm.color === c ? '2.5px solid #000' : '1px solid rgba(0,0,0,0.15)',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {!editingBox?.esPrincipal && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <input
+                      type="checkbox"
+                      id="boxActivo"
+                      checked={boxForm.activo}
+                      onChange={(e) => setBoxForm({ ...boxForm, activo: e.target.checked })}
+                      style={{ width: '18px', height: '18px', accentColor: '#7a1f1e' }}
+                    />
+                    <label htmlFor="boxActivo" style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+                      Box activo para agendamiento de turnos
+                    </label>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setIsBoxModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ backgroundColor: '#7a1f1e', color: '#fff', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', fontWeight: 700 }}
+                >
+                  {editingBox ? 'Guardar Cambios' : 'Crear Box'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

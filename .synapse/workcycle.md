@@ -2324,10 +2324,17 @@
   - [x] Rediseñar panel en `/admin/configuracion` a "🏷️ Catálogo de Servicios y Zonas" con agrupación por servicio (`.serviceGroupCard`), modales de servicio y zona enriquecidos.
   - [x] Integrar acordeones desplegables interactivos por servicio en la selección de zonas al crear y editar turnos en `/admin/agenda`.
   - [x] Validar compilación local (`npm run build`: 47/47 rutas exitosas con 0 errores).
-  - [ ] Push a GitHub (`main` y `staging`).
-  - [ ] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
-  - [ ] Documentar en `.synapse/decisions.md` (D-134), `.synapse/workcycle.md` y `chat.md`.
-- [ ] Iniciar Fase 3: Doble Agenda y Boxes en Staging (`http://187.127.9.216:3008`).
+  - [x] Push a GitHub (`main` y `staging`).
+  - [x] Desplegar en Staging y Producción en Hostinger VPS (`187.127.9.216`).
+  - [x] Documentar en `.synapse/decisions.md` (D-134), `.synapse/workcycle.md` y `chat.md`.
+- [ ] Iniciar Fase 3: Doble Agenda y Boxes en Staging (`http://187.127.9.216:3008`):
+  - [ ] Agregar modelo `Box` en `prisma/schema.prisma` y relación con `Turno` (`boxId`, `box`) y `Servicio` (`servicioId`).
+  - [ ] Ejecutar `npx prisma generate` localmente.
+  - [ ] Implementar APIs de ABM de Boxes (`/api/admin/boxes` y `/api/admin/boxes/[id]`) con auto-seeding de `Box 1 - Principal (Gonzalo)` y vinculación retrocompatible de turnos preexistentes.
+  - [ ] Implementar la interfaz de ABM de Boxes en `/admin/configuracion` (pestaña `boxes` en el selector desplegable) con horarios de atención propios, días habilitados, servicio y color.
+  - [ ] Implementar filtro/selector de Boxes en `/admin/agenda` (con opción "Todos" y boxes individuales), ajustando la grilla horaria al horario del box seleccionado.
+  - [ ] Agregar selector de Box al agendar turno (`newTurno`) y al editar turno (`editTurno`), con herencia en "Siguiente Turno".
+  - [ ] Compilar y desplegar en Staging (`http://187.127.9.216:3008`) y Producción con backup previo.
 - [ ] Iniciar Fase 4: Perfil Extendido de Operadores (Dirección y Horarios laborales).
 
 ### 🎯 Tareas en curso / Objetivos

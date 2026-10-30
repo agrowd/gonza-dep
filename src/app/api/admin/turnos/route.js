@@ -7,6 +7,8 @@ import { sendConfirmationEmail } from '@/lib/email.js';
 import { normalizeWhatsApp, sendWhatsAppMessage, parseTemplate } from '@/lib/whatsapp.js';
 
 // Convert HH:MM to minutes from midnight
+import { ensureDefaultBox } from '../boxes/route';
+
 function timeToMinutes(timeStr) {
   if (!timeStr) return 0;
   const [hours, minutes] = timeStr.split(':').map(Number);
@@ -49,14 +51,18 @@ function isPastDateTime(fechaStr, horaInicio) {
   return false;
 }
 
-async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null) {
+async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null, boxId = null) {
   const targetDate = new Date(fechaStr + 'T00:00:00');
+  const whereCondition = {
+    fecha: targetDate,
+    estado: { not: 'CANCELADO' },
+    id: excludeTurnoId ? { not: excludeTurnoId } : undefined
+  };
+  if (boxId) {
+    whereCondition.boxId = boxId;
+  }
   const dayTurnos = await prisma.turno.findMany({
-    where: {
-      fecha: targetDate,
-      estado: { not: 'CANCELADO' },
-      id: excludeTurnoId ? { not: excludeTurnoId } : undefined
-    },
+    where: whereCondition,
     include: {
       cliente: true
     }
@@ -109,11 +115,31 @@ export async function GET(request) {
 
     if (session.rol === 'OPERADOR') {
       whereClause.operadorId = session.id;
+    } else {
+      const operadorIdParam = searchParams.get('operadorId');
+      if (operadorIdParam && operadorIdParam !== 'ALL') {
+        whereClause.operadorId = operadorIdParam;
+      }
+    }
+
+    const boxIdParam = searchParams.get('boxId');
+    if (boxIdParam && boxIdParam !== 'ALL') {
+      whereClause.boxId = boxIdParam;
     }
 
     const turnos = await prisma.turno.findMany({
       where: whereClause,
       include: {
+        box: {
+          select: {
+            id: true,
+            nombre: true,
+            color: true,
+            esPrincipal: true,
+            horaInicio: true,
+            horaFin: true
+          }
+        },
         operador: {
           select: {
             id: true,
@@ -171,6 +197,7 @@ export async function POST(request) {
     const {
       clienteId,
       operadorId,
+      boxId,
       nombreCompleto,
       whatsapp,
       email,
@@ -192,6 +219,16 @@ export async function POST(request) {
       prevTurnoId,
       enviarNotificaciones
     } = body;
+
+    let finalBoxId = boxId ? String(boxId) : null;
+    if (!finalBoxId) {
+      try {
+        const defaultBox = await ensureDefaultBox();
+        if (defaultBox) finalBoxId = defaultBox.id;
+      } catch (err) {
+        console.error('Error resolving default box in POST:', err);
+      }
+    }
 
     if (estado !== 'BLOQUEADO' && (!fechaStr || !horaInicio || !horaFin || ((!selectedZoneIds || selectedZoneIds.length === 0) && !hasOtros))) {
       return NextResponse.json({ error: 'Campos requeridos incompletos' }, { status: 400 });
@@ -224,7 +261,7 @@ export async function POST(request) {
     }
 
     // Validation: Overlap Check
-    const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin);
+    const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin, null, finalBoxId);
     if (checkOverlap) {
       const isBlock = checkOverlap.estado === 'BLOQUEADO';
       return NextResponse.json({
@@ -384,6 +421,7 @@ export async function POST(request) {
       data: {
         clienteId: finalClienteId,
         operadorId: finalOperadorId,
+        boxId: finalBoxId,
         fecha: targetDate,
         horaInicio,
         horaFin,
@@ -402,6 +440,7 @@ export async function POST(request) {
       },
       include: {
         cliente: true,
+        box: true,
         operador: {
           select: {
             id: true,

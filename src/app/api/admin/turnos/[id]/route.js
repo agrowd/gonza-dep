@@ -29,14 +29,18 @@ function isPastDateTime(fechaStr) {
   return fechaStr < todayStr;
 }
 
-async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null) {
+async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null, boxId = null) {
   const targetDate = new Date(fechaStr + 'T00:00:00');
+  const whereCondition = {
+    fecha: targetDate,
+    estado: { not: 'CANCELADO' },
+    id: excludeTurnoId ? { not: excludeTurnoId } : undefined
+  };
+  if (boxId) {
+    whereCondition.boxId = boxId;
+  }
   const dayTurnos = await prisma.turno.findMany({
-    where: {
-      fecha: targetDate,
-      estado: { not: 'CANCELADO' },
-      id: excludeTurnoId ? { not: excludeTurnoId } : undefined
-    },
+    where: whereCondition,
     include: {
       cliente: true
     }
@@ -75,6 +79,7 @@ export async function GET(request, { params }) {
     const turno = await prisma.turno.findUnique({
       where: { id: String(id) },
       include: {
+        box: true,
         operador: {
           select: {
             id: true,
@@ -215,8 +220,9 @@ export async function PUT(request, { params }) {
     }
 
     // Overlap Check (only when date, time or reactivation changes)
+    const checkBoxId = body.boxId !== undefined ? (body.boxId ? String(body.boxId) : null) : oldTurn.boxId;
     if (checkEstado !== 'CANCELADO' && (isDateChanged || isTimeChanged || isStateReactivated)) {
-      const checkOverlap = await hasOverlappingTurno(checkFechaStr, checkHoraInicio, checkHoraFin, id);
+      const checkOverlap = await hasOverlappingTurno(checkFechaStr, checkHoraInicio, checkHoraFin, id, checkBoxId);
       if (checkOverlap) {
         const isBlock = checkOverlap.estado === 'BLOQUEADO';
         return NextResponse.json({
@@ -493,6 +499,9 @@ export async function PUT(request, { params }) {
     if (operadorId !== undefined) {
       updateData.operadorId = operadorId ? String(operadorId) : null;
     }
+    if (body.boxId !== undefined) {
+      updateData.boxId = body.boxId ? String(body.boxId) : null;
+    }
 
     // Perform database update
     const updatedTurno = await prisma.turno.update({
@@ -500,6 +509,16 @@ export async function PUT(request, { params }) {
       data: updateData,
       include: {
         cliente: true,
+        box: {
+          select: {
+            id: true,
+            nombre: true,
+            color: true,
+            esPrincipal: true,
+            horaInicio: true,
+            horaFin: true
+          }
+        },
         operador: {
           select: {
             id: true,

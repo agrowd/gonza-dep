@@ -78,6 +78,8 @@ model Turno {
   subEstado        String?  // "SIGUIENTE_TURNO", "VA_A_AVISAR", "MANTENIMIENTO", "FINALIZADO"
   metodoPago       String?  @default("TRANSFERENCIA") // "EFECTIVO", "TRANSFERENCIA"
   enviarNotificaciones Boolean @default(true)
+  boxId            String?
+  box              Box?     @relation(fields: [boxId], references: [id], onDelete: SetNull)
   observaciones    String?
   notasGonzalo     String?
   createdAt        DateTime @default(now())
@@ -93,6 +95,8 @@ model Bloqueo {
   esDiaCompleto Boolean   @default(false)
   tipo          String    @default("UNICO") // "FIJO", "MOVIL", "UNICO"
   color         String?   @default("#dc2626")
+  boxId         String?
+  box           Box?      @relation(fields: [boxId], references: [id], onDelete: SetNull)
   mes           Int?
   dia           Int?
   ano           Int?
@@ -108,7 +112,26 @@ model Servicio {
   activo      Boolean   @default(true)
   orden       Int       @default(0)
   zonas       Zona[]
+  boxes       Box[]
   createdAt   DateTime  @default(now())
+}
+
+model Box {
+  id            String    @id @default(uuid())
+  nombre        String
+  descripcion   String?
+  color         String?   @default("#7a1f1e")
+  esPrincipal   Boolean   @default(false)
+  activo        Boolean   @default(true)
+  horaInicio    String    @default("14:00")
+  horaFin       String    @default("22:00")
+  diasAtencion  String    @default("1,2,3,4,5") // "1,2,3,4,5" = Lunes a Viernes
+  servicioId    String?
+  servicio      Servicio? @relation(fields: [servicioId], references: [id], onDelete: SetNull)
+  turnos        Turno[]
+  bloqueos      Bloqueo[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
 }
 
 model Zona {

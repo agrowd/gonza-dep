@@ -266,6 +266,20 @@ export default function AgendaPage() {
   const [currentUserRole, setCurrentUserRole] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [operadores, setOperadores] = useState([]);
+  const [boxes, setBoxes] = useState([]);
+  const [selectedBoxId, setSelectedBoxId] = useState('ALL');
+  const [selectedOperadorId, setSelectedOperadorId] = useState('ALL');
+
+  const visibleAppointments = useMemo(() => {
+    let list = appointments;
+    if (selectedBoxId && selectedBoxId !== 'ALL') {
+      list = list.filter(app => app.boxId === selectedBoxId || app.box?.id === selectedBoxId);
+    }
+    if (selectedOperadorId && selectedOperadorId !== 'ALL') {
+      list = list.filter(app => app.operadorId === selectedOperadorId || app.operador?.id === selectedOperadorId);
+    }
+    return list;
+  }, [appointments, selectedBoxId, selectedOperadorId]);
 
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -340,6 +354,7 @@ export default function AgendaPage() {
     estado: '',
     metodoPago: 'TRANSFERENCIA',
     operadorId: '',
+    boxId: '',
     valorTotal: '',
     valorSeña: '',
     descuentoTipo: 'NINGUNO',
@@ -378,6 +393,7 @@ export default function AgendaPage() {
     observaciones: '',
     clienteId: null,
     operadorId: '',
+    boxId: '',
     hasOtros: false,
     otrosTexto: '',
     otrosPrecio: '',
@@ -466,6 +482,22 @@ export default function AgendaPage() {
         }
       })
       .catch(err => console.error('Error fetching usuarios:', err));
+
+    fetch('/api/admin/boxes', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setBoxes(data);
+          const defaultBox = data.find(b => b.esPrincipal) || data[0];
+          if (defaultBox) {
+            setNewTurno(prev => ({
+              ...prev,
+              boxId: prev.boxId || defaultBox.id
+            }));
+          }
+        }
+      })
+      .catch(err => console.error('Error fetching boxes:', err));
   }, []);
 
   const handleExecuteReauth = async (e) => {
@@ -2926,6 +2958,68 @@ export default function AgendaPage() {
           />
         </div>
 
+        {/* Selector de Box / Doble Agenda Paralela (Fase 3) */}
+        {boxes.length > 0 && currentUserRole !== 'OPERADOR' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '4px', maxWidth: '100%' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+              📦 Box:
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedBoxId('ALL')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: selectedBoxId === 'ALL' ? '2px solid #7a1f1e' : '1px solid #cbd5e1',
+                backgroundColor: selectedBoxId === 'ALL' ? '#7a1f1e' : '#ffffff',
+                color: selectedBoxId === 'ALL' ? '#ffffff' : '#334155',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: selectedBoxId === 'ALL' ? '0 2px 6px rgba(122, 31, 30, 0.2)' : 'none'
+              }}
+            >
+              <span>🌐</span>
+              <span>Todos los Boxes (Doble Agenda)</span>
+            </button>
+
+            {boxes.map(b => {
+              const isSelected = selectedBoxId === b.id;
+              const boxColor = b.color || '#7a1f1e';
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setSelectedBoxId(b.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: isSelected ? `2px solid ${boxColor}` : '1px solid #cbd5e1',
+                    backgroundColor: isSelected ? boxColor : '#ffffff',
+                    color: isSelected ? '#ffffff' : '#334155',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: isSelected ? `0 2px 6px ${boxColor}33` : 'none'
+                  }}
+                >
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isSelected ? '#ffffff' : boxColor }} />
+                  <span>{b.nombre}</span>
+                  {b.esPrincipal && <span style={{ opacity: 0.85, fontSize: '0.72rem' }}>⭐</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Fila 4: Botones de Acción (+ Nuevo Turno, Bloquear | Cancelados, Imprimir) */}
         <div className={styles.agendaActionsRow}>
           {currentUserRole !== 'OPERADOR' && (
@@ -3040,7 +3134,7 @@ export default function AgendaPage() {
                 cellDate.setHours(0,0,0,0);
                 const isPast = cellDate < today;
 
-                const dayAppointments = appointments.filter(app => {
+                const dayAppointments = visibleAppointments.filter(app => {
                   const appDateStr = getAppDateStr(app.fecha);
                   if (appDateStr !== dateStr) return false;
                   if (!showCancelled && app.estado === 'CANCELADO') return false;
@@ -3154,12 +3248,18 @@ export default function AgendaPage() {
           <div className={styles.neocitaDayContainer}>
             {(() => {
               const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
-              const dayApps = appointments.filter(app => {
+              const dayApps = visibleAppointments.filter(app => {
                 if (getAppDateStr(app.fecha) !== dateStr) return false;
                 if (!showCancelled && app.estado === 'CANCELADO') return false;
                 return true;
               });
-              const dayBloqueos = bloqueos.filter(b => getAppDateStr(b.fecha) === dateStr);
+              const dayBloqueos = bloqueos.filter(b => {
+                if (getAppDateStr(b.fecha) !== dateStr) return false;
+                if (selectedBoxId && selectedBoxId !== 'ALL') {
+                  if (b.boxId && b.boxId !== selectedBoxId) return false;
+                }
+                return true;
+              });
 
               const totalRevenue = dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorTotal || 0), 0);
               const totalSenas = dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorSeña || 0), 0);
@@ -3682,6 +3782,25 @@ export default function AgendaPage() {
                                     {app.cliente?.nombreCompleto || 'Cliente'}
                                   </span>
                                   <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    {app.box && (
+                                      <span
+                                        style={{
+                                          fontSize: '0.72rem',
+                                          padding: '2px 8px',
+                                          borderRadius: '10px',
+                                          backgroundColor: `${app.box.color || '#7a1f1e'}20`,
+                                          color: app.box.color || '#7a1f1e',
+                                          border: `1px solid ${app.box.color || '#7a1f1e'}50`,
+                                          fontWeight: 700,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}
+                                      >
+                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: app.box.color || '#7a1f1e' }} />
+                                        {app.box.nombre}
+                                      </span>
+                                    )}
                                     <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 600 }}>
                                       👤 {app.operador?.nombre || 'Gonzalo'}
                                     </span>
@@ -3756,7 +3875,7 @@ export default function AgendaPage() {
               {/* Days Columns */}
               {weekDates.map((date, dayIdx) => {
                 const dateStr = toYYYYMMDD(date);
-                const dayAppointments = appointments.filter(app => {
+                const dayAppointments = visibleAppointments.filter(app => {
                   const appDateStr = getAppDateStr(app.fecha);
                   if (appDateStr !== dateStr) return false;
                   if (!showCancelled && app.estado === 'CANCELADO') return false;
@@ -3955,6 +4074,20 @@ export default function AgendaPage() {
                     >
                       <option value="TRANSFERENCIA">🏦 Transferencia</option>
                       <option value="EFECTIVO">💵 Efectivo</option>
+                    </select>
+                  </div>
+
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                    <label className={styles.inputLabel}>📦 Box / Cabina</label>
+                    <select
+                      value={editTurno.boxId || ''}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, boxId: e.target.value }))}
+                    >
+                      {boxes.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -4442,6 +4575,91 @@ export default function AgendaPage() {
                   <div style={{
                     gridColumn: '1 / -1',
                     marginTop: '0.35rem',
+                    padding: '0.55rem 0',
+                    borderTop: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.6rem',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}>
+                    <span style={{
+                      margin: 0,
+                      textAlign: 'left',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}>
+                      📦 Box / Cabina:
+                    </span>
+                    {currentUserRole === 'ADMIN' ? (
+                      <select
+                        value={selectedTurno.boxId || selectedTurno.box?.id || ''}
+                        onChange={async (e) => {
+                          const newBoxId = e.target.value || null;
+                          try {
+                            const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({ boxId: newBoxId })
+                            });
+                            if (res.ok) {
+                              const updated = await res.json();
+                              setSelectedTurno(prev => ({
+                                ...prev,
+                                boxId: newBoxId,
+                                box: updated.box || boxes.find(b => b.id === newBoxId) || null
+                              }));
+                              const boxName = boxes.find(b => b.id === newBoxId)?.nombre || 'Box Principal';
+                              showToast(`Box asignado: ${boxName}`);
+                              fetchAppointments();
+                            } else {
+                              const err = await res.json();
+                              showToast(err.error || 'Error al cambiar box', 'error');
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            showToast('Error de red al cambiar box', 'error');
+                          }
+                        }}
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--text-primary)',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          minWidth: '150px',
+                          flex: '1 1 auto',
+                          maxWidth: '100%'
+                        }}
+                      >
+                        {boxes.map(b => (
+                          <option key={b.id} value={b.id}>
+                            {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                        {selectedTurno.box?.nombre || 'Box Principal'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    marginTop: '0.1rem',
                     padding: '0.55rem 0',
                     borderTop: '1px solid var(--border-color)',
                     borderBottom: '1px solid var(--border-color)',
@@ -6161,6 +6379,20 @@ export default function AgendaPage() {
                     <option value="CONSULTA">💡 Consulta / Evaluatorio</option>
                     <option value="PENDIENTE_AUTORIZACION">Pendiente de Autorización</option>
                     <option value="BLOQUEADO">🔒 BLOQUEADO (Bloqueo)</option>
+                  </select>
+                </div>
+
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                  <label className={styles.inputLabel}>📦 Box / Cabina</label>
+                  <select
+                    value={newTurno.boxId || ''}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, boxId: e.target.value }))}
+                  >
+                    {boxes.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
