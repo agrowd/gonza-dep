@@ -3531,91 +3531,97 @@ export default function AgendaPage() {
                     </div>
                   </div>
 
-                  {/* Bloque Informativo de Señas Cobradas en la Fecha para Administrador */}
-                  {currentUserRole !== 'OPERADOR' && daySenas?.turnos && daySenas.turnos.length > 0 && (
-                    <div style={{
-                      marginBottom: '1rem',
-                      padding: '0.65rem 0.9rem',
-                      backgroundColor: '#f0fdf4',
-                      border: '1px solid #bbf7d0',
-                      borderRadius: '12px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                    }}>
+                  {/* Bloque Informativo de Señas Cobradas en la Fecha: Solo Nuevos Turnos (D-138) */}
+                  {currentUserRole !== 'OPERADOR' && (() => {
+                    const nuevosTurnos = daySenas?.turnosNuevos || (daySenas?.turnos || []).filter(s => !s.esTurnoSiguiente);
+                    const totalNuevos = daySenas?.totalSenasNuevos ?? nuevosTurnos.reduce((a, b) => a + Number(b.valorSeña || 0), 0);
+
+                    // Si no hay nuevos turnos (todos fueron turno siguiente de clientes ya presentes hoy), no ocupa espacio
+                    if (nuevosTurnos.length === 0) return null;
+
+                    return (
                       <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontWeight: 700,
-                        fontSize: '0.82rem',
-                        color: '#166534',
-                        marginBottom: '0.4rem'
+                        marginBottom: '1rem',
+                        padding: '0.65rem 0.9rem',
+                        backgroundColor: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '12px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                       }}>
-                        <span>
-                          💵 Señas cobradas en esta fecha ({daySenas.turnos.length}):
-                        </span>
-                        <span style={{ fontSize: '0.92rem', color: '#15803d', fontWeight: 800 }}>
-                          +${totalSenasCobradasHoy.toLocaleString('es-AR')}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        {daySenas.turnos.map(s => {
-                          const fechaTurnoStr = s.fecha
-                            ? new Date(s.fecha).toLocaleDateString('es-AR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                timeZone: 'UTC'
-                              })
-                            : '';
-                          return (
-                            <div
-                              key={s.id}
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '0.35rem 0.6rem',
-                                backgroundColor: 'rgba(255, 255, 255, 0.85)',
-                                borderRadius: '8px',
-                                border: '1px solid rgba(187, 247, 208, 0.7)',
-                                fontSize: '0.78rem'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: 700, color: '#14532d' }}>
-                                  {s.cliente?.nombreCompleto || 'Cliente'}
-                                </span>
-                                <span style={{
-                                  fontSize: '0.72rem',
-                                  color: '#374151',
-                                  backgroundColor: '#e5e7eb',
-                                  padding: '1px 6px',
-                                  borderRadius: '4px'
-                                }}>
-                                  📅 Turno: {fechaTurnoStr} {s.horaInicio} hs
-                                </span>
-                                {s.estado && (
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          color: '#166534',
+                          marginBottom: '0.4rem'
+                        }}>
+                          <span>
+                            💵 Señas de Nuevos Turnos ({nuevosTurnos.length}):
+                          </span>
+                          <span style={{ fontSize: '0.92rem', color: '#15803d', fontWeight: 800 }}>
+                            +${totalNuevos.toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {nuevosTurnos.map(s => {
+                            const fechaTurnoStr = s.fecha
+                              ? new Date(s.fecha).toLocaleDateString('es-AR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  timeZone: 'UTC'
+                                })
+                              : '';
+                            return (
+                              <div
+                                key={s.id}
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '0.35rem 0.6rem',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                                  borderRadius: '8px',
+                                  border: '1px solid rgba(187, 247, 208, 0.7)',
+                                  fontSize: '0.78rem'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: 700, color: '#14532d' }}>
+                                    {s.cliente?.nombreCompleto || 'Cliente'}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '0.72rem',
+                                    color: '#374151',
+                                    backgroundColor: '#e5e7eb',
+                                    padding: '1px 6px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    📅 Turno: {fechaTurnoStr} {s.horaInicio} hs
+                                  </span>
                                   <span style={{
                                     fontSize: '0.68rem',
-                                    fontWeight: 600,
-                                    color: s.estado === 'SEÑADO' ? '#15803d' : '#854d0e',
-                                    backgroundColor: s.estado === 'SEÑADO' ? '#dcfce7' : '#fef9c3',
+                                    fontWeight: 700,
+                                    color: '#15803d',
+                                    backgroundColor: '#dcfce7',
                                     padding: '1px 5px',
                                     borderRadius: '4px'
                                   }}>
-                                    {s.estado}
+                                    NUEVO TURNO
                                   </span>
-                                )}
+                                </div>
+                                <span style={{ fontWeight: 800, color: '#15803d', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                                  +${Number(s.valorSeña || 0).toLocaleString('es-AR')}
+                                </span>
                               </div>
-                              <span style={{ fontWeight: 800, color: '#15803d', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
-                                +${Number(s.valorSeña || 0).toLocaleString('es-AR')}
-                              </span>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Bloque Informativo de Liquidación de Operadores para Administrador */}
                   {currentUserRole !== 'OPERADOR' && payableOperators.length > 0 && (

@@ -1398,3 +1398,13 @@
 - **Pestaña Directa de Bloqueos en `/admin/configuracion`**: Creada la opción directa `📅 Bloqueos de Agenda y Feriados Anuales` en el selector de secciones.
 - **Ruta API `/api/admin/bloqueos/[id]`**: Soporte completo para `GET`, `PUT`, `PATCH` y `DELETE` para mover feriados móviles y editar o borrar bloqueos sin errores.
 - **Datos de Prueba en Staging**: Creado `Box 2 - Cabina 2` en PostgreSQL `agenda_db_staging` y asignados 10 turnos de prueba para verificar la doble agenda en vivo.
+
+
+### 4. Ajuste Fino en Señas Diarias a pedido de Gonzalo (D-138)
+- **Pedido**: *"Esto no hace falta, con que aparezca en Ingreso neto el mismo valor que aparece en estadísticas está bien. Al final a esta lista de abajo que agregaste, deja nomás a los clientes que agenden un nuevo turno, no a los que hacen un turno siguiente"*.
+- **Implementación**:
+  - `Ingreso neto` en la cabecera superior se mantiene con el total contable completo (`saldos del día + total señas del día`) para coincidir con Estadísticas.
+  - La tarjeta verde inferior de la agenda filtra automáticamente:
+    - **Oculta** a los clientes que tuvieron turno hoy y solo se fueron con su *"siguiente turno"* agendado (evitando que aparezcan repetidos dos veces en la pantalla).
+    - **Muestra únicamente** a los clientes que agendaron un *"nuevo turno"* desde afuera con seña en el día.
+    - Si en la fecha todas las señas fueron de turnos siguientes, el bloque verde se oculta por completo, dejando la agenda limpia y sin bulto.

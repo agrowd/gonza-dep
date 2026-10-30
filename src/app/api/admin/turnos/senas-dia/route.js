@@ -24,7 +24,10 @@ export async function GET(request) {
       return NextResponse.json({
         totalSenas: 0,
         count: 0,
-        turnos: []
+        turnos: [],
+        turnosNuevos: [],
+        countNuevos: 0,
+        totalSenasNuevos: 0
       });
     }
 
@@ -76,11 +79,49 @@ export async function GET(request) {
 
     const totalSenas = turnos.reduce((sum, t) => sum + Number(t.valorSeña || 0), 0);
 
+    // Identificar clientes que tuvieron un turno activo/realizado en la agenda de esta misma fecha
+    // Quienes tuvieron turno hoy y agendaron un turno futuro realizaron un "Turno Siguiente" (D-138)
+    const startOfDay = new Date(`${fecha}T00:00:00.000Z`);
+    const endOfDay = new Date(`${fecha}T23:59:59.999Z`);
+
+    const clienteIds = [...new Set(turnos.map(t => t.clienteId).filter(Boolean))];
+
+    const turnosEnEstaFecha = await prisma.turno.findMany({
+      where: {
+        clienteId: { in: clienteIds },
+        fecha: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        estado: { not: 'CANCELADO' },
+        id: { notIn: turnos.map(t => t.id) }
+      },
+      select: {
+        clienteId: true
+      }
+    });
+
+    const clientsWithTurnoToday = new Set(turnosEnEstaFecha.map(t => t.clienteId));
+
+    const turnosEnriquecidos = turnos.map(t => {
+      const esTurnoSiguiente = clientsWithTurnoToday.has(t.clienteId);
+      return {
+        ...t,
+        esTurnoSiguiente
+      };
+    });
+
+    const turnosNuevos = turnosEnriquecidos.filter(t => !t.esTurnoSiguiente);
+    const totalSenasNuevos = turnosNuevos.reduce((sum, t) => sum + Number(t.valorSeña || 0), 0);
+
     return NextResponse.json({
       fecha,
-      totalSenas,
+      totalSenas,                // Mantiene el total real para el cálculo financiero de Ingreso Neto
       count: turnos.length,
-      turnos
+      turnos: turnosEnriquecidos,
+      turnosNuevos,              // Solo clientes que agendan un NUEVO turno (excluye turno siguiente)
+      countNuevos: turnosNuevos.length,
+      totalSenasNuevos
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate'

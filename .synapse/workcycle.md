@@ -2388,3 +2388,12 @@
   - **Pestaña Dedicada de Bloqueos en Configuración**: Creada la opción directa `📅 Bloqueos de Agenda y Feriados Anuales` en el selector de `/admin/configuracion` (además de estar disponible dentro de Parámetros).
   - **Doble Box en Staging**: Creado `Box 2 - Cabina 2` en PostgreSQL `agenda_db_staging` y asignados 10 turnos de prueba para verificar de inmediato el filtrado individual y la doble agenda simultánea.
 - [x] **Validación y Compilación**: `npm run build` ejecutado exitosamente (47/47 rutas compiladas).
+
+
+## Ciclo de Trabajo: 30 de Octubre de 2026 - Ajuste Fino en Señas Diarias (D-138)
+- [x] **Ajuste de Bloque de Señas en Agenda Diaria**:
+  - En `/api/admin/turnos/senas-dia`: Detectar si el cliente tuvo turno activo/realizado en la fecha para clasificar `esTurnoSiguiente`.
+  - En `/admin/agenda`: Mantener `Ingreso neto` contable intacto, pero en la tarjeta verde desplegada filtrar para mostrar exclusivamente los `turnosNuevos`.
+  - Si no hay nuevos turnos externos en la fecha, el bloque verde se oculta automáticamente para no duplicar clientes ni generar bulto visual.
+- [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas).
+- [x] **Documentación**: Registrado `D-138 🔒 LOCKED` en `.synapse/decisions.md`.
