@@ -775,6 +775,24 @@ export default function GastosPage() {
                                       {gasto.hora || '12:00'}
                                     </div>
                                   </div>
+                                  <div className={styles.mobileGastoActions} onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      type="button"
+                                      className={styles.mobileActionBtn}
+                                      onClick={() => handleOpenEditGasto(gasto)}
+                                      title="Editar gasto"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={`${styles.mobileActionBtn} ${styles.mobileActionBtnDanger}`}
+                                      onClick={() => setDeleteTarget({ type: 'gasto', id: gasto.id, name: gasto.concepto })}
+                                      title="Eliminar gasto"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
                                 </div>
                               );
                             })}
@@ -891,6 +909,22 @@ export default function GastosPage() {
 
             <form onSubmit={handleSaveGasto} className={styles.modalForm}>
               <div className={styles.formGroup}>
+                <label>Categoría *</label>
+                <select
+                  value={gastoForm.categoriaId}
+                  onChange={(e) => setGastoForm({ ...gastoForm, categoriaId: e.target.value })}
+                  className={styles.formSelect}
+                  required
+                  autoFocus
+                >
+                  <option value="" disabled>Seleccioná una categoría</option>
+                  {categorias.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
                 <label>Concepto / Detalle *</label>
                 <input
                   type="text"
@@ -898,7 +932,6 @@ export default function GastosPage() {
                   value={gastoForm.concepto}
                   onChange={(e) => setGastoForm({ ...gastoForm, concepto: e.target.value })}
                   className={styles.formInput}
-                  autoFocus
                   required
                 />
               </div>
@@ -931,21 +964,6 @@ export default function GastosPage() {
               </div>
 
               <div className={styles.formGroup}>
-                <label>Categoría *</label>
-                <select
-                  value={gastoForm.categoriaId}
-                  onChange={(e) => setGastoForm({ ...gastoForm, categoriaId: e.target.value })}
-                  className={styles.formSelect}
-                  required
-                >
-                  <option value="" disabled>Seleccioná una categoría</option>
-                  {categorias.map(c => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={styles.formGroup}>
                 <label>Observaciones (opcional)</label>
                 <textarea
                   placeholder="Detalles adicionales, proveedor, nro de comprobante..."
@@ -957,6 +975,31 @@ export default function GastosPage() {
               </div>
 
               <div className={styles.modalFooter}>
+                {editingGasto && (
+                  <button
+                    type="button"
+                    style={{
+                      backgroundColor: '#dc2626',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.65rem 1rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      marginRight: 'auto',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
+                    }}
+                    onClick={() => {
+                      const target = { type: 'gasto', id: editingGasto.id, name: editingGasto.concepto };
+                      setShowGastoModal(false);
+                      setDeleteTarget(target);
+                    }}
+                  >
+                    🗑️ Eliminar Gasto
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowGastoModal(false)}

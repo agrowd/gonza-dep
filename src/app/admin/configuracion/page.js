@@ -157,6 +157,7 @@ export default function ConfiguracionPage() {
   const currentYear = new Date().getFullYear();
   const [selectedFeriadosYear, setSelectedFeriadosYear] = useState(currentYear);
   const [feriados, setFeriados] = useState([]);
+  const [feriadoFilterTipo, setFeriadoFilterTipo] = useState('ALL');
   const [loadingFeriados, setLoadingFeriados] = useState(false);
   const [feriadoForm, setFeriadoForm] = useState({
     fechaStr: new Date().toISOString().split('T')[0],
@@ -1341,16 +1342,73 @@ export default function ConfiguracionPage() {
             {/* Listado de Feriados del Año */}
             <div className={styles.feriadosFilterHeader}>
               <div className={styles.feriadosStats}>
-                <span>Feriados cargados para el año {selectedFeriadosYear}:</span>
-                <span className={styles.badgeFijo}>
-                  🔴 {feriados.filter(f => f.tipo === 'FIJO').length} Fijos
-                </span>
-                <span className={styles.badgeMovil}>
-                  🟠 {feriados.filter(f => f.tipo === 'MOVIL').length} Móviles
-                </span>
-                <span className={styles.badgeUnico}>
-                  🔵 {feriados.filter(f => f.tipo === 'UNICO' || !f.tipo).length} Únicos
-                </span>
+                <span style={{ fontWeight: 700, color: '#1e293b' }}>Filtrar bloqueos {selectedFeriadosYear}:</span>
+                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: feriadoFilterTipo === 'ALL' ? '1px solid #7a1f1e' : '1px solid #cbd5e1',
+                      backgroundColor: feriadoFilterTipo === 'ALL' ? '#7a1f1e' : '#ffffff',
+                      color: feriadoFilterTipo === 'ALL' ? '#ffffff' : '#475569'
+                    }}
+                    onClick={() => setFeriadoFilterTipo('ALL')}
+                  >
+                    Todos ({feriados.length})
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: feriadoFilterTipo === 'UNICO' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                      backgroundColor: feriadoFilterTipo === 'UNICO' ? '#2563eb' : '#ffffff',
+                      color: feriadoFilterTipo === 'UNICO' ? '#ffffff' : '#475569'
+                    }}
+                    onClick={() => setFeriadoFilterTipo('UNICO')}
+                  >
+                    🔵 Únicos ({feriados.filter(f => f.tipo === 'UNICO' || !f.tipo).length})
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: feriadoFilterTipo === 'FIJO' ? '1px solid #dc2626' : '1px solid #cbd5e1',
+                      backgroundColor: feriadoFilterTipo === 'FIJO' ? '#dc2626' : '#ffffff',
+                      color: feriadoFilterTipo === 'FIJO' ? '#ffffff' : '#475569'
+                    }}
+                    onClick={() => setFeriadoFilterTipo('FIJO')}
+                  >
+                    🔴 Fijos ({feriados.filter(f => f.tipo === 'FIJO').length})
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: feriadoFilterTipo === 'MOVIL' ? '1px solid #d97706' : '1px solid #cbd5e1',
+                      backgroundColor: feriadoFilterTipo === 'MOVIL' ? '#d97706' : '#ffffff',
+                      color: feriadoFilterTipo === 'MOVIL' ? '#ffffff' : '#475569'
+                    }}
+                    onClick={() => setFeriadoFilterTipo('MOVIL')}
+                  >
+                    🟠 Móviles ({feriados.filter(f => f.tipo === 'MOVIL').length})
+                  </button>
+                </div>
               </div>
               <button 
                 type="button" 
@@ -1369,98 +1427,105 @@ export default function ConfiguracionPage() {
                 No hay feriados ni bloqueos registrados para el año {selectedFeriadosYear}.
               </div>
             ) : (
-              <div className={styles.feriadosTableContainer}>
-                <table className={styles.feriadosTable}>
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>Fecha / Día</th>
-                      <th>Motivo</th>
-                      <th>Horario</th>
-                      <th style={{ textAlign: 'right' }}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {feriados.map((f) => {
-                      const isMovil = f.tipo === 'MOVIL';
-                      const isFijo = f.tipo === 'FIJO';
-                      const hasMoved = isMovil && f.fechaMovida;
-                      return (
-                        <tr key={f.id}>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                              <span 
-                                className={styles.colorDot} 
-                                style={{ backgroundColor: f.color || (isFijo ? '#dc2626' : (isMovil ? '#d97706' : '#2563eb')) }} 
-                              />
-                              {isFijo ? (
-                                <span className={styles.badgeFijo}>FIJO (Anual)</span>
-                              ) : isMovil ? (
-                                <span className={styles.badgeMovil}>MÓVIL</span>
-                              ) : (
-                                <span className={styles.badgeUnico}>ÚNICO</span>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ fontWeight: 600 }}>
-                              {formatFeriadoDate(f.fecha)} ({getFeriadoDayName(f.fecha)})
-                            </div>
+              <div className={styles.bloqueoCardList}>
+                {feriados
+                  .filter(f => {
+                    if (feriadoFilterTipo === 'ALL') return true;
+                    if (feriadoFilterTipo === 'UNICO') return f.tipo === 'UNICO' || !f.tipo;
+                    if (feriadoFilterTipo === 'FIJO') return f.tipo === 'FIJO';
+                    if (feriadoFilterTipo === 'MOVIL') return f.tipo === 'MOVIL';
+                    return true;
+                  })
+                  .map((f) => {
+                    const isMovil = f.tipo === 'MOVIL';
+                    const isFijo = f.tipo === 'FIJO';
+                    const hasMoved = isMovil && f.fechaMovida;
+                    const dotColor = f.color || (isFijo ? '#dc2626' : (isMovil ? '#d97706' : '#2563eb'));
+                    const dayName = getFeriadoDayName(f.fecha);
+                    const dateFormatted = `${formatFeriadoDate(f.fecha)} (${dayName})`;
+
+                    return (
+                      <div key={f.id} className={styles.bloqueoCardItem}>
+                        {/* Header: Dot + Badge + Fecha */}
+                        <div className={styles.bloqueoCardHeader}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span 
+                              className={styles.colorDot} 
+                              style={{ backgroundColor: dotColor, width: '10px', height: '10px', margin: 0, flexShrink: 0 }} 
+                            />
+                            {isFijo ? (
+                              <span className={styles.badgeFijo}>FIJO</span>
+                            ) : isMovil ? (
+                              <span className={styles.badgeMovil}>MÓVIL</span>
+                            ) : (
+                              <span className={styles.badgeUnico}>ÚNICO</span>
+                            )}
+                            <span className={styles.bloqueoCardDateText}>{dateFormatted}</span>
+                          </div>
+                        </div>
+
+                        {/* Body: Motivo | Horario | Acciones */}
+                        <div className={styles.bloqueoCardBody}>
+                          <div className={styles.bloqueoCardField} style={{ flex: 1.5, minWidth: '150px' }}>
+                            <span className={styles.bloqueoCardFieldLabel}>Motivo</span>
+                            <span className={styles.bloqueoCardFieldValue}>{f.motivo || 'Sin motivo'}</span>
                             {hasMoved && (
-                              <div className={styles.badgeMovedAlert}>
+                              <div className={styles.badgeMovedAlert} style={{ marginTop: '0.35rem' }}>
                                 ➡️ Reubicado al: <strong>{formatFeriadoDate(f.fechaMovida)} ({getFeriadoDayName(f.fechaMovida)})</strong>
                               </div>
                             )}
-                          </td>
-                          <td style={{ fontWeight: 600, color: '#0f172a' }}>
-                            {f.motivo || 'Sin motivo'}
-                          </td>
-                          <td>
-                            {f.esDiaCompleto ? (
-                              <span style={{ color: '#059669', fontWeight: 600 }}>Día Completo</span>
-                            ) : (
-                              <span style={{ color: '#475569' }}>{f.horaInicio} - {f.horaFin} hs</span>
-                            )}
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <div className={styles.actionBtnGroup} style={{ justifyContent: 'flex-end' }}>
-                              {isMovil && (
-                                <>
+                          </div>
+
+                          <div className={styles.bloqueoCardField} style={{ flex: 1, minWidth: '110px' }}>
+                            <span className={styles.bloqueoCardFieldLabel}>Horario</span>
+                            <span className={styles.bloqueoCardFieldValue}>
+                              {f.esDiaCompleto ? (
+                                <span style={{ color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block' }}></span>
+                                  Día completo
+                                </span>
+                              ) : (
+                                <span style={{ color: '#334155', fontWeight: 600 }}>{f.horaInicio} - {f.horaFin} hs</span>
+                              )}
+                            </span>
+                          </div>
+
+                          <div className={styles.bloqueoCardActions}>
+                            {isMovil && (
+                              <>
+                                <button
+                                  type="button"
+                                  className={styles.actionBtnSmall}
+                                  onClick={() => handleOpenMoveModal(f)}
+                                  title="Reubicar este feriado a otra fecha"
+                                >
+                                  🗓️ Reubicar
+                                </button>
+                                {hasMoved && (
                                   <button
                                     type="button"
                                     className={styles.actionBtnSmall}
-                                    onClick={() => handleOpenMoveModal(f)}
-                                    title="Reubicar este feriado a otra fecha"
+                                    onClick={() => handleResetMoveFeriado(f)}
+                                    title="Restaurar fecha original"
                                   >
-                                    🗓️ Reubicar
+                                    ↩️ Restaurar
                                   </button>
-                                  {hasMoved && (
-                                    <button
-                                      type="button"
-                                      className={styles.actionBtnSmall}
-                                      onClick={() => handleResetMoveFeriado(f)}
-                                      title="Restaurar fecha original"
-                                    >
-                                      ↩️ Restaurar
-                                    </button>
-                                  )}
-                                </>
-                              )}
-                              <button
-                                type="button"
-                                className={`${styles.actionBtnSmall} ${styles.actionBtnDanger}`}
-                                onClick={() => handleDeleteFeriado(f.id, f.isSynthesized, f.originalId)}
-                                title="Eliminar este feriado o bloqueo"
-                              >
-                                <TrashIcon /> Eliminar
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                                )}
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              className={`${styles.actionBtnSmall} ${styles.actionBtnDanger}`}
+                              onClick={() => handleDeleteFeriado(f.id, f.isSynthesized, f.originalId)}
+                              title="Eliminar este feriado o bloqueo"
+                            >
+                              <TrashIcon /> Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -2274,11 +2339,11 @@ export default function ConfiguracionPage() {
                   value={configs.duracion_formula || 'ZONA_MAX_MAS_TERCIO'}
                   onChange={(e) => setConfigs({ ...configs, duracion_formula: e.target.value })}
                 >
-                  <option value="ZONA_MAX_MAS_TERCIO">
-                    ⭐ Zona más larga + ⅓ del resto (si son 4+ zonas resta 10 min, redondeo a 10 min) [Recomendada]
-                  </option>
                   <option value="ZONA_MAX_MAS_10MIN">
-                    Zona más larga + 10 min por zona adicional (Axilas, Hombros y Genitales 0 min)
+                    Zona más larga + 10 min por zona adicional (sin Ax, gl ni hom)
+                  </option>
+                  <option value="ZONA_MAX_MAS_TERCIO">
+                    Zona más larga + ⅓ del resto (si son 4+ zonas resta 10 min, redondeo a 10 min)
                   </option>
                   <option value="ZONA_MAX_MAS_MITAD">
                     Zona más larga + 50% de las demás zonas (Fórmula Clásica)

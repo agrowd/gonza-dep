@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
-import { sendReminder7DaysEmail, sendConfirmationEmail, sendReceiptEmail } from '@/lib/email.js';
+import { sendReminder7DaysEmail, sendConfirmationEmail, sendReceiptEmail, applyEmailTemplatePlaceholdersPlain } from '@/lib/email.js';
 import { sendWhatsAppMessage, parseTemplate, getWhatsAppStatus, checkRelayStatus } from '@/lib/whatsapp.js';
 
 export async function POST(request, { params }) {
@@ -143,10 +143,10 @@ export async function POST(request, { params }) {
 
     if (tipo === 'CONFIRMACION') {
       await sendConfirmationEmail(targetEmail, clientName, turnDetails);
-      logMessage = `Confirmación de turno enviada manualmente por email a ${targetEmail}.`;
+      logMessage = `[Confirmación de Turno]\n¡Hola ${clientName}! Tu turno para el día ${new Date(turnDetails.fecha).toLocaleDateString('es-AR')} a las ${turnDetails.horaInicio} hs fue confirmado con éxito por correo electrónico.`;
     } else if (tipo === 'RECIBO') {
       await sendReceiptEmail(targetEmail, clientName, turnDetails);
-      logMessage = `Comprobante de turno y pago enviado manualmente por email a ${targetEmail}.`;
+      logMessage = `[Comprobante de Turno y Pago]\n¡Hola ${clientName}! Se ha emitido tu recibo de pago y comprobante de atención para el turno del ${new Date(turnDetails.fecha).toLocaleDateString('es-AR')}.`;
     } else {
       // Default: RECORDATORIO
       const default7Body = "Hola {cliente}!\n\nTe recordamos que tenés un turno reservado para dentro de 7 días, el {día} {fecha} a las {horario}.\n\nZonas: {zonas}\nSeña abonada: {seña}\nSaldo pendiente a pagar en el local: {saldo}\n\nUbicación: {direccion}\n\nSi necesitas reprogramar o cancelar tu turno, recordá hacerlo con al menos 48 horas de anticipación desde el link de autogestión.\n\nTe esperamos,\nGonzalo Depilación";
@@ -167,7 +167,14 @@ export async function POST(request, { params }) {
         email7SubjectTemplate,
         email7BodyTemplate
       );
-      logMessage = `Recordatorio de turno reenviado manualmente por email a ${targetEmail}.`;
+
+      const emailPlainText = applyEmailTemplatePlaceholdersPlain(
+        email7BodyTemplate,
+        clientName,
+        turnDetails,
+        businessAddress
+      );
+      logMessage = `[Recordatorio automático (7 días antes)]\n${emailPlainText}`;
     }
 
     // Log the notification in the DB

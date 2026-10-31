@@ -1,7 +1,7 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import prisma from './db.js';
-import { sendMaintenanceEmail, sendWhatsAppDisconnectAlertEmail, sendWhatsAppReconnectedAlertEmail, sendReminder7DaysEmail, sendBirthdayEmail } from './email.js';
+import { sendMaintenanceEmail, sendWhatsAppDisconnectAlertEmail, sendWhatsAppReconnectedAlertEmail, sendReminder7DaysEmail, sendBirthdayEmail, applyEmailTemplatePlaceholdersPlain } from './email.js';
 import { canSendNotification } from './notifications.js';
 import fs from 'fs';
 
@@ -701,12 +701,19 @@ export async function checkAndSendReminders(force = false) {
             email7BodyTemplate
           );
 
+          const emailPlainText = applyEmailTemplatePlaceholdersPlain(
+            email7BodyTemplate,
+            t.cliente.nombreCompleto,
+            t,
+            address
+          );
+
           await prisma.notificacion.create({
             data: {
               clienteId: t.cliente.id,
               turnoId: t.id,
               canal: 'EMAIL',
-              mensaje: `Recordatorio automático (7 días antes) enviado por correo electrónico.`,
+              mensaje: `[Recordatorio automático (7 días antes)]\n${emailPlainText}`,
               estado: 'ENVIADO'
             }
           });

@@ -46,6 +46,7 @@ function AltaTurnoContent() {
 
   // Duration State: automatically calculated, but operator can edit it
   const [customDuration, setCustomDuration] = useState(null);
+  const [duracionFormula, setDuracionFormula] = useState('ZONA_MAX_MAS_10MIN');
 
   // 2. Search Filters (default 14:00 - 22:00 according to operator shift)
   const [horaDesde, setHoraDesde] = useState('14:00');
@@ -168,7 +169,9 @@ function AltaTurnoContent() {
     fetch('/api/admin/configuracion')
       .then(res => res.json())
       .then(cfg => {
-        // Preservamos el turno laboral habitual 14:00 - 22:00 para Alta de Turno
+        if (cfg?.duracion_formula) {
+          setDuracionFormula(cfg.duracion_formula);
+        }
       })
       .catch(err => console.error('Error fetching config:', err));
   }, []);
@@ -179,7 +182,7 @@ function AltaTurnoContent() {
   }, [zones, selectedZoneIds]);
 
   const calculations = useMemo(() => {
-    let baseCalcs = calculateTurnDetails(activeZoneObjs, isNuevoCliente);
+    let baseCalcs = calculateTurnDetails(activeZoneObjs, isNuevoCliente, duracionFormula);
     if (hasOtros) {
       const extraP = Number(otrosPrecio) || 0;
       baseCalcs = {
@@ -190,7 +193,7 @@ function AltaTurnoContent() {
       };
     }
     return baseCalcs;
-  }, [activeZoneObjs, isNuevoCliente, hasOtros, otrosPrecio]);
+  }, [activeZoneObjs, isNuevoCliente, hasOtros, otrosPrecio, duracionFormula]);
 
   // Dynamic displayed Total considering inherited discount
   const displayTotal = useMemo(() => {

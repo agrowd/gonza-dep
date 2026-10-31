@@ -1449,3 +1449,28 @@
      - En `configuracion.module.css`: Eliminada la doble tarjeta anidada. Agregadas reglas `@media (max-width: 600px)` para compactar paddings, apilar campos en una columna, y agrandar swatches a 34px.
      - En `layout.module.css`: Reducido el padding de `.contentArea` en pantallas móviles a `4.2rem 0.35rem 1.5rem 0.35rem` para aprovechar el 100% del ancho sin márgenes exagerados.
 - **Validación Técnica**: Compilación Next.js Turbopack limpia (47/47 rutas con 0 errores). Desplegado en VPS Staging y Producción.
+
+### 7. Corrección de Fórmula de Duración, Gastos en Móvil, Tarjetas de Bloqueos y Rediseño de Avisos (D-141, D-142, D-143, D-144)
+- **Reportes de Gonzalo Siri en WhatsApp (Capturas 1 a 5)**:
+  1. *Fórmula de Duración en Parámetros*: *"Parámetros está andando mal, porque en la cuenta elegí la opción de 'Zona más larga +10min cada zona(sin Ax, gl ni hom)' así que este turno tendría que durar 40 minutos, no 50"*.
+  2. *Historial de Gastos en el Celular*: *"Me deja modificar y borrar el historial de gastos en la compu pero no le da opción para borrar en el celu"*.
+  3. *Alta de Gastos*: *"Acá pone que la categoría vaya primero"*.
+  4. *Listado de Bloqueos*: *"Al listado de bloqueos dale este formato, y un filtro para elegir si ver los únicos, fijos, etc..."*.
+  5. *Avisos en Ficha de Cliente*: *"Que los avisos en la ficha de cada cliente tengan esta pinta porque cuesta diferenciar los mails y los wpp. Además, también que se puedan ver los mails enviados como con los wpp..."*.
+- **Solución Implementada**:
+  1. **Fórmula de Duración Estricta `(sin Ax, gl ni hom)` (D-141)**:
+     - En `src/lib/calculations.js`: Se corrigió la lista de excepciones `isZeroAdditionalZone` para que aplique exactamente a Axilas (`axila`), Glúteos (`gluteo`) y Hombros (`hombro`). La zona Genitales suma +10 min extra.
+     - Con Pecho y abdomen (30m), Glúteos (30m) y Genitales (20m): Base = 30m, Glúteos = +0m (exento), Genitales = +10m -> Duración total = **40 minutos** (resuelto).
+     - En `src/app/admin/alta-turno/page.js`: Se vinculó la fórmula activa guardada en configuración (`duracion_formula`) y se dejó `ZONA_MAX_MAS_10MIN` como fallback por defecto.
+  2. **Gastos: Orden de Campos y Botones Móviles (D-142)**:
+     - En el modal "Cargar Nuevo Gasto", se reubicó `Categoría *` como primer campo en la parte superior.
+     - En el listado móvil (`mobileGastoItem`), se agregaron los botones directos `✏️` (editar) y `🗑️` (eliminar con confirmación).
+     - En el pie del modal de edición se agregó el botón `🗑️ Eliminar Gasto`.
+  3. **Bloqueos: Tarjetas y Filtro por Tipo (D-143)**:
+     - Se crearon píldoras de filtro en cabecera: `Todos`, `🔵 Únicos`, `🔴 Fijos`, `🟠 Móviles`.
+     - Se reemplazó la tabla por tarjetas individuales idénticas a la captura: punto de color, badge de tipo, fecha con día (`05/10/2026 (Lunes)`), motivo, horario (`🟢 Día completo` o rango horario) y botón `🗑️ Eliminar`.
+  4. **Ficha de Cliente: Rediseño de Avisos y Persistencia de Correos (D-144)**:
+     - Se añadieron píldoras de filtro: `Todos`, `Email`, `WhatsApp`.
+     - Cada aviso se presenta en una tarjeta con borde de acento (azul para Email, verde para WhatsApp), badges de canal y estado, fecha, título descriptivo y acordeón `👁️ Ver mensaje completo >`.
+     - En `src/lib/whatsapp.js` y el endpoint de reenvío, el contenido plano completo del email se guarda en `Notificacion.mensaje` en PostgreSQL.
+- **Validación Técnica**: Compilación Next.js Turbopack limpia (47/47 rutas con 0 errores). Desplegado en VPS Staging y Producción.

@@ -1,10 +1,10 @@
 /**
  * Helper to identify zones that add 0 additional minutes when combined with a base zone.
- * Exceptions: Axilas, Hombros, Genitales.
+ * Exceptions according to Gonzalo: Axilas, Glúteos, Hombros (sin Ax, gl ni hom).
  */
 function isZeroAdditionalZone(zone) {
   const norm = (zone?.nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return norm.includes('axila') || norm.includes('hombro') || norm.includes('genital');
+  return norm.includes('axila') || norm.includes('gluteo') || norm.includes('hombro');
 }
 
 /**
@@ -13,7 +13,7 @@ function isZeroAdditionalZone(zone) {
  * 
  * Rules (Actualizado según Gonzalo y Luciano Siri):
  * 1. Base duration is the duration of the longest zone.
- * 2. Additional zones add 10 minutes each, EXCEPT Axilas, Hombros and Genitales which add 0 extra minutes.
+ * 2. Additional zones add 10 minutes each, EXCEPT Axilas, Glúteos and Hombros which add 0 extra minutes.
  * 3. If it's a new client, add 10 extra minutes.
  * 4. Round up to the nearest multiple of 10 minutes.
  * 
@@ -22,7 +22,7 @@ function isZeroAdditionalZone(zone) {
  * @param {string} formulaType - 'ZONA_MAX_MAS_TERCIO', 'ZONA_MAX_MAS_10MIN', 'ZONA_MAX_MAS_MITAD'
  * @returns {Object} { valorTotal, valorSeña, duracionMinutos }
  */
-export function calculateTurnDetails(selectedZones, isNewClient = false, formulaType = 'ZONA_MAX_MAS_TERCIO') {
+export function calculateTurnDetails(selectedZones, isNewClient = false, formulaType = 'ZONA_MAX_MAS_10MIN') {
   if (!selectedZones || selectedZones.length === 0) {
     return {
       valorTotal: 0,

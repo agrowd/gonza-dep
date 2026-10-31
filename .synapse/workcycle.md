@@ -2431,3 +2431,23 @@
   - En `layout.module.css`: Reducido el padding de `.contentArea` en pantallas móviles a `4.2rem 0.35rem 1.5rem 0.35rem` para aprovechar el 100% del ancho sin márgenes exagerados.
 - [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas con 0 errores).
 - [x] **Documentación**: Registrado `D-140 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 30 de Octubre de 2026 - Corrección de Fórmula de Duración, Gastos en Móvil, Tarjetas de Bloqueos y Rediseño de Avisos (D-141, D-142, D-143, D-144)
+- [x] **Fórmula de Duración Estricta `(sin Ax, gl ni hom)` (D-141)**:
+  - En `src/lib/calculations.js`: Excepciones ajustadas a `axila`, `gluteo` y `hombro`. Genitales suma +10 min normalmente.
+  - Para Genitales (20m), Glúteos (30m) y Pecho y abdomen (30m), el cálculo arroja exactamente 40 minutos (Pecho y abdomen 30m base + Glúteos 0m + Genitales 10m).
+  - En `src/app/admin/alta-turno/page.js`: Incorporado estado `duracionFormula` cargado desde `/api/admin/configuracion` y pasado a `calculateTurnDetails`.
+  - Configurado `ZONA_MAX_MAS_10MIN` como fallback por defecto en `calculateTurnDetails`.
+- [x] **Gestión Móvil y Reordenamiento en Gastos (D-142)**:
+  - En modal "Cargar Nuevo Gasto", `Categoría *` reubicado al inicio antes de `Concepto / Detalle *`.
+  - En la lista móvil (`mobileGastoItem`), incorporados botones de acción directa `✏️` y `🗑️`.
+  - En el pie del modal de edición, agregado botón `🗑️ Eliminar Gasto`.
+- [x] **Formato de Tarjetas y Filtro por Tipo en Bloqueos (D-143)**:
+  - Píldoras de filtro en cabecera: `Todos`, `🔵 Únicos`, `🔴 Fijos`, `🟠 Móviles`.
+  - Formato por tarjetas individuales con dot de color, badge, fecha y día, motivo, horario y botón `🗑️ Eliminar`.
+- [x] **Rediseño de Avisos en Ficha de Cliente y Persistencia de Emails (D-144)**:
+  - Píldoras de filtro: `Todos`, `Email`, `WhatsApp`.
+  - Tarjetas de notificaciones con borde de canal (azul para Email, verde para WhatsApp), badges de estado, fecha, título y acordeón `👁️ Ver mensaje completo >`.
+  - En `src/lib/whatsapp.js` y `/api/admin/turnos/[id]/enviar-aviso`: Persistencia del cuerpo plano completo del correo en `Notificacion.mensaje` en PostgreSQL.
+- [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas con 0 errores).
+- [x] **Documentación**: Registrados `D-141`, `D-142`, `D-143` y `D-144` en `.synapse/decisions.md`.

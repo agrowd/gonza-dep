@@ -134,6 +134,18 @@ function ClientesPageContent() {
     notifMantenimiento: true
   });
 
+  const [notifFilterCanal, setNotifFilterCanal] = useState('ALL');
+  const [expandedNotifIds, setExpandedNotifIds] = useState(new Set());
+
+  const toggleExpandNotif = (id) => {
+    setExpandedNotifIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const formatCanalAdquisicion = (canal) => {
     if (!canal) return 'Orgánico';
     switch (String(canal).toUpperCase()) {
@@ -154,7 +166,48 @@ function ClientesPageContent() {
     }
   };
 
-  // Helper to calculate age (ignores year 2000 placeholder for Day/Month only)
+  const parseNotificationContent = (n) => {
+    const text = (n.mensaje || '').trim();
+    let title = '';
+    let body = text;
+
+    if (n.canal === 'EMAIL') {
+      if (text.startsWith('[') && text.includes(']')) {
+        const closingIdx = text.indexOf(']');
+        title = text.substring(1, closingIdx).replace(/_/g, ' ');
+        body = text.substring(closingIdx + 1).trim();
+      } else if (text.toLowerCase().includes('recordatorio automático') || text.toLowerCase().includes('7 días')) {
+        title = 'Recordatorio automático (7 días antes)';
+      } else if (text.toLowerCase().includes('confirmación') || text.toLowerCase().includes('confirmacion')) {
+        title = 'Confirmación de turno agendado';
+      } else if (text.toLowerCase().includes('recibo') || text.toLowerCase().includes('comprobante')) {
+        title = 'Comprobante y recibo de turno';
+      } else if (text.toLowerCase().includes('cancelación') || text.toLowerCase().includes('cancelado')) {
+        title = 'Aviso de turno cancelado';
+      } else if (text.toLowerCase().includes('reprogramado')) {
+        title = 'Aviso de turno reprogramado';
+      } else {
+        title = 'Aviso por correo electrónico';
+      }
+    } else {
+      // WHATSAPP
+      if (text.startsWith('[') && text.includes(']')) {
+        const closingIdx = text.indexOf(']');
+        title = text.substring(1, closingIdx).replace(/_/g, ' ');
+        body = text.substring(closingIdx + 1).trim();
+      } else if (text.includes('agendado con éxito') || text.includes('agendado con exito')) {
+        title = 'Turno agendado con éxito';
+      } else if (text.includes('reprogramado con éxito')) {
+        title = 'Turno reprogramado con éxito';
+      } else if (text.includes('te recuerdo tu turno') || text.includes('recordatorio')) {
+        title = 'Recordatorio de turno (48 hs)';
+      } else {
+        title = 'Mensaje de WhatsApp';
+      }
+    }
+
+    return { title, body };
+  };
   const calculateAge = (dateInput) => {
     if (!dateInput) return null;
     const birthDate = new Date(dateInput);
@@ -1612,19 +1665,188 @@ function ClientesPageContent() {
                     </div>
                   )}
                 </div>
+
+                {/* Filter Pills: Todos | Email | WhatsApp */}
+                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', margin: '0.75rem 0 1rem 0' }}>
+                  <button
+                    type="button"
+                    onClick={() => setNotifFilterCanal('ALL')}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: notifFilterCanal === 'ALL' ? '1px solid #7a1f1e' : '1px solid #cbd5e1',
+                      backgroundColor: notifFilterCanal === 'ALL' ? '#7a1f1e' : '#ffffff',
+                      color: notifFilterCanal === 'ALL' ? '#ffffff' : '#475569'
+                    }}
+                  >
+                    Todos ({selectedClient.notificaciones.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotifFilterCanal('EMAIL')}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: notifFilterCanal === 'EMAIL' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                      backgroundColor: notifFilterCanal === 'EMAIL' ? '#2563eb' : '#ffffff',
+                      color: notifFilterCanal === 'EMAIL' ? '#ffffff' : '#475569'
+                    }}
+                  >
+                    Email ({selectedClient.notificaciones.filter(n => n.canal === 'EMAIL').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotifFilterCanal('WHATSAPP')}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: notifFilterCanal === 'WHATSAPP' ? '1px solid #16a34a' : '1px solid #cbd5e1',
+                      backgroundColor: notifFilterCanal === 'WHATSAPP' ? '#16a34a' : '#ffffff',
+                      color: notifFilterCanal === 'WHATSAPP' ? '#ffffff' : '#475569'
+                    }}
+                  >
+                    WhatsApp ({selectedClient.notificaciones.filter(n => n.canal === 'WHATSAPP').length})
+                  </button>
+                </div>
+
                 {selectedClient.notificaciones.length === 0 ? (
                   <div className={styles.emptyState}>No hay notificaciones enviadas a este cliente.</div>
                 ) : (
-                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                    {selectedClient.notificaciones.map(n => (
-                      <div key={n.id} style={{ borderBottom: '1px solid var(--border-color)', padding: '1rem 0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                          <span>{new Date(n.fechaEnvio).toLocaleString('es-ES')} | Canal: {n.canal}</span>
-                          <span style={{ color: n.estado === 'ENVIADO' ? '#81c784' : '#ff8a8a', fontWeight: 600 }}>{n.estado}</span>
-                        </div>
-                        <p style={{ color: '#111111', fontSize: '0.9rem', whiteSpace: 'pre-wrap', fontWeight: 500 }}>{n.mensaje}</p>
-                      </div>
-                    ))}
+                  <div style={{ maxHeight: '420px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    {selectedClient.notificaciones
+                      .filter(n => {
+                        if (notifFilterCanal === 'ALL') return true;
+                        return n.canal === notifFilterCanal;
+                      })
+                      .map(n => {
+                        const isEmail = n.canal === 'EMAIL';
+                        const isEnviado = n.estado === 'ENVIADO';
+                        const isExpanded = expandedNotifIds.has(n.id);
+                        const { title, body } = parseNotificationContent(n);
+
+                        const dateObj = new Date(n.fechaEnvio);
+                        const formattedDate = !isNaN(dateObj.getTime())
+                          ? `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()} - ${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`
+                          : '—';
+
+                        return (
+                          <div
+                            key={n.id}
+                            style={{
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              borderLeft: isEmail ? '4px solid #2563eb' : '4px solid #16a34a',
+                              borderRadius: '10px',
+                              padding: '0.85rem 1rem',
+                              marginBottom: '0.75rem',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {/* Header: Dot + Channel Badge | Status Badge */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                <span
+                                  style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    backgroundColor: isEmail ? '#2563eb' : '#16a34a',
+                                    display: 'inline-block'
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    padding: '0.15rem 0.5rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 800,
+                                    letterSpacing: '0.04em',
+                                    textTransform: 'uppercase',
+                                    backgroundColor: isEmail ? '#eff6ff' : '#f0fdf4',
+                                    color: isEmail ? '#1d4ed8' : '#15803d',
+                                    border: isEmail ? '1px solid #bfdbfe' : '1px solid #bbf7d0'
+                                  }}
+                                >
+                                  {isEmail ? 'EMAIL' : 'WHATSAPP'}
+                                </span>
+                              </div>
+
+                              <span
+                                style={{
+                                  padding: '0.15rem 0.55rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  textTransform: 'uppercase',
+                                  backgroundColor: isEnviado ? '#dcfce7' : '#fee2e2',
+                                  color: isEnviado ? '#166534' : '#991b1b',
+                                  border: isEnviado ? '1px solid #bbf7d0' : '1px solid #fecaca'
+                                }}
+                              >
+                                {n.estado}
+                              </span>
+                            </div>
+
+                            {/* Date & Time */}
+                            <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem' }}>
+                              {formattedDate}
+                            </div>
+
+                            {/* Title */}
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.3rem' }}>
+                              {title}
+                            </div>
+
+                            {/* Body snippet or full */}
+                            <div style={{
+                              fontSize: '0.84rem',
+                              color: '#334155',
+                              lineHeight: '1.45',
+                              whiteSpace: isExpanded ? 'pre-wrap' : 'normal',
+                              overflow: 'hidden',
+                              textOverflow: isExpanded ? 'clip' : 'ellipsis',
+                              display: isExpanded ? 'block' : '-webkit-box',
+                              WebkitLineClamp: isExpanded ? 'unset' : '2',
+                              WebkitBoxOrient: isExpanded ? 'unset' : 'vertical'
+                            }}>
+                              {body}
+                            </div>
+
+                            {/* Action: Ver mensaje completo */}
+                            {body && body.length > 70 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandNotif(n.id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: '0.35rem 0 0 0',
+                                  color: '#7a1f1e',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  marginTop: '0.2rem'
+                                }}
+                              >
+                                {isExpanded ? '▲ Ocultar mensaje' : '👁️ Ver mensaje completo >'}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
               </div>
