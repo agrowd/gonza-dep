@@ -1067,6 +1067,14 @@
   color: #ffffff;
 }
 
+.quickActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .modalFooter {
   display: flex;
   justify-content: flex-end;
@@ -1136,7 +1144,7 @@
     max-height: 100dvh !important;
     padding: max(0.4rem, env(safe-area-inset-top, 0px)) 0.35rem max(0.4rem, env(safe-area-inset-bottom, 0px)) 0.35rem !important;
     display: flex !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     justify-content: center !important;
     box-sizing: border-box !important;
     overflow: hidden !important; /* CRITICAL: Overlay DOES NOT SCROLL, eliminating the double scroll trap */
@@ -1158,7 +1166,9 @@
     overscroll-behavior: contain !important;
     touch-action: pan-y !important;
     position: relative !important;
-    transform: translate3d(0, 0, 0) !important;
+    animation: none !important;
+    transform: none !important;
+    will-change: auto !important;
     margin: 0 auto !important;
     border-radius: 12px !important;
   }
@@ -1166,7 +1176,8 @@
     position: sticky !important;
     top: 0 !important;
     z-index: 50 !important;
-    transform: translate3d(0, 0, 0) !important;
+    transform: none !important;
+    will-change: auto !important;
     margin: -0.85rem -0.75rem 0.85rem -0.75rem !important;
     padding: 0.75rem 0.75rem 0.65rem 0.75rem !important;
     border-top-left-radius: 12px !important;
@@ -1177,6 +1188,13 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
     box-sizing: border-box !important;
     width: auto !important;
+  }
+  .quickActionsGrid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .modalHeader h3 {
     font-size: 1.05rem !important;

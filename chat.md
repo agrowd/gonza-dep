@@ -1474,3 +1474,24 @@
      - Cada aviso se presenta en una tarjeta con borde de acento (azul para Email, verde para WhatsApp), badges de canal y estado, fecha, título descriptivo y acordeón `👁️ Ver mensaje completo >`.
      - En `src/lib/whatsapp.js` y el endpoint de reenvío, el contenido plano completo del email se guarda en `Notificacion.mensaje` en PostgreSQL.
 - **Validación Técnica**: Compilación Next.js Turbopack limpia (47/47 rutas con 0 errores). Desplegado en VPS Staging y Producción.
+
+### 8. Corrección de Saldos Diarios en Agenda vs Estadísticas y Solución Definitiva de Hit-Testing en iOS Safari (D-145)
+- **Problemas Reportados por Gonzalo Siri en WhatsApp**:
+  1. *Discrepancia de $39.000 en Saldos de Agenda vs Estadísticas*:
+     - *"El neto sigue dando mal, y es cuando hace la cuenta de los saldos, las señas que dice ahi 214 está bien y coincide en ambas. Pero el saldo es donde es distinto, está bien en estadísticas pero mal en la agenda"*.
+     - Agenda mostraba: `INGRESO NETO: $497.600 ($283.500 saldos + $214.100 señas)`.
+     - Estadísticas mostraba: `GANANCIA NETA INGRESADA: $536.500 (Saldos sesiones: $322.500 | Señas: $214.000)`.
+     - Diferencia: Exactamente $39.000 ($322.500 - $283.500).
+  2. *Desplazamiento Táctil en Botones de Ficha en Móvil (iPhone)*:
+     - *"A Gonza le sigue pasando lo del botón, quiso tocar un botón y le pulsa el de abajo ahora. También hay veces que no le toma los botones para cerrar la ficha, y tiene que salir de la página y volver a entrar"*.
+- **Diagnóstico y Causa Raíz**:
+  1. *Cálculo de Saldos*: En la base de datos PostgreSQL, `valorTotal` ya contiene aplicada la bonificación pactada. Al calcular `totalSaldosRealizados` en `src/app/admin/agenda/page.js`, la Agenda restaba la bonificación por segunda vez (`valorTotal - bonificacion - valorSeña`). Para los 9 turnos del 30/10/2026, 3 clientes tenían bonificación (Michel De Caro $8.000, Blas Fontaine $24.000, Federico Villalba $7.000) sumando exactamente $39.000. Estadísticas, en cambio, calculaba correctamente `valorTotal - valorSeña`.
+  2. *Hit-Testing en iPhone WebKit*: En `agenda.module.css`, la presencia de `transform: translate3d(0, 0, 0)` en `.modalContent` y `.stickyModalHeader`, sumada a `animation: fadeIn 0.3s ease forwards` (que dejaba `transform: translateY(0)` permanente en el estilo computado), provocaba que el compositor de hardware de WebKit iOS desfasara el árbol de hit-testing de la pantalla al scrollear hacia arriba o hacia abajo, e invalidaba el hit-target del botón sticky de cierre. Además, los botones en `display: flex` con `calc(50% - 0.5rem)` sufrían saltos de línea asimétricos con colisiones de dedo por gaps insuficientes (8px).
+- **Solución Implementada**:
+  1. *Alineación de Saldos en Agenda*: En `src/app/admin/agenda/page.js` línea 3401, se simplificó el cálculo de saldo a `Math.max(0, Number(a.valorTotal || 0) - Number(a.valorSeña || 0))`. Ahora Agenda muestra `$322.500 saldos + $214.100 señas = $536.600 Ingreso Neto`, en perfecta coincidencia matemática con Estadísticas.
+  2. *Eliminación de Transforms y Grilla Nativa*:
+     - En `agenda.module.css`: Se eliminó todo `transform` (`transform: none !important; will-change: auto !important; animation: none !important;`).
+     - En `.modalOverlay`: Se fijó `align-items: flex-start !important;` para garantizar un anclaje estable en la parte superior sin rebotes verticales de flexbox.
+     - En `.stickyModalHeader`: Se fijó `transform: none !important; will-change: auto !important;`, permitiendo que el botón `&times;` permanezca 100% interactivo en todo momento al scrollear.
+     - En la botonera de Acciones Rápidas: Se creó `.quickActionsGrid` con CSS Grid nativo de 2 columnas (`repeat(2, minmax(0, 1fr))`, `gap: 12px`, botones con `minHeight: 46px` y botón `🗑️ Eliminar` en `gridColumn: '1 / -1'`), erradicando colisiones de dedo y garantizando 12px de separación limpia.
+- **Validación Técnica**: Compilación Next.js Turbopack limpia (47/47 rutas generadas con 0 errores). Desplegado en VPS Staging y Producción.

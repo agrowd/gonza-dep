@@ -2451,3 +2451,17 @@
   - En `src/lib/whatsapp.js` y `/api/admin/turnos/[id]/enviar-aviso`: Persistencia del cuerpo plano completo del correo en `Notificacion.mensaje` en PostgreSQL.
 - [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas con 0 errores).
 - [x] **Documentación**: Registrados `D-141`, `D-142`, `D-143` y `D-144` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 31 de Octubre de 2026 - Corrección de Saldos Diarios en Agenda vs Estadísticas y Solución Definitiva de Hit-Testing en iOS Safari (D-145)
+- [x] **Alineación Matemática de Saldos en Agenda con Estadísticas (D-145)**:
+  - Causa Raíz: En `src/app/admin/agenda/page.js`, la Agenda restaba la bonificación por segunda vez (`saldo = valorTotal - bonificacion - valorSeña`), mientras que en la base de datos `valorTotal` ya tiene descontada la bonificación. En el día 30/10/2026, la suma de bonificaciones de 3 turnos (Michel De Caro $8.000, Blas Fontaine $24.000, Federico Villalba $7.000) daba exactamente los $39.000 de diferencia que reportó Gonzalo.
+  - Solución: En `src/app/admin/agenda/page.js` línea 3401, se simplificó a `Math.max(0, Number(a.valorTotal || 0) - Number(a.valorSeña || 0))`, coincidiendo al 100% con `src/app/api/admin/estadisticas/route.js`.
+  - Resultado: Agenda muestra `$322.500 saldos + $214.100 señas = $536.600 Ingreso Neto` (coincidencia exacta con Estadísticas).
+- [x] **Solución Definitiva de Hit-Testing y Botones en Móvil (iPhone WebKit)**:
+  - Causa Raíz: La presencia de `transform: translate3d(0, 0, 0)` en `.modalContent` y `.stickyModalHeader`, sumada a `animation: fadeIn 0.3s ease forwards` (que mantenía `transform: translateY(0)` permanente en el estilo computado), provocaba que el compositor de hardware de WebKit iOS desfasara el árbol de hit-testing hacia arriba o hacia abajo tras el scroll y desconectara el hit-target del botón de cierre.
+  - Solución:
+    - En `agenda.module.css`: Se eliminó todo `transform` (`transform: none !important; will-change: auto !important; animation: none !important;`).
+    - En `.modalOverlay`: Se fijó `align-items: flex-start !important;` para estabilidad de anclaje.
+    - Se creó la clase `.quickActionsGrid` con CSS Grid nativo de 2 columnas (`repeat(2, minmax(0, 1fr))`, `gap: 12px`, botones con `minHeight: 46px` y botón `🗑️ Eliminar` en `gridColumn: '1 / -1'`), erradicando colisiones de dedo y asegurando 12px de separación limpia.
+- [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas con 0 errores).
+- [x] **Documentación**: Registrado `D-145 🔒 LOCKED` en `.synapse/decisions.md`.
