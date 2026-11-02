@@ -1531,3 +1531,39 @@
      - `agenda_db_20261026_030001.sql.gz` (2.1 MB)
      - `agenda_db_20261102_131659.sql.gz` (2.2 MB) ⭐ **(Copia fresca generada hoy)**.
    - El cron continuará ejecutándose automáticamente todos los días a las 03:00 AM.
+
+---
+
+## 🚀 Sesión: 2 de Noviembre de 2026 - Confirmación de Sincronización Web de Precios y Restitución del Bloqueo Estricto en Configuración de Agenda (D-147, ERR-59)
+
+### Mensajes de Gonzalo Siri en WhatsApp (`media_1793626286938_2ba821f9.png` - 10:28 y 10:29 a. m.):
+> *Mensaje 1 (10:28 a. m.)*:  
+> *"perfecto gracias te consulto, hay un par de precios que tengo que ajustar, pero quiero que me confirmes, porque esta es una regla que ya estaba: cambio el precio en la web, y el sistema de agenda se nutre de la web, y la ia cuando piden precios tambien se nutre de la web y pasa la info actualizada?"*  
+>  
+> *Mensaje 2 (10:29 a. m.)*:  
+> *"esta es la regla que pusimos fija, pero en la agenda, tanto los precios como la se;a, esta puesto para que se edite, siendo que antes estaba bloqueado porque lo chupaba de la web, que paso?"*
+
+### Diagnóstico Técnico y Auditoría Forense:
+1. **Flujo de Fuente Única de Verdad (Single Source of Truth)**:
+   - Se auditó el motor de scraping de backend (`webScraperEngine.js` y `webSyncCron.js` en `ia-gonzadep`).
+   - Se verificó que el cron autónomo `AUTO_CRON_10MIN` escanea la web oficial (`https://depilacionparahombres.com/precios/`) cada 10 minutos (y al iniciar).
+   - Extrae con precisión las 8 zonas + Cuerpo Completo ($150.000) y los descuentos por combinación (3 zonas 10%, 4+ zonas 15%).
+   - Actualiza de forma atómica la tabla `Zona` en PostgreSQL `agenda_db` (`precioBase` y `señaBase = Math.round(precioBase * 0.5)`).
+   - Tanto la Agenda Web (`gonzalo-dep`) como la IA de WhatsApp (`ia-gonzadep`) consultan en tiempo real la tabla `Zona` de PostgreSQL. Por ende, **SÍ: cambiar el precio en WordPress impacta 100% de manera automática en la Agenda y en la IA**.
+2. **Causa Raíz del Desbloqueo en la Agenda**:
+   - En el commit `0b46dea` del 30/10/2026 (`feat(servicios): renombrar zonas a servicios y acordeon desplegable en agenda`), se reestructuró la pestaña de Configuración para agrupar los tratamientos según su Servicio (preparando la Fase 2 para servicios adicionales con precios manuales como Masajes).
+   - Al recrear la fila de edición inline y el modal de zonas, se omitieron involuntariamente los atributos `readOnly disabled` en los campos de `precioBase` y `señaBase` para el servicio base de Depilación Láser.
+
+### Solución Implementada:
+1. **Bloqueo Estricto en `src/app/admin/configuracion/page.js`**:
+   - **Edición Inline en Tabla**:
+     - `Precio Base ($)`: configurado con `readOnly={isBase} disabled={isBase}`, cursor `not-allowed`, fondo translúcido atenuado y tooltip explicativo.
+     - `Seña (50% Automático)`: configurado con `readOnly disabled`, atado matemáticamente a `Math.round(precioBase * 0.5)`.
+   - **Modal de Alta/Edición de Zonas**:
+     - Campo `Precio Base` condicionado con `isModalLaser`: si el servicio seleccionado es Depilación Láser, se muestra bloqueado con placeholder *"Tomado automáticamente de la web"*.
+     - Campo `Seña Requerida` permanece bloqueado al 50%.
+   - **Banner Informativo**: Se incorporó un banner en azul institucional arriba de la tabla de zonas de Depilación Láser recordando: *"Fuente Única de Verdad: Los precios y señas de Depilación Láser se sincronizan automáticamente cada 10 minutos desde depilacionparahombres.com/precios/. Al actualizar los precios en WordPress, se impactan automáticamente tanto en la Agenda como en la IA de WhatsApp"*.
+2. **Despliegue y Verificación en Producción**:
+   - Compilación exitosa en local y servidor VPS (`187.127.9.216`, puerto 3006).
+   - PM2 recargado limpiamente (`gonzalo-agenda`, PID 161271, 0 errores, online).
+   - Configuración verificada y protegida en vivo.

@@ -1659,18 +1659,38 @@ export default function ConfiguracionPage() {
                         No hay zonas ni tratamientos cargados para este servicio. Usa el botón <strong>"+ Agregar Zona"</strong> para cargar el primer tratamiento.
                       </div>
                     ) : (
-                      <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
-                          <thead>
-                            <tr>
-                              <th className={styles.th}>Zona / Tratamiento</th>
-                              <th className={styles.th}>Precio Base</th>
-                              <th className={styles.th}>Seña Requerida</th>
-                              <th className={styles.th}>Duración</th>
-                              <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                      <>
+                        {isBase && (
+                          <div style={{
+                            margin: '0.25rem 1rem 0.85rem 1rem',
+                            padding: '0.65rem 0.95rem',
+                            backgroundColor: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            fontSize: '0.82rem',
+                            color: '#1e40af'
+                          }}>
+                            <span style={{ fontSize: '1rem' }}>🌐</span>
+                            <span>
+                              <strong>Fuente Única de Verdad:</strong> Los precios y señas de Depilación Láser se sincronizan automáticamente cada 10 minutos desde <strong>depilacionparahombres.com/precios/</strong>. Al actualizar los precios en WordPress, se impactan automáticamente tanto en la Agenda como en la IA de WhatsApp.
+                            </span>
+                          </div>
+                        )}
+                        <div className={styles.tableWrapper}>
+                          <table className={styles.table}>
+                            <thead>
+                              <tr>
+                                <th className={styles.th}>Zona / Tratamiento</th>
+                                <th className={styles.th}>Precio Base</th>
+                                <th className={styles.th}>Seña Requerida</th>
+                                <th className={styles.th}>Duración</th>
+                                <th className={styles.th} style={{ textAlign: 'right' }}>Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody>
                             {sZonas.map((z) => {
                               const isEditingThisZone = editingZoneId === z.id;
                               return (
@@ -1718,7 +1738,9 @@ export default function ConfiguracionPage() {
                                               />
                                             </div>
                                             <div className={styles.formGroup} style={{ margin: 0 }}>
-                                              <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Precio Base ($)</label>
+                                              <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>
+                                                {isBase ? 'Precio Base ($) (Automático Web)' : 'Precio Base ($)'}
+                                              </label>
                                               <input 
                                                 type="number" 
                                                 className={styles.input} 
@@ -1727,8 +1749,27 @@ export default function ConfiguracionPage() {
                                                   const p = Number(e.target.value);
                                                   setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round(p * 0.5) });
                                                 }}
+                                                readOnly={isBase}
+                                                disabled={isBase}
+                                                style={{
+                                                  padding: '0.4rem 0.6rem',
+                                                  fontSize: '0.85rem',
+                                                  ...(isBase ? { opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' } : {})
+                                                }}
+                                                title={isBase ? 'El precio se toma automáticamente de la web (depilacionparahombres.com/precios/) y no se puede modificar manualmente' : 'Precio base de la zona'}
                                                 required 
-                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                                              />
+                                            </div>
+                                            <div className={styles.formGroup} style={{ margin: 0 }}>
+                                              <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Seña (50% Automático)</label>
+                                              <input 
+                                                type="number" 
+                                                className={styles.input} 
+                                                value={Math.round(Number(zoneForm.precioBase || 0) * 0.5)}
+                                                readOnly
+                                                disabled
+                                                style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                                                title="La seña se calcula automáticamente como la mitad (50%) del valor de la zona"
                                               />
                                             </div>
                                             <div className={styles.formGroup} style={{ margin: 0 }}>
@@ -1776,7 +1817,8 @@ export default function ConfiguracionPage() {
                           </tbody>
                         </table>
                       </div>
-                    )}
+                    </>
+                  )}
                   </div>
                 );
               })}
@@ -2980,20 +3022,40 @@ export default function ConfiguracionPage() {
                   />
                 </div>
 
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Precio Base (ARS) *</label>
-                  <input 
-                    type="number" 
-                    className={styles.input} 
-                    value={zoneForm.precioBase}
-                    onChange={(e) => {
-                      const p = Number(e.target.value);
-                      setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round(p * 0.5) });
-                    }}
-                    placeholder="Ej: 35000"
-                    required
-                  />
-                </div>
+                {(() => {
+                  const isModalLaser = !zoneForm.servicioId || servicios.find(s => s.id === zoneForm.servicioId)?.nombre.toLowerCase().includes('depilaci');
+                  return (
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>
+                        {isModalLaser ? 'Precio Base (ARS) (Automático Web)' : 'Precio Base (ARS) *'}
+                      </label>
+                      {isModalLaser ? (
+                        <input 
+                          type="number" 
+                          className={styles.input} 
+                          value={zoneForm.precioBase}
+                          readOnly
+                          disabled
+                          placeholder="Tomado automáticamente de la web"
+                          style={{ opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                          title="El precio se toma automáticamente de la web (depilacionparahombres.com/precios/) y no se puede modificar manualmente"
+                        />
+                      ) : (
+                        <input 
+                          type="number" 
+                          className={styles.input} 
+                          value={zoneForm.precioBase}
+                          onChange={(e) => {
+                            const p = Number(e.target.value);
+                            setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round(p * 0.5) });
+                          }}
+                          placeholder="Ej: 35000"
+                          required
+                        />
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Seña Requerida (ARS) (50% Automático)</label>

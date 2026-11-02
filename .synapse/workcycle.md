@@ -2479,3 +2479,21 @@
   - Se forzó la ejecución manual inmediata del backup: se generó exitosamente `agenda_db_20261102_131659.sql.gz` (2.2 MB) y se transfirió en 53 segundos a Google Drive.
   - Se auditó con `rclone ls gdrive:AgendaBackups/`, confirmando que el nuevo backup ya está disponible en la carpeta de Drive de Gonzalo.
 - [x] **Documentación**: Registrado `D-146 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-58` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 2 de Noviembre de 2026 - Restitución del Bloqueo Estricto de Precios y Señas de Depilación Láser en Agenda (D-147, ERR-59)
+- [x] **Diagnóstico y Confirmación de Fuente Única Web (WordPress)**:
+  - Gonzalo consultó en WhatsApp (`media_1793626286938_2ba821f9.png`) si modificar el precio en la web (`depilacionparahombres.com/precios/`) impacta automáticamente en la Agenda y en la IA de WhatsApp, y por qué en la Agenda los campos de precio y seña figuraban editables cuando antes estaban bloqueados.
+  - Se confirmó que el scraping y sincronización autónoma cada 10 minutos (`webSyncCron.js` en `ia-gonzadep`) opera con normalidad contra la web de WordPress, actualizando la tabla `Zona` en PostgreSQL `agenda_db`.
+  - Tanto la Agenda Web como la IA consumen directamente de esa tabla `Zona`, por lo que cualquier ajuste en WordPress impacta 100% de manera automática en ambos sistemas.
+- [x] **Causa Raíz del Desbloqueo en Agenda**:
+  - En el commit `0b46dea` del 30/10/2026 (Fase 2 Multidisciplinaria), al agrupar las zonas por servicios para permitir futuros servicios manuales (ej: masajes), se reconstruyó la fila inline y el modal de zonas, omitiendo involuntariamente los modificadores `readOnly disabled` en Depilación Láser.
+- [x] **Restitución y Blindaje en `src/app/admin/configuracion/page.js`**:
+  - Se reincorporó `readOnly={isBase} disabled={isBase}` con cursor not-allowed y tooltip informativo en la edición inline de Depilación Láser.
+  - El campo de Seña Requerida se bloqueó (`readOnly disabled`) y se vincula estrictamente al 50% automático.
+  - En el modal de zonas, el campo Precio Base se deshabilitó (`isModalLaser`) con placeholder *"Tomado automáticamente de la web"*.
+  - Se agregó un banner visible de **Fuente Única de Verdad** sobre la tabla de Depilación Láser.
+- [x] **Compilación y Despliegue en VPS**:
+  - Compilación Next.js validada localmente (47/47 rutas).
+  - Archivo sincronizado a `/srv/gonzalo-dep` y staging en VPS `187.127.9.216`.
+  - Next.js Turbopack compilado con éxito en el servidor y PM2 recargado (`gonzalo-agenda`, PID 161271, 0 errores, online).
+- [x] **Documentación**: Registrado `D-147 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-59` en `.synapse/errores.md`.

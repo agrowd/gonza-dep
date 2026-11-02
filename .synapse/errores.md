@@ -601,3 +601,19 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 3. Se ejecutó una prueba manual inmediata: se generó y subió a Google Drive el archivo `agenda_db_20261102_131659.sql.gz` (2.2 MB), verificando con `rclone ls gdrive:AgendaBackups/` su presencia efectiva.
 **Commit:** `b46fc59` (siguiente)
 **Estado:** ✅ FIXED
+
+## ERR-59: Desbloqueo Inadvertido de Campos Precio Base y Seña en Configuración de Agenda tras Refactorización Multidisciplinaria (02/11/2026)
+**Síntoma:** Gonzalo reportó en WhatsApp (`media_1793626286938_2ba821f9.png`): *"esta es la regla que pusimos fija, pero en la agenda, tanto los precios como la se;a, esta puesto para que se edite, siendo que antes estaba bloqueado porque lo chupaba de la web, que paso?"*. Al ingresar a `/admin/configuracion` en la pestaña de Zonas, los campos de Precio Base y Seña aparecían como inputs numéricos editables en lugar de estar bloqueados en sólo lectura.
+**Root Cause:**
+1. En el commit `0b46dea` del 30/10/2026 (`feat(servicios): renombrar zonas a servicios y acordeon desplegable en agenda`), la interfaz de Zonas se refactorizó para agrupar los tratamientos según su Servicio correspondiente (preparando la Fase 2 Multidisciplinaria para servicios adicionales como Masajes o Faciales con precios manuales).
+2. Al reconstruir la fila de edición inline en la tabla y los campos del modal de alta de zona, se reemplazaron los inputs estáticos originales y se omitieron involuntariamente los atributos `readOnly={isBase}` y `disabled={isBase}` en los tratamientos de Depilación Láser.
+3. Si un administrador hubiera editado manualmente un precio desde la agenda, el daemon autónomo de fondo (`webSyncCron.js` en `ia-gonzadep`) lo habría sobreescrito a los 10 minutos devolviéndolo al valor oficial de WordPress (`depilacionparahombres.com/precios/`).
+**Solución:**
+1. En `src/app/admin/configuracion/page.js`:
+   - Se reincorporó `readOnly={isBase} disabled={isBase}` con cursor not-allowed y tooltip explicativo para el Precio Base en la edición inline de Depilación Láser.
+   - Se bloqueó el campo de Seña Requerida (`readOnly disabled`) vinculándolo estrictamente a la fórmula automática del 50% (`Math.round(precioBase * 0.5)`).
+   - En el modal de zonas, se evaluó `isModalLaser`: si el servicio es Depilación Láser, el precio base permanece deshabilitado/bloqueado con placeholder *"Tomado automáticamente de la web"*.
+   - Se añadió un banner informativo destacado de **Fuente Única de Verdad** sobre la tabla de Depilación Láser indicando que los precios se sincronizan automáticamente cada 10 minutos desde WordPress.
+2. Se compiló el proyecto con Next.js Turbopack y se desplegó en el servidor VPS (`187.127.9.216`, puerto 3006), reiniciando PM2 (`gonzalo-agenda`).
+**Commit:** `b46fc59` (siguiente)
+**Estado:** ✅ FIXED
