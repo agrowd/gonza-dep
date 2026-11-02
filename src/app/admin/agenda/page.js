@@ -1317,13 +1317,28 @@ export default function AgendaPage() {
   if (appointments && appointments.length > 0) {
     appointments.forEach(app => {
       if (app.horaInicio) {
-        const [h] = app.horaInicio.split(':').map(Number);
-        if (h < minAppStartHour) minAppStartHour = h;
+        const [h] = app.horaInicio.trim().split(':').map(Number);
+        if (!isNaN(h) && h < minAppStartHour) minAppStartHour = h;
       }
       if (app.horaFin) {
-        const [h, m] = app.horaFin.split(':').map(Number);
+        const [h, m] = app.horaFin.trim().split(':').map(Number);
         const endH = m > 0 ? h + 1 : h;
-        if (endH > maxAppEndHour) maxAppEndHour = endH;
+        if (!isNaN(endH) && endH > maxAppEndHour) maxAppEndHour = endH;
+      }
+    });
+  }
+
+  if (bloqueos && bloqueos.length > 0) {
+    bloqueos.forEach(b => {
+      if (b.esDiaCompleto) return;
+      if (b.horaInicio) {
+        const [h] = b.horaInicio.trim().split(':').map(Number);
+        if (!isNaN(h) && h < minAppStartHour) minAppStartHour = h;
+      }
+      if (b.horaFin) {
+        const [h, m] = b.horaFin.trim().split(':').map(Number);
+        const endH = m > 0 ? h + 1 : h;
+        if (!isNaN(endH) && endH > maxAppEndHour) maxAppEndHour = endH;
       }
     });
   }
@@ -1869,12 +1884,17 @@ export default function AgendaPage() {
   const getBlockStyle = (horaInicio, horaFin, layout = { colIdx: 0, totalCols: 1 }) => {
     const startMin = timeToMinutes(horaInicio);
     const endMin = timeToMinutes(horaFin);
-    const duration = endMin - startMin;
 
     const gridStartMin = startHour * 60;
+    const gridEndMin = endHour * 60;
     
-    const top = Math.max(0, (startMin - gridStartMin) * (100 / 60));
-    const height = Math.max(20, duration * (100 / 60)); // minimum 20px
+    // Clamp to visible grid range so out-of-bounds start/end doesn't shift or stretch into wrong hours
+    const visibleStartMin = Math.max(gridStartMin, startMin);
+    const visibleEndMin = Math.min(gridEndMin, endMin);
+    const visibleDuration = Math.max(0, visibleEndMin - visibleStartMin);
+
+    const top = (visibleStartMin - gridStartMin) * (100 / 60);
+    const height = Math.max(20, visibleDuration * (100 / 60)); // minimum 20px
 
     const widthPercent = 100 / layout.totalCols;
     const leftPercent = layout.colIdx * widthPercent;
@@ -4049,7 +4069,14 @@ export default function AgendaPage() {
 
                     {/* Bloqueos absolute positioning */}
                     {dayBloqueos.map(b => {
-                      const blockStyle = getBlockStyle(b.horaInicio, b.horaFin, { colIdx: 0, totalCols: 1 });
+                      const blockStyle = b.esDiaCompleto
+                        ? {
+                            top: '0px',
+                            height: `${dayColumnHeight}px`,
+                            width: 'calc(100% - 6px)',
+                            left: '4px'
+                          }
+                        : getBlockStyle(b.horaInicio, b.horaFin, { colIdx: 0, totalCols: 1 });
                       const blockColor = b.color || (b.tipo === 'FIJO' ? '#dc2626' : (b.tipo === 'MOVIL' ? '#d97706' : '#2563eb'));
                       return (
                         <div
@@ -4082,7 +4109,9 @@ export default function AgendaPage() {
                             <span style={{ fontWeight: 800, fontSize: '0.78rem', color: '#f59e0b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               🔒 {b.motivo || 'BLOQUEADO'}
                             </span>
-                            <span style={{ fontSize: '0.7rem', opacity: 0.9 }}>{b.horaInicio} - {b.horaFin}</span>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.9 }}>
+                              {b.esDiaCompleto ? 'DÍA COMPLETO' : `${b.horaInicio} - ${b.horaFin}`}
+                            </span>
                           </div>
                         </div>
                       );
