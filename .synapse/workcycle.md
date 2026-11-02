@@ -2497,3 +2497,20 @@
   - Archivo sincronizado a `/srv/gonzalo-dep` y staging en VPS `187.127.9.216`.
   - Next.js Turbopack compilado con éxito en el servidor y PM2 recargado (`gonzalo-agenda`, PID 161271, 0 errores, online).
 - [x] **Documentación**: Registrado `D-147 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-59` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 2 de Noviembre de 2026 - Corrección de Altura y Rango Horario de Bloqueos en Agenda (D-148, ERR-60)
+- [x] **Diagnóstico y Confirmación de Causa Raíz**:
+  - Gonzalo Siri reportó en WhatsApp (`media_1793637490522_28175b1f.png` y `media_1793637500720_f3a63d0c.png`): *"Está tomando mal los horarios de bloqueo en la agenda, puse que bloquee hasta las 16:00 y lo bloqueo hasta las 18:00 en la agenda"*.
+  - En la base de datos de producción (`agenda_db`), el bloqueo del 15/12/2026 estaba guardado de forma exacta: `horaInicio: "10:00"`, `horaFin: "16:00"`.
+  - Sin embargo, en `src/app/admin/agenda/page.js`, la grilla semanal calculaba su hora de inicio (`minAppStartHour`) mirando solo `appointments` y la configuración `work_start` (`12:30`). Al no haber turnos antes de las 12:00, la grilla comenzaba a las 12:00 hs.
+  - Al renderizar el bloqueo de 10:00 a 16:00 (duración 360 min = 600px), `getBlockStyle` truncaba `top` a `0px` (las 12:00) pero mantenía la altura de 6 horas completas (600px). Como consecuencia, el bloque se extendía desde las 12:00 hasta las 18:00 (12:00 + 6h = 18:00), cubriendo visualmente 2 horas de más.
+- [x] **Solución y Blindaje en `src/app/admin/agenda/page.js`**:
+  - Se expandió `minAppStartHour` y `maxAppEndHour` para iterar también sobre `bloqueos` (excluyendo `esDiaCompleto`), haciendo que la grilla semanal se abra dinámicamente desde las 10:00 y muestre las horas completas.
+  - Se corrigió `getBlockStyle` para acotar matemáticamente `visibleStartMin` y `visibleEndMin` a los límites de la grilla visible (`gridStartMin` y `gridEndMin`) y calcular `visibleDuration = Math.max(0, visibleEndMin - visibleStartMin)`, garantizando que ningún evento desplace o estire su altura fuera de su franja horaria real.
+  - Se configuró que los bloqueos de día completo (`esDiaCompleto`) abarquen el 100% de la columna (`top: 0px`, `height: dayColumnHeight`) con la etiqueta clara `'DÍA COMPLETO'`.
+- [x] **Compilación y Despliegue en VPS**:
+  - Compilación Next.js validada localmente con Turbopack (47/47 rutas compiladas).
+  - Commits en `main` y `staging` sincronizados (`e85eb79`).
+  - Desplegado en VPS Staging (puerto 3008) y Producción (puerto 3006).
+  - Ambos procesos PM2 (`gonzalo-agenda-staging` y `gonzalo-agenda`) online con respuesta HTTP 200 OK.
+- [x] **Documentación**: Registrado `D-148 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-60` en `.synapse/errores.md`.

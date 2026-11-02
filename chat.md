@@ -1567,3 +1567,37 @@
    - Compilación exitosa en local y servidor VPS (`187.127.9.216`, puerto 3006).
    - PM2 recargado limpiamente (`gonzalo-agenda`, PID 161271, 0 errores, online).
    - Configuración verificada y protegida en vivo.
+
+---
+
+## 🚀 Sesión: 2 de Noviembre de 2026 - Corrección de Desfase de Horarios y Altura de Bloqueos en Agenda (D-148, ERR-60)
+
+### Reporte de Gonzalo Siri en WhatsApp (`media_1793637490522_28175b1f.png` y `media_1793637500720_f3a63d0c.png` - 1:33 p. m.):
+> *"Está tomando mal los horarios de bloqueo en la agenda, puse que bloquee hasta las 16:00 y lo bloqueo hasta las 18:00 en la agenda"*
+> *(Capturas muestran el martes 15 de diciembre con el bloque negro abarcando desde las 12:00 hasta las 18:00 hs, indicando en texto 10:00 - 16:00 pero cubriendo hasta las 18:00 hs).*
+
+### Diagnóstico Técnico y Causa Raíz:
+1. **Auditoría en Base de Datos**:
+   - Se auditó el registro en PostgreSQL `agenda_db`: el bloqueo estaba guardado de forma exacta con `horaInicio: "10:00"` y `horaFin: "16:00"`.
+   - La API de disponibilidad para reservas de clientes también calculaba correctamente el bloqueo hasta las 16:00.
+2. **Causa del Fallo Visual en la Grilla Semanal**:
+   - En `src/app/admin/agenda/page.js`, el cálculo dinámico de franjas horarias (`minAppStartHour` y `maxAppEndHour`) sólo recorría los turnos (`appointments`) y comparaba contra `config.work_start` (`12:30`). Al no haber turnos antes de las 12:00 en esa semana, la grilla horaria se creaba arrancando a las 12:00 hs.
+   - En `getBlockStyle`, al recibir `horaInicio: '10:00'` (600 min) contra `gridStartMin = 12 * 60 = 720 min`, truncaba `top = Math.max(0, (600 - 720) * 1.666) = 0px` (las 12:00 hs).
+   - Sin embargo, la altura se calculaba con la duración absoluta del bloqueo: `duration = 960 - 600 = 360 min` (6 horas = 600px).
+   - Por ende, un bloque de 6 horas se graficaba a partir de las 12:00 hs y se extendía 6 horas completas hacia abajo: **desde las 12:00 hasta las 18:00 hs** (12:00 + 6h = 18:00 hs), tapando visualmente 2 horas de más.
+
+### Solución Implementada:
+1. **Expansión Dinámica de la Grilla Semanal**:
+   - Se modificó el cálculo de `minAppStartHour` y `maxAppEndHour` en `src/app/admin/agenda/page.js` para iterar también sobre `bloqueos` (excluyendo los de día completo). De este modo, la grilla se abre dinámicamente desde las 10:00 hs para que el horario bloqueado sea plenamente visible con sus etiquetas horarias en la columna de tiempo.
+2. **Blindaje Matemático en `getBlockStyle`**:
+   - Se acotaron los minutos a la grilla visible:
+     `visibleStartMin = Math.max(gridStartMin, startMin)`  
+     `visibleEndMin = Math.min(gridEndMin, endMin)`  
+     `visibleDuration = Math.max(0, visibleEndMin - visibleStartMin)`  
+   - Se calcula `top` y `height` estrictamente en base al intervalo visible, impidiendo cualquier desborde o alargamiento erróneo.
+3. **Manejo Estricto de Bloqueos de Día Completo**:
+   - Para bloqueos con `esDiaCompleto === true`, se aplica estilo directo ocupando el 100% de la columna del día (`top: 0px`, `height: dayColumnHeight`) y etiqueta `'DÍA COMPLETO'`.
+4. **Compilación y Despliegue en Staging y Producción**:
+   - Build validado con Turbopack (47/47 rutas compiladas).
+   - Commits en `main` y `staging` sincronizados (`e85eb79`).
+   - Desplegado y verificado en VPS Staging (puerto 3008) y Producción (puerto 3006), ambos respondiendo HTTP 200 OK.

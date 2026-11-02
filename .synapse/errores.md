@@ -615,5 +615,19 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
    - En el modal de zonas, se evaluó `isModalLaser`: si el servicio es Depilación Láser, el precio base permanece deshabilitado/bloqueado con placeholder *"Tomado automáticamente de la web"*.
    - Se añadió un banner informativo destacado de **Fuente Única de Verdad** sobre la tabla de Depilación Láser indicando que los precios se sincronizan automáticamente cada 10 minutos desde WordPress.
 2. Se compiló el proyecto con Next.js Turbopack y se desplegó en el servidor VPS (`187.127.9.216`, puerto 3006), reiniciando PM2 (`gonzalo-agenda`).
-**Commit:** `b46fc59` (siguiente)
+**Commit:** `b46fc59`
+**Estado:** ✅ FIXED
+
+## ERR-60: Desplazamiento y Sobredimensión Visual de Bloqueos Horarios en la Grilla Semanal de la Agenda (02/11/2026)
+**Síntoma:** Gonzalo Siri reportó en WhatsApp (`media_1793637490522_28175b1f.png` y `media_1793637500720_f3a63d0c.png`): *"Está tomando mal los horarios de bloqueo en la agenda, puse que bloquee hasta las 16:00 y lo bloqueo hasta las 18:00 en la agenda"*. En la captura, un bloqueo de 10:00 a 16:00 aparecía comenzando a las 12:00 y extendiéndose hasta las 18:00, cubriendo 2 horas de más y tocando el turno de las 18:00.
+**Root Cause:**
+1. En `src/app/admin/agenda/page.js`, el cálculo dinámico de franjas horarias de la grilla (`minAppStartHour` y `maxAppEndHour`) sólo recorría `appointments`, sin verificar la lista de `bloqueos`. Como en la semana del 14 al 19 de diciembre no había turnos antes de las 12:00 y la configuración `work_start` estaba fijada en `12:30`, la grilla horaria se inicializaba a partir de las 12:00.
+2. En `getBlockStyle`, al recibir `horaInicio: '10:00'` (600 min) contra `gridStartMin = 12 * 60 = 720 min`, calculaba `top = Math.max(0, (600 - 720) * 1.666) = 0px` (anclando el bloque a las 12:00).
+3. Sin embargo, la altura se calculaba con la duración absoluta `duration = 960 - 600 = 360 min` (6 horas = 600px), sin recortar la porción previa al inicio visible de la grilla. Como resultado, un bloque de 6 horas se graficaba desde las 12:00 hasta las 18:00 (12:00 + 6h = 18:00), dando la apariencia visual errónea de que bloqueaba hasta las 18:00.
+**Solución:**
+1. En `src/app/admin/agenda/page.js`, se integró la iteración sobre `bloqueos` (ignorando `esDiaCompleto`) en el cálculo de `minAppStartHour` y `maxAppEndHour`, asegurando que la grilla semanal se abra dinámicamente desde las 10:00 cuando haya bloqueos matutinos.
+2. En `getBlockStyle`, se acotó matemáticamente el rango visible con `visibleStartMin = Math.max(gridStartMin, startMin)`, `visibleEndMin = Math.min(gridEndMin, endMin)` y `visibleDuration = Math.max(0, visibleEndMin - visibleStartMin)`, impidiendo desbordes o desfases en cualquier evento que caiga parcial o totalmente fuera de los límites de la grilla.
+3. Para bloqueos de día completo (`esDiaCompleto`), se fijó estilo estricto `top: 0px` y `height: dayColumnHeight` con leyenda `'DÍA COMPLETO'`.
+4. Compilado con Next.js Turbopack y desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
+**Commit:** `e85eb79`
 **Estado:** ✅ FIXED
