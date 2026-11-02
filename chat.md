@@ -1495,3 +1495,39 @@
      - En `.stickyModalHeader`: Se fijó `transform: none !important; will-change: auto !important;`, permitiendo que el botón `&times;` permanezca 100% interactivo en todo momento al scrollear.
      - En la botonera de Acciones Rápidas: Se creó `.quickActionsGrid` con CSS Grid nativo de 2 columnas (`repeat(2, minmax(0, 1fr))`, `gap: 12px`, botones con `minHeight: 46px` y botón `🗑️ Eliminar` en `gridColumn: '1 / -1'`), erradicando colisiones de dedo y garantizando 12px de separación limpia.
 - **Validación Técnica**: Compilación Next.js Turbopack limpia (47/47 rutas generadas con 0 errores). Desplegado en VPS Staging y Producción.
+
+---
+
+## 🚀 Sesión: 2 de Noviembre de 2026 - Restauración y Blindaje del Backup Diario Off-Site a Google Drive (D-146, ERR-58)
+
+### Reporte de Gonzalo Siri en WhatsApp (`media_1793624778954_ac9189a8.png`):
+> *"Fede, ¿cómo va? Te aviso que el backup diario de la agenda no se está haciendo. En la carpeta AgendaBackups del Drive (depilaser1925) hay solo dos copias: la del 25/10 y la del 26/10 a las 03:00. Desde ese día no se generó ninguna más. ¿Lo podés revisar y dejarlo andando de nuevo? Avisame cuando esté, así controlo que aparezca la copia del día siguiente. ¡Gracias!"*
+
+### Diagnóstico Técnico y Causa Raíz:
+1. **Auditoría de Servicios y Conectividad**:
+   - Se probó la autenticación con Google Drive mediante `rclone`: la conexión con `depilaser1925@gmail.com` y los tokens OAuth de refresco estaban **100% activos y vigentes**, con 12.8 GB de espacio disponible.
+   - En la carpeta remota `gdrive:AgendaBackups/` figuraban efectivamente solo los dos archivos mencionados: `agenda_db_20261025_175944.sql.gz` y `agenda_db_20261026_030001.sql.gz`.
+2. **Causa del Corte desde el 26/10**:
+   - El script `/srv/gonzalo-dep/scripts/daily_backup.sh` había sido configurado originalmente de forma local en el VPS sin commitearse al repositorio Git (`scripts/` estaba vacío/untracked).
+   - En el despliegue del 26/10 a las 17:56 hs (y posteriores), los scripts de despliegue ejecutaron `git clean -fd -e .env -e .wwebjs_auth -e .wwebjs_cache -e backups`, lo que limpió todo directorio untracked, borrando la carpeta `scripts/`.
+   - Al ejecutarse la tarea programada en `/etc/cron.d/agenda-backup` cada noche a las 03:00 AM, el log `/var/log/agenda_backup.log` reportó diariamente:  
+     `/bin/sh: 1: /srv/gonzalo-dep/scripts/daily_backup.sh: not found`.
+
+### Solución Implementada y Blindaje:
+1. **Control de Versiones y Blindaje en Git**:
+   - Se commiteó `scripts/daily_backup.sh` en el repositorio Git (`main` y `staging`). Al estar trackeado formalmente, **ningún futuro `git clean -fd` ni despliegue podrá volver a borrarlo**.
+   - Se definió `export PATH` explícito dentro del script para garantizar que `pg_dump`, `gzip` y `rclone` se ejecuten sin restricciones de entorno en cron.
+2. **Restauración en el Servidor VPS**:
+   - Se restableció `/srv/gonzalo-dep/scripts/daily_backup.sh` con permisos `chmod +x`.
+   - Se creó un symlink global `/usr/local/bin/agenda-daily-backup.sh`.
+   - Se validó el cronjob en `/etc/cron.d/agenda-backup`:
+     `0 3 * * * root /srv/gonzalo-dep/scripts/daily_backup.sh >> /var/log/agenda_backup.log 2>&1`
+3. **Ejecución y Verificación Inmediata**:
+   - Se forzó la ejecución manual del backup en el VPS:
+     - Dump comprimido generado: `agenda_db_20261102_131659.sql.gz` (2.2 MB).
+     - Subida completada a Google Drive en 53.3 segundos (`100% transferred`).
+   - Se auditó el listado remoto en Drive confirmando las 3 copias:
+     - `agenda_db_20261025_175944.sql.gz` (2.1 MB)
+     - `agenda_db_20261026_030001.sql.gz` (2.1 MB)
+     - `agenda_db_20261102_131659.sql.gz` (2.2 MB) ⭐ **(Copia fresca generada hoy)**.
+   - El cron continuará ejecutándose automáticamente todos los días a las 03:00 AM.

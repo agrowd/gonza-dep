@@ -2465,3 +2465,17 @@
     - Se creó la clase `.quickActionsGrid` con CSS Grid nativo de 2 columnas (`repeat(2, minmax(0, 1fr))`, `gap: 12px`, botones con `minHeight: 46px` y botón `🗑️ Eliminar` en `gridColumn: '1 / -1'`), erradicando colisiones de dedo y asegurando 12px de separación limpia.
 - [x] **Validación y Compilación**: `npm run build` exitoso (47/47 rutas compiladas con 0 errores).
 - [x] **Documentación**: Registrado `D-145 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 2 de Noviembre de 2026 - Restauración y Blindaje del Backup Diario Off-Site a Google Drive (D-146, ERR-58)
+- [x] **Diagnóstico de Ausencia de Backups Diarios**:
+  - Gonzalo reportó en WhatsApp (`media_1793624778954_ac9189a8.png`) que en Google Drive (`depilaser1925@gmail.com`) solo figuraban copias del 25/10 y 26/10 a las 03:00 AM, y que desde esa fecha no se generaron más.
+  - Al revisar `/var/log/agenda_backup.log` en el VPS, se halló: `/bin/sh: 1: /srv/gonzalo-dep/scripts/daily_backup.sh: not found` repetido diariamente a las 03:00 AM desde el 27/10.
+  - Causa Raíz: La carpeta `scripts/` no estaba trackeada en Git. En el despliegue del 26/10 (17:56 hs), `git clean -fd` barrió los archivos untracked, eliminando el script `daily_backup.sh`. La cuenta de Google Drive y `rclone` se encontraban 100% operativos con cuota libre de 12.8 GB.
+- [x] **Solución y Blindaje Permanente**:
+  - Se creó y commiteó `scripts/daily_backup.sh` en el repositorio Git (`main` y `staging`) para que sea inmutable ante cualquier despliegue o `git clean`.
+  - Se configuró `export PATH` explícito para asegurar disponibilidad de binarios (`pg_dump`, `gzip`, `rclone`, etc.) en subshells de cron.
+  - Se restauró en el VPS `/srv/gonzalo-dep/scripts/daily_backup.sh` con `chmod +x` y se enlazó a `/usr/local/bin/agenda-daily-backup.sh`.
+  - Se verificó `/etc/cron.d/agenda-backup` (`0 3 * * * root ...`) con permisos 644.
+  - Se forzó la ejecución manual inmediata del backup: se generó exitosamente `agenda_db_20261102_131659.sql.gz` (2.2 MB) y se transfirió en 53 segundos a Google Drive.
+  - Se auditó con `rclone ls gdrive:AgendaBackups/`, confirmando que el nuevo backup ya está disponible en la carpeta de Drive de Gonzalo.
+- [x] **Documentación**: Registrado `D-146 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-58` en `.synapse/errores.md`.

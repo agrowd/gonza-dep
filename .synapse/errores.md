@@ -587,3 +587,17 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 **Solución:** 1) Se removió `touch-action: none` de `.modalOverlay` cambiando a `touch-action: auto !important; -webkit-tap-highlight-color: transparent;`; 2) Se reemplazó `-webkit-overflow-scrolling: touch` por `-webkit-overflow-scrolling: auto !important;` con aceleración por hardware sincronizada (`transform: translate3d(0, 0, 0) !important;`) tanto en `.modalContent` como en `.stickyModalHeader`; 3) Se amplió `.closeBtn` en mobile a 44x44px con `touch-action: manipulation !important; cursor: pointer !important;`; 4) Se aplicó `touch-action: manipulation`, altura mínima (42px) y protección `WebkitTapHighlightColor` en todos los botones de "Acciones Rápidas", y se agregó un botón ergonómico full-width `[ ✕ Cerrar Ficha ]` (44px) al final del modal para cierre inmediato con el pulgar; 5) Se protegieron los listeners de backdrop en overlay con `if (e.target === e.currentTarget)` en todos los modales.
 **Commit:** `f7005a8`
 **Estado:** ✅ FIXED
+
+## ERR-58: Interrupción del Backup Diario a Google Drive por Eliminación de Script No Trackeado en Deploy (02/11/2026)
+**Síntoma:** Gonzalo reportó en WhatsApp (`media_1793624778954_ac9189a8.png`): *"Fede, ¿cómo va? Te aviso que el backup diario de la agenda no se está haciendo. En la carpeta AgendaBackups del Drive (depilaser1925) hay solo dos copias: la del 25/10 y la del 26/10 a las 03:00. Desde ese día no se generó ninguna más. ¿Lo podés revisar y dejarlo andando de nuevo? Avisame cuando esté, así controlo que aparezca la copia del día siguiente. ¡Gracias!"*.
+**Root Cause:**
+1. El script `/srv/gonzalo-dep/scripts/daily_backup.sh` fue configurado originalmente directo en el servidor VPS sin commitearse al repositorio Git (`scripts/` estaba vacío/untracked).
+2. Durante el despliegue del 26/10 a las 17:56 hs (y posteriores), los scripts de despliegue ejecutaron `git clean -fd -e .env -e .wwebjs_auth -e .wwebjs_cache -e backups`, lo que eliminó el directorio untracked `scripts/`.
+3. A partir de las 03:00 AM del 27/10, la tarea cron de `/etc/cron.d/agenda-backup` fallaba silenciosamente registrando en `/var/log/agenda_backup.log`: `/bin/sh: 1: /srv/gonzalo-dep/scripts/daily_backup.sh: not found`.
+4. La conexión de `rclone` con Google Drive (`depilaser1925@gmail.com`) y los tokens OAuth se encontraban 100% íntegros y vigentes.
+**Solución:**
+1. Se incorporó `scripts/daily_backup.sh` formalmente al repositorio Git (`main` y `staging`), definiendo `export PATH` explícito para entornos cron, permisos de ejecución y compresión `.sql.gz`.
+2. Se desplegó en el VPS en `/srv/gonzalo-dep/scripts/daily_backup.sh`, se generó un symlink en `/usr/local/bin/agenda-daily-backup.sh` y se restableció `/etc/cron.d/agenda-backup`.
+3. Se ejecutó una prueba manual inmediata: se generó y subió a Google Drive el archivo `agenda_db_20261102_131659.sql.gz` (2.2 MB), verificando con `rclone ls gdrive:AgendaBackups/` su presencia efectiva.
+**Commit:** `b46fc59` (siguiente)
+**Estado:** ✅ FIXED
