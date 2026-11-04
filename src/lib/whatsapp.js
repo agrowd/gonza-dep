@@ -475,6 +475,11 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
 export const parseWppTemplate = parseTemplate;
 
 export async function checkAndSendReminders(force = false) {
+  if (globalThis.isReminderRunning) {
+    console.log('[Reminder Cron] A reminder check run is already active. Skipping overlapping tick.');
+    return;
+  }
+  globalThis.isReminderRunning = true;
   try {
     // Get time in Argentina (GMT-3)
     const now = new Date();
@@ -674,14 +679,19 @@ export async function checkAndSendReminders(force = false) {
           continue;
         }
 
+        const fourDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
         const existing7Notification = await prisma.notificacion.findFirst({
           where: {
             turnoId: t.id,
             canal: 'EMAIL',
             estado: 'ENVIADO',
-            mensaje: {
-              startsWith: 'Recordatorio automático (7 días antes)'
-            }
+            fechaEnvio: { gte: fourDaysAgo },
+            OR: [
+              { mensaje: { contains: 'Recordatorio automático (7 días antes)' } },
+              { mensaje: { contains: '[Recordatorio automático (7 días antes)]' } },
+              { mensaje: { contains: '7 días antes' } },
+              { mensaje: { contains: '7 días' } }
+            ]
           }
         });
 
@@ -1086,6 +1096,8 @@ export async function checkAndSendReminders(force = false) {
     }
   } catch (error) {
     console.error('[Reminder Cron] Error in automated reminder cron:', error);
+  } finally {
+    globalThis.isReminderRunning = false;
   }
 }
 
