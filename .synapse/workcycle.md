@@ -2596,3 +2596,17 @@
 - [x] **Compilación y Validación**:
   - Next.js Turbopack compilado localmente con éxito (47/47 rutas OK).
 - [x] **Documentación**: Registrado `D-151 🔒 LOCKED` en `.synapse/decisions.md`, `ERR-63` y `ERR-64` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 4 de Noviembre de 2026 - Corrección Ergonómica de Selector de Cumpleaños vs Frecuencia en Modal de Turnos (D-152, ERR-65)
+- [x] **Diagnóstico y Confirmación de Causa Raíz**:
+  - Gonzalo Siri reportó en WhatsApp (`media_1793822467903_8545b5c5.png`): *"Aprieto para cargar fecha de cumpleaños y sale cantidad de semanas. Puedes verlo por favor"*.
+  - En `src/app/admin/agenda/page.js`, la fila `🎂 Cumpleaños` tenía el texto estático como `<span>` y selects pequeños a la derecha (`13px` font, `48px` width).
+  - Al presionar con el pulgar en el texto "Cumpleaños", WebKit/Safari asignaba el tap al `<select>` dominante inmediatamente debajo (`Frecuencia Estimada`), abriendo el menú de semanas (`Cada X semanas`).
+- [x] **Solución y Blindaje en `src/app/admin/agenda/page.js`**:
+  - Se vinculó el texto `🎂 Cumpleaños` a un `<label htmlFor="clientBdayDaySelect">` interactivo que enfoca y abre el selector de Día al tocarlo.
+  - Se ampliaron los selectores de Día y Mes a dimensiones estándar Apple HIG (`minHeight: 42px`, `fontSize: 16px`, `minWidth: 68px/78px`, `touch-action: manipulation`).
+  - Se implementó auto-guardado en base de datos (`handleSaveClientObservaciones(false, { fechaNacimiento })`) con toast confirmatorio al seleccionar Día y Mes o al borrarlos.
+  - Se añadió una separación generosa (`marginTop: 1.25rem`, `paddingTop: 0.5rem`, divisor visual) y `fontSize: 16px` en `Frecuencia Estimada del Tratamiento`, eliminando interferencias táctiles.
+- [x] **Compilación y Validación**:
+  - Next.js Turbopack compilado localmente con éxito (47/47 rutas OK).
+- [x] **Documentación**: Registrado `D-152 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-65` en `.synapse/errores.md`.

@@ -5466,20 +5466,22 @@ export default function AgendaPage() {
                             tempClientFechaPrimerTurnoRef.current = e.target.value;
                           }}
                           style={{
-                            width: '120px',
-                            maxWidth: '125px',
-                            minWidth: '95px',
+                            width: '135px',
+                            maxWidth: '140px',
+                            minWidth: '110px',
+                            height: '42px',
                             flexShrink: 0,
-                            padding: '0.3rem 0.35rem',
+                            padding: '0.35rem 0.45rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '14px',
+                            fontSize: '16px',
                             fontWeight: 600,
                             textAlign: 'center',
                             boxSizing: 'border-box',
                             margin: 0,
+                            touchAction: 'manipulation',
                             ...(currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed' } : {})
                           }}
                           title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la fecha del primer turno' : ''}
@@ -5514,20 +5516,22 @@ export default function AgendaPage() {
                           disabled={currentUserRole === 'OPERADOR'}
                           onChange={(e) => handleTotalSesionesChange(e.target.value)}
                           style={{
-                            width: '60px',
-                            maxWidth: '70px',
-                            minWidth: '50px',
+                            width: '65px',
+                            maxWidth: '75px',
+                            minWidth: '55px',
+                            height: '42px',
                             flexShrink: 0,
                             padding: '0.35rem 0.4rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '14px',
+                            fontSize: '16px',
                             fontWeight: 700,
                             textAlign: 'center',
                             boxSizing: 'border-box',
                             margin: 0,
+                            touchAction: 'manipulation',
                             ...(currentUserRole === 'OPERADOR' ? { opacity: 0.75, cursor: 'not-allowed' } : {})
                           }}
                           title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la cantidad de sesiones' : ''}
@@ -5540,41 +5544,62 @@ export default function AgendaPage() {
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '0.4rem',
-                        paddingTop: '0.2rem',
+                        gap: '0.5rem',
+                        paddingTop: '0.4rem',
+                        paddingBottom: '0.2rem',
+                        minHeight: '44px',
                         width: '100%',
                         boxSizing: 'border-box'
                       }}>
-                        <span className={styles.detailLabel} style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.78rem', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word' }}>
+                        <label
+                          htmlFor="clientBdayDaySelect"
+                          style={{
+                            color: 'var(--text-secondary)',
+                            margin: 0,
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            flex: '1 1 auto',
+                            minWidth: 0,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
                           🎂 Cumpleaños
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                           <select
+                            id="clientBdayDaySelect"
                             value={tempClientBdayDay}
                             disabled={currentUserRole === 'OPERADOR'}
                             onChange={(e) => {
                               const dVal = e.target.value;
                               setTempClientBdayDay(dVal);
                               if (dVal && tempClientBdayMonth) {
-                                setTempClientFechaNacimiento(`2000-${tempClientBdayMonth.padStart(2, '0')}-${dVal.padStart(2, '0')}`);
+                                const newIso = `2000-${tempClientBdayMonth.padStart(2, '0')}-${dVal.padStart(2, '0')}`;
+                                setTempClientFechaNacimiento(newIso);
+                                handleSaveClientObservaciones(false, { fechaNacimiento: newIso });
                               } else if (!dVal && !tempClientBdayMonth) {
                                 setTempClientFechaNacimiento('');
+                                handleSaveClientObservaciones(false, { fechaNacimiento: null });
                               }
                             }}
                             style={{
-                              padding: '0.28rem 0.2rem',
-                              borderRadius: '7px',
+                              padding: '0.45rem 0.4rem',
+                              borderRadius: '8px',
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '13px',
+                              fontSize: '16px',
                               fontWeight: 600,
                               textAlign: 'center',
-                              minWidth: '48px',
-                              maxWidth: '52px',
+                              minWidth: '68px',
+                              height: '42px',
                               cursor: currentUserRole === 'OPERADOR' ? 'not-allowed' : 'pointer',
                               opacity: currentUserRole === 'OPERADOR' ? 0.75 : 1,
-                              boxSizing: 'border-box'
+                              boxSizing: 'border-box',
+                              touchAction: 'manipulation'
                             }}
                             title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar el cumpleaños' : ''}
                           >
@@ -5585,31 +5610,36 @@ export default function AgendaPage() {
                           </select>
 
                           <select
+                            id="clientBdayMonthSelect"
                             value={tempClientBdayMonth}
                             disabled={currentUserRole === 'OPERADOR'}
                             onChange={(e) => {
                               const mVal = e.target.value;
                               setTempClientBdayMonth(mVal);
                               if (tempClientBdayDay && mVal) {
-                                setTempClientFechaNacimiento(`2000-${mVal.padStart(2, '0')}-${tempClientBdayDay.padStart(2, '0')}`);
+                                const newIso = `2000-${mVal.padStart(2, '0')}-${tempClientBdayDay.padStart(2, '0')}`;
+                                setTempClientFechaNacimiento(newIso);
+                                handleSaveClientObservaciones(false, { fechaNacimiento: newIso });
                               } else if (!tempClientBdayDay && !mVal) {
                                 setTempClientFechaNacimiento('');
+                                handleSaveClientObservaciones(false, { fechaNacimiento: null });
                               }
                             }}
                             style={{
-                              padding: '0.28rem 0.2rem',
-                              borderRadius: '7px',
+                              padding: '0.45rem 0.4rem',
+                              borderRadius: '8px',
                               border: '1px solid var(--border-color)',
                               backgroundColor: 'var(--bg-secondary)',
                               color: 'var(--text-primary)',
-                              fontSize: '13px',
+                              fontSize: '16px',
                               fontWeight: 600,
                               textAlign: 'center',
-                              minWidth: '54px',
-                              maxWidth: '58px',
+                              minWidth: '78px',
+                              height: '42px',
                               cursor: currentUserRole === 'OPERADOR' ? 'not-allowed' : 'pointer',
                               opacity: currentUserRole === 'OPERADOR' ? 0.75 : 1,
-                              boxSizing: 'border-box'
+                              boxSizing: 'border-box',
+                              touchAction: 'manipulation'
                             }}
                             title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar el cumpleaños' : ''}
                           >
@@ -5627,14 +5657,17 @@ export default function AgendaPage() {
                                 setTempClientBdayDay('');
                                 setTempClientBdayMonth('');
                                 setTempClientFechaNacimiento('');
+                                handleSaveClientObservaciones(false, { fechaNacimiento: null });
                               }}
                               style={{
                                 background: 'none',
                                 border: 'none',
                                 color: '#ff5252',
                                 cursor: 'pointer',
-                                fontSize: '13px',
-                                padding: '0 2px',
+                                fontSize: '16px',
+                                padding: '0 6px',
+                                minWidth: '32px',
+                                minHeight: '42px',
                                 lineHeight: 1
                               }}
                             >
@@ -5672,25 +5705,28 @@ export default function AgendaPage() {
                   )}
 
                   {selectedTurno.clienteId && (
-                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
-                      <span className={styles.detailLabel} style={{ wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.25 }}>
+                    <div className={styles.detailItem} style={{ gridColumn: '1 / -1', marginTop: '1.25rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <label htmlFor="clientFrecuenciaSelect" className={styles.detailLabel} style={{ wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.25, cursor: 'pointer', marginBottom: '0.35rem' }}>
                         Frecuencia Estimada del Tratamiento (Semanas)
-                      </span>
+                      </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
                         <select
+                          id="clientFrecuenciaSelect"
                           value={tempClientFrecuencia}
                           onChange={(e) => setTempClientFrecuencia(Number(e.target.value))}
                           style={{
-                            padding: '0.45rem',
+                            padding: '0.55rem 0.65rem',
                             borderRadius: '8px',
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '14px',
+                            fontSize: '16px',
                             fontWeight: 600,
-                            flex: '1 1 130px',
+                            minHeight: '44px',
+                            flex: '1 1 140px',
                             minWidth: 0,
-                            boxSizing: 'border-box'
+                            boxSizing: 'border-box',
+                            touchAction: 'manipulation'
                           }}
                         >
                           {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(w => (

@@ -684,3 +684,14 @@ Al auditar los logs del sistema en `/var/log/agenda_backup.log`, se constató qu
 2. Se actualizó la definición en `/etc/cron.d/agenda-backup` para ejecutar `/bin/bash /srv/gonzalo-dep/scripts/daily_backup.sh >> /var/log/agenda_backup.log 2>&1`.
 3. Se disparó una ejecución de prueba inmediata, confirmando la compresión y subida exitosa de `agenda_db_20261104_181403.sql.gz` a Google Drive (`rclone ls gdrive:AgendaBackups/`).
 **Estado:** ✅ FIXED
+
+## ERR-65: Apertura Involuntaria del Selector de Semanas al Pulsar Cumpleaños en Móvil (04/11/2026)
+**Síntoma:** Gonzalo Siri reportó en WhatsApp (`media_1793822467903_8545b5c5.png`): *"Aprieto para cargar fecha de cumpleaños y sale cantidad de semanas. Puedes verlo por favor"*.
+**Root Cause:**
+En la ficha del turno (`selectedTurno`), la fila de Cumpleaños tenía una altura reducida (~24px) y su texto `🎂 Cumpleaños` era un `<span>` estático sin interacción. Los selects de Día y Mes tenían `fontSize: 13px` y estaban comprimidos en el extremo derecho. A escasos píxeles por debajo se ubicaba el selector de ancho completo de `Frecuencia Estimada del Tratamiento (Semanas)`. Al tocar sobre "🎂 Cumpleaños" con el pulgar en un smartphone, la zona de contacto (~44px) no encontraba un elemento interactivo en la fila y WebKit disparaba el evento táctil en el control de formulario dominante inmediatamente inferior (el select de frecuencia), abriendo el selector de "Cada X semanas".
+**Solución:**
+1. Se envolvió el título `🎂 Cumpleaños` en un `<label htmlFor="clientBdayDaySelect">` con cursor pointer para que pulsar en cualquier parte del texto o de la fila enfoque y abra de inmediato el selector de Día.
+2. Se ampliaron los selectores de Día y Mes a dimensiones estándar Apple HIG (`minHeight: 42px`, `fontSize: 16px`, `minWidth: 68px` y `78px`, `touch-action: manipulation`), eliminando auto-zooms de Safari.
+3. Se implementó auto-guardado inmediato en la base de datos con notificación toast al elegir Día y Mes (`handleSaveClientObservaciones(false, { fechaNacimiento })`).
+4. Se agregó una separación física y visual generosa (`marginTop: 1.25rem`, `paddingTop: 0.5rem`, borde superior divisor) y `fontSize: 16px` en el selector de Frecuencia Estimada, eliminando cualquier posibilidad de solapamiento o error de pulsación.
+**Estado:** ✅ FIXED

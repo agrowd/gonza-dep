@@ -1703,3 +1703,27 @@
 10. **Blindaje del Cron Diario de Backups a Google Drive (ERR-64)**:
    - Invocación con `/bin/bash` y permisos de ejecución en `/etc/cron.d/agenda-backup`.
    - Backup de verificación subido con éxito a Google Drive (`agenda_db_20261104_181403.sql.gz`).
+
+
+## 📅 Sesión: 4 de Noviembre de 2026 - Corrección Ergonómica de Selector de Cumpleaños vs Frecuencia en Modal de Turnos (D-152, ERR-65)
+
+### Reporte de Gonzalo Siri en WhatsApp (`media_1793822467903_8545b5c5.png`):
+> *"Aprieto para cargar fecha de cumpleaños y sale cantidad de semanas. Puedes verlo por favor"*
+
+### Diagnóstico Forense y Causa Raíz:
+1. **Falta de elemento interactivo en el título "Cumpleaños"**:
+   - En la ficha del turno (`selectedTurno`), la fila de Cumpleaños tenía una altura reducida (~24px) y su texto `🎂 Cumpleaños` era un `<span>` estático sin interacción.
+   - Los selects de Día y Mes tenían `fontSize: 13px` y estaban comprimidos en el extremo derecho.
+2. **Despacho del evento táctil al select inferior por proximidad**:
+   - A escasos 4 píxeles por debajo y sin margen de separación se ubicaba el selector de ancho completo de `Frecuencia Estimada del Tratamiento (Semanas)`.
+   - Al tocar sobre "🎂 Cumpleaños" con el pulgar en un smartphone, la zona de contacto (~44px) no encontraba un elemento interactivo en la fila y WebKit disparaba el evento táctil en el control de formulario dominante inmediatamente inferior (el select de frecuencia), abriendo el selector de "Cada X semanas".
+
+### Solución y Blindaje Implementado:
+1. **Label Interactivo en Título**:
+   - Se convirtió el texto `🎂 Cumpleaños` en un `<label htmlFor="clientBdayDaySelect">` con `cursor: pointer`, de modo que al pulsar en el texto o en el icono se abre de inmediato el selector de Día.
+2. **Dimensiones Apple HIG y Prevención de Zoom**:
+   - Se redimensionaron los selectores de Día y Mes a dimensiones estándar (`minHeight: 42px`, `fontSize: 16px`, `minWidth: 68px/78px`, `touch-action: manipulation`), eliminando cualquier auto-zoom involuntario de Safari.
+3. **Auto-Guardado Inmediato**:
+   - Se conectó auto-guardado en base de datos (`handleSaveClientObservaciones(false, { fechaNacimiento })`) con notificación toast al elegir día y mes o al borrarlos.
+4. **Separación Física y Visual**:
+   - Se aplicó una separación física y visual generosa (`marginTop: 1.25rem`, `paddingTop: 0.5rem`, divisor visual) y `fontSize: 16px` con `minHeight: 44px` en `Frecuencia Estimada del Tratamiento`, eliminando de raíz cualquier confusión táctil.
