@@ -631,3 +631,15 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 4. Compilado con Next.js Turbopack y desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
 **Commit:** `e85eb79`
 **Estado:** ✅ FIXED
+
+## ERR-61: Envío Duplicado de Correos de Recordatorio Automático 7 Días Previos (04/11/2026)
+**Síntoma:** Gonzalo Siri reportó en WhatsApp (`media_1793798362136_b9917255.png`): *"Buen día federico, los mails que salen de notificación siete días previos se están enviando dos veces"*. En la base de datos se constató que a las 10:01 AM (13:01 UTC) del 03/11 y 04/11, todos los clientes con turnos a 7 días recibieron dos correos idénticos con una separación de apenas 10 a 45 segundos.
+**Root Cause:**
+1. **Fallo en Query de Deduplicación en Base de Datos**: En `src/lib/whatsapp.js`, la notificación enviada se guardaba como `[Recordatorio automático (7 días antes)]\n${emailPlainText}` (con corchete inicial `[`). Sin embargo, la verificación previa buscaba `mensaje: { startsWith: 'Recordatorio automático (7 días antes)' }`. Al esperar que la cadena comenzara con la letra `R` en vez de `[`, la consulta retornaba siempre `null`, considerando que el correo nunca había sido enviado.
+2. **Solapamiento Concurrente de Ticks (Falta de Mutex)**: El cron de recordatorios corre en un `setInterval` cada 60 segundos. En jornadas con 9 o más citas, el despacho de recordatorios por WhatsApp (con pausas de cortesía de 2s) sumado a la latencia de envíos por SMTP demoraba entre 65 y 75 segundos. Dado que `lastReminderRunDate` sólo se asignaba al finalizar exitosamente toda la función y no existía un mutex de ejecución (`isReminderRunning`), a las 10:01:00 AM se disparaba un segundo tick concurrente. Mientras que para WhatsApp el segundo tick salteaba los turnos porque su chequeo usaba `contains`, al llegar a los correos de 7 días, la query fallida con `startsWith` permitía que el segundo tick reenviara todos los correos una segunda vez.
+**Solución:**
+1. En `src/lib/whatsapp.js`, se implementó el guardián de concurrencia `globalThis.isReminderRunning` con bloque `finally` para descartar de inmediato cualquier tick que intente solaparse mientras un ciclo previo siga en curso.
+2. Se corrigió la consulta de deduplicación de 7 días en Prisma para utilizar `contains` acotado a los últimos 4 días (`fechaEnvio: { gte: fourDaysAgo }`, con `OR: [ { mensaje: { contains: 'Recordatorio automático (7 días antes)' } }, ... ]`), garantizando que cualquier correo ya enviado para la cita se detecte y omita (`Skipping`).
+3. Compilado con Next.js Turbopack y desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006). Al reiniciar, los logs confirmaron que todas las citas notificadas fueron omitidas con éxito.
+**Commit:** `95bb56a`
+**Estado:** ✅ FIXED

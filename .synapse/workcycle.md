@@ -2514,3 +2514,20 @@
   - Desplegado en VPS Staging (puerto 3008) y Producción (puerto 3006).
   - Ambos procesos PM2 (`gonzalo-agenda-staging` y `gonzalo-agenda`) online con respuesta HTTP 200 OK.
 - [x] **Documentación**: Registrado `D-148 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-60` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 4 de Noviembre de 2026 - Blindaje Anti-Duplicación de Recordatorios por Email a 7 Días (D-149, ERR-61)
+- [x] **Diagnóstico y Confirmación Forense en Base de Datos y Logs**:
+  - Gonzalo Siri reportó en WhatsApp (`media_1793798362136_b9917255.png`): *"Buen día federico, los mails que salen de notificación siete días previos se están enviando dos veces"*.
+  - En la tabla `Notificacion` de PostgreSQL (`agenda_db`), se constató que los correos de recordatorio 7 días se creaban dos veces a las 10:01 AM (con 10-45 segundos de diferencia).
+  - Al auditar el log de PM2 (`/root/.pm2/logs/gonzalo-agenda-out.log`), se descubrió la doble causa raíz:
+    1. **Fallo en Query de Deduplicación**: La notificación se guardaba con corchete inicial `[Recordatorio automático (7 días antes)]\n...`, pero la verificación previa buscaba `startsWith: 'Recordatorio automático (7 días antes)'`. Al esperar la letra `R` en vez de `[`, la consulta devolvía siempre `null`.
+    2. **Solapamiento Concurrente de Ticks**: El cron corre cada 60s (`setInterval`). Al notificar 9+ citas de WhatsApp (con pausas de 2s) y correos SMTP, el ciclo de las 10:00 AM demoraba más de 60 segundos. Como no había mutex (`isReminderRunning`) y `lastReminderRunDate` sólo se asignaba al terminar todo el ciclo, a las 10:01 AM se disparaba un segundo tick concurrente que reenviaba todos los emails de 7 días.
+- [x] **Solución y Blindaje en `src/lib/whatsapp.js`**:
+  - Se incorporó el mutex global `globalThis.isReminderRunning` con bloque `finally` para descartar de inmediato cualquier tick que intente solaparse mientras un ciclo previo siga en curso.
+  - Se corrigió la consulta de deduplicación en Prisma para utilizar `contains` acotado a los últimos 4 días (`fechaEnvio: { gte: fourDaysAgo }`, con `OR: [ { mensaje: { contains: 'Recordatorio automático (7 días antes)' } }, ... ]`).
+- [x] **Compilación y Despliegue en VPS**:
+  - Compilación Next.js validada con Turbopack (47/47 rutas compiladas).
+  - Commits en `main` y `staging` sincronizados (`95bb56a`).
+  - Desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
+  - Al iniciar el servicio, los logs de PM2 confirmaron que todas las citas notificadas fueron omitidas (`[Reminder Cron] 7-day email reminder already sent ... Skipping.`).
+- [x] **Documentación**: Registrado `D-149 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-61` en `.synapse/errores.md`.

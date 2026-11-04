@@ -1601,3 +1601,35 @@
    - Build validado con Turbopack (47/47 rutas compiladas).
    - Commits en `main` y `staging` sincronizados (`e85eb79`).
    - Desplegado y verificado en VPS Staging (puerto 3008) y Producción (puerto 3006), ambos respondiendo HTTP 200 OK.
+
+---
+
+## 🚀 Sesión: 4 de Noviembre de 2026 - Corrección y Blindaje de Recordatorios de 7 Días por Email Duplicados (D-149, ERR-61)
+
+### Reporte de Gonzalo Siri en WhatsApp (`media_1793798362136_b9917255.png` - 10:11 a. m.):
+> *"Buen día federico, los mails que salen de notificación siete días previos se están enviando dos veces"*
+
+### Diagnóstico Forense y Causa Raíz:
+1. **Auditoría en Base de Datos (`Notificacion`)**:
+   - Se revisaron los registros de notificaciones por `EMAIL`: a las 10:01 AM (13:01 UTC) tanto del 03/11 como del 04/11, todos los turnos programados a 7 días recibieron **dos correos idénticos enviados con apenas 10 a 45 segundos de diferencia**.
+2. **Causa 1: Fallo de Sintaxis en Deduplicación de Base de Datos**:
+   - En `src/lib/whatsapp.js`, la notificación se guardaba con formato:  
+     `mensaje: [Recordatorio automático (7 días antes)]\n...` (con corchete `[` al inicio).
+   - La condición de búsqueda previa evaluaba:  
+     `mensaje: { startsWith: 'Recordatorio automático (7 días antes)' }`.
+   - Al empezar la cadena guardada con `[` y no con la letra `R`, Prisma retornaba siempre `null`, considerando erróneamente que el correo aún no había sido enviado para esa cita.
+3. **Causa 2: Solapamiento Concurrente de Ticks (Intervalo de 60s sin Mutex)**:
+   - El cron corre cada 60 segundos (`setInterval`). Cuando hay 9 o más citas en el día, despachar las notificaciones de WhatsApp con pausas de cortesía (2s) más el envío SMTP demora entre 65 y 75 segundos.
+   - Como no existía un mutex de ejecución (`isReminderRunning`) y `lastReminderRunDate` solo se fijaba al completar todo el ciclo, a las 10:01 AM se disparaba un segundo tick concurrente.
+   - Mientras WhatsApp se salteaba porque su chequeo usaba `contains`, los correos de 7 días no coincidían por el error de `startsWith`, disparando un segundo envío para todos los clientes antes de que terminara el primer ciclo.
+
+### Solución Implementada:
+1. **Mutex de Concurrencia (`globalThis.isReminderRunning`)**:
+   - Se implementó un bloqueo atómico al inicio de `checkAndSendReminders()` con liberación garantizada en un bloque `finally`, descartando inmediatamente cualquier tick que intente solaparse mientras una ejecución previa esté activa.
+2. **Corrección de la Query de Deduplicación en Prisma**:
+   - Se sustituyó `startsWith` por `contains: 'Recordatorio automático (7 días antes)'` acotado a los últimos 4 días (`fechaEnvio: { gte: fourDaysAgo }`).
+3. **Compilación y Despliegue en VPS**:
+   - Compilación Next.js validada con Turbopack (47/47 rutas compiladas).
+   - Commits sincronizados en ramas `main` y `staging` (`95bb56a`).
+   - Desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
+   - Al reiniciar, los logs de PM2 confirmaron que todas las citas notificadas fueron omitidas (`[Reminder Cron] 7-day email reminder already sent ... Skipping.`).
