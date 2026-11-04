@@ -48,6 +48,8 @@ export async function GET(request) {
         vacacionesFin: true,
         comisionTipo: true,
         comisionValor: true,
+        boxPredeterminadoId: true,
+        boxPredeterminado: { select: { id: true, nombre: true } },
         ...(isAdmin ? { email: true, telefono: true, createdAt: true } : {})
       },
       orderBy: { createdAt: 'asc' }
@@ -90,7 +92,8 @@ export async function POST(request) {
       vacacionesInicio,
       vacacionesFin,
       comisionTipo,
-      comisionValor
+      comisionValor,
+      boxPredeterminadoId
     } = body;
 
     if (!nombre || !nombre.trim()) {
@@ -138,6 +141,7 @@ export async function POST(request) {
         vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null,
         comisionTipo: comisionTipo || 'POR_TURNO',
         comisionValor: comisionValor !== undefined && comisionValor !== '' ? Number(comisionValor) : 0,
+        boxPredeterminadoId: boxPredeterminadoId || null,
         activo: body.activo !== undefined ? Boolean(body.activo) : true
       },
       select: {
@@ -158,6 +162,8 @@ export async function POST(request) {
         vacacionesFin: true,
         comisionTipo: true,
         comisionValor: true,
+        boxPredeterminadoId: true,
+        boxPredeterminado: { select: { id: true, nombre: true } },
         createdAt: true
       }
     });

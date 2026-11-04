@@ -53,7 +53,18 @@ export async function GET(request) {
     let computedSeñaEstado = ultimoTurno.señaEstado;
     let computedValorSeña = ultimoTurno.valorSeña;
 
-    if (!computedSeñaEstado && ultimoTurno.estado === 'CANCELADO') {
+    // Consultar saldo a favor persistido en la ficha del cliente
+    const clienteData = await prisma.cliente.findUnique({
+      where: { id: targetClienteId },
+      select: { id: true, nombreCompleto: true, saldoAFavor: true }
+    });
+
+    const clienteSaldoAFavor = Number(clienteData?.saldoAFavor || 0);
+
+    if (clienteSaldoAFavor > 0) {
+      computedSeñaEstado = 'CONSERVADA';
+      computedValorSeña = clienteSaldoAFavor;
+    } else if (!computedSeñaEstado && ultimoTurno.estado === 'CANCELADO') {
       const obs = ultimoTurno.observaciones || '';
       if (obs.includes('Guardada') || obs.includes('guardada') || obs.includes('CONSERVADA')) {
         computedSeñaEstado = 'CONSERVADA';
@@ -80,6 +91,8 @@ export async function GET(request) {
       señaEstado: computedSeñaEstado, // 'CONSERVADA' | 'PERDIDA' | null
       valorTotal: ultimoTurno.valorTotal,
       valorSeña: computedValorSeña,
+      saldoAFavor: clienteSaldoAFavor,
+      isSaldoAFavor: clienteSaldoAFavor > 0,
       zonas: parsedZones,
       zonasRaw: ultimoTurno.zonas,
       duracionMinutos: ultimoTurno.duracionMinutos,

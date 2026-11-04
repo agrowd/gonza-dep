@@ -40,7 +40,8 @@ export async function PUT(request, context) {
       vacacionesInicio,
       vacacionesFin,
       comisionTipo,
-      comisionValor
+      comisionValor,
+      boxPredeterminadoId
     } = body;
 
     const user = await prisma.usuario.findUnique({ where: { id } });
@@ -80,6 +81,9 @@ export async function PUT(request, context) {
     if (comisionValor !== undefined) {
       updateData.comisionValor = comisionValor !== '' && comisionValor !== null ? Number(comisionValor) : 0;
     }
+    if (boxPredeterminadoId !== undefined) {
+      updateData.boxPredeterminadoId = boxPredeterminadoId ? String(boxPredeterminadoId) : null;
+    }
 
     if (usuario !== undefined && usuario.trim()) {
       const cleanUser = usuario.trim().toLowerCase();
@@ -117,6 +121,8 @@ export async function PUT(request, context) {
         vacacionesFin: true,
         comisionTipo: true,
         comisionValor: true,
+        boxPredeterminadoId: true,
+        boxPredeterminado: { select: { id: true, nombre: true } },
         createdAt: true
       }
     });

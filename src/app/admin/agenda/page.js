@@ -351,18 +351,23 @@ export default function AgendaPage() {
     if (op.activo === false) {
       return { available: false, reason: 'Bloqueado' };
     }
+    // Sanitizar fecha para evitar Invalid Date cuando viene en formato ISO (ej. 2026-11-02T00:00:00.000Z)
+    const cleanFechaStr = typeof fechaStr === 'string' 
+      ? fechaStr.slice(0, 10) 
+      : (fechaStr instanceof Date ? fechaStr.toISOString().slice(0, 10) : '');
+
     // 1. Vacaciones
-    if (op.vacacionesInicio && op.vacacionesFin && fechaStr) {
-      const tDate = new Date(fechaStr + 'T12:00:00');
-      const vStart = new Date(op.vacacionesInicio);
-      const vEnd = new Date(op.vacacionesFin);
+    if (op.vacacionesInicio && op.vacacionesFin && cleanFechaStr) {
+      const tDate = new Date(cleanFechaStr + 'T12:00:00');
+      const vStart = new Date(typeof op.vacacionesInicio === 'string' ? op.vacacionesInicio.slice(0, 10) + 'T00:00:00' : op.vacacionesInicio);
+      const vEnd = new Date(typeof op.vacacionesFin === 'string' ? op.vacacionesFin.slice(0, 10) + 'T23:59:59' : op.vacacionesFin);
       if (tDate >= vStart && tDate <= vEnd) {
         return { available: false, reason: 'En vacaciones' };
       }
     }
     // 2. Días laborales
-    if (fechaStr && op.diasLaborales) {
-      const dayOfWeek = new Date(fechaStr + 'T12:00:00').getDay().toString();
+    if (cleanFechaStr && op.diasLaborales) {
+      const dayOfWeek = new Date(cleanFechaStr + 'T12:00:00').getDay().toString();
       const allowedDays = op.diasLaborales.split(',').map(s => s.trim());
       if (!allowedDays.includes(dayOfWeek)) {
         return { available: false, reason: 'No atiende este día' };
@@ -2169,6 +2174,22 @@ export default function AgendaPage() {
       .catch(() => setWppConnectionStatus('DISCONNECTED'));
   };
 
+  // Enviar Recibo Oficial directamente por WhatsApp (D-151)
+  const handleSendReceiptWhatsApp = (turno) => {
+    if (!turno || !turno.cliente?.whatsapp) {
+      showToast('El cliente no tiene número de WhatsApp cargado', 'error');
+      return;
+    }
+    const cleanPhone = turno.cliente.whatsapp.replace(/\D/g, '');
+    const receiptUrl = `${window.location.origin}/admin/recibos/${turno.id}`;
+    const nombre = turno.cliente.nombreCompleto || 'Estimado/a';
+    const fechaStr = turno.fecha ? new Date(turno.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+    const total = Number(turno.valorTotal || 0).toLocaleString('es-AR');
+    const msg = `Hola *${nombre}*, te compartimos el comprobante oficial de tu sesión de depilación láser del día *${fechaStr}* por un total de *$${total}*.\n\nPuedes visualizar y descargar tu recibo digital oficial aquí:\n👉 ${receiptUrl}\n\n¡Muchas gracias por elegirnos!`;
+    const wppUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`;
+    window.open(wppUrl, '_blank');
+  };
+
   // Send selected WhatsApp notice
   const handleSendWppNotice = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -2748,6 +2769,13 @@ export default function AgendaPage() {
         .then(data => {
           if (data && data.found) {
             setLastClientTurnoInfo(data);
+            if (Number(data.saldoAFavor || 0) > 0) {
+              setNewTurno(prev => ({
+                ...prev,
+                valorSeña: Number(data.saldoAFavor),
+                manualSeñaOverride: Number(data.saldoAFavor)
+              }));
+            }
           } else {
             setLastClientTurnoInfo(null);
           }
@@ -3523,18 +3551,25 @@ export default function AgendaPage() {
                 return true;
               });
 
-              const totalRevenue = dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorTotal || 0), 0);
+              const isFilteredView = (selectedBoxId && selectedBoxId !== 'ALL') || (selectedOperadorId && selectedOperadorId !== 'ALL');
+
+              const totalRevenue = !isFilteredView && daySenas?.totalRevenue !== undefined
+                ? Number(daySenas.totalRevenue)
+                : dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorTotal || 0), 0);
+
               const totalSenas = dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorSeña || 0), 0);
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
               const dayNameLong = selectedDate ? selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
               // Cálculo de ingreso neto: dinero real de caja de la jornada (Gonzalo Rule of Cashflow, alineado 100% con Ganancia Neta de Estadísticas)
-              // 1) Saldos cobrados de turnos REALIZADOS en el día (valorTotal - seña previa; valorTotal ya incluye descuentos/bonificaciones)
+              // 1) Saldos cobrados de turnos REALIZADOS en el día (valorTotal - seña previa; sincronizado con servidor y estadísticas)
               const turnosRealizados = dayApps.filter(app => app.estado === 'REALIZADO');
-              const totalSaldosRealizados = turnosRealizados.reduce((sum, a) => {
-                const saldo = Math.max(0, Number(a.valorTotal || 0) - Number(a.valorSeña || 0));
-                return sum + saldo;
-              }, 0);
+              const totalSaldosRealizados = !isFilteredView && daySenas?.totalSaldosRealizados !== undefined
+                ? Number(daySenas.totalSaldosRealizados)
+                : turnosRealizados.reduce((sum, a) => {
+                    const saldo = Math.max(0, Number(a.valorTotal || 0) - Number(a.valorSeña || 0));
+                    return sum + saldo;
+                  }, 0);
 
               // 2) Señas cobradas en este día (turnos agendados en esta fecha en timezone UTC-3)
               const totalSenasCobradasHoy = Number(daySenas?.totalSenas || 0);
@@ -4387,7 +4422,15 @@ export default function AgendaPage() {
                       <label className={styles.inputLabel}>👤 Operador Asignado</label>
                       <select
                         value={editTurno.operadorId || ''}
-                        onChange={(e) => setEditTurno(prev => ({ ...prev, operadorId: e.target.value }))}
+                        onChange={(e) => {
+                          const chosenOpId = e.target.value;
+                          const chosenOp = operadores.find(op => op.id === chosenOpId);
+                          setEditTurno(prev => ({
+                            ...prev,
+                            operadorId: chosenOpId,
+                            ...(chosenOp?.boxPredeterminadoId ? { boxId: chosenOp.boxPredeterminadoId } : {})
+                          }));
+                        }}
                       >
                         <option value="">Gonzalo (Por defecto)</option>
                         {operadores.filter(op => op.activo !== false || op.id === editTurno.operadorId).map(op => {
@@ -4994,22 +5037,28 @@ export default function AgendaPage() {
                         value={selectedTurno.operadorId || ''}
                         onChange={async (e) => {
                           const newOpId = e.target.value || null;
+                          const chosenOp = operadores.find(op => op.id === newOpId);
                           try {
+                            const payload = { operadorId: newOpId };
+                            if (chosenOp?.boxPredeterminadoId) {
+                              payload.boxId = chosenOp.boxPredeterminadoId;
+                            }
                             const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
                               method: 'PUT',
                               headers: { 'Content-Type': 'application/json' },
                               credentials: 'include',
-                              body: JSON.stringify({ operadorId: newOpId })
+                              body: JSON.stringify(payload)
                             });
                             if (res.ok) {
                               const updated = await res.json();
                               setSelectedTurno(prev => ({
                                 ...prev,
                                 operadorId: newOpId,
-                                operador: updated.operador || operadores.find(op => op.id === newOpId) || null
+                                operador: updated.operador || operadores.find(op => op.id === newOpId) || null,
+                                ...(chosenOp?.boxPredeterminadoId ? { boxId: chosenOp.boxPredeterminadoId, box: boxes.find(b => b.id === chosenOp.boxPredeterminadoId) || prev.box } : {})
                               }));
                               const opName = operadores.find(op => op.id === newOpId)?.nombre || 'Gonzalo';
-                              showToast(`Operador asignado: ${opName}`);
+                              showToast(`Operador asignado: ${opName}${chosenOp?.boxPredeterminadoId ? ' (Box actualizado)' : ''}`);
                               fetchAppointments();
                             } else {
                               showToast('Error al asignar operador', 'error');
@@ -5114,7 +5163,7 @@ export default function AgendaPage() {
                                     if (res.ok) {
                                       const updated = await res.json();
                                       setSelectedTurno(prev => ({ ...prev, metodoPago: val }));
-                                      showToast(`Método de pago: ${val === 'TRANSFERENCIA' ? '🏦 Transferencia' : '💵 Efectivo'}`);
+                                      showToast(`Método de pago: ${val === 'TRANSFERENCIA' ? '🏦 Transferencia' : val === 'EFECTIVO' ? '💵 Efectivo' : '🔀 Ambos'}`);
                                       fetchAppointments();
                                     }
                                   } catch (err) {
@@ -5139,8 +5188,113 @@ export default function AgendaPage() {
                               >
                                 <option value="TRANSFERENCIA">🏦 Transferencia</option>
                                 <option value="EFECTIVO">💵 Efectivo</option>
+                                <option value="AMBOS">🔀 Ambos</option>
                               </select>
                             </div>
+
+                            {/* Desglose de Pago Dividido "Ambos" (Efectivo + Transferencia) - D-151 */}
+                            {selectedTurno.metodoPago === 'AMBOS' && (
+                              <div style={{
+                                gridColumn: '1 / -1',
+                                backgroundColor: '#f8fafc',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '8px',
+                                padding: '0.65rem 0.85rem',
+                                marginTop: '0.35rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.45rem'
+                              }}>
+                                <div style={{ fontSize: '0.73rem', color: '#64748b', fontWeight: 600 }}>
+                                  La suma debe coincidir con el total en la sesión
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                  <div>
+                                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.2rem' }}>
+                                      💵 Efectivo
+                                    </label>
+                                    <input
+                                      type="number"
+                                      value={selectedTurno.montoEfectivo ?? ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        setSelectedTurno(prev => ({ ...prev, montoEfectivo: val }));
+                                      }}
+                                      onBlur={async () => {
+                                        try {
+                                          await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              montoEfectivo: selectedTurno.montoEfectivo,
+                                              montoTransferencia: selectedTurno.montoTransferencia
+                                            })
+                                          });
+                                          fetchAppointments();
+                                        } catch (err) {
+                                          console.error(err);
+                                        }
+                                      }}
+                                      placeholder="$0"
+                                      style={{ width: '100%', padding: '0.4rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem', fontWeight: 700 }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.2rem' }}>
+                                      🏛️ Transferencia
+                                    </label>
+                                    <input
+                                      type="number"
+                                      value={selectedTurno.montoTransferencia ?? ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        setSelectedTurno(prev => ({ ...prev, montoTransferencia: val }));
+                                      }}
+                                      onBlur={async () => {
+                                        try {
+                                          await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              montoEfectivo: selectedTurno.montoEfectivo,
+                                              montoTransferencia: selectedTurno.montoTransferencia
+                                            })
+                                          });
+                                          fetchAppointments();
+                                        } catch (err) {
+                                          console.error(err);
+                                        }
+                                      }}
+                                      placeholder="$0"
+                                      style={{ width: '100%', padding: '0.4rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem', fontWeight: 700 }}
+                                    />
+                                  </div>
+                                </div>
+                                {(() => {
+                                  const saldoPendiente = Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0));
+                                  const sumSplit = Number(selectedTurno.montoEfectivo || 0) + Number(selectedTurno.montoTransferencia || 0);
+                                  const matches = sumSplit === saldoPendiente;
+                                  return (
+                                    <div style={{
+                                      fontSize: '0.75rem',
+                                      fontWeight: 700,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      color: matches ? '#16a34a' : '#dc2626',
+                                      backgroundColor: matches ? '#f0fdf4' : '#fef2f2',
+                                      padding: '0.3rem 0.55rem',
+                                      borderRadius: '5px',
+                                      marginTop: '0.15rem'
+                                    }}>
+                                      <span>Total ingresado: ${sumSplit.toLocaleString('es-AR')}</span>
+                                      <span>{matches ? '✓ Coincide con el total' : `Faltan/Sobran $${Math.abs(saldoPendiente - sumSplit).toLocaleString('es-AR')}`}</span>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
                             {Boolean(selectedTurno.descuentoTipo && selectedTurno.descuentoTipo !== 'NINGUNO' && selectedTurno.descuentoTipo !== 'SIN_DESCUENTO' && (dynPrices.bonificacion > 0 || (selectedTurno.bonificacion && selectedTurno.bonificacion > 0))) && (
                               <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
                                 <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word' }}>
@@ -5151,6 +5305,53 @@ export default function AgendaPage() {
                                 </span>
                               </div>
                             )}
+
+                            {/* Monto / Dinero a Favor del Cliente (D-151) */}
+                            <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.35rem', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span className={styles.detailLabel} style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  🎁 Dinero a favor
+                                </span>
+                                <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                                  Se aplicará en el próximo turno
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <span style={{ fontWeight: 700, color: '#b45309' }}>$</span>
+                                <input
+                                  type="number"
+                                  value={selectedTurno.dineroAFavor ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? null : Number(e.target.value);
+                                    setSelectedTurno(prev => ({ ...prev, dineroAFavor: val }));
+                                  }}
+                                  onBlur={async () => {
+                                    try {
+                                      await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ dineroAFavor: selectedTurno.dineroAFavor || 0 })
+                                      });
+                                      showToast('Monto a favor actualizado');
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
+                                  }}
+                                  placeholder="0"
+                                  style={{
+                                    width: '95px',
+                                    padding: '0.3rem 0.45rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid #f59e0b',
+                                    backgroundColor: '#fffbeb',
+                                    fontWeight: 700,
+                                    textAlign: 'right',
+                                    fontSize: '0.88rem',
+                                    color: '#b45309'
+                                  }}
+                                />
+                              </div>
+                            </div>
                           </>
                         );
                       })()}
@@ -5965,6 +6166,16 @@ export default function AgendaPage() {
                         📄 Ver Recibo Oficial
                       </button>
                     )}
+                    {selectedTurno.cliente?.whatsapp && currentUserRole !== 'OPERADOR' && (
+                      <button
+                        type="button"
+                        onClick={() => handleSendReceiptWhatsApp(selectedTurno)}
+                        className="btn"
+                        style={{ padding: '0.6rem 0.5rem', fontSize: '0.82rem', fontWeight: 600, borderRadius: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '0.35rem', width: '100%', minHeight: '46px', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', cursor: 'pointer', boxSizing: 'border-box' }}
+                      >
+                        📲 Recibo WhatsApp
+                      </button>
+                    )}
                     {selectedTurno.cliente?.email && currentUserRole !== 'OPERADOR' && (
                       <button
                         type="button"
@@ -6263,7 +6474,7 @@ export default function AgendaPage() {
                                         hasOtros: hasOtros,
                                         otrosTexto: otrosZone ? (otrosZone.nombre?.replace(/^Otros:\s*/, '') || '') : prev.otrosTexto,
                                         otrosPrecio: otrosZone ? otrosZone.precio : prev.otrosPrecio,
-                                        ...(data.señaEstado === 'CONSERVADA' ? { valorSeña: data.valorSeña, manualSeñaOverride: data.valorSeña } : {})
+                                        ...(Number(data.saldoAFavor || 0) > 0 ? { valorSeña: Number(data.saldoAFavor), manualSeñaOverride: Number(data.saldoAFavor) } : (data.señaEstado === 'CONSERVADA' ? { valorSeña: data.valorSeña, manualSeñaOverride: data.valorSeña } : {}))
                                       }));
                                     }
                                   } else {
@@ -6544,6 +6755,24 @@ export default function AgendaPage() {
                         required
                         placeholder="Auto-calculado al elegir zona"
                       />
+                      {lastClientTurnoInfo && Number(lastClientTurnoInfo.saldoAFavor || 0) > 0 && (
+                        <div style={{
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: '#1d4ed8',
+                          backgroundColor: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          padding: '0.35rem 0.6rem',
+                          borderRadius: '6px',
+                          marginTop: '0.35rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}>
+                          <span>🎁</span>
+                          <span>Monto a favor del último turno: ${Number(lastClientTurnoInfo.saldoAFavor).toLocaleString('es-AR')}</span>
+                        </div>
+                      )}
                       {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.señaEstado) && (
                         (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -6594,6 +6823,24 @@ export default function AgendaPage() {
                         required
                         placeholder="Auto-calculado al elegir zona"
                       />
+                      {lastClientTurnoInfo && Number(lastClientTurnoInfo.saldoAFavor || 0) > 0 && (
+                        <div style={{
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: '#1d4ed8',
+                          backgroundColor: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          padding: '0.35rem 0.6rem',
+                          borderRadius: '6px',
+                          marginTop: '0.35rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}>
+                          <span>🎁</span>
+                          <span>Monto a favor del último turno: ${Number(lastClientTurnoInfo.saldoAFavor).toLocaleString('es-AR')}</span>
+                        </div>
+                      )}
                       {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.señaEstado) && (
                         (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -6768,7 +7015,15 @@ export default function AgendaPage() {
                     <label className={styles.inputLabel}>👤 Operador Asignado</label>
                     <select
                       value={newTurno.operadorId || ''}
-                      onChange={(e) => setNewTurno(prev => ({ ...prev, operadorId: e.target.value }))}
+                      onChange={(e) => {
+                        const chosenOpId = e.target.value;
+                        const chosenOp = operadores.find(op => op.id === chosenOpId);
+                        setNewTurno(prev => ({
+                          ...prev,
+                          operadorId: chosenOpId,
+                          ...(chosenOp?.boxPredeterminadoId ? { boxId: chosenOp.boxPredeterminadoId } : {})
+                        }));
+                      }}
                     >
                       <option value="">Gonzalo (Por defecto)</option>
                       {operadores.filter(op => op.activo !== false).map(op => {

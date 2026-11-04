@@ -76,7 +76,8 @@ export async function PUT(request, { params }) {
       notifAltaTurno,
       notifCancelacion,
       notifReprogramacion,
-      notifMantenimiento
+      notifMantenimiento,
+      notifCumpleanos
     } = body;
 
     const cleanDni = dni !== undefined ? (dni ? String(dni).replace(/\D/g, '').trim() : null) : undefined;
@@ -160,6 +161,7 @@ export async function PUT(request, { params }) {
     if (notifCancelacion !== undefined) updateData.notifCancelacion = Boolean(notifCancelacion);
     if (notifReprogramacion !== undefined) updateData.notifReprogramacion = Boolean(notifReprogramacion);
     if (notifMantenimiento !== undefined) updateData.notifMantenimiento = Boolean(notifMantenimiento);
+    if (notifCumpleanos !== undefined) updateData.notifCumpleanos = Boolean(notifCumpleanos);
 
     const updated = await prisma.cliente.update({
       where: { id },

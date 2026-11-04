@@ -1670,3 +1670,36 @@
 5. **Compilación y Despliegue en VPS**:
    - Compilación Next.js validada con Turbopack (47/47 rutas compiladas con éxito).
    - Desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
+
+
+## 📅 Sesión: 4 de Noviembre de 2026 - Paquete Integral de Mejoras Solicitadas (D-151, ERR-63, ERR-64)
+
+### Requerimientos de Gonzalo Siri y Luciano Gómez:
+1. **Método de Pago "Ambos" (Split Payment)**:
+   - Opción `Ambos` en método de pago de la ficha de turno.
+   - Despliega 2 campos numéricos: Efectivo y Transferencia con indicador de coincidencia en vivo frente al saldo a cobrar en el local.
+   - Se persiste en `montoEfectivo` y `montoTransferencia` y suma en estadísticas y facturación.
+2. **"Dinero a Favor" / "Monto a Favor"**:
+   - Debajo del descuento aplicado, se añade el campo `🎁 Dinero a favor` ($X) para clientes que dejan paga una sesión futura sin agendarla en el momento.
+   - Al agendar un nuevo turno para el cliente, se precarga automáticamente el monto a favor como seña con el mensaje: *"🎁 Monto a favor del último turno: $X"*.
+3. **Estadísticas: Seña de Turnos Futuros Pre-Agendados**:
+   - Si un cliente se realiza un turno pero no agenda un turno nuevo porque ya tenía otro agendado a futuro en el sistema, la seña se suma en Ingreso Neto bajo `Turno siguiente (Saldo + Seña próx.)`.
+4. **Discrepancia Saldo Agenda vs Estadísticas (ERR-63)**:
+   - En la fecha 30/10/2026, Agenda mostraba $283.500 saldos cuando Estadísticas calculaba $345.000 saldos.
+   - Se resolvió calculando `totalSaldosRealizados` y `totalRevenue` desde la base de datos PostgreSQL en `/api/admin/turnos/senas-dia`, consumiéndose canónicamente en la Agenda.
+5. **Rediseño de Bloqueos en Configuración y Filtro por Tipo**:
+   - Tarjetas `.bloqueoCardItem` adaptadas al formato exacto de imagen (dot indicador, badge de tipo, fecha con día, motivo, horario con dot verde para día completo y botón eliminar).
+   - Selector desplegable de filtro (`Todos`, `Únicos`, `Fijos`, `Móviles`) junto a las píldoras interactivas.
+6. **Operadores: Scroll Down Suave y Asignación de Box Predeterminado**:
+   - Al elegir "Usuarios y Operadores" en Configuración, scroll automático suave hacia abajo.
+   - En creación y edición de operadores, posibilidad de asignar un Box Predeterminado; al seleccionar el operador en Agenda se asigna automáticamente dicho box.
+7. **Recibo Oficial por WhatsApp**:
+   - Botón `📲 Recibo WhatsApp` en las acciones rápidas de la ficha de turno, formateando el mensaje con enlace oficial web (`/admin/recibos/[id]`) y abriendo WhatsApp directamente.
+8. **Avisos: Visor Modal de Mensaje Completo y Checkbox de Cumpleaños**:
+   - Modal interactivo `viewNoticeModal` para auditar el contenido íntegro de emails y whatsapps enviados.
+   - Checkbox `🎂 Saludo de Cumpleaños` (`notifCumpleanos`) en la ficha de cliente respetado por el cron automatizado de saludos.
+9. **Gastos Móvil**:
+   - Rediseño de tarjeta a 2 filas con categoría y monto rojo en la fila superior, y concepto opcional.
+10. **Blindaje del Cron Diario de Backups a Google Drive (ERR-64)**:
+   - Invocación con `/bin/bash` y permisos de ejecución en `/etc/cron.d/agenda-backup`.
+   - Backup de verificación subido con éxito a Google Drive (`agenda_db_20261104_181403.sql.gz`).

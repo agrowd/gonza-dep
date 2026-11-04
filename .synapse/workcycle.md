@@ -2559,3 +2559,40 @@
 - [x] **Validación y Compilación**:
   - Compilación Next.js validada con Turbopack (47/47 rutas compiladas con éxito).
 - [x] **Documentación**: Registrado `D-150 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-62` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 4 de Noviembre de 2026 - Paquete Integral de Mejoras y Ajustes Solicitados (D-151, ERR-63, ERR-64)
+- [x] **Método de Pago "Ambos" (Split Payment Efectivo + Transferencia)**:
+  - En `prisma/schema.prisma`: Se agregaron los campos `montoEfectivo Float?` y `montoTransferencia Float?` al modelo `Turno`. Sincronizado con base de datos.
+  - En `src/app/admin/agenda/page.js`: En el modal de detalle de turno (`selectedTurno`), al seleccionar Método de Pago `Ambos` se despliegan dos campos numéricos (`montoEfectivo` y `montoTransferencia`) con indicador de coincidencia en vivo frente al saldo pendiente a cobrar en el local.
+  - En `/api/admin/turnos/[id]/route.js` y `/api/admin/turnos/route.js`: Persistencia completa de `montoEfectivo` y `montoTransferencia`.
+  - En `/api/admin/estadisticas/route.js`: Integración de los montos divididos en la facturación y reportes contables.
+- [x] **"Dinero a Favor" / "Monto a Favor"**:
+  - En `prisma/schema.prisma`: Agregada la columna `saldoAFavor Float @default(0)` en `Cliente` y `dineroAFavor Float?` en `Turno`.
+  - En `src/app/admin/agenda/page.js`: Debajo de Descuento se agregó el campo `🎁 Dinero a favor` ($X). Al guardar el turno, se registra en el turno y en el saldo a favor del cliente.
+  - En `src/app/api/admin/turnos/ultimo-cliente/route.js` y `newTurno`: Al agendar un nuevo turno para ese cliente, se consulta su saldo a favor, se pre-pobla automáticamente en el campo de seña (`valorSeña`) y se muestra el banner: *"🎁 Monto a favor del último turno: $X"*.
+- [x] **Estadísticas: Seña de Turnos Futuros Pre-Agendados**:
+  - En `/api/admin/estadisticas/route.js`: Cuando un cliente se realiza un turno pero ya tenía reservada otra cita a futuro en el sistema (agendó varios turnos por adelantado), la seña de ese turno futuro se suma automáticamente en el Ingreso Neto dentro del desglose `Turno siguiente (Saldo + Seña próx.)`.
+- [x] **Sincronización Total de Saldos Diarios entre Agenda y Estadísticas (ERR-63)**:
+  - En `/api/admin/turnos/senas-dia/route.js`: Se implementó el cálculo y retorno de `totalSaldosRealizados`, `totalRevenue` e `ingresoNeto` directamente desde PostgreSQL (`prisma.turno.findMany`).
+  - En `src/app/admin/agenda/page.js`: La vista diaria de la Agenda ahora consume estos totales canónicos del backend cuando no hay filtros individuales de box/operador, erradicando la discrepancia de saldos ($283.500 vs $345.000).
+- [x] **Rediseño de Bloqueos en Configuración y Filtro por Tipo**:
+  - En `src/app/admin/configuracion/page.js`: Se adaptó la lista de bloqueos (`.bloqueoCardItem`) al diseño exacto de Image 2 (Cabecera: Dot indicador, Badge de tipo [ÚNICO/FIJO/MÓVIL], Fecha formateada con día; Cuerpo: Motivo, Horario con dot verde para día completo, y botón `🗑️ Eliminar`).
+  - Se incorporó el selector desplegable de filtro (`Todos`, `Únicos`, `Fijos`, `Móviles`) junto a los botones pill.
+- [x] **Operadores: Scroll Down Suave y Asignación de Box Predeterminado**:
+  - Al seleccionar "Usuarios y Operadores" en el selector de secciones de Configuración, la pantalla se desplaza suavemente hacia abajo (`usersSectionRef`).
+  - En `prisma/schema.prisma`: Se agregó `boxPredeterminadoId String?` en `Usuario` y relación con `Box`.
+  - En `src/app/admin/configuracion/page.js`: Se agregó el selector de box predeterminado en el modal de usuario/operador y su badge correspondiente en la tarjeta.
+  - En `src/app/admin/agenda/page.js`: Al seleccionar un operador en la creación o edición de turnos, se asigna automáticamente su box predeterminado asignado.
+- [x] **Recibo Oficial por WhatsApp**:
+  - En `src/app/admin/agenda/page.js`: En la grilla de acciones rápidas de la ficha de turno, se añadió el botón `📲 Recibo WhatsApp` que genera el enlace oficial web al recibo (`/admin/recibos/[id]`) con texto personalizado y abre WhatsApp Web/App.
+- [x] **Avisos: Visor Modal de Mensaje Completo y Checkbox de Cumpleaños**:
+  - En `src/app/admin/clientes/page.js`: Se agregó el modal `viewNoticeModal` para auditar el contenido íntegro de cualquier correo o mensaje de WhatsApp enviado desde la pestaña de Avisos.
+  - En la edición de cliente: Se incorporó el checkbox `🎂 Saludo de Cumpleaños` (`notifCumpleanos`), conectado a la API y respetado por el cron de saludos de cumpleaños en `src/lib/whatsapp.js`.
+- [x] **Gastos Móvil**:
+  - En `src/app/admin/gastos/page.js` y `gastos.module.css`: Rediseñado a 2 filas (Categoría prominente e importe en rojo en la fila superior; detalle, fecha y botones en la fila inferior). Concepto opcional en el modal.
+- [x] **Blindaje del Cron Diario de Backups a Google Drive (ERR-64)**:
+  - En el VPS, se otorgaron permisos `chmod +x` a `/srv/gonzalo-dep/scripts/daily_backup.sh` y se actualizó `/etc/cron.d/agenda-backup` para ejecutar con `/bin/bash`.
+  - Se ejecutó un backup manual de verificación, subiendo con éxito `agenda_db_20261104_181403.sql.gz` a la carpeta `AgendaBackups/` de Google Drive.
+- [x] **Compilación y Validación**:
+  - Next.js Turbopack compilado localmente con éxito (47/47 rutas OK).
+- [x] **Documentación**: Registrado `D-151 🔒 LOCKED` en `.synapse/decisions.md`, `ERR-63` y `ERR-64` en `.synapse/errores.md`.

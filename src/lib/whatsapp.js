@@ -1033,6 +1033,11 @@ export async function checkAndSendReminders(force = false) {
         console.log(`[Reminder Cron] Found ${birthdayClients.length} clients with birthday today (${currentDay}/${currentMonth})! Sending greetings strictly via EMAIL...`);
 
         for (const c of birthdayClients) {
+          if (c.notifCumpleanos === false) {
+            console.log(`[Reminder Cron] Birthday greetings explicitly disabled for client ${c.nombreCompleto}. Skipping.`);
+            continue;
+          }
+
           if (!c.email || !c.email.trim()) {
             console.log(`[Reminder Cron] Client ${c.nombreCompleto} has birthday today but no email address configured. Skipping.`);
             continue;

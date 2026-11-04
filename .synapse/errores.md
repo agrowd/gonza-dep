@@ -665,3 +665,22 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 3. Compilado con Next.js Turbopack (47/47 rutas OK) y desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
 **Commit:** `b0a3359`
 **Estado:** ✅ FIXED
+
+## ERR-63: Discrepancia en Saldos del Día entre Agenda y Estadísticas (04/11/2026)
+**Síntoma:** Gonzalo Siri y Luciano Gómez reportaron que en la vista diaria de la Agenda (`/admin/agenda`), los saldos del día mostraban $283.500 cuando en Estadísticas (`/admin/estadisticas`) figuraban $345.000 (diferencia de $61.500 en la fecha 30/10/2026).
+**Root Cause:**
+En el cliente React de `/admin/agenda`, `totalSaldosRealizados` se computaba sumando dinámicamente sobre el array `visibleAppointments` filtrado en memoria del navegador. Si algún turno de estado `REALIZADO` pertenecía a otro operador o box, o si no estaba en la vista visible por paginación/filtro, el cálculo cliente difería de la verdad canónica calculada por la base de datos PostgreSQL en Estadísticas.
+**Solución:**
+En `/api/admin/turnos/senas-dia/route.js`, se incorporó el cómputo de `totalSaldosRealizados`, `totalRevenue` e `ingresoNeto` directamente desde la base de datos (con `prisma.turno.findMany` para la fecha consultada), replicando la lógica exacta de Estadísticas. La vista diaria de la Agenda ahora consume prioritariamente estos totales canónicos del backend cuando no hay filtros individuales de box/operador activos, garantizando 100% de coincidencia al centavo.
+**Estado:** ✅ FIXED
+
+## ERR-64: Fallo de Ejecución en Cron Diario de Backup a Google Drive por Permisos de Shell (04/11/2026)
+**Síntoma:** Gonzalo reportó que los backups automáticos de la base de datos en Google Drive (`AgendaBackups/`) no se generaban desde el 26/10.
+**Root Cause:**
+Al auditar los logs del sistema en `/var/log/agenda_backup.log`, se constató que la tarea cron en `/etc/cron.d/agenda-backup` intentaba ejecutar `/srv/gonzalo-dep/scripts/daily_backup.sh` de forma directa sin invocar `/bin/bash` explícito y sin el bit de ejecución (`chmod +x`), arrojando:
+`/bin/sh: 1: /srv/gonzalo-dep/scripts/daily_backup.sh: Permission denied`.
+**Solución:**
+1. Se otorgaron permisos ejecutables con `chmod +x /srv/gonzalo-dep/scripts/daily_backup.sh`.
+2. Se actualizó la definición en `/etc/cron.d/agenda-backup` para ejecutar `/bin/bash /srv/gonzalo-dep/scripts/daily_backup.sh >> /var/log/agenda_backup.log 2>&1`.
+3. Se disparó una ejecución de prueba inmediata, confirmando la compresión y subida exitosa de `agenda_db_20261104_181403.sql.gz` a Google Drive (`rclone ls gdrive:AgendaBackups/`).
+**Estado:** ✅ FIXED

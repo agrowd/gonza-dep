@@ -1823,27 +1823,26 @@ function ClientesPageContent() {
                             </div>
 
                             {/* Action: Ver mensaje completo */}
-                            {body && body.length > 70 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.35rem' }}>
                               <button
                                 type="button"
-                                onClick={() => toggleExpandNotif(n.id)}
+                                onClick={() => setViewNoticeModal(n)}
                                 style={{
                                   background: 'none',
                                   border: 'none',
-                                  padding: '0.35rem 0 0 0',
+                                  padding: '0.2rem 0',
                                   color: '#7a1f1e',
-                                  fontSize: '0.78rem',
+                                  fontSize: '0.8rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '0.3rem',
-                                  marginTop: '0.2rem'
+                                  gap: '0.3rem'
                                 }}
                               >
-                                {isExpanded ? '▲ Ocultar mensaje' : '👁️ Ver mensaje completo >'}
+                                👁️ Ver mensaje completo &gt;
                               </button>
-                            )}
+                            </div>
                           </div>
                         );
                       })}
@@ -2189,6 +2188,15 @@ function ClientesPageContent() {
                               onChange={(e) => setEditNotes({ ...editNotes, notifMantenimiento: e.target.checked })}
                             />
                             <span>⏰ Recordatorio / Mantenimiento</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={editNotes.notifCumpleanos !== false}
+                              disabled={!editNotes.enviarNotificaciones}
+                              onChange={(e) => setEditNotes({ ...editNotes, notifCumpleanos: e.target.checked })}
+                            />
+                            <span>🎂 Saludo de Cumpleaños</span>
                           </label>
                         </div>
                       </div>
@@ -2868,6 +2876,99 @@ function ClientesPageContent() {
           </div>
         </div>
       )}
+
+      {/* FULL NOTIFICATION READER MODAL (D-151) */}
+      {viewNoticeModal && (
+        <div className={agendaStyles.modalOverlay} style={{ zIndex: 10001 }}>
+          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '580px', width: '100%', boxSizing: 'border-box' }}>
+            <div className={agendaStyles.modalHeader}>
+              <h3 style={{ fontSize: '1.15rem', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <span>{viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '📧' : '📲'}</span>
+                Detalle del Aviso Enviado
+              </h3>
+              <button type="button" onClick={() => setViewNoticeModal(null)} className={agendaStyles.closeBtn}>&times;</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+              {/* Meta card */}
+              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span style={{
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    backgroundColor: viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '#eff6ff' : '#f0fdf4',
+                    color: viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '#1d4ed8' : '#15803d',
+                    border: viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '1px solid #bfdbfe' : '1px solid #bbf7d0'
+                  }}>
+                    {viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '📧 EMAIL' : '📲 WHATSAPP'}
+                  </span>
+                  <span style={{
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    backgroundColor: viewNoticeModal.estado === 'ENVIADO' ? '#dcfce7' : '#fee2e2',
+                    color: viewNoticeModal.estado === 'ENVIADO' ? '#166534' : '#991b1b',
+                    border: viewNoticeModal.estado === 'ENVIADO' ? '1px solid #bbf7d0' : '1px solid #fecaca'
+                  }}>
+                    {viewNoticeModal.estado}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <strong>Fecha y hora:</strong> {new Date(viewNoticeModal.fechaEnvio).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <strong>Destinatario:</strong> {selectedClient?.nombreCompleto} ({viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? selectedClient?.email : selectedClient?.whatsapp})
+                </div>
+              </div>
+
+              {/* Message Content */}
+              <div>
+                <label className={styles.inputLabel} style={{ marginBottom: '0.4rem', fontWeight: 600 }}>Contenido del Mensaje:</label>
+                <div style={{
+                  backgroundColor: '#ffffff',
+                  color: '#1e293b',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.88rem',
+                  lineHeight: '1.5',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: '320px',
+                  overflowY: 'auto'
+                }}>
+                  {viewNoticeModal.mensaje}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setViewNoticeModal(null)}
+                  style={{
+                    backgroundColor: '#7a1f1e',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '0.6rem 1.4rem',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toast.show && (
         <div style={{

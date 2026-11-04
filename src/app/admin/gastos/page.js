@@ -287,8 +287,8 @@ export default function GastosPage() {
   // Handle save gasto
   const handleSaveGasto = async (e) => {
     e.preventDefault();
-    if (!gastoForm.concepto.trim()) {
-      setGastoError('Ingresá el concepto del gasto.');
+    if (!gastoForm.categoriaId) {
+      setGastoError('Seleccioná una categoría.');
       return;
     }
     const num = parseFloat(gastoForm.monto);
@@ -296,10 +296,9 @@ export default function GastosPage() {
       setGastoError('Ingresá un monto válido mayor a 0.');
       return;
     }
-    if (!gastoForm.categoriaId) {
-      setGastoError('Seleccioná una categoría.');
-      return;
-    }
+
+    const selectedCat = categorias.find(c => c.id === gastoForm.categoriaId);
+    const finalConcepto = gastoForm.concepto.trim() || selectedCat?.nombre || 'Gasto General';
 
     setSavingGasto(true);
     setGastoError('');
@@ -314,7 +313,10 @@ export default function GastosPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(gastoForm),
+        body: JSON.stringify({
+          ...gastoForm,
+          concepto: finalConcepto
+        }),
         credentials: 'include'
       });
 
@@ -752,46 +754,53 @@ export default function GastosPage() {
                                   onClick={() => handleOpenEditGasto(gasto)}
                                   title="Tocar para editar o eliminar gasto"
                                 >
-                                  <div
-                                    className={styles.mobileGastoAvatar}
-                                    style={{ background: visuals.bg, color: visuals.color }}
-                                  >
-                                    <span>{visuals.icon}</span>
-                                  </div>
-                                  <div className={styles.mobileGastoInfo}>
-                                    <div className={styles.mobileGastoCategory}>
-                                      {gasto.categoriaNombre}
+                                  {/* Fila 1: Categoría destacada con Icono a la izquierda, y Monto a la derecha sin recorte */}
+                                  <div className={styles.mobileGastoRowTop}>
+                                    <div className={styles.mobileGastoCategoryWrapper}>
+                                      <div
+                                        className={styles.mobileGastoAvatar}
+                                        style={{ background: visuals.bg, color: visuals.color, width: '32px', height: '32px', fontSize: '1rem' }}
+                                      >
+                                        <span>{visuals.icon}</span>
+                                      </div>
+                                      <div className={styles.mobileGastoCategory} style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a' }}>
+                                        {gasto.categoriaNombre}
+                                      </div>
                                     </div>
-                                    <div className={styles.mobileGastoConcept}>
-                                      {gasto.concepto}
-                                      {gasto.observaciones ? ` • ${gasto.observaciones}` : ''}
-                                    </div>
-                                  </div>
-                                  <div className={styles.mobileGastoAmountCol}>
-                                    <div className={styles.mobileGastoMonto}>
+                                    <div className={styles.mobileGastoMonto} style={{ fontSize: '1rem', fontWeight: 800, color: '#dc2626', whiteSpace: 'nowrap' }}>
                                       - {formatCurrency(gasto.monto)}
                                     </div>
-                                    <div className={styles.mobileGastoHora}>
-                                      {gasto.hora || '12:00'}
-                                    </div>
                                   </div>
-                                  <div className={styles.mobileGastoActions} onClick={(e) => e.stopPropagation()}>
-                                    <button
-                                      type="button"
-                                      className={styles.mobileActionBtn}
-                                      onClick={() => handleOpenEditGasto(gasto)}
-                                      title="Editar gasto"
-                                    >
-                                      ✏️
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className={`${styles.mobileActionBtn} ${styles.mobileActionBtnDanger}`}
-                                      onClick={() => setDeleteTarget({ type: 'gasto', id: gasto.id, name: gasto.concepto })}
-                                      title="Eliminar gasto"
-                                    >
-                                      🗑️
-                                    </button>
+
+                                  {/* Fila 2: Concepto secundario a la izquierda, Hora + Acciones a la derecha */}
+                                  <div className={styles.mobileGastoRowBottom}>
+                                    <div className={styles.mobileGastoConcept} style={{ fontSize: '0.8rem', color: '#64748b', flex: 1, minWidth: 0 }}>
+                                      {gasto.concepto || gasto.categoriaNombre}
+                                      {gasto.observaciones ? ` • ${gasto.observaciones}` : ''}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                                      <span className={styles.mobileGastoHora} style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600 }}>
+                                        {gasto.hora || '12:00'}
+                                      </span>
+                                      <div className={styles.mobileGastoActions} onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                          type="button"
+                                          className={styles.mobileActionBtn}
+                                          onClick={() => handleOpenEditGasto(gasto)}
+                                          title="Editar gasto"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className={`${styles.mobileActionBtn} ${styles.mobileActionBtnDanger}`}
+                                          onClick={() => setDeleteTarget({ type: 'gasto', id: gasto.id, name: gasto.concepto || gasto.categoriaNombre })}
+                                          title="Eliminar gasto"
+                                        >
+                                          🗑️
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -925,14 +934,13 @@ export default function GastosPage() {
               </div>
 
               <div className={styles.formGroup}>
-                <label>Concepto / Detalle *</label>
+                <label>Concepto / Detalle (opcional)</label>
                 <input
                   type="text"
-                  placeholder="Ej: Insumos de cera, Alquiler local, Honorarios..."
+                  placeholder="Ej: Insumos de cera, Alquiler local, Honorarios (o dejar vacío para usar la categoría)..."
                   value={gastoForm.concepto}
                   onChange={(e) => setGastoForm({ ...gastoForm, concepto: e.target.value })}
                   className={styles.formInput}
-                  required
                 />
               </div>
 
@@ -961,17 +969,6 @@ export default function GastosPage() {
                     required
                   />
                 </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Observaciones (opcional)</label>
-                <textarea
-                  placeholder="Detalles adicionales, proveedor, nro de comprobante..."
-                  value={gastoForm.observaciones}
-                  onChange={(e) => setGastoForm({ ...gastoForm, observaciones: e.target.value })}
-                  className={styles.formTextarea}
-                  rows={2}
-                />
               </div>
 
               <div className={styles.modalFooter}>

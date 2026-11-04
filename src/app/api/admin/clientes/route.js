@@ -198,6 +198,7 @@ export async function POST(request) {
         notasGonzalo,
         frecuencia: frecuencia ? Number(frecuencia) : 4,
         enviarNotificaciones: enviarNotificaciones !== false,
+        notifCumpleanos: body.notifCumpleanos !== false,
         fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
         fechaPrimerTurno: fechaPrimerTurno ? new Date(fechaPrimerTurno) : null,
         sesionesPrevias: sesionesPrevias ? Number(sesionesPrevias) : 0

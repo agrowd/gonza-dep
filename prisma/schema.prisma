@@ -28,6 +28,8 @@ model Usuario {
   comisionTipo     String?   @default("POR_TURNO") // "POR_TURNO", "POR_DIA", "PORCENTAJE"
   comisionValor    Float?    @default(0)
   activo           Boolean   @default(true)
+  boxPredeterminadoId String?
+  boxPredeterminado   Box?     @relation("OperadorBoxPredeterminado", fields: [boxPredeterminadoId], references: [id], onDelete: SetNull)
   turnos           Turno[]
   createdAt        DateTime  @default(now())
 }
@@ -47,6 +49,7 @@ model Cliente {
   fechaPrimerTurno DateTime?
   fechaNacimiento  DateTime?
   sesionesPrevias  Int            @default(0)
+  saldoAFavor      Float          @default(0)
   enviarNotificaciones Boolean @default(true)
   bloqueado            Boolean        @default(false)
   recibioResena        Boolean        @default(false)
@@ -56,6 +59,7 @@ model Cliente {
   notifCancelacion     Boolean        @default(true)
   notifReprogramacion  Boolean        @default(true)
   notifMantenimiento   Boolean        @default(true)
+  notifCumpleanos      Boolean        @default(true)
   turnos           Turno[]
   notificaciones   Notificacion[]
   conversaciones   ConversacionWsp[]
@@ -81,7 +85,10 @@ model Turno {
   estado           String   @default("PENDIENTE_PAGO") // "SEÑADO", "REALIZADO", "CANCELADO", "REPROGRAMADO", "NO_ASISTIO", "PENDIENTE_AUTORIZACION", "PENDIENTE_PAGO", "CONSULTA"
   señaEstado       String?  // "CONSERVADA", "PERDIDA"
   subEstado        String?  // "SIGUIENTE_TURNO", "VA_A_AVISAR", "MANTENIMIENTO", "FINALIZADO"
-  metodoPago       String?  @default("TRANSFERENCIA") // "EFECTIVO", "TRANSFERENCIA"
+  metodoPago       String?  @default("TRANSFERENCIA") // "EFECTIVO", "TRANSFERENCIA", "AMBOS"
+  montoEfectivo    Float?   @default(0)
+  montoTransferencia Float? @default(0)
+  dineroAFavor     Float?   @default(0)
   enviarNotificaciones Boolean @default(true)
   boxId            String?
   box              Box?     @relation(fields: [boxId], references: [id], onDelete: SetNull)
@@ -135,6 +142,7 @@ model Box {
   servicio      Servicio? @relation(fields: [servicioId], references: [id], onDelete: SetNull)
   turnos        Turno[]
   bloqueos      Bloqueo[]
+  operadoresPredeterminados Usuario[] @relation("OperadorBoxPredeterminado")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
 }

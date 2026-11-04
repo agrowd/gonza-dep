@@ -1,10 +1,10 @@
 /**
  * Helper to identify zones that add 0 additional minutes when combined with a base zone.
- * Exceptions according to Gonzalo: Axilas, Glúteos, Hombros (sin Ax, gl ni hom).
+ * Regla confirmada por Gonzalo: Axilas, Genitales y Hombros (0 min extra). Glúteos SÍ suma +10 min.
  */
 function isZeroAdditionalZone(zone) {
   const norm = (zone?.nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return norm.includes('axila') || norm.includes('gluteo') || norm.includes('hombro');
+  return norm.includes('axila') || norm.includes('genital') || norm.includes('hombro');
 }
 
 /**

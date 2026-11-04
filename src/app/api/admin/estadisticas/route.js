@@ -39,7 +39,11 @@ function formatTurnoItem(t, extra = {}) {
   const valorSeña = Number(t.valorSeña || 0);
   const saldoDelTurno = Math.max(0, valorTotal - valorSeña);
   const metodoPagoRaw = t.metodoPago || 'TRANSFERENCIA';
-  const metodoPagoLabel = metodoPagoRaw === 'EFECTIVO' ? 'Efectivo' : 'Transferencia';
+  const mEf = Number(t.montoEfectivo || 0);
+  const mTr = Number(t.montoTransferencia || 0);
+  const metodoPagoLabel = metodoPagoRaw === 'AMBOS'
+    ? `Ambos (Ef: $${mEf.toLocaleString('es-AR')} + Tr: $${mTr.toLocaleString('es-AR')})`
+    : (metodoPagoRaw === 'EFECTIVO' ? 'Efectivo' : 'Transferencia');
   const canalAdquisicion = t.cliente?.canalAdquisicion || 'ORGANICO';
   const origenCategoria = mapOrigenCategoria(canalAdquisicion);
   const operadorNombre = t.operador?.nombre || 'Gonzalo';
@@ -132,6 +136,9 @@ function formatTurnoItem(t, extra = {}) {
     origenCategoria,
     metodoPago: metodoPagoRaw,
     metodoPagoLabel,
+    montoEfectivo: mEf,
+    montoTransferencia: mTr,
+    dineroAFavor: Number(t.dineroAFavor || 0),
     operadorId: t.operadorId || null,
     operadorNombre,
     fecha: typeof t.fecha === 'string' ? t.fecha.split('T')[0] : t.fecha.toISOString().split('T')[0],
@@ -404,7 +411,22 @@ export async function GET(request) {
 
       // Verificar si este cliente agendó un próximo turno con seña durante este período
       const clientFutureTurnos = (futureSenasByClient.get(t.clienteId) || []).filter(ft => !consumedFutureTurnoIds.has(ft.id));
-      const nextTurnoBooked = clientFutureTurnos.length > 0 ? clientFutureTurnos[0] : null;
+      let nextTurnoBooked = clientFutureTurnos.length > 0 ? clientFutureTurnos[0] : null;
+
+      // NUEVO (Requerimiento Gonzalo): Si el cliente no agendó nuevo turno en este período, pero ya tenía
+      // un turno agendado a futuro en el sistema (turnos múltiples adelantados), la seña se le suma igual
+      // porque en el sistema la seña se va pasando de uno a otro.
+      if (!nextTurnoBooked && t.clienteId) {
+        const cl = allClients.find(c => c.id === t.clienteId);
+        const existingFuture = (cl?.turnos || []).find(ft => {
+          if (consumedFutureTurnoIds.has(ft.id)) return false;
+          if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'].includes(ft.estado)) return false;
+          return new Date(ft.fecha).getTime() > new Date(t.fecha).getTime() && Number(ft.valorSeña || 0) > 0;
+        });
+        if (existingFuture) {
+          nextTurnoBooked = existingFuture;
+        }
+      }
 
       if (nextTurnoBooked) {
         consumedFutureTurnoIds.add(nextTurnoBooked.id);

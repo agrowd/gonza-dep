@@ -457,6 +457,22 @@ export async function PUT(request, { params }) {
     if (body.metodoPago !== undefined) {
       updateData.metodoPago = String(body.metodoPago);
     }
+    if (body.montoEfectivo !== undefined) {
+      updateData.montoEfectivo = Math.max(0, Number(body.montoEfectivo) || 0);
+    }
+    if (body.montoTransferencia !== undefined) {
+      updateData.montoTransferencia = Math.max(0, Number(body.montoTransferencia) || 0);
+    }
+    if (body.dineroAFavor !== undefined) {
+      const dineroAFavorNum = Math.max(0, Number(body.dineroAFavor) || 0);
+      updateData.dineroAFavor = dineroAFavorNum;
+      if (oldTurn.clienteId) {
+        await prisma.cliente.update({
+          where: { id: oldTurn.clienteId },
+          data: { saldoAFavor: dineroAFavorNum }
+        }).catch(err => console.error('Error updating client saldoAFavor:', err));
+      }
+    }
 
     if (selectedZoneIds !== undefined) {
       let dbZones = [];

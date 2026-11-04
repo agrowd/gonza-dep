@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import styles from './configuracion.module.css';
 
 // SVG Icons
@@ -19,6 +19,7 @@ const SettingsIcon = () => (
 
 export default function ConfiguracionPage() {
   const [activeTab, setActiveTab] = useState('zones'); // 'zones', 'hours', 'templates'
+  const usersSectionRef = useRef(null);
 
   // Zones State
   const [zones, setZones] = useState([]);
@@ -150,7 +151,8 @@ export default function ConfiguracionPage() {
     vacacionesInicio: '',
     vacacionesFin: '',
     comisionTipo: 'POR_HORA',
-    comisionValor: ''
+    comisionValor: '',
+    boxPredeterminadoId: ''
   });
 
   // Feriados y Bloqueos State (D-133)
@@ -356,6 +358,26 @@ export default function ConfiguracionPage() {
           esDiaCompleto: true
         }));
         fetchFeriados(selectedFeriadosYear);
+      } else if (res.status === 409) {
+        const warnData = await res.json();
+        const conf = window.confirm(`⚠️ ${warnData.message || 'Existen turnos cargados en esa fecha. ¿Deseas aplicar el bloqueo de todas formas?'}`);
+        if (conf) {
+          const forceRes = await fetch('/api/admin/bloqueos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...feriadoForm, forzar: true })
+          });
+          if (forceRes.ok) {
+            showToast('Bloqueo forzado y registrado con éxito');
+            setFeriadoForm(prev => ({
+              ...prev,
+              motivo: '',
+              esDiaCompleto: true
+            }));
+            fetchFeriados(selectedFeriadosYear);
+            return;
+          }
+        }
       } else {
         const err = await res.json();
         showToast(err.error || 'Error al guardar bloqueo', 'error');
@@ -1068,7 +1090,8 @@ export default function ConfiguracionPage() {
       vacacionesInicio: '',
       vacacionesFin: '',
       comisionTipo: 'POR_HORA',
-      comisionValor: ''
+      comisionValor: '',
+      boxPredeterminadoId: ''
     });
     setIsUserModalOpen(true);
   };
@@ -1092,7 +1115,8 @@ export default function ConfiguracionPage() {
       vacacionesInicio: u.vacacionesInicio ? u.vacacionesInicio.slice(0, 10) : '',
       vacacionesFin: u.vacacionesFin ? u.vacacionesFin.slice(0, 10) : '',
       comisionTipo: u.comisionTipo === 'POR_DIA' ? 'POR_HORA' : (u.comisionTipo || 'POR_HORA'),
-      comisionValor: u.comisionValor !== undefined && u.comisionValor !== null ? u.comisionValor : ''
+      comisionValor: u.comisionValor !== undefined && u.comisionValor !== null ? u.comisionValor : '',
+      boxPredeterminadoId: u.boxPredeterminadoId || ''
     });
     setIsUserModalOpen(true);
   };
@@ -1340,16 +1364,35 @@ export default function ConfiguracionPage() {
             </form>
 
             {/* Listado de Feriados del Año */}
-            <div className={styles.feriadosFilterHeader}>
-              <div className={styles.feriadosStats}>
-                <span style={{ fontWeight: 700, color: '#1e293b' }}>Filtrar bloqueos {selectedFeriadosYear}:</span>
-                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+            <div className={styles.feriadosFilterHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div className={styles.feriadosStats} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.88rem' }}>Filtro de bloqueos:</span>
+                <select
+                  value={feriadoFilterTipo}
+                  onChange={(e) => setFeriadoFilterTipo(e.target.value)}
+                  style={{
+                    padding: '0.4rem 0.65rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    color: '#334155',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="ALL">Ver Todos ({feriados.length})</option>
+                  <option value="UNICO">🔵 Únicos ({feriados.filter(f => f.tipo === 'UNICO' || !f.tipo).length})</option>
+                  <option value="FIJO">🔴 Fijos ({feriados.filter(f => f.tipo === 'FIJO').length})</option>
+                  <option value="MOVIL">🟠 Móviles ({feriados.filter(f => f.tipo === 'MOVIL').length})</option>
+                </select>
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     style={{
-                      padding: '0.35rem 0.75rem',
+                      padding: '0.3rem 0.65rem',
                       borderRadius: '20px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       border: feriadoFilterTipo === 'ALL' ? '1px solid #7a1f1e' : '1px solid #cbd5e1',
@@ -1363,9 +1406,9 @@ export default function ConfiguracionPage() {
                   <button
                     type="button"
                     style={{
-                      padding: '0.35rem 0.75rem',
+                      padding: '0.3rem 0.65rem',
                       borderRadius: '20px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       border: feriadoFilterTipo === 'UNICO' ? '1px solid #2563eb' : '1px solid #cbd5e1',
@@ -1379,9 +1422,9 @@ export default function ConfiguracionPage() {
                   <button
                     type="button"
                     style={{
-                      padding: '0.35rem 0.75rem',
+                      padding: '0.3rem 0.65rem',
                       borderRadius: '20px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       border: feriadoFilterTipo === 'FIJO' ? '1px solid #dc2626' : '1px solid #cbd5e1',
@@ -1395,9 +1438,9 @@ export default function ConfiguracionPage() {
                   <button
                     type="button"
                     style={{
-                      padding: '0.35rem 0.75rem',
+                      padding: '0.3rem 0.65rem',
                       borderRadius: '20px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       border: feriadoFilterTipo === 'MOVIL' ? '1px solid #d97706' : '1px solid #cbd5e1',
@@ -1427,7 +1470,7 @@ export default function ConfiguracionPage() {
                 No hay feriados ni bloqueos registrados para el año {selectedFeriadosYear}.
               </div>
             ) : (
-              <div className={styles.bloqueoCardList}>
+              <div className={styles.bloqueoCardList} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {feriados
                   .filter(f => {
                     if (feriadoFilterTipo === 'ALL') return true;
@@ -1445,43 +1488,74 @@ export default function ConfiguracionPage() {
                     const dateFormatted = `${formatFeriadoDate(f.fecha)} (${dayName})`;
 
                     return (
-                      <div key={f.id} className={styles.bloqueoCardItem}>
+                      <div
+                        key={f.id}
+                        className={styles.bloqueoCardItem}
+                        style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '0.9rem 1.1rem',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.6rem'
+                        }}
+                      >
                         {/* Header: Dot + Badge + Fecha */}
-                        <div className={styles.bloqueoCardHeader}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <span 
-                              className={styles.colorDot} 
-                              style={{ backgroundColor: dotColor, width: '10px', height: '10px', margin: 0, flexShrink: 0 }} 
-                            />
-                            {isFijo ? (
-                              <span className={styles.badgeFijo}>FIJO</span>
-                            ) : isMovil ? (
-                              <span className={styles.badgeMovil}>MÓVIL</span>
-                            ) : (
-                              <span className={styles.badgeUnico}>ÚNICO</span>
-                            )}
-                            <span className={styles.bloqueoCardDateText}>{dateFormatted}</span>
-                          </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+                          <span 
+                            style={{
+                              backgroundColor: dotColor,
+                              width: '9px',
+                              height: '9px',
+                              borderRadius: '50%',
+                              display: 'inline-block',
+                              flexShrink: 0
+                            }} 
+                          />
+                          {isFijo ? (
+                            <span style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                              FIJO
+                            </span>
+                          ) : isMovil ? (
+                            <span style={{ backgroundColor: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                              MÓVIL
+                            </span>
+                          ) : (
+                            <span style={{ backgroundColor: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                              ÚNICO
+                            </span>
+                          )}
+                          <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e293b' }}>
+                            {dateFormatted}
+                          </span>
                         </div>
 
-                        {/* Body: Motivo | Horario | Acciones */}
-                        <div className={styles.bloqueoCardBody}>
-                          <div className={styles.bloqueoCardField} style={{ flex: 1.5, minWidth: '150px' }}>
-                            <span className={styles.bloqueoCardFieldLabel}>Motivo</span>
-                            <span className={styles.bloqueoCardFieldValue}>{f.motivo || 'Sin motivo'}</span>
+                        {/* Body: Motivo | Horario | Acciones (Formato idéntico a especificación Gonzalo) */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1.5, minWidth: '150px' }}>
+                            <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                              Motivo
+                            </span>
+                            <span style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                              {f.motivo || 'Bloqueo administrativo'}
+                            </span>
                             {hasMoved && (
-                              <div className={styles.badgeMovedAlert} style={{ marginTop: '0.35rem' }}>
+                              <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '0.2rem' }}>
                                 ➡️ Reubicado al: <strong>{formatFeriadoDate(f.fechaMovida)} ({getFeriadoDayName(f.fechaMovida)})</strong>
                               </div>
                             )}
                           </div>
 
-                          <div className={styles.bloqueoCardField} style={{ flex: 1, minWidth: '110px' }}>
-                            <span className={styles.bloqueoCardFieldLabel}>Horario</span>
-                            <span className={styles.bloqueoCardFieldValue}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1, minWidth: '110px' }}>
+                            <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                              Horario
+                            </span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
                               {f.esDiaCompleto ? (
-                                <span style={{ color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
-                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block' }}></span>
+                                <span style={{ color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
                                   Día completo
                                 </span>
                               ) : (
@@ -1490,7 +1564,7 @@ export default function ConfiguracionPage() {
                             </span>
                           </div>
 
-                          <div className={styles.bloqueoCardActions}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
                             {isMovil && (
                               <>
                                 <button
@@ -1515,11 +1589,26 @@ export default function ConfiguracionPage() {
                             )}
                             <button
                               type="button"
-                              className={`${styles.actionBtnSmall} ${styles.actionBtnDanger}`}
                               onClick={() => handleDeleteFeriado(f.id, f.isSynthesized, f.originalId)}
                               title="Eliminar este feriado o bloqueo"
+                              style={{
+                                border: '1px solid #fca5a5',
+                                backgroundColor: '#ffffff',
+                                color: '#dc2626',
+                                borderRadius: '6px',
+                                padding: '0.35rem 0.75rem',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
                             >
-                              <TrashIcon /> Eliminar
+                              🗑️ Eliminar
                             </button>
                           </div>
                         </div>
@@ -1550,7 +1639,12 @@ export default function ConfiguracionPage() {
           onChange={(e) => {
             const tab = e.target.value;
             setActiveTab(tab);
-            if (tab === 'users') fetchUsers();
+            if (tab === 'users') {
+              fetchUsers();
+              setTimeout(() => {
+                usersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 120);
+            }
             if (tab === 'promos') { fetchPromociones(); fetchCupones(); }
             if (tab === 'parametros' || tab === 'bloqueos') { fetchFeriados(selectedFeriadosYear); }
             if (tab === 'boxes') fetchBoxes();
@@ -2685,7 +2779,7 @@ export default function ConfiguracionPage() {
 
       {/* Tab Content 5: Users and Operators Management */}
       {activeTab === 'users' && (
-        <div className={styles.sectionCard}>
+        <div ref={usersSectionRef} className={styles.sectionCard}>
           <div className={styles.sectionTitle}>
             <span>Gestión de Usuarios y Roles de Acceso</span>
             <button 
@@ -2770,6 +2864,14 @@ export default function ConfiguracionPage() {
                       <div className={styles.userCardDetailItem}>
                         <span>✉️</span>
                         <span style={{ wordBreak: 'break-all' }}>{u.email}</span>
+                      </div>
+                    )}
+                    {(u.boxPredeterminadoId || u.boxPredeterminado) && (
+                      <div className={styles.userCardDetailItem}>
+                        <span>🏢</span>
+                        <span style={{ fontWeight: 600, color: '#7a1f1e' }}>
+                          Box: {boxes.find(b => b.id === u.boxPredeterminadoId)?.nombre || u.boxPredeterminado?.nombre || 'Box asignado'}
+                        </span>
                       </div>
                     )}
                     {/* Servicios Asignados */}
@@ -3650,6 +3752,24 @@ export default function ConfiguracionPage() {
                       step="any"
                     />
                   </div>
+                </div>
+
+                {/* Box Predeterminado */}
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>🏢 Box Predeterminado (Asignación automática)</label>
+                  <select 
+                    className={styles.input}
+                    value={userForm.boxPredeterminadoId}
+                    onChange={(e) => setUserForm({ ...userForm, boxPredeterminadoId: e.target.value })}
+                  >
+                    <option value="">Sin box predeterminado</option>
+                    {boxes.filter(b => b.activo !== false).map(b => (
+                      <option key={b.id} value={b.id}>{b.nombre} {b.esPrincipal ? '(Principal)' : ''}</option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+                    Al agendar un turno con este operador en la agenda, se auto-seleccionará este box por defecto (se puede cambiar manualmente).
+                  </span>
                 </div>
 
                 {/* Estado del Usuario / Operador */}

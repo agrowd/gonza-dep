@@ -185,7 +185,8 @@ export async function POST(request) {
       esDiaCompleto, 
       tipo = 'UNICO', 
       color, 
-      fechaMovidaStr 
+      fechaMovidaStr,
+      forzar = false
     } = body;
 
     if (!fechaStr) {
@@ -209,6 +210,48 @@ export async function POST(request) {
       const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
       finalStart = startConfig?.value || '08:00';
       finalEnd = endConfig?.value || '22:00';
+    }
+
+    // Advertencia previa: Si no se fuerza, verificar si existen turnos agendados en esa fecha y horario
+    if (!forzar) {
+      const targetDateStart = new Date(fechaStr + 'T00:00:00');
+      const targetDateEnd = new Date(fechaStr + 'T23:59:59');
+
+      const existingTurnos = await prisma.turno.findMany({
+        where: {
+          fecha: { gte: targetDateStart, lte: targetDateEnd },
+          estado: { notIn: ['CANCELADO', 'BLOQUEADO'] }
+        },
+        include: { cliente: true }
+      });
+
+      let conflicting = existingTurnos;
+      if (!esDiaCompleto && horaInicio && horaFin) {
+        const toMin = (h) => {
+          const [hh, mm] = (h || '00:00').split(':').map(Number);
+          return hh * 60 + (mm || 0);
+        };
+        const bStart = toMin(horaInicio);
+        const bEnd = toMin(horaFin);
+        conflicting = existingTurnos.filter(t => {
+          const tStart = toMin(t.horaInicio);
+          const tEnd = toMin(t.horaFin);
+          return tStart < bEnd && tEnd > bStart;
+        });
+      }
+
+      if (conflicting.length > 0) {
+        return NextResponse.json({
+          warning: true,
+          conflictingCount: conflicting.length,
+          turnos: conflicting.slice(0, 5).map(t => ({
+            id: t.id,
+            cliente: t.cliente?.nombreCompleto || 'Cliente',
+            horario: `${t.horaInicio} - ${t.horaFin}`
+          })),
+          message: `Existen ${conflicting.length} turno(s) agendado(s) en la fecha y horario seleccionados. ¿Deseas aplicar el bloqueo de todas formas sobre ese día con turnos?`
+        }, { status: 409 });
+      }
     }
 
     const nuevoBloqueo = await prisma.bloqueo.create({

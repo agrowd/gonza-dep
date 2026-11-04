@@ -361,10 +361,6 @@ export async function POST(request) {
     const body = await request.json();
     const { concepto, monto, fecha, categoriaId, observaciones } = body;
 
-    if (!concepto || !concepto.trim()) {
-      return NextResponse.json({ error: 'El concepto del gasto es requerido.' }, { status: 400 });
-    }
-
     const numericMonto = parseFloat(monto);
     if (isNaN(numericMonto) || numericMonto <= 0) {
       return NextResponse.json({ error: 'El monto debe ser un número positivo.' }, { status: 400 });
@@ -407,10 +403,13 @@ export async function POST(request) {
 
       if (firstCat) {
         targetCategoriaId = firstCat.id;
+        categoryExists = firstCat;
       } else {
         return NextResponse.json({ error: 'Debe crear o seleccionar una categoría para el gasto.' }, { status: 400 });
       }
     }
+
+    const finalConcepto = (concepto || '').trim() || categoryExists?.nombre || 'Gasto General';
 
     let parsedFecha;
     if (fecha) {
@@ -421,7 +420,7 @@ export async function POST(request) {
 
     const nuevoGasto = await prisma.gasto.create({
       data: {
-        concepto: concepto.trim(),
+        concepto: finalConcepto,
         monto: numericMonto,
         fecha: parsedFecha,
         categoriaId: targetCategoriaId,

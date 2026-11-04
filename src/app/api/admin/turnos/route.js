@@ -444,6 +444,9 @@ export async function POST(request) {
         descuentoValor: Number(descuentoValor || 0),
         estado: estado || 'SEÑADO',
         metodoPago: body.metodoPago || 'TRANSFERENCIA',
+        montoEfectivo: Math.max(0, Number(body.montoEfectivo) || 0),
+        montoTransferencia: Math.max(0, Number(body.montoTransferencia) || 0),
+        dineroAFavor: Math.max(0, Number(body.dineroAFavor) || 0),
         observaciones,
         notasGonzalo: finalNotasGonzalo
       },
@@ -474,6 +477,14 @@ export async function POST(request) {
       } catch (errPrev) {
         console.error('Error updating previous turno to REALIZADO:', errPrev);
       }
+    }
+
+    // Si el cliente tenÃ­a saldo a favor que se aplicÃ³ a este nuevo turno, resetear saldoAFavor
+    if (finalClienteId) {
+      await prisma.cliente.update({
+        where: { id: finalClienteId },
+        data: { saldoAFavor: 0 }
+      }).catch(err => console.error('Error resetting client saldoAFavor:', err));
     }
 
     if (body.clientObservaciones !== undefined && body.clientObservaciones !== '' && finalClienteId) {

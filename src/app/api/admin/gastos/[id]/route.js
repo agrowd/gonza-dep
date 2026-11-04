@@ -30,10 +30,14 @@ export async function PUT(request, context) {
     const updateData = {};
 
     if (concepto !== undefined) {
-      if (!concepto.trim()) {
-        return NextResponse.json({ error: 'El concepto no puede estar vacío' }, { status: 400 });
+      if (concepto.trim()) {
+        updateData.concepto = concepto.trim();
+      } else {
+        const cat = await prisma.categoriaGasto.findUnique({
+          where: { id: categoriaId || existingGasto.categoriaId }
+        });
+        updateData.concepto = cat?.nombre || 'Gasto General';
       }
-      updateData.concepto = concepto.trim();
     }
 
     if (monto !== undefined) {

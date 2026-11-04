@@ -114,9 +114,30 @@ export async function GET(request) {
     const turnosNuevos = turnosEnriquecidos.filter(t => !t.esTurnoSiguiente);
     const totalSenasNuevos = turnosNuevos.reduce((sum, t) => sum + Number(t.valorSeña || 0), 0);
 
+    // Cómputo exacto de sesiones del día para Ingreso del Día y Saldos Realizados (100% sincronizado con Estadísticas)
+    const allTurnosDia = await prisma.turno.findMany({
+      where: {
+        fecha: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      }
+    });
+
+    const totalRevenue = allTurnosDia
+      .filter(t => t.estado !== 'CANCELADO' && t.estado !== 'NO_ASISTIO' && t.estado !== 'BLOQUEADO')
+      .reduce((sum, t) => sum + Number(t.valorTotal || 0), 0);
+
+    const totalSaldosRealizados = allTurnosDia
+      .filter(t => t.estado === 'REALIZADO')
+      .reduce((acc, t) => acc + Math.max(0, Number(t.valorTotal || 0) - Number(t.valorSeña || 0)), 0);
+
     return NextResponse.json({
       fecha,
+      totalRevenue,              // Ingreso total facturado de la jornada (excluye cancelados/no asistió)
+      totalSaldosRealizados,      // Saldos cobrados de sesiones REALIZADAS (valorTotal - seña)
       totalSenas,                // Mantiene el total real para el cálculo financiero de Ingreso Neto
+      ingresoNeto: totalSaldosRealizados + totalSenas, // Caja total real del día (Saldos + Señas)
       count: turnos.length,
       turnos: turnosEnriquecidos,
       turnosNuevos,              // Solo clientes que agendan un NUEVO turno (excluye turno siguiente)
