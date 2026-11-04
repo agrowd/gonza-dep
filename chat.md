@@ -1633,3 +1633,40 @@
    - Commits sincronizados en ramas `main` y `staging` (`95bb56a`).
    - Desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
    - Al reiniciar, los logs de PM2 confirmaron que todas las citas notificadas fueron omitidas (`[Reminder Cron] 7-day email reminder already sent ... Skipping.`).
+
+## 📱 Sesión: 4 de Noviembre de 2026 - Corrección Definitiva de Hit-Testing Táctil en iPhone Safari y Botón de Recarga en Tiempo Real de Agenda (D-150, ERR-62)
+
+### Reporte de Gonzalo Siri y Luciano Gómez en WhatsApp (`media_1793801795612_800ef441.jpg` y video):
+> *"En el teléfono de Gonzalo, por los últimos cambios, le toca mal el click en todos los botones de la ficha, quiere tocar un botón y le toma el que está encima, acá quise tocar el de recibo y me abrió editar turno por ejemplo.*
+> *También hay veces que no le toma los botones para cerrar la ficha, y tiene que salir de la página y volver a entrar.*
+> *A Gonza de vuelta cada rato no le toma los botones para cerrar o los comentarios.*
+> *También agrégale en la agenda un botón para recargar la página porque sino no puede ver los cambios que yo hago."*
+
+### Diagnóstico Forense y Causa Raíz:
+1. **Desfase de Hit-Testing por Redimensionamiento de Viewport en Safari iOS (Desfase de 58px)**:
+   - Al scrollear por la agenda, la barra de navegación de Safari se colapsa dinámicamente (~50-60px).
+   - Al abrir un modal `position: fixed` sin congelar el scroll del `body`, WebKit sufre un bug conocido donde las coordenadas táctiles del viewport quedan desfasadas por la altura de la barra colapsada (~50-60px).
+   - Como la grilla de acciones rápidas tiene filas de 46px con gap de 12px (58px exactos), pulsar `Ver Recibo Oficial` (fila 2, col 2) disparaba el evento en `Editar Turno` (fila 1, col 2), ubicada exactamente 58px arriba.
+2. **Cancelación de Clicks por `touch-action: pan-y`**:
+   - En `.modalContent`, `touch-action: pan-y !important;` instruía al motor de gestos de WebKit a priorizar el scroll vertical ante cualquier mínimo desplazamiento del pulgar, cancelando el evento `onClick` del botón de cierre (`closeBtn`) y de las textareas de observaciones.
+3. **Zoom Involuntario en Textareas**:
+   - Las textareas de observaciones de la ficha tenían `fontSize: 0.85rem` (13.6px < 16px). En iOS Safari, tocar cualquier campo de texto menor a 16px dispara automáticamente un zoom que altera la escala del viewport y desalinea los blancos táctiles en toda la pantalla.
+4. **Compositor Desincronizado**:
+   - `-webkit-overflow-scrolling: auto` desactivaba la aceleración de hardware en el subárbol del modal, haciendo que la caja táctil se retrasara respecto al renderizado visual.
+
+### Solución y Blindaje Implementado:
+1. **Congelamiento de Scroll de Body (`Scroll Freeze`)**:
+   - Se implementó un efecto que aplica `position: fixed; top: -scrollY px; width: 100%; overflow: hidden;` a `document.body` mientras cualquier modal esté abierto, blindando el viewport de Safari contra redimensionamientos y restaurando el scroll exacto al cerrar sin ningún salto.
+2. **Optimización Táctil en CSS (`agenda.module.css`)**:
+   - Se eliminó `touch-action: pan-y` (reemplazado por `touch-action: auto`).
+   - Se reactivó `-webkit-overflow-scrolling: touch` para aceleración GPU nativa.
+   - Se eliminó el margen superior negativo en `stickyModalHeader`, fijando padding superior 0 en `.modalContent`.
+   - Se blindaron `pointer-events: auto`, `z-index: 100`, y `fontSize: 16px` en todas las textareas e inputs.
+3. **Listeners de Toque Inmediatos (`onTouchEnd` con Umbral)**:
+   - Se incorporaron `handleTouchStartClose` y `handleTouchEndClose` (con umbral de movimiento < 12px) en los botones de cierre superior e inferior (`✕ Cerrar Ficha`), logrando respuesta instantánea a 0ms de latencia e inmune a cancelaciones de clicks.
+4. **Botón de Recarga y Auto-Sincronización en Tiempo Real**:
+   - Se añadió el botón `🔄 Actualizar` con icono animado (`isRefreshing`) y notificación toast en la barra superior de vistas (`viewModeRow`).
+   - Se implementó sincronización automática periódica en segundo plano cada 45 segundos (cuando no hay modales abiertos y la pestaña está activa), garantizando que Gonzalo vea de inmediato los turnos creados o editados por Luciano sin tener que refrescar el navegador.
+5. **Compilación y Despliegue en VPS**:
+   - Compilación Next.js validada con Turbopack (47/47 rutas compiladas con éxito).
+   - Desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).

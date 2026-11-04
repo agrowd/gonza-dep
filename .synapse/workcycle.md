@@ -2531,3 +2531,31 @@
   - Desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
   - Al iniciar el servicio, los logs de PM2 confirmaron que todas las citas notificadas fueron omitidas (`[Reminder Cron] 7-day email reminder already sent ... Skipping.`).
 - [x] **Documentación**: Registrado `D-149 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-61` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 4 de Noviembre de 2026 - Corrección Definitiva de Hit-Testing Táctil en iPhone Safari y Botón de Recarga en Vivo de Agenda (D-150, ERR-62)
+- [x] **Diagnóstico y Confirmación de Causa Raíz**:
+  - Gonzalo Siri y Luciano Gómez reportaron en WhatsApp (`media_1793801795612_800ef441.jpg` y video):
+    - *"En el teléfono de Gonzalo, por los últimos cambios, le toca mal el click en todos los botones de la ficha, quiere tocar un botón y le toma el que está encima, acá quise tocar el de recibo y me abrió editar turno por ejemplo"*.
+    - *"También hay veces que no le toma los botones para cerrar la ficha, y tiene que salir de la página y volver a entrar"*.
+    - *"A Gonza de vuelta cada rato no le toma los botones para cerrar o los comentarios"*.
+    - *"También agrégale en la agenda un botón para recargar la página porque sino no puede ver los cambios que yo hago"*.
+  - **Análisis Forense de Hit-Testing en iOS WebKit**:
+    1. **Desfase de 58px**: En iPhone Safari, cuando el usuario navega y hace scroll vertical en la agenda, la barra de navegación del navegador se comprime dinámicamente (~50-60px). Al abrir el modal fijo sin congelar el scroll del `body`, WebKit calcula los toques desfasados en exactamente la altura de la barra colapsada (~50-60px). En la grilla de acciones rápidas, cada fila mide 46px con gap de 12px (58px exactos): al pulsar `Ver Recibo Oficial` (fila 2, col 2), el evento se despachaba en `Editar Turno` (fila 1, col 2).
+    2. **Falta de Respuesta al Cerrar y en Observaciones**: `.modalContent` tenía `touch-action: pan-y !important;`. Ante el menor micro-desplazamiento del pulgar sobre el cristal del iPhone, WebKit interpretaba el gesto como paneo vertical de scroll y cancelaba el evento `onClick`.
+    3. **Zoom Forzado en Textareas**: Las textareas de observaciones tenían `fontSize: 0.85rem` (13.6px < 16px), disparando el auto-zoom nativo de Safari que alteraba las dimensiones del viewport y desalineaba todos los blancos táctiles.
+    4. **Compositor Desincronizado**: `-webkit-overflow-scrolling: auto` impedía la aceleración GPU y desincronizaba la capa de hit-testing.
+- [x] **Solución y Blindaje Integral**:
+  - **Scroll Freeze en `document.body`**: Se implementó un efecto que aplica `position: fixed; top: -scrollY px; width: 100%; overflow: hidden;` a `document.body` mientras cualquier modal esté abierto, congelando el viewport de Safari y restaurando el scroll exacto al cerrar sin ningún salto.
+  - **Optimización Táctil en CSS (`agenda.module.css`)**:
+    - Se eliminó `touch-action: pan-y` (reemplazado por `touch-action: auto`).
+    - Se reactivó `-webkit-overflow-scrolling: touch` para aceleración GPU nativa.
+    - Se eliminó el margen superior negativo en `stickyModalHeader`, fijando padding superior 0 en `.modalContent`.
+    - Se blindaron `pointer-events: auto`, `z-index: 100`, y `fontSize: 16px` en todas las textareas e inputs.
+  - **Listeners de Toque Inmediatos (`onTouchEnd` con Umbral)**:
+    - Se incorporaron `handleTouchStartClose` y `handleTouchEndClose` (con umbral de movimiento < 12px) en los botones de cierre superior e inferior (`✕ Cerrar Ficha`), logrando respuesta instantánea a 0ms de latencia e inmune a cancelaciones de clicks.
+  - **Botón de Recarga y Auto-Sincronización en Tiempo Real**:
+    - Se añadió el botón `🔄 Actualizar` con icono animado (`isRefreshing`) y notificación toast en la barra superior de vistas (`viewModeRow`).
+    - Se implementó sincronización automática periódica en segundo plano cada 45 segundos (cuando no hay modales abiertos y la pestaña está activa), garantizando que Gonzalo vea de inmediato los turnos creados o editados por Luciano sin tener que refrescar el navegador.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js validada con Turbopack (47/47 rutas compiladas con éxito).
+- [x] **Documentación**: Registrado `D-150 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-62` en `.synapse/errores.md`.

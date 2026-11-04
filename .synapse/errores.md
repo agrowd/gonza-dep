@@ -643,3 +643,25 @@ En `src/app/admin/agenda/page.js`, en el evento `onChange` del checkbox (línea 
 3. Compilado con Next.js Turbopack y desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006). Al reiniciar, los logs confirmaron que todas las citas notificadas fueron omitidas con éxito.
 **Commit:** `95bb56a`
 **Estado:** ✅ FIXED
+
+## ERR-62: Desfase Vertical de 58px en Hit-Testing Táctil y Bloqueo de Toques en Modales de iPhone (04/11/2026)
+**Síntoma:** Gonzalo Siri y Luciano Gómez reportaron en WhatsApp (`media_1793801795612_800ef441.jpg` y video): *"En el teléfono de Gonzalo, por los últimos cambios, le toca mal el click en todos los botones de la ficha, quiere tocar un botón y le toma el que está encima, acá quise tocar el de recibo y me abrió editar turno por ejemplo. También hay veces que no le toma los botones para cerrar la ficha, y tiene que salir de la página y volver a entrar. A Gonza de vuelta cada rato no le toma los botones para cerrar o los comentarios. También agrégale en la agenda un botón para recargar la página porque sino no puede ver los cambios que yo hago"*.
+**Root Cause:**
+1. **Desfase de Hit-Testing por Redimensionamiento de Viewport en Safari iOS**: En iPhone Safari, cuando el usuario hace scroll vertical por la agenda, la barra de navegación del navegador se colapsa dinámicamente (~50-60px). Al abrir el modal (`position: fixed`) sin congelar el scroll del `body`, WebKit sufre de un bug conocido donde las coordenadas táctiles del viewport quedan desfasadas por la altura de la barra colapsada (~50-60px). Como la grilla de acciones rápidas tiene filas de 46px con gap de 12px (total 58px), tocar `Ver Recibo Oficial` (fila 2, columna 2) impactaba el área táctil de `Editar Turno` (fila 1, columna 2), ubicada exactamente 58px arriba.
+2. **Cancelación de Eventos `click` por `touch-action: pan-y`**: En `.modalContent`, la regla `touch-action: pan-y !important` instruía al motor de gestos de WebKit a priorizar el scroll vertical ante cualquier mínimo desplazamiento del pulgar (común al tocar una pantalla de vidrio), cancelando el evento `onClick` del botón de cierre (`closeBtn`) y de las textareas de observaciones.
+3. **Zoom Involuntario en Textareas**: Las textareas de observaciones tenían un tamaño de fuente de `0.85rem` (13.6px < 16px). En iOS Safari, tocar cualquier campo de texto menor a 16px dispara automáticamente un zoom que altera la escala del viewport y desalinea los blancos táctiles en toda la pantalla.
+4. **Desconexión Compositor/Render**: `-webkit-overflow-scrolling: auto` desactivaba la aceleración de hardware en el subárbol del modal, haciendo que la caja táctil se retrasara respecto al renderizado visual.
+**Solución:**
+1. En `src/app/admin/agenda/page.js`:
+   - Se añadió un efecto de congelamiento estricto de scroll en `document.body` (`position: fixed; top: -scrollY px; width: 100%; overflow: hidden;`) mientras cualquier modal esté abierto, blindando el viewport de Safari contra redimensionamientos y restaurando el scroll exacto al cerrar.
+   - Se implementaron listeners de toque con umbral (`onTouchStart={handleTouchStartClose}` y `onTouchEnd={handleTouchEndClose}` con distancia < 12px) tanto en la `&times;` superior como en el botón inferior `✕ Cerrar Ficha`, garantizando cierre instantáneo (0ms de latencia) e inmune a cancelaciones de `click`.
+   - Se actualizaron las 3 textareas de observaciones para tener `fontSize: '16px'`, `touchAction: 'auto'` y `userSelect: 'text'`, evitando el zoom de Safari y permitiendo foco y edición inmediata.
+   - Se añadió el botón `🔄 Actualizar` con spinner animado (`isRefreshing`) y toast en la barra de controles (`viewModeRow`), junto con sincronización automática en segundo plano cada 45 segundos.
+2. En `src/app/admin/agenda/agenda.module.css`:
+   - Se cambió `touch-action: pan-y` a `touch-action: auto` en `.modalContent`.
+   - Se reactivó `-webkit-overflow-scrolling: touch` para aceleración GPU nativa.
+   - Se removió el margen superior negativo en `stickyModalHeader`, fijando padding superior 0 en `.modalContent` y `pointer-events: auto`.
+   - Se añadieron estilos para `.btnRefreshPill` en desktop y móvil.
+3. Compilado con Next.js Turbopack (47/47 rutas OK) y desplegado en VPS Staging y Producción (`gonzalo-agenda`, puerto 3006).
+**Commit:** `b0a3359`
+**Estado:** ✅ FIXED

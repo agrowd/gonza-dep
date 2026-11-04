@@ -399,6 +399,7 @@ export default function AgendaPage() {
 
   const [isNewOpen, setIsNewOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [nowPosition, setNowPosition] = useState(null);
   const [newTurnoWarning, setNewTurnoWarning] = useState('');
   const [editTurnoWarning, setEditTurnoWarning] = useState('');
@@ -1697,9 +1698,9 @@ export default function AgendaPage() {
   }, [currentWeekStart]);
 
   // 3. Fetch appointments robustly (calculates date boundaries directly to avoid initial render race conditions)
-  const fetchAppointments = useCallback(() => {
+  const fetchAppointments = useCallback((silent = false) => {
     const baseDate = selectedDate || new Date();
-    setLoading(true);
+    if (!silent) setLoading(true);
     let startStr, endStr;
     
     if (viewMode === 'month') {
@@ -1726,8 +1727,8 @@ export default function AgendaPage() {
     }
 
     if (!startStr || !endStr) {
-      setLoading(false);
-      return;
+      if (!silent) setLoading(false);
+      return Promise.resolve();
     }
 
     const promises = [
@@ -1741,7 +1742,7 @@ export default function AgendaPage() {
       );
     }
 
-    Promise.all(promises)
+    return Promise.all(promises)
       .then(([turnosData, bloqueosData, senasData]) => {
         if (Array.isArray(turnosData)) {
           const finalTurnos = currentUserRole === 'OPERADOR' && currentUserId
@@ -1759,12 +1760,85 @@ export default function AgendaPage() {
         }
       })
       .catch(err => console.error('Error fetching appointments or bloqueos:', err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   }, [viewMode, selectedDate, currentWeekStart, currentUserRole, currentUserId]);
 
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
+
+  // Recarga manual rápida solicitada por Gonzalo/Luciano
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await fetchAppointments(true);
+      showToast('🔄 Agenda actualizada con los últimos cambios');
+    } catch (err) {
+      console.error('Error refreshing agenda:', err);
+      showToast('Error al actualizar agenda', 'error');
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  // Sincronización automática periódica en segundo plano (cada 45 segundos) si pestaña activa y sin modales abiertos
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState === 'visible' &&
+        !isDetailsOpen &&
+        !isEditing &&
+        !isNewOpen &&
+        !isBlockModalOpen &&
+        !cancelModalTurno &&
+        !resendEmailModalTurno &&
+        !resendWppModalTurno
+      ) {
+        fetchAppointments(true);
+      }
+    }, 45000);
+
+    return () => clearInterval(syncInterval);
+  }, [isDetailsOpen, isEditing, isNewOpen, isBlockModalOpen, cancelModalTurno, resendEmailModalTurno, resendWppModalTurno, fetchAppointments]);
+
+  // Congelamiento estricto del scroll de página en iPhone/WebKit al abrir cualquier modal
+  // Evita el bug de desfase de hit-testing de 50px de Safari al colapsar la barra de navegación
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(
+      isDetailsOpen ||
+      isEditing ||
+      isNewOpen ||
+      isBlockModalOpen ||
+      cancelModalTurno ||
+      resendEmailModalTurno ||
+      resendWppModalTurno
+    );
+    if (typeof window === 'undefined') return;
+
+    if (isAnyModalOpen) {
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        const top = document.body.style.top;
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        if (top) {
+          const restoreY = Math.abs(parseInt(top, 10)) || 0;
+          window.scrollTo(0, restoreY);
+        }
+      };
+    }
+  }, [isDetailsOpen, isEditing, isNewOpen, isBlockModalOpen, cancelModalTurno, resendEmailModalTurno, resendWppModalTurno]);
 
   // 4. Fetch zones and promotions for the appointment modals
   useEffect(() => {
@@ -2842,6 +2916,27 @@ export default function AgendaPage() {
     }
   };
 
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
+
+  const handleTouchStartClose = (e) => {
+    if (e.touches && e.touches[0]) {
+      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchEndClose = (e) => {
+    if (e.changedTouches && e.changedTouches[0]) {
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const dist = Math.hypot(endX - touchStartPosRef.current.x, endY - touchStartPosRef.current.y);
+      if (dist < 12) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleCloseDetailsModal();
+      }
+    }
+  };
+
   const handleCloseDetailsModal = async () => {
     setIsDetailsOpen(false);
     setIsEditing(false);
@@ -2987,21 +3082,40 @@ export default function AgendaPage() {
             </button>
           </div>
 
-          {/* Quick Return to Today */}
-          <button 
-            onClick={() => {
-              const today = new Date();
-              setSelectedDate(today);
-              const monday = getStartOfWeek(today);
-              setCurrentWeekStart(monday);
-              try {
-                window.history.replaceState({}, '', window.location.pathname);
-              } catch (e) {}
-            }}
-            className={styles.btnTodayPill}
-          >
-            📅 Hoy
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <button 
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className={styles.btnRefreshPill}
+              title="Recargar turnos y novedades de la agenda en tiempo real"
+            >
+              <span style={{ 
+                display: 'inline-block', 
+                animation: isRefreshing ? 'spin 0.8s linear infinite' : 'none',
+                lineHeight: 1
+              }}>
+                🔄
+              </span>
+              <span>{isRefreshing ? 'Actualizando...' : 'Actualizar'}</span>
+            </button>
+
+            {/* Quick Return to Today */}
+            <button 
+              onClick={() => {
+                const today = new Date();
+                setSelectedDate(today);
+                const monday = getStartOfWeek(today);
+                setCurrentWeekStart(monday);
+                try {
+                  window.history.replaceState({}, '', window.location.pathname);
+                } catch (e) {}
+              }}
+              className={styles.btnTodayPill}
+            >
+              📅 Hoy
+            </button>
+          </div>
         </div>
 
         {/* Fila 3: Navegador de Fecha Amplio (< Miércoles, 21 de octubre de 2026 >) */}
@@ -4203,7 +4317,7 @@ export default function AgendaPage() {
                   <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
                     Editar / Reprogramar Turno
                   </h3>
-                  <button type="button" onClick={handleCloseDetailsModal} className={styles.closeBtn} aria-label="Cerrar edición">&times;</button>
+                  <button type="button" onClick={handleCloseDetailsModal} onTouchStart={handleTouchStartClose} onTouchEnd={handleTouchEndClose} className={styles.closeBtn} aria-label="Cerrar edición">&times;</button>
                 </div>
                 <div className={styles.detailGrid}>
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
@@ -4717,6 +4831,8 @@ export default function AgendaPage() {
                     <button
                       type="button"
                       onClick={handleCloseDetailsModal}
+                      onTouchStart={handleTouchStartClose}
+                      onTouchEnd={handleTouchEndClose}
                       className={styles.closeBtn}
                       title="Cerrar detalle"
                       aria-label="Cerrar detalle"
@@ -5501,10 +5617,13 @@ export default function AgendaPage() {
                             border: '1px solid var(--border-color)',
                             backgroundColor: 'var(--bg-secondary)',
                             color: 'var(--text-primary)',
-                            fontSize: '0.85rem',
+                            fontSize: '16px',
                             resize: 'vertical',
                             boxSizing: 'border-box',
-                            transition: 'height 0.2s ease'
+                            transition: 'height 0.2s ease',
+                            touchAction: 'auto',
+                            WebkitUserSelect: 'text',
+                            userSelect: 'text'
                           }}
                         />
                       </div>
@@ -5552,10 +5671,13 @@ export default function AgendaPage() {
                           border: '1px solid #d4a54d50',
                           backgroundColor: 'var(--bg-secondary)',
                           color: 'var(--text-primary)',
-                          fontSize: '0.85rem',
+                          fontSize: '16px',
                           resize: 'vertical',
                           boxSizing: 'border-box',
-                          transition: 'height 0.2s ease'
+                          transition: 'height 0.2s ease',
+                          touchAction: 'auto',
+                          WebkitUserSelect: 'text',
+                          userSelect: 'text'
                         }}
                       />
                       {(tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '') || 
@@ -5628,10 +5750,13 @@ export default function AgendaPage() {
                           border: '1px solid rgba(29, 78, 216, 0.45)',
                           backgroundColor: 'var(--bg-secondary)',
                           color: 'var(--text-primary)',
-                          fontSize: '0.85rem',
+                          fontSize: '16px',
                           resize: 'vertical',
                           boxSizing: 'border-box',
-                          transition: 'height 0.2s ease'
+                          transition: 'height 0.2s ease',
+                          touchAction: 'auto',
+                          WebkitUserSelect: 'text',
+                          userSelect: 'text'
                         }}
                       />
                       {tempTurnoObservaciones !== (selectedTurno.observaciones || '') && (
@@ -5863,10 +5988,12 @@ export default function AgendaPage() {
                     <button
                       type="button"
                       onClick={handleCloseDetailsModal}
+                      onTouchStart={handleTouchStartClose}
+                      onTouchEnd={handleTouchEndClose}
                       className="btn"
                       style={{
                         width: '100%',
-                        minHeight: '44px',
+                        minHeight: '46px',
                         padding: '0.65rem 1rem',
                         fontSize: '0.9rem',
                         fontWeight: 700,

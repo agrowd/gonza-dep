@@ -85,6 +85,35 @@
   color: #7a1f1e;
 }
 
+.btnRefreshPill {
+  background: rgba(212, 165, 77, 0.12);
+  border: 1.5px solid var(--color-gold);
+  color: var(--color-gold);
+  border-radius: 24px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btnRefreshPill:hover, .btnRefreshPill:active {
+  background: rgba(212, 165, 77, 0.22);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Fila 3: Navegador de Fecha Amplio (< Fecha >) */
 .dateNavigatorPill {
   display: flex;
@@ -1153,7 +1182,7 @@
     z-index: 2000 !important;
   }
   .modalContent {
-    padding: 0.85rem 0.75rem 3.5rem 0.75rem !important;
+    padding: 0 0.75rem 3.5rem 0.75rem !important;
     max-width: calc(100vw - 0.7rem) !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -1162,9 +1191,9 @@
     max-height: calc(100dvh - 0.9rem) !important;
     height: auto !important;
     overflow-y: auto !important; /* The ONLY element that scrolls */
-    -webkit-overflow-scrolling: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
-    touch-action: pan-y !important;
+    touch-action: auto !important;
     position: relative !important;
     animation: none !important;
     transform: none !important;
@@ -1178,16 +1207,15 @@
     z-index: 50 !important;
     transform: none !important;
     will-change: auto !important;
-    margin: -0.85rem -0.75rem 0.85rem -0.75rem !important;
+    margin: 0 -0.75rem 0.85rem -0.75rem !important;
     padding: 0.75rem 0.75rem 0.65rem 0.75rem !important;
     border-top-left-radius: 12px !important;
     border-top-right-radius: 12px !important;
-    background-color: var(--bg-card, #1c1c1e);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+    background-color: var(--bg-card, #1c1c1e) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
     box-sizing: border-box !important;
     width: auto !important;
+    pointer-events: auto !important;
   }
   .quickActionsGrid {
     display: grid !important;
@@ -1195,6 +1223,17 @@
     gap: 12px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    position: relative !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
+  }
+  .quickActionsGrid button,
+  .quickActionsGrid a {
+    position: relative !important;
+    z-index: 1 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
   .modalHeader h3 {
     font-size: 1.05rem !important;
@@ -1218,16 +1257,22 @@
     align-items: center !important;
     justify-content: center !important;
     flex-shrink: 0 !important;
+    pointer-events: auto !important;
+    z-index: 100 !important;
+    position: relative !important;
   }
   .inputGroup > input,
   .inputGroup > select,
-  .inputGroup > textarea {
+  .inputGroup > textarea,
+  .detailItem textarea {
     font-size: 16px !important;
     padding: 0.65rem 0.75rem !important;
     box-sizing: border-box;
     max-width: 100% !important;
     user-select: text !important;
     -webkit-user-select: text !important;
+    touch-action: auto !important;
+    pointer-events: auto !important;
   }
   .phonePrefix {
     padding: 0.6rem 0.7rem !important;
@@ -1548,6 +1593,11 @@
   }
 
   .btnTodayPill {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .btnRefreshPill {
     padding: 6px 12px;
     font-size: 0.8rem;
   }
