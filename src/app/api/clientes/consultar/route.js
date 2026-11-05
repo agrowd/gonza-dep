@@ -190,9 +190,7 @@ export async function GET(request) {
             }
 
             if (rawZones.length > 0) {
-              const catalogZones = await prisma.zona.findMany({
-                where: { activo: true }
-              });
+              const catalogZones = await prisma.zona.findMany();
 
               const normalize = (str) =>
                 (str || '')
