@@ -75,7 +75,22 @@ export async function POST(request) {
   try {
     await cleanupExpiredPendingPayments();
     const body = await request.json();
-    const { nombreCompleto, whatsapp, email, dni, fechaStr, horaInicio, selectedZoneIds, observaciones, fechaNacimiento } = body;
+    const {
+      nombreCompleto,
+      whatsapp,
+      email,
+      dni,
+      fechaStr,
+      horaInicio,
+      selectedZoneIds,
+      observaciones,
+      fechaNacimiento,
+      isRepeatLastZones,
+      customDuracion,
+      customValorTotal,
+      customValorSeña,
+      customZonasText
+    } = body;
 
     if (!nombreCompleto || !whatsapp || !email || !fechaStr || !horaInicio || !selectedZoneIds || selectedZoneIds.length === 0) {
       return NextResponse.json(
@@ -102,13 +117,12 @@ export async function POST(request) {
     }
 
     // 1. Fetch zones details from DB
-    const dbZones = await prisma.zona.findMany({
-      where: {
-        id: { in: selectedZoneIds }
-      }
-    });
+    const normalZoneIds = (selectedZoneIds || []).filter(id => id && id !== 'otros');
+    const dbZones = normalZoneIds.length > 0
+      ? await prisma.zona.findMany({ where: { id: { in: normalZoneIds } } })
+      : [];
 
-    if (dbZones.length !== selectedZoneIds.length) {
+    if (!isRepeatLastZones && dbZones.length !== selectedZoneIds.length) {
       return NextResponse.json({ error: 'Alguna de las zonas seleccionadas no es válida.' }, { status: 400 });
     }
 
@@ -186,7 +200,23 @@ export async function POST(request) {
     }
 
     // 3. Calculate appointment duration & values
-    const { valorTotal, valorSeña, duracionMinutos } = calculateTurnDetails(dbZones, false);
+    let duracionMinutos = 30;
+    let valorTotal = 0;
+    let valorSeña = 0;
+    let zonasNombres = '';
+
+    if (isRepeatLastZones) {
+      duracionMinutos = Number(customDuracion || 30);
+      valorTotal = Number(customValorTotal || 0);
+      valorSeña = Number(customValorSeña || Math.round(valorTotal * 0.5));
+      zonasNombres = customZonasText || (dbZones.map(z => z.nombre).join(', ') || 'Zonas agendadas');
+    } else {
+      const calcs = calculateTurnDetails(dbZones, false);
+      duracionMinutos = calcs.duracionMinutos;
+      valorTotal = calcs.valorTotal;
+      valorSeña = calcs.valorSeña;
+      zonasNombres = dbZones.map(z => z.nombre).join(', ');
+    }
 
     const startMinutes = timeToMinutes(horaInicio);
     const endMinutes = startMinutes + duracionMinutos;
@@ -208,8 +238,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'El horario seleccionado ya no se encuentra disponible. Por favor, elige otro horario o día.' }, { status: 400 });
     }
 
-    // 5. Zone summary
-    const zonasNombres = dbZones.map(z => z.nombre).join(', ');
+    // 5. Zone summary is already established in zonasNombres
 
     // 6. WhatsApp redirection ("Pagar Seña")
     // Retrieve business phone number (Gonzalo: +54 9 11 3251-9008)

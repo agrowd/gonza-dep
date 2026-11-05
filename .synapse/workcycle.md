@@ -2625,3 +2625,24 @@
 - [x] **Compilación y Validación**:
   - Next.js Turbopack compilado localmente con éxito (47/47 rutas OK).
 - [x] **Documentación**: Registrado `D-153 🔒 LOCKED` en `.synapse/decisions.md`, `ERR-66` y `ERR-67` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 5 de Noviembre de 2026 - Repetición Ágil de Zonas del Último Turno (< 90 días) en Autogestión (D-154)
+- [x] **Requerimiento y Objetivos**:
+  - Gonzalo Siri y Luciano Gómez solicitaron en WhatsApp (`media_1793880546843_9b41dbf2.jpg` y `media_1793880553808_236d6362.jpg`):
+    - Al consultar un cliente en autogestión sin turnos activos, si su último turno en el sistema fue hace menos de 90 días (por cancelación u otra razón), desplegar la tarjeta de repetición rápida con sus zonas anteriores.
+    - Dos opciones:
+      1. `[ 🔄 Mismas Zonas ]`: Lleva directamente a elegir día y horario (Paso 3). Preserva la duración de sesión exacta del último turno y calcula el valor total sin descuento sumando los precios de catálogo actualizados de las zonas normales más los valores de ítems "Otros" sin modificar.
+      2. `[ 📅 Elegir Zonas y Horarios ]`: Lleva al selector de zonas (Paso 2) para elegir zonas nuevas desde cero.
+    - Al elegir fecha y hora, se despacha el mensaje estructurado de WhatsApp con las zonas, duración, total y seña para cobrar.
+- [x] **Implementación en Backend (`/api/clientes/consultar` y `/api/reservas/crear`)**:
+  - En `/api/clientes/consultar`: Si el cliente no tiene turnos activos, se busca su último turno histórico. Si `diffDays <= 90`, se parsean sus zonas, actualizando zonas de catálogo a su `precioBase` actual y conservando el precio de "Otros". Se devuelve `ultimoTurnoData` con `duracionMinutos`, `valorTotal`, `valorSeña`, `zonasTexto` y `zoneIds`.
+  - En `/api/reservas/crear`: Se agregó soporte para `isRepeatLastZones` admitiendo zonas "Otros" sin fallar validación de catálogo, respetando `customDuracion`, `customValorTotal`, `customValorSeña` y `customZonasText`.
+- [x] **Implementación en Frontend (`src/app/page.js`)**:
+  - Tarjeta condicional idéntica a Image 2: bienvenida, recuadro `Zonas último turno: [Zonas]` con icono de calendario y chevron, y botones `[ 🔄 Mismas Zonas ]` y `[ 📅 Elegir Zonas y Horarios ]`.
+  - `handleRepeatLastZones`: Prefija duración, valores actualizados y envía directo al Paso 3 de horarios.
+  - Botón "← Volver" en Paso 3 regresa a Paso 1 cuando se repiten zonas.
+  - Paso 4 y WhatsApp: Despliegan y formatean las zonas, duración y valores calculados.
+  - Cancelación de turno: Al cancelar el último turno activo, refresca automáticamente para habilitar la opción de repetir zonas.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (47/47 rutas OK).
+- [x] **Documentación**: Registrado `D-154 🔒 LOCKED` en `.synapse/decisions.md`.

@@ -151,6 +151,118 @@ export async function GET(request) {
 
     const hasActiveTurno = client.turnos.length > 0;
 
+    let ultimoTurnoData = null;
+    if (!hasActiveTurno) {
+      try {
+        const ultimoTurno = await prisma.turno.findFirst({
+          where: { clienteId: client.id },
+          orderBy: [
+            { fecha: 'desc' },
+            { createdAt: 'desc' }
+          ]
+        });
+
+        if (ultimoTurno && ultimoTurno.fecha) {
+          const now = new Date();
+          const offsetBA = -3;
+          const utcNow = now.getTime() + (now.getTimezoneOffset() * 60000);
+          const nowLocal = new Date(utcNow + (3600000 * offsetBA));
+          const todayZero = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate());
+
+          const tDate = new Date(ultimoTurno.fecha);
+          const tZero = new Date(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
+          const diffDays = Math.floor((todayZero.getTime() - tZero.getTime()) / (1000 * 60 * 60 * 24));
+
+          // Si el último turno fue hace menos de 90 días (o fue un turno cancelado reciente/futuro)
+          if (diffDays <= 90) {
+            let rawZones = [];
+            try {
+              const parsed = JSON.parse(ultimoTurno.zonas || '[]');
+              if (Array.isArray(parsed)) {
+                rawZones = parsed;
+              } else if (typeof parsed === 'string') {
+                rawZones = parsed.split(',').map(s => ({ nombre: s.trim() })).filter(z => z.nombre);
+              }
+            } catch {
+              if (typeof ultimoTurno.zonas === 'string') {
+                rawZones = ultimoTurno.zonas.split(',').map(s => ({ nombre: s.trim() })).filter(z => z.nombre);
+              }
+            }
+
+            if (rawZones.length > 0) {
+              const catalogZones = await prisma.zona.findMany({
+                where: { activo: true }
+              });
+
+              const normalize = (str) =>
+                (str || '')
+                  .toLowerCase()
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .trim();
+
+              let valorTotalCalculado = 0;
+              let valorSeñaCalculado = 0;
+              const matchedZoneIds = [];
+              const zoneNames = [];
+
+              for (const rz of rawZones) {
+                const rawName = (rz.nombre || rz.name || String(rz)).trim();
+                const isOtros = rz.id === 'otros' || normalize(rawName).startsWith('otros');
+
+                if (isOtros) {
+                  // Valores de Otros sin cambiar
+                  const precioOtros = Number(rz.precio || rz.precioBase || 0);
+                  valorTotalCalculado += precioOtros;
+                  valorSeñaCalculado += Math.round(precioOtros * 0.5);
+                  matchedZoneIds.push('otros');
+                  zoneNames.push(rawName);
+                } else {
+                  // Buscar zona normal en catálogo por ID o nombre normalizado
+                  const matched = catalogZones.find(cz => cz.id === rz.id) ||
+                    catalogZones.find(cz => normalize(cz.nombre) === normalize(rawName));
+
+                  if (matched) {
+                    // Valor de zonas normales actualizadas
+                    const precioActualizado = Number(matched.precioBase);
+                    const señaActualizada = Number(matched.señaBase || (precioActualizado * 0.5));
+                    valorTotalCalculado += precioActualizado;
+                    valorSeñaCalculado += señaActualizada;
+                    matchedZoneIds.push(matched.id);
+                    zoneNames.push(matched.nombre);
+                  } else {
+                    // Si no está en catálogo, mantener precio previo
+                    const precioOriginal = Number(rz.precio || rz.precioBase || 0);
+                    valorTotalCalculado += precioOriginal;
+                    valorSeñaCalculado += Math.round(precioOriginal * 0.5);
+                    zoneNames.push(rawName);
+                  }
+                }
+              }
+
+              if (valorSeñaCalculado === 0 && valorTotalCalculado > 0) {
+                valorSeñaCalculado = Math.round(valorTotalCalculado * 0.5);
+              }
+
+              ultimoTurnoData = {
+                id: ultimoTurno.id,
+                fecha: ultimoTurno.fecha,
+                duracionMinutos: Number(ultimoTurno.duracionMinutos || 30),
+                valorTotal: valorTotalCalculado,
+                valorSeña: valorSeñaCalculado,
+                zonasTexto: zoneNames.join(', '),
+                zoneIds: matchedZoneIds,
+                diffDays,
+                isWithin90Days: true
+              };
+            }
+          }
+        }
+      } catch (errUltimo) {
+        console.error('Error fetching ultimoTurno for client:', errUltimo);
+      }
+    }
+
     return NextResponse.json({
       exists: true,
       bloqueado: false,
@@ -163,7 +275,8 @@ export async function GET(request) {
       },
       hasActiveTurno,
       activeTurno: hasActiveTurno ? client.turnos[0] : null,
-      activeTurnos: client.turnos
+      activeTurnos: client.turnos,
+      ultimoTurnoData
     });
 
   } catch (error) {

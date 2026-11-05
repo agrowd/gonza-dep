@@ -1755,3 +1755,31 @@
 4. **Validación**:
    - Compilación exitosa con Next.js Turbopack (47/47 rutas OK).
    - Despliegue en VPS Staging y Producción.
+
+---
+
+## 📅 Sesión: 5 de Noviembre de 2026 - Repetición Ágil de Zonas del Último Turno (< 90 días) en Autogestión (D-154)
+
+### Requerimiento de Gonzalo Siri y Luciano Gómez:
+- En la reserva online por autogestión, cuando un cliente sin turnos activos consulta su email, si su último turno fue hace menos de 90 días (por cancelación o sesión anterior), ofrecer repetir las zonas anteriores o elegir zonas nuevas (según diseño de captura).
+- Si repite las mismas zonas:
+  - Preserva exactamente la duración de sesión anterior.
+  - El valor total sin descuento se calcula como la suma de las zonas normales actualizadas al catálogo web vigente + los valores de ítems "Otros" sin modificar.
+  - El botón envía al cliente directamente al selector de días y horarios (Paso 3).
+- Al elegir fecha y hora, se envía el mensaje estructurado de WhatsApp con las zonas, duración, precio total y seña para cobrar.
+
+### Implementación Realizada:
+1. **Backend (`/api/clientes/consultar`)**:
+   - Búsqueda de `ultimoTurno` histórico cuando `hasActiveTurno` es falso.
+   - Evaluación `diffDays <= 90`.
+   - Recálculo inteligente de zonas: zonas normales con `precioBase` actualizado del catálogo, ítems "Otros" con su precio histórico.
+   - Retorno de `ultimoTurnoData` (`duracionMinutos`, `valorTotal`, `valorSeña`, `zonasTexto`, `zoneIds`).
+2. **Backend (`/api/reservas/crear`)**:
+   - Soporte para `isRepeatLastZones`: validación de disponibilidad y horarios de atención con la duración exacta anterior, cálculo y preservación de zonas "Otros", y generación del mensaje de WhatsApp estructurado con las zonas y montos correspondientes.
+3. **Frontend (`src/app/page.js`)**:
+   - Tarjeta condicional idéntica a la captura del cliente con bienvenida, caja `Zonas último turno: [Zonas]` y dos botones: `[ 🔄 Mismas Zonas ]` (salta directo a horarios) y `[ 📅 Elegir Zonas y Horarios ]` (lleva a selección de zonas).
+   - Botón "← Volver" en horarios regresa al menú inicial cuando se repiten zonas.
+   - Enlace reactivo tras cancelación de turnos para ofrecer inmediatamente la repetición de zonas.
+4. **Validación y Despliegue**:
+   - Compilación Next.js Turbopack exitosa (47/47 rutas).
+   - Sincronización en Git (`main` y `staging`) y despliegue en VPS Hostinger.

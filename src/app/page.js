@@ -72,6 +72,11 @@ export default function Home() {
   const [selectedZoneIds, setSelectedZoneIds] = useState([]);
   const [isClientBlocked, setIsClientBlocked] = useState(false);
 
+  // Repeat last zones (< 90 days)
+  const [ultimoTurnoData, setUltimoTurnoData] = useState(null);
+  const [isRepeatingLastZones, setIsRepeatingLastZones] = useState(false);
+  const [repeatTurnoData, setRepeatTurnoData] = useState(null);
+
   // Step 3: Calendar & Availability State (Alta de Turno model)
   const now = new Date();
   const [calendarYear, setCalendarYear] = useState(now.getFullYear());
@@ -109,11 +114,17 @@ export default function Home() {
 
   const valorTotal = (rescheduleMode && activeTurno?.valorTotal)
     ? Number(activeTurno.valorTotal)
-    : calculations.valorTotal;
-  const valorSeña = calculations.valorSeña;
+    : (isRepeatingLastZones && repeatTurnoData?.valorTotal)
+      ? Number(repeatTurnoData.valorTotal)
+      : calculations.valorTotal;
+  const valorSeña = (isRepeatingLastZones && repeatTurnoData?.valorSeña)
+    ? Number(repeatTurnoData.valorSeña)
+    : calculations.valorSeña;
   const duracionMinutos = (rescheduleMode && activeTurno?.duracionMinutos)
     ? Number(activeTurno.duracionMinutos)
-    : (calculations.duracionMinutos > 0 ? calculations.duracionMinutos : 30);
+    : (isRepeatingLastZones && repeatTurnoData?.duracionMinutos)
+      ? Number(repeatTurnoData.duracionMinutos)
+      : (calculations.duracionMinutos > 0 ? calculations.duracionMinutos : 30);
   const isThresholdMet = valorTotal >= 65000;
 
   // Helper: calculate remaining business hours until appointment (Mon-Fri, excl Sat-Sun)
@@ -146,9 +157,11 @@ export default function Home() {
           setExistingClient(data.client);
           setActiveTurno(null);
           setActiveTurnos([]);
+          setUltimoTurnoData(null);
         } else {
           setIsClientBlocked(false);
           setExistingClient(data.client);
+          setUltimoTurnoData(data.ultimoTurnoData || null);
           // Split name if possible
           const parts = (data.client.nombreCompleto || '').split(' ');
           const nom = parts[0] || '';
@@ -178,6 +191,7 @@ export default function Home() {
         setExistingClient(null);
         setActiveTurno(null);
         setActiveTurnos([]);
+        setUltimoTurnoData(null);
       }
     } catch (err) {
       console.error('Error querying client:', err);
@@ -194,6 +208,9 @@ export default function Home() {
     setExistingClient(null);
     setActiveTurno(null);
     setActiveTurnos([]);
+    setUltimoTurnoData(null);
+    setIsRepeatingLastZones(false);
+    setRepeatTurnoData(null);
     setSelectedZoneIds([]);
     setSelectedDateStr(null);
     setSelectedSlot(null);
@@ -201,6 +218,14 @@ export default function Home() {
     setPhoneConflict(null);
     setCheckingPhone(false);
     setStep(1);
+  };
+
+  const handleRepeatLastZones = () => {
+    if (!ultimoTurnoData) return;
+    setIsRepeatingLastZones(true);
+    setRepeatTurnoData(ultimoTurnoData);
+    setSelectedZoneIds(ultimoTurnoData.zoneIds || []);
+    setStep(3); // El botón lo enviará directamente a elegir los horarios
   };
 
   // 4. Handle "Reagendar Turno" with 72hs policy check
@@ -355,6 +380,8 @@ export default function Home() {
         setActiveTurno(remaining[0] || null);
         if (remaining.length === 0) {
           setShow72hsAlert(false);
+          // Refrescar consulta para cargar el turno cancelado como último turno y ofrecer repetir zonas si es < 90 días
+          handleLookupEmail();
         }
       } else {
         alert(data.error || 'No se pudo cancelar el turno.');
@@ -601,7 +628,12 @@ Duración: ${duracionMinutos} min`;
             horaInicio: selectedSlot.horaInicio,
             selectedZoneIds,
             observaciones: formData.observaciones.trim() || undefined,
-            fechaNacimiento: calculatedFechaNacimiento
+            fechaNacimiento: calculatedFechaNacimiento,
+            isRepeatLastZones: isRepeatingLastZones,
+            customDuracion: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.duracionMinutos : undefined,
+            customValorTotal: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.valorTotal : undefined,
+            customValorSeña: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.valorSeña : undefined,
+            customZonasText: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.zonasTexto : undefined
           })
         });
         const data = await res.json();
@@ -959,21 +991,138 @@ Duración: ${duracionMinutos} min`;
 
                 {/* Client Exists but NO Active Turno */}
                 {clientChecked && existingClient && !isClientBlocked && (!activeTurnos || activeTurnos.length === 0) && (
-                  <div style={{ background: '#ffffff', border: '1.5px solid #86efac', borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#166534', marginBottom: '8px' }}>
-                      ¡Hola {existingClient.nombreCompleto}!
-                    </h3>
-                    <p style={{ color: '#475569', marginBottom: '20px' }}>
-                      No tenés turnos activos registrados. Podés reservar tu próxima sesión ahora mismo.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setStep(2)}
-                      style={{ background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 28px', fontSize: '1.05rem', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      Elegir Zonas y Horario →
-                    </button>
-                  </div>
+                  ultimoTurnoData && ultimoTurnoData.isWithin90Days ? (
+                    <div style={{
+                      background: '#ffffff',
+                      border: '2px solid #86efac',
+                      borderRadius: '20px',
+                      padding: '24px 20px',
+                      textAlign: 'center',
+                      marginBottom: '24px',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)'
+                    }}>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '800', color: '#166534', marginBottom: '8px' }}>
+                        ¡Hola {existingClient.nombreCompleto}!
+                      </h3>
+                      <p style={{ color: '#475569', fontSize: '0.98rem', lineHeight: '1.45', marginBottom: '20px' }}>
+                        No tenés turnos activos registrados.<br />
+                        Podes repetir las mismas zonas o elegir zonas nuevas y horarios.
+                      </p>
+
+                      {/* Tarjeta de Zonas Último Turno */}
+                      <div style={{
+                        background: '#fdf8f6',
+                        border: '1.5px solid #fecdd3',
+                        borderRadius: '14px',
+                        padding: '14px 16px',
+                        marginBottom: '20px',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '12px'
+                      }}>
+                        <div style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '10px',
+                          background: '#fee2e2',
+                          color: '#7a1f1e',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.25rem',
+                          flexShrink: 0
+                        }}>
+                          📅
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '800', fontSize: '0.98rem', color: '#1e293b', marginBottom: '4px' }}>
+                            Zonas último turno:
+                          </div>
+                          <div style={{ color: '#475569', fontSize: '0.92rem', lineHeight: '1.45', fontWeight: '500' }}>
+                            {ultimoTurnoData.zonasTexto}.
+                          </div>
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '0.85rem', flexShrink: 0, marginTop: '2px' }}>
+                          ⌵
+                        </div>
+                      </div>
+
+                      {/* Botón 1: Mismas Zonas */}
+                      <button
+                        type="button"
+                        onClick={handleRepeatLastZones}
+                        style={{
+                          width: '100%',
+                          background: '#7a1f1e',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: '14px 20px',
+                          fontSize: '1.05rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          marginBottom: '12px',
+                          boxShadow: '0 4px 14px rgba(122, 31, 30, 0.25)',
+                          transition: 'transform 0.15s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.15rem' }}>🔄</span> Mismas Zonas
+                      </button>
+
+                      {/* Botón 2: Elegir Zonas y Horarios */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRepeatingLastZones(false);
+                          setRepeatTurnoData(null);
+                          setStep(2);
+                        }}
+                        style={{
+                          width: '100%',
+                          background: '#ffffff',
+                          color: '#7a1f1e',
+                          border: '2px solid #7a1f1e',
+                          borderRadius: '12px',
+                          padding: '14px 20px',
+                          fontSize: '1.05rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.15rem' }}>📅</span> Elegir Zonas y Horarios
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ background: '#ffffff', border: '1.5px solid #86efac', borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#166534', marginBottom: '8px' }}>
+                        ¡Hola {existingClient.nombreCompleto}!
+                      </h3>
+                      <p style={{ color: '#475569', marginBottom: '20px' }}>
+                        No tenés turnos activos registrados. Podés reservar tu próxima sesión ahora mismo.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRepeatingLastZones(false);
+                          setRepeatTurnoData(null);
+                          setStep(2);
+                        }}
+                        style={{ background: 'var(--color-gold)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px 28px', fontSize: '1.05rem', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Elegir Zonas y Horario →
+                      </button>
+                    </div>
+                  )
                 )}
 
                 {/* Deferred Client Form (Does not exist in DB yet) */}
@@ -1495,6 +1644,8 @@ Duración: ${duracionMinutos} min`;
                         if (rescheduleMode) {
                           setStep(1);
                           setRescheduleMode(false);
+                        } else if (isRepeatingLastZones) {
+                          setStep(1);
                         } else {
                           setStep(2);
                         }
@@ -1568,7 +1719,9 @@ Duración: ${duracionMinutos} min`;
                     <div>
                       <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', fontWeight: '700' }}>ZONAS ELEGIDAS</span>
                       <strong style={{ fontSize: '1rem', color: '#0f172a' }}>
-                        {activeZoneObjs.map(z => z.nombre).join(', ') || (activeTurno ? (() => { try { const p = JSON.parse(activeTurno.zonas); return Array.isArray(p) ? p.map(z => z.nombre).join(', ') : activeTurno.zonas; } catch(e) { return activeTurno.zonas; } })() : 'Zonas agendadas')}
+                        {isRepeatingLastZones && repeatTurnoData?.zonasTexto
+                          ? repeatTurnoData.zonasTexto
+                          : (activeZoneObjs.map(z => z.nombre).join(', ') || (activeTurno ? (() => { try { const p = JSON.parse(activeTurno.zonas); return Array.isArray(p) ? p.map(z => z.nombre).join(', ') : activeTurno.zonas; } catch(e) { return activeTurno.zonas; } })() : 'Zonas agendadas'))}
                       </strong>
                     </div>
                   </div>
