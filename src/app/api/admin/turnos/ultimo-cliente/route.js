@@ -64,6 +64,11 @@ export async function GET(request) {
     if (clienteSaldoAFavor > 0) {
       computedSeñaEstado = 'CONSERVADA';
       computedValorSeña = clienteSaldoAFavor;
+    } else if (ultimoTurno.estado === 'NO_ASISTIO') {
+      computedSeñaEstado = 'PERDIDA';
+      if (!computedValorSeña || Number(computedValorSeña) === 0) {
+        computedValorSeña = Number(ultimoTurno.valorSeña || 0);
+      }
     } else if (!computedSeñaEstado && ultimoTurno.estado === 'CANCELADO') {
       const obs = ultimoTurno.observaciones || '';
       if (obs.includes('Guardada') || obs.includes('guardada') || obs.includes('CONSERVADA')) {

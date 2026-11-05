@@ -179,6 +179,7 @@ export async function POST(request) {
     const body = await request.json();
     const { 
       fechaStr, 
+      fechaHastaStr,
       horaInicio, 
       horaFin, 
       motivo, 
@@ -186,6 +187,7 @@ export async function POST(request) {
       tipo = 'UNICO', 
       color, 
       fechaMovidaStr,
+      boxId,
       forzar = false
     } = body;
 
@@ -193,10 +195,21 @@ export async function POST(request) {
       return NextResponse.json({ error: 'La fecha es obligatoria' }, { status: 400 });
     }
 
-    const [yearStr, monthStr, dayStr] = fechaStr.split('-');
-    const yearNum = parseInt(yearStr, 10);
-    const monthNum = parseInt(monthStr, 10);
-    const dayNum = parseInt(dayStr, 10);
+    // Determine target dates list (single date or continuous range)
+    const dates = [];
+    if (fechaHastaStr && fechaHastaStr > fechaStr) {
+      let curr = new Date(fechaStr + 'T00:00:00');
+      const end = new Date(fechaHastaStr + 'T00:00:00');
+      while (curr <= end) {
+        const y = curr.getFullYear();
+        const m = String(curr.getMonth() + 1).padStart(2, '0');
+        const d = String(curr.getDate()).padStart(2, '0');
+        dates.push(`${y}-${m}-${d}`);
+        curr.setDate(curr.getDate() + 1);
+      }
+    } else {
+      dates.push(fechaStr);
+    }
 
     const tipoVal = ['FIJO', 'MOVIL', 'UNICO'].includes(tipo) ? tipo : 'UNICO';
     const defaultColor = tipoVal === 'FIJO' ? '#dc2626' : (tipoVal === 'MOVIL' ? '#d97706' : '#2563eb');
@@ -212,15 +225,16 @@ export async function POST(request) {
       finalEnd = endConfig?.value || '22:00';
     }
 
-    // Advertencia previa: Si no se fuerza, verificar si existen turnos agendados en esa fecha y horario
+    // Advertencia previa: Si no se fuerza, verificar si existen turnos agendados en todo el rango
     if (!forzar) {
       const targetDateStart = new Date(fechaStr + 'T00:00:00');
-      const targetDateEnd = new Date(fechaStr + 'T23:59:59');
+      const targetDateEnd = new Date((fechaHastaStr && fechaHastaStr > fechaStr ? fechaHastaStr : fechaStr) + 'T23:59:59');
 
       const existingTurnos = await prisma.turno.findMany({
         where: {
           fecha: { gte: targetDateStart, lte: targetDateEnd },
-          estado: { notIn: ['CANCELADO', 'BLOQUEADO'] }
+          estado: { notIn: ['CANCELADO', 'BLOQUEADO'] },
+          ...(boxId ? { boxId } : {})
         },
         include: { cliente: true }
       });
@@ -241,36 +255,49 @@ export async function POST(request) {
       }
 
       if (conflicting.length > 0) {
+        const isRange = dates.length > 1;
         return NextResponse.json({
           warning: true,
           conflictingCount: conflicting.length,
           turnos: conflicting.slice(0, 5).map(t => ({
             id: t.id,
             cliente: t.cliente?.nombreCompleto || 'Cliente',
-            horario: `${t.horaInicio} - ${t.horaFin}`
+            horario: `${t.fecha?.toISOString().split('T')[0]} ${t.horaInicio} - ${t.horaFin}`
           })),
-          message: `Existen ${conflicting.length} turno(s) agendado(s) en la fecha y horario seleccionados. ¿Deseas aplicar el bloqueo de todas formas sobre ese día con turnos?`
+          message: isRange
+            ? `Existen ${conflicting.length} turno(s) agendado(s) en el rango de fechas seleccionado (${dates[0]} al ${dates[dates.length - 1]}). ¿Deseas aplicar el bloqueo de todas formas sobre esos días?`
+            : `Existen ${conflicting.length} turno(s) agendado(s) en la fecha y horario seleccionados. ¿Deseas aplicar el bloqueo de todas formas sobre ese día con turnos?`
         }, { status: 409 });
       }
     }
 
-    const nuevoBloqueo = await prisma.bloqueo.create({
-      data: {
-        fecha: new Date(fechaStr + 'T00:00:00'),
-        horaInicio: finalStart,
-        horaFin: finalEnd,
-        motivo: motivo || (tipoVal === 'FIJO' ? 'Feriado Fijo Anual' : (tipoVal === 'MOVIL' ? 'Feriado Móvil' : 'Bloqueo administrativo')),
-        esDiaCompleto: !!esDiaCompleto,
-        tipo: tipoVal,
-        color: finalColor,
-        mes: monthNum,
-        dia: dayNum,
-        ano: tipoVal === 'FIJO' ? null : yearNum,
-        fechaMovida: fechaMovidaStr ? new Date(fechaMovidaStr + 'T00:00:00') : null
-      }
-    });
+    const createdBloqueos = [];
+    for (const dStr of dates) {
+      const [yearStr, monthStr, dayStr] = dStr.split('-');
+      const yearNum = parseInt(yearStr, 10);
+      const monthNum = parseInt(monthStr, 10);
+      const dayNum = parseInt(dayStr, 10);
 
-    return NextResponse.json(nuevoBloqueo, { status: 201 });
+      const nb = await prisma.bloqueo.create({
+        data: {
+          fecha: new Date(dStr + 'T00:00:00'),
+          horaInicio: finalStart,
+          horaFin: finalEnd,
+          motivo: motivo || (tipoVal === 'FIJO' ? 'Feriado Fijo Anual' : (tipoVal === 'MOVIL' ? 'Feriado Móvil' : 'Bloqueo administrativo')),
+          esDiaCompleto: !!esDiaCompleto,
+          tipo: tipoVal,
+          color: finalColor,
+          mes: monthNum,
+          dia: dayNum,
+          ano: tipoVal === 'FIJO' ? null : yearNum,
+          fechaMovida: (dates.length === 1 && fechaMovidaStr) ? new Date(fechaMovidaStr + 'T00:00:00') : null,
+          boxId: boxId ? String(boxId) : null
+        }
+      });
+      createdBloqueos.push(nb);
+    }
+
+    return NextResponse.json(createdBloqueos.length === 1 ? createdBloqueos[0] : { success: true, count: createdBloqueos.length, bloqueos: createdBloqueos }, { status: 201 });
   } catch (error) {
     console.error('Error creating bloqueo:', error);
     return NextResponse.json({ error: 'Error interno al crear bloqueo' }, { status: 500 });

@@ -163,6 +163,8 @@ export default function ConfiguracionPage() {
   const [loadingFeriados, setLoadingFeriados] = useState(false);
   const [feriadoForm, setFeriadoForm] = useState({
     fechaStr: new Date().toISOString().split('T')[0],
+    fechaHastaStr: '',
+    isRangoFechas: false,
     tipo: 'FIJO', // 'FIJO', 'MOVIL', 'UNICO'
     color: '#dc2626',
     motivo: '',
@@ -344,6 +346,10 @@ export default function ConfiguracionPage() {
       showToast('Selecciona una fecha para el bloqueo', 'error');
       return;
     }
+    if (feriadoForm.isRangoFechas && feriadoForm.fechaHastaStr && feriadoForm.fechaHastaStr < feriadoForm.fechaStr) {
+      showToast('La Fecha Hasta no puede ser anterior a la Fecha Desde', 'error');
+      return;
+    }
     try {
       const res = await fetch('/api/admin/bloqueos', {
         method: 'POST',
@@ -351,11 +357,13 @@ export default function ConfiguracionPage() {
         body: JSON.stringify(feriadoForm)
       });
       if (res.ok) {
-        showToast('Feriado o bloqueo registrado con éxito');
+        showToast(feriadoForm.isRangoFechas ? 'Rango de días bloqueado con éxito' : 'Feriado o bloqueo registrado con éxito');
         setFeriadoForm(prev => ({
           ...prev,
           motivo: '',
-          esDiaCompleto: true
+          esDiaCompleto: true,
+          fechaHastaStr: '',
+          isRangoFechas: false
         }));
         fetchFeriados(selectedFeriadosYear);
       } else if (res.status === 409) {
@@ -372,7 +380,9 @@ export default function ConfiguracionPage() {
             setFeriadoForm(prev => ({
               ...prev,
               motivo: '',
-              esDiaCompleto: true
+              esDiaCompleto: true,
+              fechaHastaStr: '',
+              isRangoFechas: false
             }));
             fetchFeriados(selectedFeriadosYear);
             return;
@@ -1260,9 +1270,31 @@ export default function ConfiguracionPage() {
                   </select>
                 </div>
 
-                {/* 2. Fecha */}
+                {/* Checkbox Rango de Días */}
+                <div className={styles.formField} style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', margin: '0.15rem 0' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!feriadoForm.isRangoFechas}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFeriadoForm(prev => ({
+                          ...prev,
+                          isRangoFechas: checked,
+                          fechaHastaStr: checked ? (prev.fechaHastaStr || prev.fechaStr) : ''
+                        }));
+                      }}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                      📅 Bloquear rango de días continuos (Desde / Hasta)
+                    </span>
+                  </label>
+                </div>
+
+                {/* 2. Fecha / Rango */}
                 <div className={styles.formField}>
-                  <label>Fecha a Bloquear *</label>
+                  <label>{feriadoForm.isRangoFechas ? 'Fecha Desde *' : 'Fecha a Bloquear *'}</label>
                   <input
                     type="date"
                     className={styles.input}
@@ -1271,6 +1303,20 @@ export default function ConfiguracionPage() {
                     required
                   />
                 </div>
+
+                {feriadoForm.isRangoFechas && (
+                  <div className={styles.formField}>
+                    <label>Fecha Hasta *</label>
+                    <input
+                      type="date"
+                      className={styles.input}
+                      min={feriadoForm.fechaStr}
+                      value={feriadoForm.fechaHastaStr || ''}
+                      onChange={(e) => setFeriadoForm(prev => ({ ...prev, fechaHastaStr: e.target.value }))}
+                      required
+                    />
+                  </div>
+                )}
 
                 {/* 3. Selector de Color */}
                 <div className={styles.formField}>

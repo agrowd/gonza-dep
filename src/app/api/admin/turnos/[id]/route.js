@@ -125,6 +125,32 @@ export async function PUT(request, { params }) {
     }
     const isOperator = sessionUser.rol === 'OPERADOR';
 
+    // Determine profile name and role label for audit tags
+    let authorLabel = 'Administrador';
+    if (sessionUser) {
+      let uName = sessionUser.nombre;
+      let uRol = sessionUser.rol;
+      if (!uName && sessionUser.id) {
+        try {
+          const dbUser = await prisma.usuario.findUnique({
+            where: { id: sessionUser.id },
+            select: { nombre: true, usuario: true, rol: true }
+          });
+          if (dbUser) {
+            uName = dbUser.nombre || dbUser.usuario;
+            uRol = dbUser.rol || uRol;
+          }
+        } catch (e) {
+          console.error('Error fetching dbUser in PUT turno:', e);
+        }
+      }
+      uName = uName || sessionUser.usuario || 'Administrador';
+      const roleDisplay = (uRol === 'RECEPCION' || uRol === 'RECEPCIONISTA')
+        ? 'Recepcionista'
+        : (uRol === 'OPERADOR' ? 'Operador' : 'Administrador');
+      authorLabel = `${uName} (${roleDisplay})`;
+    }
+
     const body = await request.json();
     const {
       operadorId,
@@ -312,7 +338,7 @@ export async function PUT(request, { params }) {
     const currentObs = stripSelfRefTag(currentObsRaw);
 
     if (isActualReschedule) {
-      const tagReprogram = `[Turno reprogramado de ${originFechaDisplay} a las ${originHoraInicio} hs - Administrador]`;
+      const tagReprogram = `[Turno reprogramado de ${originFechaDisplay} a las ${originHoraInicio} hs - ${authorLabel}]`;
       if (!currentObs.includes(tagReprogram)) {
         updateData.observaciones = `${currentObs} ${tagReprogram}`.trim();
       } else {
@@ -425,19 +451,19 @@ export async function PUT(request, { params }) {
       if (Number(oldTurn.valorSeña) > 0) {
         if (body.preserveDeposit) {
           updateData.señaEstado = 'CONSERVADA';
-          const creditTag = `[Cancelado - Seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - Administrador]`;
+          const creditTag = `[Cancelado - Seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - ${authorLabel}]`;
           if (!currentTurnoObs.includes(creditTag)) {
             updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${creditTag}`.trim() : creditTag;
           }
         } else {
           updateData.señaEstado = 'PERDIDA';
-          const lossTag = `[Cancelado - Pierde seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} - Administrador]`;
+          const lossTag = `[Cancelado - Pierde seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} - ${authorLabel}]`;
           if (!currentTurnoObs.includes(lossTag)) {
             updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${lossTag}`.trim() : lossTag;
           }
         }
       } else {
-        const cancelTag = `[Cancelado - Administrador]`;
+        const cancelTag = `[Cancelado - ${authorLabel}]`;
         if (!currentTurnoObs.includes(cancelTag)) {
           updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${cancelTag}`.trim() : cancelTag;
         }
@@ -449,6 +475,11 @@ export async function PUT(request, { params }) {
           where: { id: oldTurn.clienteId },
           data: { estado: 'ACTIVO' }
         }).catch(err => console.error('Error resetting client status to ACTIVO upon cancellation:', err));
+      }
+    } else if (estado === 'NO_ASISTIO') {
+      // Inasistencia: el cliente pierde la seña abonada para cubrir costos logísticos
+      if (Number(oldTurn.valorSeña) > 0) {
+        updateData.señaEstado = 'PERDIDA';
       }
     } else if (body.señaEstado !== undefined) {
       updateData.señaEstado = body.señaEstado;

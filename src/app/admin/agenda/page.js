@@ -254,6 +254,8 @@ export default function AgendaPage() {
   const [blockForm, setBlockForm] = useState({
     id: null,
     fechaStr: '',
+    fechaHastaStr: '',
+    isRangoFechas: false,
     horaInicio: '10:00',
     horaFin: '11:00',
     motivo: '',
@@ -293,6 +295,10 @@ export default function AgendaPage() {
   };
 
   const handleSaveBloqueo = async () => {
+    if (blockForm.isRangoFechas && blockForm.fechaHastaStr && blockForm.fechaHastaStr < blockForm.fechaStr) {
+      showToast('La Fecha Hasta no puede ser anterior a la Fecha Desde', 'error');
+      return;
+    }
     try {
       const url = blockForm.id ? `/api/admin/bloqueos/${blockForm.id}` : '/api/admin/bloqueos';
       const method = blockForm.id ? 'PUT' : 'POST';
@@ -304,7 +310,23 @@ export default function AgendaPage() {
       if (res.ok) {
         setIsBlockModalOpen(false);
         fetchAppointments();
-        showToast(blockForm.id ? 'Bloqueo actualizado' : 'Horario bloqueado con éxito');
+        showToast(blockForm.id ? 'Bloqueo actualizado' : (blockForm.isRangoFechas ? 'Rango de días bloqueado con éxito' : 'Horario bloqueado con éxito'));
+      } else if (res.status === 409) {
+        const warnData = await res.json();
+        const conf = window.confirm(`⚠️ ${warnData.message || 'Existen turnos en esa fecha/rango. ¿Deseas aplicar el bloqueo de todas formas?'}`);
+        if (conf) {
+          const forceRes = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...blockForm, forzar: true })
+          });
+          if (forceRes.ok) {
+            setIsBlockModalOpen(false);
+            fetchAppointments();
+            showToast('Bloqueo forzado y registrado con éxito');
+            return;
+          }
+        }
       } else {
         const err = await res.json();
         showToast(err.error || 'Error al guardar bloqueo', 'error');
@@ -6809,16 +6831,20 @@ export default function AgendaPage() {
                           <span>Monto a favor del último turno: ${Number(lastClientTurnoInfo.saldoAFavor).toLocaleString('es-AR')}</span>
                         </div>
                       )}
-                      {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.señaEstado) && (
+                      {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.estado === 'NO_ASISTIO' || lastClientTurnoInfo.señaEstado) && (
                         (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>✅</span>
                             <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} para este turno</span>
                           </div>
-                        ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña')) ? (
+                        ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña') || lastClientTurnoInfo.estado === 'NO_ASISTIO') ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>⚠️</span>
-                            <span>Seña perdida de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior</span>
+                            <span>
+                              {lastClientTurnoInfo.estado === 'NO_ASISTIO'
+                                ? `Perdió la seña de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} por inasistencia en su turno anterior`
+                                : `Seña perdida de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior`}
+                            </span>
                           </div>
                         ) : null
                       )}
@@ -6877,16 +6903,20 @@ export default function AgendaPage() {
                           <span>Monto a favor del último turno: ${Number(lastClientTurnoInfo.saldoAFavor).toLocaleString('es-AR')}</span>
                         </div>
                       )}
-                      {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.señaEstado) && (
+                      {lastClientTurnoInfo && (lastClientTurnoInfo.estado === 'CANCELADO' || lastClientTurnoInfo.estado === 'NO_ASISTIO' || lastClientTurnoInfo.señaEstado) && (
                         (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>✅</span>
                             <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} para este turno</span>
                           </div>
-                        ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña')) ? (
+                        ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña') || lastClientTurnoInfo.estado === 'NO_ASISTIO') ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>⚠️</span>
-                            <span>Seña perdida de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior</span>
+                            <span>
+                              {lastClientTurnoInfo.estado === 'NO_ASISTIO'
+                                ? `Perdió la seña de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} por inasistencia en su turno anterior`
+                                : `Seña perdida de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior`}
+                            </span>
                           </div>
                         ) : null
                       )}
@@ -7426,6 +7456,28 @@ export default function AgendaPage() {
                 </div>
               )}
 
+              {!blockForm.id && (
+                <div className={styles.inputGroup} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '-0.25rem' }}>
+                  <input
+                    type="checkbox"
+                    id="blockIsRango"
+                    checked={!!blockForm.isRangoFechas}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setBlockForm({
+                        ...blockForm,
+                        isRangoFechas: checked,
+                        fechaHastaStr: checked ? (blockForm.fechaHastaStr || blockForm.fechaStr) : ''
+                      });
+                    }}
+                    style={{ width: 'auto', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="blockIsRango" style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                    📅 Bloquear rango de días continuos (Desde / Hasta)
+                  </label>
+                </div>
+              )}
+
               <div className={styles.inputRow}>
                 <div className={styles.inputGroup} style={{ flex: 1 }}>
                   <label className={styles.inputLabel}>Tipo de Bloqueo</label>
@@ -7445,7 +7497,7 @@ export default function AgendaPage() {
                   </select>
                 </div>
                 <div className={styles.inputGroup} style={{ flex: 1 }}>
-                  <label className={styles.inputLabel}>Fecha del Bloqueo *</label>
+                  <label className={styles.inputLabel}>{blockForm.isRangoFechas ? 'Fecha Desde *' : 'Fecha del Bloqueo *'}</label>
                   <input
                     type="date"
                     value={blockForm.fechaStr}
@@ -7453,6 +7505,18 @@ export default function AgendaPage() {
                     required
                   />
                 </div>
+                {blockForm.isRangoFechas && (
+                  <div className={styles.inputGroup} style={{ flex: 1 }}>
+                    <label className={styles.inputLabel}>Fecha Hasta *</label>
+                    <input
+                      type="date"
+                      min={blockForm.fechaStr}
+                      value={blockForm.fechaHastaStr || ''}
+                      onChange={(e) => setBlockForm({ ...blockForm, fechaHastaStr: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <div className={styles.inputGroup} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -2670,3 +2670,21 @@
 - [x] **Validación y Compilación**:
   - Compilación Next.js Turbopack validada localmente (47/47 rutas OK).
 - [x] **Documentación**: Registrado `D-155 🔒 LOCKED` en `.synapse/decisions.md`.
+
+
+## Ciclo de Trabajo: 5 de Noviembre de 2026 - Nombre de Perfil en Cancelaciones/Reprogramaciones, Alerta de Seña en Clientes Ausentes y Bloqueo de Días Continuos (D-156)
+- [x] **Diagnóstico y Requerimientos de Gonzalo y Luciano (`media_1793891105626_67532445.png` y `media_1793891114792_6e29deff.png`)**:
+  1. **Nombre de Perfil en Tags de Cancelación y Reprogramación**:
+     - En `/api/admin/turnos/[id]`, reemplazar `- Administrador` genérico por el nombre real del usuario autenticado y su rol (ej: `[Cancelado - Pierde seña de $51.600 - Gonzalo Siri (Administrador)]` o `[Turno reprogramado de DD/MM/YYYY a las HH:MM hs - Luciano Gómez (Recepcionista)]`).
+  2. **Alerta de Seña Perdida en Clientes Ausentes (`NO_ASISTIO`)**:
+     - Al dar de alta un nuevo turno a un cliente cuya última cita fue marcada como ausente (`NO_ASISTIO`), mostrar la alerta de advertencia: `⚠️ Perdió la seña de $... por inasistencia en su turno anterior`.
+     - En `/api/admin/turnos/ultimo-cliente`, computar `señaEstado = 'PERDIDA'` cuando el último turno es `NO_ASISTIO` y preservar el monto de la seña.
+     - En `/api/admin/turnos/[id]`, cuando se actualiza el estado a `NO_ASISTIO`, fijar `señaEstado = 'PERDIDA'`.
+     - En `src/app/admin/agenda/page.js`, actualizar las condiciones de visualización del banner de seña para cubrir `NO_ASISTIO`.
+  3. **Bloqueo de Múltiples Días Continuos (Rango de Fechas)**:
+     - En `/api/admin/bloqueos` (POST): aceptar `fechaHastaStr` opcional para generar automáticamente un registro de bloqueo diario por cada fecha del rango continuo, manteniendo motivo, horario (o día completo), color y box.
+     - Detección de colisiones defensiva en todo el rango con advertencia HTTP 409 y bypass `forzar: true`.
+     - En `src/app/admin/configuracion/page.js` y `src/app/admin/agenda/page.js`: añadir opción interactiva `📅 Bloquear rango de días continuos (Desde / Hasta)` con validación de fechas.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (47/47 rutas OK).
+- [x] **Documentación**: Registrado `D-156 🔒 LOCKED` en `.synapse/decisions.md`.
