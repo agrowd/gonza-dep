@@ -2688,3 +2688,28 @@
 - [x] **Validación y Compilación**:
   - Compilación Next.js Turbopack validada localmente (47/47 rutas OK).
 - [x] **Documentación**: Registrado `D-156 🔒 LOCKED` en `.synapse/decisions.md`.
+
+
+## Ciclo de Trabajo: 5 de Noviembre de 2026 - Consolidado Mensual con Reporte PDF (13 meses), Desglose Efectivo/Transferencia en Neto, Botones 'Todos', Box Automático y Saldo a Favor (D-157)
+- [x] **Diagnóstico e Implementación Integral**:
+  1. **Métrica "Consolidado Mensual" en Estadísticas y Reporte PDF (13 Meses)**:
+     - Creado endpoint `/api/admin/estadisticas/consolidado-mensual` computando KPIs de mes, ocupación de agenda (D-155), facturación neta vs gastos, clientes nuevos vs bajas y evolución histórica de 13 meses.
+     - En `/admin/estadisticas`, agregada métrica "Consolidado Mensual" que sustituye dinámicamente el selector Desde/Hasta por selector de mes (`<input type="month">`).
+     - Renderizado de dashboard ejecutivo interactivo en pantalla y vista imprimible exacta a 2 páginas con saltos CSS en `/admin/estadisticas/informe-mensual?mes=YYYY-MM`.
+  2. **Desglose de Efectivo y Transferencia en Ingreso Neto**:
+     - En `/api/admin/turnos/senas-dia`, cálculo exacto de `totalEfectivo`, `totalTransferencia`, `totalDineroAFavor` e `ingresoNeto` real de caja.
+     - En `/admin/agenda`, subtítulo reemplazado por `($X efectivo + $Y transferencia)`.
+  3. **Simplificación de Botones de Filtro en Agenda**:
+     - Botones simplificados a `Todos` (Boxes y Operadores).
+  4. **Corrección de Seña con Saldo a Favor**:
+     - Turnos con saldo a favor etiquetados con `señaEstado = 'SALDO_A_FAVOR'` y excluidos de señas de nuevos turnos del día para evitar doble conteo.
+     - Actualizado turno de Ignacio Reynaldi en producción.
+  5. **Asignación Automática de Box a Operadores y Scroll en Configuración**:
+     - Campo de Box Asignado ubicado prominentemente debajo del rol de usuario en `/admin/configuracion`.
+     - Precarga automática de box predeterminado al seleccionar operador en la agenda.
+  6. **Optimización Responsiva y Corrección de Impresión de Recibos**:
+     - Ajustada grilla y tipografía móvil en `/admin/recibos/[id]`.
+     - Reglas `@media print` globales y en `SidebarNav.js` para impresión limpia sin solapamientos ni desbordes.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
+- [x] **Documentación**: Registrado `D-157 🔒 LOCKED` en `.synapse/decisions.md`.

@@ -51,6 +51,9 @@ export async function GET(request) {
         valorSeña: {
           gt: 0
         },
+        NOT: {
+          señaEstado: 'SALDO_A_FAVOR'
+        },
         OR: [
           { estado: { not: 'CANCELADO' } },
           { estado: 'CANCELADO', señaEstado: 'PERDIDA' }
@@ -128,16 +131,73 @@ export async function GET(request) {
       .filter(t => t.estado !== 'CANCELADO' && t.estado !== 'NO_ASISTIO' && t.estado !== 'BLOQUEADO')
       .reduce((sum, t) => sum + Number(t.valorTotal || 0), 0);
 
-    const totalSaldosRealizados = allTurnosDia
-      .filter(t => t.estado === 'REALIZADO')
+    const turnosRealizadosDia = allTurnosDia.filter(t => t.estado === 'REALIZADO');
+
+    const totalSaldosRealizados = turnosRealizadosDia
       .reduce((acc, t) => acc + Math.max(0, Number(t.valorTotal || 0) - Number(t.valorSeña || 0)), 0);
+
+    // Suma de dineros a favor cobrados en sesiones realizadas hoy (D-157)
+    const totalDineroAFavor = turnosRealizadosDia
+      .reduce((sum, t) => sum + Math.max(0, Number(t.dineroAFavor || 0)), 0);
+
+    // Desglose de dinero efectivo vs transferencia que ingresó a caja en la jornada
+    let totalEfectivo = 0;
+    let totalTransferencia = 0;
+
+    // 1) Saldos y dinero a favor de turnos realizados
+    turnosRealizadosDia.forEach(t => {
+      const saldoCobrado = Math.max(0, Number(t.valorTotal || 0) - Number(t.valorSeña || 0)) + Math.max(0, Number(t.dineroAFavor || 0));
+      const metodo = String(t.metodoPago || '').toUpperCase();
+      if (metodo === 'AMBOS') {
+        const ef = Math.max(0, Number(t.montoEfectivo || 0));
+        const tr = Math.max(0, Number(t.montoTransferencia || 0));
+        if (ef + tr > 0) {
+          totalEfectivo += ef;
+          totalTransferencia += tr;
+        } else {
+          const mitad = Math.round(saldoCobrado / 2);
+          totalEfectivo += mitad;
+          totalTransferencia += (saldoCobrado - mitad);
+        }
+      } else if (metodo === 'EFECTIVO') {
+        totalEfectivo += saldoCobrado;
+      } else {
+        totalTransferencia += saldoCobrado;
+      }
+    });
+
+    // 2) Señas que ingresaron hoy a caja (excluyendo saldo a favor)
+    turnos.forEach(t => {
+      const seña = Math.max(0, Number(t.valorSeña || 0));
+      const metodo = String(t.metodoPago || '').toUpperCase();
+      if (metodo === 'AMBOS') {
+        const ef = Math.max(0, Number(t.montoEfectivo || 0));
+        const tr = Math.max(0, Number(t.montoTransferencia || 0));
+        if (ef + tr > 0) {
+          totalEfectivo += ef;
+          totalTransferencia += tr;
+        } else {
+          totalTransferencia += seña;
+        }
+      } else if (metodo === 'EFECTIVO') {
+        totalEfectivo += seña;
+      } else {
+        totalTransferencia += seña;
+      }
+    });
+
+    // Ingreso neto real = Saldos de turnos realizados + Dinero a favor recibido hoy + Señas cobradas hoy
+    const ingresoNeto = totalSaldosRealizados + totalDineroAFavor + totalSenas;
 
     return NextResponse.json({
       fecha,
       totalRevenue,              // Ingreso total facturado de la jornada (excluye cancelados/no asistió)
       totalSaldosRealizados,      // Saldos cobrados de sesiones REALIZADAS (valorTotal - seña)
       totalSenas,                // Mantiene el total real para el cálculo financiero de Ingreso Neto
-      ingresoNeto: totalSaldosRealizados + totalSenas, // Caja total real del día (Saldos + Señas)
+      totalDineroAFavor,         // Monto a favor recibido hoy en fichas de turnos (D-157)
+      totalEfectivo,             // Desglose efectivo ingresado a caja hoy
+      totalTransferencia,        // Desglose transferencia ingresado a caja hoy
+      ingresoNeto,               // Caja total real del día (Saldos + Señas + Dinero a favor)
       count: turnos.length,
       turnos: turnosEnriquecidos,
       turnosNuevos,              // Solo clientes que agendan un NUEVO turno (excluye turno siguiente)

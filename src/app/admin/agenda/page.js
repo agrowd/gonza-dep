@@ -3227,7 +3227,7 @@ export default function AgendaPage() {
               }}
             >
               <span>🌐</span>
-              <span>Todos los Boxes (Doble Agenda)</span>
+              <span>Todos</span>
             </button>
 
             {boxes.map(b => {
@@ -3289,7 +3289,7 @@ export default function AgendaPage() {
               }}
             >
               <span>👥</span>
-              <span>Todos los Operadores</span>
+              <span>Todos</span>
             </button>
 
             {operadores.map(op => {
@@ -3331,12 +3331,15 @@ export default function AgendaPage() {
               <button 
                 onClick={() => {
                   setIsNextScheduling(false);
-                  const defaultBoxId = (selectedBoxId && selectedBoxId !== 'ALL')
-                    ? selectedBoxId
-                    : (lastTurnoAssignment.current.boxId || boxes.find(b => b.esPrincipal)?.id || (boxes[0]?.id || ''));
                   const defaultOpId = (selectedOperadorId && selectedOperadorId !== 'ALL')
                     ? selectedOperadorId
                     : (lastTurnoAssignment.current.operadorId || (operadores[0]?.id || ''));
+                  const chosenOpObj = operadores.find(op => op.id === defaultOpId);
+                  const defaultBoxId = (chosenOpObj?.boxPredeterminadoId)
+                    ? chosenOpObj.boxPredeterminadoId
+                    : ((selectedBoxId && selectedBoxId !== 'ALL')
+                      ? selectedBoxId
+                      : (lastTurnoAssignment.current.boxId || boxes.find(b => b.esPrincipal)?.id || (boxes[0]?.id || '')));
                   setNewTurno({
                     nombreCompleto: '',
                     nombre: '',
@@ -3593,11 +3596,25 @@ export default function AgendaPage() {
                     return sum + saldo;
                   }, 0);
 
-              // 2) Señas cobradas en este día (turnos agendados en esta fecha en timezone UTC-3)
+              // 2) Dinero a favor cobrado en turnos realizados hoy (D-157)
+              const totalDineroAFavorHoy = !isFilteredView && daySenas?.totalDineroAFavor !== undefined
+                ? Number(daySenas.totalDineroAFavor)
+                : turnosRealizados.reduce((sum, a) => sum + Math.max(0, Number(a.dineroAFavor || 0)), 0);
+
+              // 3) Señas cobradas en este día (turnos agendados en esta fecha en timezone UTC-3)
               const totalSenasCobradasHoy = Number(daySenas?.totalSenas || 0);
 
-              // 3) Ingreso neto total de caja = Saldos de sesiones realizadas + Señas cobradas en el día
-              const ingresoNeto = totalSaldosRealizados + totalSenasCobradasHoy;
+              // 4) Ingreso neto total de caja = Saldos + Dinero a favor + Señas
+              const ingresoNeto = !isFilteredView && daySenas?.ingresoNeto !== undefined
+                ? Number(daySenas.ingresoNeto)
+                : (totalSaldosRealizados + totalDineroAFavorHoy + totalSenasCobradasHoy);
+
+              const totalEfectivoDia = !isFilteredView && daySenas?.totalEfectivo !== undefined
+                ? Number(daySenas.totalEfectivo)
+                : 0;
+              const totalTransferenciaDia = !isFilteredView && daySenas?.totalTransferencia !== undefined
+                ? Number(daySenas.totalTransferencia)
+                : 0;
 
               // Liquidación de Operadores (Desde primer turno hasta último turno con su etiqueta)
               const activeDayApps = dayApps.filter(a => a.estado !== 'CANCELADO');
@@ -3696,7 +3713,17 @@ export default function AgendaPage() {
                             <div className={styles.dayCardStatItem}>
                               <span className={styles.dayCardStatLabel}>Ingreso neto</span>
                               <span className={styles.dayCardStatValGreen}>${ingresoNeto.toLocaleString('es-AR')}</span>
-                              {totalSenasCobradasHoy > 0 && (
+                              {(totalEfectivoDia > 0 || totalTransferenciaDia > 0) ? (
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  color: '#15803d',
+                                  fontWeight: 600,
+                                  whiteSpace: 'nowrap',
+                                  marginTop: '1px'
+                                }}>
+                                  (${totalEfectivoDia.toLocaleString('es-AR')} efectivo + ${totalTransferenciaDia.toLocaleString('es-AR')} transferencia)
+                                </span>
+                              ) : totalSenasCobradasHoy > 0 && (
                                 <span style={{
                                   fontSize: '0.65rem',
                                   color: '#15803d',
@@ -3705,8 +3732,8 @@ export default function AgendaPage() {
                                   marginTop: '1px'
                                 }}>
                                   {totalSaldosRealizados > 0
-                                    ? `($${totalSaldosRealizados.toLocaleString('es-AR')} saldos + $${totalSenasCobradasHoy.toLocaleString('es-AR')} señas)`
-                                    : `($${totalSenasCobradasHoy.toLocaleString('es-AR')} señas del día)`}
+                                    ? `(${totalSaldosRealizados.toLocaleString('es-AR')} saldos + ${totalSenasCobradasHoy.toLocaleString('es-AR')} señas)`
+                                    : `(${totalSenasCobradasHoy.toLocaleString('es-AR')} señas del día)`}
                                 </span>
                               )}
                             </div>
@@ -5567,29 +5594,33 @@ export default function AgendaPage() {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        paddingTop: '0.4rem',
-                        paddingBottom: '0.2rem',
-                        minHeight: '44px',
+                        paddingTop: '0.5rem',
+                        paddingBottom: '0.5rem',
+                        paddingLeft: '0.5rem',
+                        paddingRight: '0.5rem',
+                        backgroundColor: 'rgba(217, 119, 6, 0.08)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(217, 119, 6, 0.3)',
+                        minHeight: '48px',
                         width: '100%',
                         boxSizing: 'border-box'
                       }}>
-                        <label
-                          htmlFor="clientBdayDaySelect"
-                          style={{
-                            color: 'var(--text-secondary)',
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flex: '1 1 auto', minWidth: 0 }}>
+                          <span style={{
+                            color: '#d97706',
                             margin: 0,
                             fontSize: '0.85rem',
-                            fontWeight: 600,
-                            flex: '1 1 auto',
-                            minWidth: 0,
-                            cursor: 'pointer',
+                            fontWeight: 700,
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.35rem'
-                          }}
-                        >
-                          🎂 Cumpleaños
-                        </label>
+                          }}>
+                            🎂 Cumpleaños
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                            Para saludo automático
+                          </span>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
                           <select
                             id="clientBdayDaySelect"

@@ -1688,7 +1688,8 @@ export default function ConfiguracionPage() {
             if (tab === 'users') {
               fetchUsers();
               setTimeout(() => {
-                usersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const el = document.getElementById('userCardsGridSection') || usersSectionRef.current;
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }, 120);
             }
             if (tab === 'promos') { fetchPromociones(); fetchCupones(); }
@@ -2846,7 +2847,7 @@ export default function ConfiguracionPage() {
           ) : users.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay usuarios registrados.</div>
           ) : (
-            <div className={styles.userCardsGrid}>
+            <div className={styles.userCardsGrid} id="userCardsGridSection">
               {users.map(u => (
                 <div key={u.id} className={`${styles.userCard} ${u.activo === false ? styles.userCardBlocked : ''}`}>
                   <div className={styles.userCardHeader}>
@@ -3592,6 +3593,24 @@ export default function ConfiguracionPage() {
                   </select>
                 </div>
 
+                {/* Box Predeterminado (Asignación automática) */}
+                <div className={styles.formGroup} style={{ backgroundColor: 'rgba(217, 119, 6, 0.05)', padding: '0.65rem', borderRadius: '8px', border: '1px solid rgba(217, 119, 6, 0.2)' }}>
+                  <label className={styles.label} style={{ color: '#d97706', fontWeight: 700 }}>🏢 Box Asignado / Predeterminado</label>
+                  <select 
+                    className={styles.input}
+                    value={userForm.boxPredeterminadoId}
+                    onChange={(e) => setUserForm({ ...userForm, boxPredeterminadoId: e.target.value })}
+                  >
+                    <option value="">Sin box predeterminado</option>
+                    {boxes.filter(b => b.activo !== false).map(b => (
+                      <option key={b.id} value={b.id}>{b.nombre} {b.esPrincipal ? '(Principal)' : ''}</option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
+                    Al cargar un turno con este operador en la agenda, se cargará automáticamente este box (se puede cambiar manualmente).
+                  </span>
+                </div>
+
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label className={styles.label}>Teléfono / WhatsApp (Opcional)</label>
@@ -3800,23 +3819,7 @@ export default function ConfiguracionPage() {
                   </div>
                 </div>
 
-                {/* Box Predeterminado */}
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>🏢 Box Predeterminado (Asignación automática)</label>
-                  <select 
-                    className={styles.input}
-                    value={userForm.boxPredeterminadoId}
-                    onChange={(e) => setUserForm({ ...userForm, boxPredeterminadoId: e.target.value })}
-                  >
-                    <option value="">Sin box predeterminado</option>
-                    {boxes.filter(b => b.activo !== false).map(b => (
-                      <option key={b.id} value={b.id}>{b.nombre} {b.esPrincipal ? '(Principal)' : ''}</option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
-                    Al agendar un turno con este operador en la agenda, se auto-seleccionará este box por defecto (se puede cambiar manualmente).
-                  </span>
-                </div>
+
 
                 {/* Estado del Usuario / Operador */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: userForm.activo !== false ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)', borderRadius: '8px', border: userForm.activo !== false ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)' }}>

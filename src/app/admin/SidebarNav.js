@@ -83,7 +83,7 @@ const DollarIcon = () => (
   const currentRole = user?.rol || 'ADMIN';
   const navItems = allNavItems.filter(item => item.roles.includes(currentRole));
 
-  const isPrintPage = pathname === '/admin/agenda/imprimir';
+  const isPrintPage = pathname === '/admin/agenda/imprimir' || pathname.startsWith('/admin/recibos') || pathname.includes('/imprimir') || pathname.includes('/informe-mensual');
 
   if (isPrintPage) {
     return (
@@ -101,10 +101,14 @@ const DollarIcon = () => (
           color: #000000 !important;
           width: 100% !important;
           max-width: 100% !important;
+          overflow: visible !important;
+          height: auto !important;
         }
         body, html {
           background: #ffffff !important;
           color: #000000 !important;
+          overflow: visible !important;
+          height: auto !important;
         }
       `}} />
     );

@@ -9,6 +9,15 @@ import styles from './estadisticas.module.css';
 // ==========================================
 const METRIC_DEFINITIONS = [
   {
+    id: 'consolidado_mensual',
+    label: '📊 Consolidado Mensual (Informe Ejecutivo y PDF 13 Meses)',
+    valueLabel: 'Mes Seleccionado',
+    isDanger: false,
+    hasAvg: false,
+    excelModel: null,
+    description: 'Informe mensual consolidado y evolución histórica de 13 meses con turnos atendidos, facturación bruta, gastos, facturación neta, % de ocupación de agenda, clientes nuevos y bajas. Permite generar y descargar el reporte PDF exacto de 2 páginas.'
+  },
+  {
     id: 'realizados',
     label: 'Turnos Realizados',
     valueLabel: 'Facturación Realizada',
@@ -191,6 +200,37 @@ export default function EstadisticasPage() {
   // Filtros multi-selección para Zonas y Canales
   const [selectedZonesFilter, setSelectedZonesFilter] = useState([]);
   const [selectedCanalesFilter, setSelectedCanalesFilter] = useState([]);
+
+  // Consolidado Mensual State (D-157)
+  const [selectedConsolidadoMonth, setSelectedConsolidadoMonth] = useState(() => {
+    const nowBA = new Date(Date.now() - 3 * 3600 * 1000);
+    return `${nowBA.getUTCFullYear()}-${String(nowBA.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
+  const [consolidadoData, setConsolidadoData] = useState(null);
+  const [loadingConsolidado, setLoadingConsolidado] = useState(false);
+
+  const fetchConsolidado = useCallback(async () => {
+    if (!selectedConsolidadoMonth) return;
+    setLoadingConsolidado(true);
+    try {
+      const res = await fetch(`/api/admin/estadisticas/consolidado-mensual?mes=${selectedConsolidadoMonth}&_t=${Date.now()}`);
+      if (res.ok) {
+        const json = await res.json();
+        setConsolidadoData(json);
+      }
+    } catch (err) {
+      console.error('Error fetching consolidado:', err);
+    } finally {
+      setLoadingConsolidado(false);
+    }
+  }, [selectedConsolidadoMonth]);
+
+  useEffect(() => {
+    if (selectedMetric === 'consolidado_mensual') {
+      fetchConsolidado();
+    }
+  }, [selectedMetric, selectedConsolidadoMonth, fetchConsolidado]);
+
 
   // Modales: Ficha de Cliente, Listado Ampliado y Vista/Descarga Excel
   const [modalClient, setModalClient] = useState(null);
@@ -1011,6 +1051,350 @@ export default function EstadisticasPage() {
     );
   };
 
+
+  // Renderizado especial: Consolidado Mensual e Informe Ejecutivo de 13 Meses (D-157)
+  const renderConsolidadoMensualView = () => {
+    if (loadingConsolidado) {
+      return (
+        <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#7a1f1e' }}>
+          <div style={{ fontSize: '1.8rem', marginBottom: '0.6rem' }}>⏳</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>Calculando Consolidado Mensual de {selectedConsolidadoMonth}...</div>
+        </div>
+      );
+    }
+
+    if (!consolidadoData) {
+      return (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+          No hay datos disponibles para el mes seleccionado ({selectedConsolidadoMonth}).
+        </div>
+      );
+    }
+
+    const { kpis, resumen, evolucion13Meses, mesLabel } = consolidadoData;
+    const maxTurnos = Math.max(...evolucion13Meses.map(m => m.turnosAtendidos), 10);
+    const maxFacturacion = Math.max(...evolucion13Meses.map(m => Math.max(m.facturacion, m.gastos, m.facturacionNeta)), 100000);
+    const maxAltasBajas = Math.max(...evolucion13Meses.map(m => Math.max(m.clientesNuevos, m.totalBajas)), 5);
+    const maxDetalleBajas = Math.max(...evolucion13Meses.map(m => Math.max(m.finalizados, m.cancelados, m.ausentes)), 5);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', marginTop: '1.25rem' }}>
+        {/* 4 KPI CARDS DEL CONSOLIDADO */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderTop: '4px solid #7a1f1e', borderRadius: '10px', padding: '1rem 1.1rem', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+              TURNOS ATENDIDOS
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+              {kpis.turnosAtendidos.valor}
+            </div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: kpis.turnosAtendidos.comparacion ? '#16a34a' : '#64748b', marginTop: '0.35rem' }}>
+              {kpis.turnosAtendidos.comparacion ? `${kpis.turnosAtendidos.comparacion} vs mes anterior` : 's/d vs mes anterior'}
+            </div>
+          </div>
+
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderTop: '4px solid #d97706', borderRadius: '10px', padding: '1rem 1.1rem', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+              FACTURACIÓN
+            </div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+              {formatMoney(kpis.facturacion.valor)}
+            </div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: kpis.facturacion.comparacion ? '#16a34a' : '#64748b', marginTop: '0.35rem' }}>
+              {kpis.facturacion.comparacion ? `${kpis.facturacion.comparacion} vs mes anterior` : 's/d vs mes anterior'}
+            </div>
+          </div>
+
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderTop: '4px solid #16a34a', borderRadius: '10px', padding: '1rem 1.1rem', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+              FACTURACIÓN NETA
+            </div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#16a34a', lineHeight: 1.1 }}>
+              {formatMoney(kpis.facturacionNeta.valor)}
+            </div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginTop: '0.35rem' }}>
+              {kpis.facturacionNeta.porcentajeFacturacion}
+            </div>
+          </div>
+
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderTop: '4px solid #2563eb', borderRadius: '10px', padding: '1rem 1.1rem', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+              CLIENTES NUEVOS
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+              {kpis.clientesNuevos.valor}
+            </div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: kpis.clientesNuevos.comparacion ? '#16a34a' : '#64748b', marginTop: '0.35rem' }}>
+              {kpis.clientesNuevos.comparacion ? `${kpis.clientesNuevos.comparacion} vs mes anterior` : 's/d vs mes anterior'}
+            </div>
+          </div>
+        </div>
+
+        {/* TABLA RESUMEN DEL MES */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              📋 Resumen Ejecutivo de {mesLabel}
+            </h3>
+            <button
+              type="button"
+              onClick={() => router.push(`/admin/estadisticas/informe-mensual?mes=${selectedConsolidadoMonth}`)}
+              style={{
+                padding: '0.45rem 0.95rem',
+                backgroundColor: '#7a1f1e',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              📄 Abrir Versión Imprimible PDF
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #94a3b8' }}>
+                  <th style={{ textAlign: 'left', padding: '0.65rem 0.9rem', fontWeight: 800, color: '#334155' }}>Indicador</th>
+                  <th style={{ textAlign: 'right', padding: '0.65rem 0.9rem', fontWeight: 800, color: '#334155', width: '220px' }}>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Turnos atendidos</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>{resumen.turnosAtendidos}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Ocupación de agenda</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>
+                    {resumen.ocupacionAgendaPorc.toFixed(1).replace('.', ',')}% <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 500 }}>({resumen.ocupacionMinutos} min ocup. / {resumen.disponiblesMinutos} min disp.)</span>
+                  </td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Facturación del mes</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>{formatMoney(resumen.facturacionMes)}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Gastos del mes</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700, color: '#dc2626' }}>{formatMoney(resumen.gastosMes)}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f0fdf4' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#166534', fontWeight: 700 }}>Facturación neta</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 800, color: '#166534' }}>{formatMoney(resumen.facturacionNeta)}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Clientes nuevos</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>{resumen.clientesNuevos}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Valor de los turnos de clientes nuevos</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>{formatMoney(resumen.valorTurnosNuevos)}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Clientes que finalizaron tratamiento</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>{resumen.clientesFinalizaron}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Bajas: turnos cancelados</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{resumen.bajasCancelados}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Bajas: no vinieron (ausentes)</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700, color: '#dc2626' }}>{resumen.bajasNoVinieron}</td>
+                </tr>
+                <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#fff1f2' }}>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#991b1b', fontWeight: 700 }}>Total bajas</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 800, color: '#991b1b' }}>{resumen.totalBajas}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '0.55rem 0.9rem', color: '#475569' }}>Valor de los turnos cancelados y no asistidos</td>
+                  <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700, color: '#dc2626' }}>{formatMoney(resumen.valorBajasPerdido)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* EVOLUCIÓN HISTÓRICA DE 13 MESES */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            📈 Evolución Comparativa de los Últimos 13 Meses
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Gráfico 1 */}
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                  1. Turnos Atendidos por Mes
+                </span>
+                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Cantidad mensual de citas realizadas</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+                {evolucion13Meses.map((m, idx) => {
+                  const heightPct = maxTurnos > 0 ? (m.turnosAtendidos / maxTurnos) * 100 : 0;
+                  const isSelected = idx === evolucion13Meses.length - 1;
+                  return (
+                    <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: m.turnosAtendidos > 0 ? '#0f172a' : '#cbd5e1', marginBottom: '3px' }}>
+                        {m.turnosAtendidos > 0 ? m.turnosAtendidos : 's/d'}
+                      </span>
+                      <div style={{
+                        width: '100%',
+                        maxWidth: '36px',
+                        height: `${Math.max(heightPct, 4)}%`,
+                        backgroundColor: m.turnosAtendidos > 0 ? (isSelected ? '#7a1f1e' : '#b45309') : '#e2e8f0',
+                        borderRadius: '3px 3px 0 0'
+                      }} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                {evolucion13Meses.map(m => (
+                  <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                    {m.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Gráfico 2 */}
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                  2. Facturación, Gastos y Facturación Neta ($)
+                </span>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#d97706' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#d97706', borderRadius: '2px' }} /> Facturación
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#dc2626' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> Gastos
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#16a34a', borderRadius: '2px' }} /> Neta
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+                {evolucion13Meses.map((m) => {
+                  const fPct = maxFacturacion > 0 ? (m.facturacion / maxFacturacion) * 100 : 0;
+                  const gPct = maxFacturacion > 0 ? (m.gastos / maxFacturacion) * 100 : 0;
+                  const nPct = maxFacturacion > 0 ? (m.facturacionNeta / maxFacturacion) * 100 : 0;
+                  return (
+                    <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '1.5px', justifyContent: 'center' }}>
+                        <div title={`Facturación: ${formatMoney(m.facturacion)}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(fPct, m.facturacion > 0 ? 4 : 0)}%`, backgroundColor: '#d97706', borderRadius: '2px 2px 0 0' }} />
+                        <div title={`Gastos: ${formatMoney(m.gastos)}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(gPct, m.gastos > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
+                        <div title={`Neta: ${formatMoney(m.facturacionNeta)}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(nPct, m.facturacionNeta > 0 ? 4 : 0)}%`, backgroundColor: '#16a34a', borderRadius: '2px 2px 0 0' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                {evolucion13Meses.map(m => (
+                  <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                    {m.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Gráfico 3 */}
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                  3. Altas (Clientes Nuevos) vs Total de Bajas
+                </span>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2563eb' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#2563eb', borderRadius: '2px' }} /> Altas (Nuevos)
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#dc2626' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> Total Bajas
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+                {evolucion13Meses.map((m) => {
+                  const aPct = maxAltasBajas > 0 ? (m.clientesNuevos / maxAltasBajas) * 100 : 0;
+                  const bPct = maxAltasBajas > 0 ? (m.totalBajas / maxAltasBajas) * 100 : 0;
+                  return (
+                    <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '2px', justifyContent: 'center' }}>
+                        <div title={`Altas: ${m.clientesNuevos}`} style={{ flex: 1, maxWidth: '14px', height: `${Math.max(aPct, m.clientesNuevos > 0 ? 4 : 0)}%`, backgroundColor: '#2563eb', borderRadius: '2px 2px 0 0' }} />
+                        <div title={`Bajas: ${m.totalBajas}`} style={{ flex: 1, maxWidth: '14px', height: `${Math.max(bPct, m.totalBajas > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                {evolucion13Meses.map(m => (
+                  <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                    {m.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Gráfico 4 */}
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                  4. Detalle de Bajas por Mes
+                </span>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#475569' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#64748b', borderRadius: '2px' }} /> Finalizaron
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#d97706' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#d97706', borderRadius: '2px' }} /> Cancelaron
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#dc2626' }}>
+                    <span style={{ width: '10px', height: '10px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> No Vinieron
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+                {evolucion13Meses.map((m) => {
+                  const finPct = maxDetalleBajas > 0 ? (m.finalizados / maxDetalleBajas) * 100 : 0;
+                  const canPct = maxDetalleBajas > 0 ? (m.cancelados / maxDetalleBajas) * 100 : 0;
+                  const ausPct = maxDetalleBajas > 0 ? (m.ausentes / maxDetalleBajas) * 100 : 0;
+                  return (
+                    <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '1.5px', justifyContent: 'center' }}>
+                        <div title={`Finalizaron: ${m.finalizados}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(finPct, m.finalizados > 0 ? 4 : 0)}%`, backgroundColor: '#64748b', borderRadius: '2px 2px 0 0' }} />
+                        <div title={`Cancelaron: ${m.cancelados}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(canPct, m.cancelados > 0 ? 4 : 0)}%`, backgroundColor: '#d97706', borderRadius: '2px 2px 0 0' }} />
+                        <div title={`No vinieron: ${m.ausentes}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(ausPct, m.ausentes > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                {evolucion13Meses.map(m => (
+                  <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                    {m.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.78rem', color: '#94a3b8' }}>
+            * s/d: sin datos en meses anteriores al inicio del registro en el sistema.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={styles.container}>
       {/* HEADER + FILTRO DE FECHAS LIMPIO */}
@@ -1021,27 +1405,41 @@ export default function EstadisticasPage() {
         </div>
 
         <div className={styles.controls}>
-          <div className={styles.dateInputsRow}>
-            <div className={styles.dateInputGroup}>
-              <label>Desde</label>
-              <input
-                type="date"
-                className={styles.dateInput}
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+          {selectedMetric === 'consolidado_mensual' ? (
+            <div className={styles.dateInputsRow}>
+              <div className={styles.dateInputGroup} style={{ minWidth: '220px' }}>
+                <label>Mes del Informe</label>
+                <input
+                  type="month"
+                  className={styles.dateInput}
+                  value={selectedConsolidadoMonth}
+                  onChange={(e) => setSelectedConsolidadoMonth(e.target.value)}
+                />
+              </div>
             </div>
+          ) : (
+            <div className={styles.dateInputsRow}>
+              <div className={styles.dateInputGroup}>
+                <label>Desde</label>
+                <input
+                  type="date"
+                  className={styles.dateInput}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
 
-            <div className={styles.dateInputGroup}>
-              <label>Hasta</label>
-              <input
-                type="date"
-                className={styles.dateInput}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <div className={styles.dateInputGroup}>
+                <label>Hasta</label>
+                <input
+                  type="date"
+                  className={styles.dateInput}
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <button
             type="button"
@@ -1089,27 +1487,42 @@ export default function EstadisticasPage() {
               </select>
 
               <div className={styles.actionButtonsGroup}>
-                {currentMetricDef.excelModel && (
+                {selectedMetric === 'consolidado_mensual' ? (
                   <button
                     type="button"
                     className={styles.btnExcel}
-                    onClick={() => setExcelModalOpen(true)}
+                    style={{ backgroundColor: '#7a1f1e', color: '#ffffff', border: 'none' }}
+                    onClick={() => router.push(`/admin/estadisticas/informe-mensual?mes=${selectedConsolidadoMonth}`)}
                   >
-                    📊 Ver / Descargar Informe Excel
+                    📄 Imprimir / Descargar Informe PDF (2 Páginas)
                   </button>
-                )}
+                ) : (
+                  <>
+                    {currentMetricDef.excelModel && (
+                      <button
+                        type="button"
+                        className={styles.btnExcel}
+                        onClick={() => setExcelModalOpen(true)}
+                      >
+                        📊 Ver / Descargar Informe Excel
+                      </button>
+                    )}
 
-                <button
-                  type="button"
-                  className={styles.btnExpandList}
-                  onClick={() => setExpandedListModalOpen(true)}
-                >
-                  🔍 Ampliar Listado en Ventana
-                </button>
+                    <button
+                      type="button"
+                      className={styles.btnExpandList}
+                      onClick={() => setExpandedListModalOpen(true)}
+                    >
+                      🔍 Ampliar Listado en Ventana
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
+{selectedMetric === 'consolidado_mensual' ? renderConsolidadoMensualView() : (
+            <>
           {/* 3 TARJETAS KPI DE LA MÉTRICA SELECCIONADA */}
           <div className={styles.kpiGrid}>
             <div className={styles.kpiCard}>
@@ -1349,6 +1762,8 @@ export default function EstadisticasPage() {
           <div style={{ marginTop: '1.25rem' }}>
             {renderTurnosTable()}
           </div>
+            </>
+          )}
         </>
       )}
 

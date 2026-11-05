@@ -458,6 +458,7 @@ export async function POST(request) {
         descuentoTipo: descuentoTipo || 'NINGUNO',
         descuentoValor: Number(descuentoValor || 0),
         estado: estado || 'SEÑADO',
+        señaEstado: body.señaEstado || (clientRecord?.saldoAFavor > 0 ? 'SALDO_A_FAVOR' : null),
         metodoPago: body.metodoPago || 'TRANSFERENCIA',
         montoEfectivo: Math.max(0, Number(body.montoEfectivo) || 0),
         montoTransferencia: Math.max(0, Number(body.montoTransferencia) || 0),

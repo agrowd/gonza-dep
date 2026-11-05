@@ -244,108 +244,119 @@
 
 @media (max-width: 768px) {
   .pageContainer {
-    padding: 1rem 0.5rem;
+    padding: 0.75rem 0.4rem;
   }
 
   .actionBar {
-    padding: 0.6rem 0.8rem;
+    padding: 0.5rem 0.75rem;
     gap: 0.5rem;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-wrap: nowrap;
+    justify-content: space-between;
   }
 
   .btnPrint {
-    font-size: 0.82rem;
-    padding: 0.45rem 0.8rem;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.7rem;
+    white-space: nowrap;
   }
 
   .btnSecondary {
-    font-size: 0.82rem;
-    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.65rem;
+    white-space: nowrap;
   }
 
   .receiptBox {
-    padding: 1.25rem 0.75rem;
+    padding: 0.85rem 0.5rem;
     min-height: auto;
     border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .headerSection {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .headerLeft {
-    padding: 0.6rem 0.5rem;
+    padding: 0.4rem 0.35rem;
     flex: 3;
+    min-width: 0;
   }
 
   .brandTitle {
-    font-size: 1rem;
-    line-height: 1.2;
+    font-size: 0.88rem;
+    line-height: 1.15;
+    margin-bottom: 0.15rem;
   }
 
   .domicilio {
-    font-size: 0.75rem;
-    line-height: 1.25;
+    font-size: 0.68rem;
+    line-height: 1.2;
   }
 
   .headerCenter {
-    padding: 0.4rem 0.2rem;
-    flex: 1.2;
+    padding: 0.25rem 0.15rem;
+    flex: 1;
+    min-width: 34px;
   }
 
   .letterX {
-    font-size: 1.4rem;
+    font-size: 1.25rem;
   }
 
   .noValido {
-    font-size: 0.52rem;
-    max-width: 65px;
+    font-size: 0.45rem;
+    max-width: 50px;
+    line-height: 1;
   }
 
   .headerRight {
-    padding: 0.6rem 0.5rem;
+    padding: 0.4rem 0.35rem;
     flex: 2.8;
+    min-width: 0;
   }
 
   .reciboWord {
-    font-size: 1rem;
+    font-size: 0.88rem;
+    margin-bottom: 0.1rem;
   }
 
   .reciboNumero {
-    font-size: 0.85rem;
+    font-size: 0.76rem;
+    margin-bottom: 0.15rem;
   }
 
   .reciboFecha {
-    font-size: 0.75rem;
+    font-size: 0.68rem;
   }
 
   .clientBar {
-    padding: 0.6rem 0.75rem;
-    font-size: 0.85rem;
-    margin-bottom: 1rem;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.78rem;
+    margin-bottom: 0.75rem;
   }
 
   .servicesTable th {
-    padding: 0.5rem 0.4rem;
-    font-size: 0.8rem;
+    padding: 0.35rem 0.25rem;
+    font-size: 0.72rem;
   }
 
   .servicesTable td {
-    padding: 0.55rem 0.4rem;
-    font-size: 0.8rem;
+    padding: 0.4rem 0.25rem;
+    font-size: 0.72rem;
   }
 
   .totalRow {
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .totalLabel {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .totalValue {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 }
 

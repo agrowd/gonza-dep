@@ -271,3 +271,53 @@ input::placeholder, textarea::placeholder {
     opacity: 1;
   }
 }
+
+
+/* ==========================================================
+   GLOBAL PRINT RULES FOR CLEAN PDF & PRINTER OUTPUT
+   ========================================================== */
+@media print {
+  @page {
+    margin: 8mm;
+    size: auto;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide navigation, toolbars, sidebars and mobile overlays */
+  aside,
+  nav,
+  header,
+  [class*="sidebar"],
+  [class*="mobileToggleBtn"],
+  [class*="mobileBackdrop"],
+  [class*="actionBar"],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Unclip main and layout wrappers */
+  main,
+  [class*="adminLayout"],
+  [class*="contentArea"] {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
