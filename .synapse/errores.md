@@ -695,3 +695,20 @@ En la ficha del turno (`selectedTurno`), la fila de Cumpleaños tenía una altur
 3. Se implementó auto-guardado inmediato en la base de datos con notificación toast al elegir Día y Mes (`handleSaveClientObservaciones(false, { fechaNacimiento })`).
 4. Se agregó una separación física y visual generosa (`marginTop: 1.25rem`, `paddingTop: 0.5rem`, borde superior divisor) y `fontSize: 16px` en el selector de Frecuencia Estimada, eliminando cualquier posibilidad de solapamiento o error de pulsación.
 **Estado:** ✅ FIXED
+
+## ERR-66: Crash en Directorio de Clientes por Variable viewNoticeModal No Declarada (05/11/2026)
+**Síntoma:** Gonzalo Siri reportó en WhatsApp (`media_1793878095805_3f9f78f8.png`): Cartel rojo con *"⚠️ Ocurrió un error en el Panel: Can't find variable: viewNoticeModal"* al ingresar a `/admin/clientes`.
+**Root Cause:**
+Durante la integración del modal de visualización de avisos (`viewNoticeModal`), se agregaron los bloques JSX que lo renderizan y lo abren en las filas de notificaciones, pero se omitió la declaración `const [viewNoticeModal, setViewNoticeModal] = useState(null);` dentro del componente `ClientesPageContent`. Al montar la página, el motor de JavaScript de Safari/V8 arrojó `ReferenceError: Can't find variable: viewNoticeModal`.
+**Solución:**
+Se declaró explícitamente el hook de estado `const [viewNoticeModal, setViewNoticeModal] = useState(null);` en `src/app/admin/clientes/page.js`.
+**Estado:** ✅ FIXED
+
+## ERR-67: Omisión de Actualización de Email y Teléfono de Cliente Existente al Agendar Turno (05/11/2026)
+**Síntoma:** Gonzalo Siri reportó en WhatsApp (`media_1793878108021_effab9f2.png`): *"En el sistema está cargado sin [punto]. Y es Con [punto: leandro.trips@gmail.com]. A mí no me deja modificar"*.
+**Root Cause:**
+En `src/app/api/admin/turnos/route.js` (POST de creación manual), cuando se seleccionaba un cliente preexistente (`clientRecord`) y el operador corregía o editaba en el modal su correo electrónico (`email`), su teléfono (`whatsapp`) o su DNI (`dni`), el endpoint asignaba el `clienteId` pero omitía actualizar dichos campos en la tabla `Cliente` de la base de datos PostgreSQL, persistiendo únicamente los turnos con los datos desactualizados del cliente.
+**Solución:**
+1. En `src/app/api/admin/turnos/route.js`, se añadió lógica de detección de cambios en `email`, `whatsapp` y `dni` que actualiza de inmediato el registro del cliente (`prisma.cliente.update`) al guardar el turno.
+2. Se corrigió manualmente en la base de datos el correo de Leandro Piro a `leandro.trips@gmail.com`.
+**Estado:** ✅ FIXED

@@ -136,6 +136,7 @@ function ClientesPageContent() {
 
   const [notifFilterCanal, setNotifFilterCanal] = useState('ALL');
   const [expandedNotifIds, setExpandedNotifIds] = useState(new Set());
+  const [viewNoticeModal, setViewNoticeModal] = useState(null);
 
   const toggleExpandNotif = (id) => {
     setExpandedNotifIds(prev => {

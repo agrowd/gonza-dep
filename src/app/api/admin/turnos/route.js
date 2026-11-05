@@ -315,19 +315,34 @@ export async function POST(request) {
           include: { turnos: true }
         });
       } else {
+        const updateClientData = {};
+        if (email && email.trim() && email.trim() !== clientRecord.email) {
+          updateClientData.email = email.trim();
+          clientRecord.email = email.trim();
+        }
+        const cleanWpp = finalWhatsapp || (whatsapp ? normalizeWhatsApp(whatsapp) : null);
+        if (cleanWpp && cleanWpp !== clientRecord.whatsapp) {
+          updateClientData.whatsapp = cleanWpp;
+          clientRecord.whatsapp = cleanWpp;
+        }
+        if (dni !== undefined && dni !== null && dni.trim() !== (clientRecord.dni || '')) {
+          updateClientData.dni = dni.trim() || null;
+          clientRecord.dni = dni.trim() || null;
+        }
         if (enviarNotificaciones !== undefined && clientRecord.enviarNotificaciones !== Boolean(enviarNotificaciones)) {
-          await prisma.cliente.update({
-            where: { id: clientRecord.id },
-            data: { enviarNotificaciones: Boolean(enviarNotificaciones) }
-          });
+          updateClientData.enviarNotificaciones = Boolean(enviarNotificaciones);
           clientRecord.enviarNotificaciones = Boolean(enviarNotificaciones);
         }
         if (clientRecord.estado !== 'ACTIVO') {
+          updateClientData.estado = 'ACTIVO';
+          clientRecord.estado = 'ACTIVO';
+        }
+
+        if (Object.keys(updateClientData).length > 0) {
           await prisma.cliente.update({
             where: { id: clientRecord.id },
-            data: { estado: 'ACTIVO' }
-          }).catch(() => {});
-          clientRecord.estado = 'ACTIVO';
+            data: updateClientData
+          }).catch(err => console.error('Error updating existing client info during turno creation:', err));
         }
       }
       finalClienteId = clientRecord.id;

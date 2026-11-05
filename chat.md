@@ -1727,3 +1727,31 @@
    - Se conectó auto-guardado en base de datos (`handleSaveClientObservaciones(false, { fechaNacimiento })`) con notificación toast al elegir día y mes o al borrarlos.
 4. **Separación Física y Visual**:
    - Se aplicó una separación física y visual generosa (`marginTop: 1.25rem`, `paddingTop: 0.5rem`, divisor visual) y `fontSize: 16px` con `minHeight: 44px` en `Frecuencia Estimada del Tratamiento`, eliminando de raíz cualquier confusión táctil.
+
+---
+
+## 📅 Sesión: 5 de Noviembre de 2026 - Corrección de Crash en Clientes y Sincronización Automática de Datos de Cliente al Agendar Turnos (D-153, ERR-66, ERR-67)
+
+### Reportes de Gonzalo Siri en WhatsApp:
+1. **Captura 1 (`media_1793878095805_3f9f78f8.png`)**:
+   > *"En clientes aparece asi"*
+   > Cartel de error en `/admin/clientes`: `⚠️ Ocurrió un error en el Panel` / `Can't find variable: viewNoticeModal`
+2. **Captura 2 (`media_1793878108021_effab9f2.png`)**:
+   > *"En el sistema está cargado sin. Y es Con. A mí no me deja modificar."* (Email de Leandro Piro en modal de agendar turno en Agenda)
+
+### Diagnóstico Forense y Causa Raíz:
+1. **Crash en `/admin/clientes` (`ERR-66`)**:
+   - En `src/app/admin/clientes/page.js`, los bloques JSX que renderizan el modal de lectura íntegra de avisos (`viewNoticeModal`) hacían referencia a la variable de estado, pero la declaración `const [viewNoticeModal, setViewNoticeModal] = useState(null);` se había omitido en el componente. Al renderizarse en Safari/Chrome, el navegador arrojaba un `ReferenceError` inmediato bloqueando la pantalla.
+2. **Email No Modificable al Agendar Turno (`ERR-67`)**:
+   - En `src/app/api/admin/turnos/route.js` (POST de creación manual), cuando se seleccionaba un cliente existente (`clientRecord`), el backend sólo actualizaba `enviarNotificaciones` y `estado`, ignorando cualquier cambio en `email`, `whatsapp` o `dni` enviado desde el modal. Como consecuencia, si el operador corregía el email (de `leandrotrips@gmail.com` a `leandro.trips@gmail.com`), la modificación se descartaba silenciosamente y nunca se guardaba en el registro del cliente.
+
+### Solución y Blindaje Implementado:
+1. **Declaración de Hook en `src/app/admin/clientes/page.js`**:
+   - Se declaró explícitamente `const [viewNoticeModal, setViewNoticeModal] = useState(null);` en el componente.
+2. **Sincronización Bidireccional en `src/app/api/admin/turnos/route.js`**:
+   - Si al agendar un turno para un cliente existente se ingresa un `email`, `whatsapp` o `dni` diferente al que tenía registrado, el backend actualiza de forma automática el registro en la tabla `Cliente` de la base de datos.
+3. **Actualización de Base de Datos PostgreSQL**:
+   - Se actualizó el correo de Leandro Piro a `leandro.trips@gmail.com` tanto en producción (`agenda_db`) como en staging (`agenda_db_staging`).
+4. **Validación**:
+   - Compilación exitosa con Next.js Turbopack (47/47 rutas OK).
+   - Despliegue en VPS Staging y Producción.

@@ -2610,3 +2610,18 @@
 - [x] **Compilación y Validación**:
   - Next.js Turbopack compilado localmente con éxito (47/47 rutas OK).
 - [x] **Documentación**: Registrado `D-152 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-65` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 5 de Noviembre de 2026 - Corrección de Crash en Clientes y Sincronización de Datos al Agendar Turnos (D-153, ERR-66, ERR-67)
+- [x] **Diagnóstico y Confirmación de Causa Raíz**:
+  - Gonzalo Siri reportó en WhatsApp (`media_1793878095805_3f9f78f8.png` y `media_1793878108021_effab9f2.png`):
+    1. Cartel rojo al ingresar a `/admin/clientes`: *"⚠️ Ocurrió un error en el Panel: Can't find variable: viewNoticeModal"*.
+    2. En el modal de agendar turno para Leandro Piro: *"En el sistema está cargado sin [punto en email]. Y es Con [leandro.trips@gmail.com]. A mí no me deja modificar"*.
+  - **Causa Raíz Crash Clientes**: Al implementar el visor de mensajes completos en Avisos, se invocaba `viewNoticeModal` y `setViewNoticeModal` en el JSX pero se omitió declarar `const [viewNoticeModal, setViewNoticeModal] = useState(null);` en el componente.
+  - **Causa Raíz Email No Modificable**: En `POST /api/admin/turnos`, cuando se matcheaba un cliente existente (`clientRecord`), el endpoint sólo actualizaba `enviarNotificaciones` y `estado`, ignorando cualquier cambio en `email`, `whatsapp` o `dni` enviado desde el formulario modal de agendado.
+- [x] **Solución y Blindaje**:
+  - En `src/app/admin/clientes/page.js`: Se declaró el estado `const [viewNoticeModal, setViewNoticeModal] = useState(null);`, eliminando el `ReferenceError`.
+  - En `src/app/api/admin/turnos/route.js`: Se implementó la sincronización automática de campos (`email`, `whatsapp`, `dni`) cuando difieren del registro en base de datos.
+  - En base de datos PostgreSQL (`agenda_db` y `agenda_db_staging`): Se actualizó el correo de Leandro Piro a `leandro.trips@gmail.com`.
+- [x] **Compilación y Validación**:
+  - Next.js Turbopack compilado localmente con éxito (47/47 rutas OK).
+- [x] **Documentación**: Registrado `D-153 🔒 LOCKED` en `.synapse/decisions.md`, `ERR-66` y `ERR-67` en `.synapse/errores.md`.
