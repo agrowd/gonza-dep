@@ -720,3 +720,15 @@ En `src/app/api/clientes/consultar/route.js`, al obtener las zonas del catálogo
 **Solución:**
 Se eliminó el filtro inválido `where: { activo: true }` en `prisma.zona.findMany()`, obteniendo todas las zonas activas del catálogo limpiamente. Se recompiló el bundle y se desplegó en producción y staging, validando que `/api/clientes/consultar?email=lucianogomez4213@gmail.com` responde inmediatamente con `ultimoTurnoData` (`isWithin90Days: true`, `zonasTexto: "Brazos"`, `duracionMinutos: 30`, `valorTotal: 32000`, `valorSeña: 16000`).
 **Estado:** ✅ FIXED
+
+## ERR-69: Fallo de Build Turbopack por Error de Resolución en next/font/google al Eliminar .next en el VPS (05/11/2026)
+**Síntoma:** Al compilar Next.js 16 con Turbopack en el VPS Debian/Ubuntu tras un clean de archivos, el build fallaba arrojando 60 errores del tipo: `Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font' ... next/font/google queries have exactly one entry`.
+**Root Cause:**
+Next.js 16.2.9 con Turbopack intenta descargar y procesar binarios tipográficos en tiempo de compilación a través del helper interno `@vercel/turbopack-next/internal/font/google/font`. Si el cache local de `.next` no existe o hay fluctuaciones con el API de Google Fonts desde servidores remotos, el loader interno falla y aborta la compilación de forma fatal.
+**Solución:**
+1. Se desacopló la dependencia frágil de `next/font/google` en `src/app/layout.js`.
+2. Se importaron las tipografías Montserrat e Inter mediante `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');` estándar en `src/app/globals.css`.
+3. Se definieron las variables CSS nativas `--font-montserrat`, `--font-inter`, `--font-title` y `--font-body` con fallbacks robustos.
+4. En `scratch/deploy_full_safe.mjs`, se añadió `-e .next` a `git clean` para proteger el caché de compilación en el VPS.
+**Commit:** `057ecdd`
+**Estado:** ✅ FIXED

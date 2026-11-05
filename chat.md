@@ -1811,3 +1811,37 @@
    - Formateo de precios en pesos enteros sin decimales (`toLocaleString('es-AR')`).
 4. **Validación y Despliegue**:
    - Compilación local validada con Next.js Turbopack (47/47 rutas OK).
+
+---
+
+## 📅 Sesión: 5 de Noviembre de 2026 - Nombre de Perfil en Cancelaciones/Reprogramaciones, Alerta de Seña en Ausentes y Bloqueo de Días Continuos (D-156)
+
+### Requerimientos Solicitados:
+1. **Nombre de Perfil en Tags de Cancelación y Reprogramación**:
+   - Para cancelaciones y reprogramaciones de turnos, reemplazar el tag genérico `- Administrador` para que indique con precisión quién realizó la acción, mostrando el nombre del perfil y su rol (ej: `[Cancelado - Pierde seña de $51.600 - Gonzalo Siri (Administrador)]` o `[Turno reprogramado de 04/11/2026 a las 16:30 hs - Luciano Gómez (Recepcionista)]`).
+2. **Alerta de Seña Perdida en Clientes Ausentes (`NO_ASISTIO`)**:
+   - Cuando un cliente no asiste a su turno (`NO_ASISTIO`), la seña queda retenida (`PERDIDA`). Al agendarle un nuevo turno (tanto en alta manual como en la agenda), debe mostrar el mensaje de advertencia: `⚠️ Perdió la seña de $... por inasistencia en su turno anterior`.
+3. **Bloqueo de Múltiples Días Continuos (Rango de Fechas)**:
+   - En la creación de bloqueos (tanto en Configuración > Bloqueos como en Agenda > Bloquear Horario), agregar la opción interactiva de bloquear un rango continuo de fechas (`Desde` y `Hasta`), manteniendo el mismo horario (o día completo) y motivo, evitando tener que crearlos día por día.
+
+### Implementación Realizada:
+1. **Auditoría Dinámica de Usuario en Turnos (`src/app/api/admin/turnos/[id]/route.js`)**:
+   - Se extrajo el usuario de la sesión (`sessionUser`) y su perfil (`nombre`, `usuario`, `rol`).
+   - Se reemplazó `- Administrador` estático por `${uName} (${roleDisplay})` en:
+     - Reprogramaciones: `[Turno reprogramado de DD/MM/YYYY a las HH:MM hs - Autor]`
+     - Cancelación con seña conservada: `[Cancelado - Seña de $... Guardada para siguiente turno - Autor]`
+     - Cancelación con seña perdida: `[Cancelado - Pierde seña de $... - Autor]`
+     - Cancelación sin seña: `[Cancelado - Autor]`
+2. **Persistencia y Advertencia de Inasistencia (`NO_ASISTIO`)**:
+   - En `src/app/api/admin/turnos/[id]/route.js`: al cambiar a `NO_ASISTIO`, si el turno tenía seña, se asigna automáticamente `updateData.señaEstado = 'PERDIDA'`.
+   - En `src/app/api/admin/turnos/ultimo-cliente/route.js`: si el último turno fue `NO_ASISTIO`, computa `computedSeñaEstado = 'PERDIDA'` y devuelve el monto de la seña.
+   - En `src/app/admin/agenda/page.js`: los modales de alta y edición despliegan `⚠️ Perdió la seña de $... por inasistencia en su turno anterior`.
+3. **Bloqueo de Días Continuos (`/api/admin/bloqueos`, `configuracion`, `agenda`)**:
+   - En `src/app/api/admin/bloqueos/route.js` (POST): recibe `fechaHastaStr`. Si es un rango continuo, genera un registro diario para cada fecha, preservando horario, motivo, color, tipo y box. Incluye advertencia HTTP 409 ante turnos solapados en cualquier día del rango.
+   - En `src/app/admin/configuracion/page.js` y `src/app/admin/agenda/page.js`: se añadió la casilla `📅 Bloquear rango de días continuos (Desde / Hasta)` con selector de `Fecha Hasta *` y validaciones.
+4. **Desacoplamiento de `next/font/google` (ERR-69)**:
+   - Se eliminó la dependencia de compilación de fuentes Google Fonts en `layout.js` y se cargaron vía `@import url(...)` en `globals.css`, eliminando definitivamente los errores de Turbopack en el VPS.
+5. **Validación y Despliegue**:
+   - Compilación exitosa con Turbopack (47/47 rutas OK).
+   - Backup de producción completado (`agenda_db_pre_deploy_20261105_154022.sql`, 6.0MB).
+   - Despliegue en VPS Staging (puerto 3008) y Producción (puerto 3006) completado con HTTP 200 OK.
