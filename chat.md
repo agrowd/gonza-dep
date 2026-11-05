@@ -1845,3 +1845,38 @@
    - Compilación exitosa con Turbopack (47/47 rutas OK).
    - Backup de producción completado (`agenda_db_pre_deploy_20261105_154022.sql`, 6.0MB).
    - Despliegue en VPS Staging (puerto 3008) y Producción (puerto 3006) completado con HTTP 200 OK.
+
+
+---
+
+## 📌 Sesión: 5 de Noviembre de 2026 - Consolidado Mensual con Reporte PDF (13 meses), Desglose Efectivo/Transferencia en Neto, Botones 'Todos', Box Automático y Saldo a Favor (D-157)
+
+### Requerimientos Solicitados por Gonzalo y Luciano:
+1. **Consolidado Mensual en Estadísticas y Reporte PDF Oficial de 13 Meses**:
+   - En Estadísticas, agregar métrica 'Consolidado Mensual (Informe Ejecutivo y PDF 13 Meses)' que sustituya dinámicamente los campos Desde / Hasta por un selector interactivo de mes (<input type="month">). Al volver a otra métrica, restaura el rango de fechas.
+   - Comparación histórica con los 13 meses precedentes hasta el mismo mes del año anterior.
+   - Generación e impresión de informe PDF idéntico al documento oficial 'Informe-mensual-DPH-2026-10.pdf' (4 KPI cards de cabecera con variación porcentual vs mes anterior, tabla ejecutiva de 12 meses y 4 gráficos comparativos de barras).
+2. **Desglose de Efectivo y Transferencia en Ingreso Neto de la Agenda**:
+   - En la tarjeta del día de la agenda, reemplazar el subtítulo bajo Ingreso Neto '($X saldos + $Y señas)' por '($X efectivo + $Y transferencia)'.
+   - Sumar el dinero a favor cobrado en las sesiones del día al ingreso neto de caja.
+3. **Botones de Filtro en Agenda Simplificados**:
+   - Cambiar 'Todos los Boxes (Doble Agenda)' a 'Todos'.
+   - Cambiar 'Todos los Operadores' a 'Todos'.
+4. **Corrección de Seña con Saldo a Favor**:
+   - Turnos cuya seña fue cubierta por saldo a favor no deben computar en el listado ni en la suma de 'Señas de nuevos turnos' del día (se asigna señaEstado = 'SALDO_A_FAVOR').
+   - Corrección en base de datos de producción para el turno de Ignacio Reynaldi.
+5. **Asignación Automática de Box al Operador y Scroll en Configuración**:
+   - Ubicación prominente del campo 'Box Predeterminado' directamente debajo del 'Rol' en el formulario de operadores.
+   - Precarga automática del box asignado al seleccionar operador al crear o editar turnos en la agenda.
+   - Scroll automático a la cuadrícula de operadores al ingresar a la pestaña de usuarios.
+6. **Optimización de Recibos e Impresión sin Cortes**:
+   - Ajuste de diseño responsive para móviles en /admin/recibos/[id].
+   - Reglas globales @media print desbordes y alturas para impresión limpia en PDF.
+7. **Clarificación y Separación de Cumpleaños vs Frecuencia**:
+   - Contenedor ámbar independiente para Cumpleaños con emojis, descripción 'Para saludo automático' y selectores aislados (clientBdayDaySelect y clientBdayMonthSelect).
+
+### Implementación Realizada:
+- Backend: /api/admin/estadisticas/consolidado-mensual, /api/admin/turnos/senas-dia, /api/admin/turnos (POST y PUT).
+- Frontend: /admin/estadisticas (dashboard mensual + gráficos 13 meses), /admin/estadisticas/informe-mensual (reporte PDF a 2 páginas con cortes CSS), /admin/agenda (botones 'Todos', desglose neto y auto box), /admin/configuracion (box bajo rol y scroll), /admin/recibos/[id] (diseño responsive e impresión).
+- Base de Datos: Actualizado turno 443660a7-c763-4b0e-9ac7-b830978587a3 a señaEstado = 'SALDO_A_FAVOR'.
+- Despliegue: Compilación exitosa (48/48 rutas) y despliegue en VPS Staging y Producción respondiendo HTTP 200 OK.
