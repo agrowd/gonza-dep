@@ -712,3 +712,11 @@ En `src/app/api/admin/turnos/route.js` (POST de creación manual), cuando se sel
 1. En `src/app/api/admin/turnos/route.js`, se añadió lógica de detección de cambios en `email`, `whatsapp` y `dni` que actualiza de inmediato el registro del cliente (`prisma.cliente.update`) al guardar el turno.
 2. Se corrigió manualmente en la base de datos el correo de Leandro Piro a `leandro.trips@gmail.com`.
 **Estado:** ✅ FIXED
+
+## ERR-68: PrismaClientValidationError en Búsqueda de Último Turno en Autogestión por Argumento Inexistente 'activo' en Modelo Zona (05/11/2026)
+**Síntoma:** Al consultar un cliente sin turnos activos en autogestión (`/api/clientes/consultar`), `ultimoTurnoData` retornaba `null` a pesar de que el cliente tenía turnos realizados o cancelados en los últimos 90 días, mostrando la tarjeta genérica anterior en lugar de la nueva tarjeta de repetición rápida de zonas.
+**Root Cause:**
+En `src/app/api/clientes/consultar/route.js`, al obtener las zonas del catálogo para actualizar los precios de las zonas normales, se ejecutaba `prisma.zona.findMany({ where: { activo: true } })`. El modelo `Zona` en Prisma no cuenta con la columna `activo` (esta pertenece a `Servicio` y `Box`). Prisma arrojaba `PrismaClientValidationError: Unknown argument activo. Available options are marked with ?`, el cual era capturado silenciosamente por el bloque `try/catch` de `ultimoTurno`, dejando `ultimoTurnoData = null`.
+**Solución:**
+Se eliminó el filtro inválido `where: { activo: true }` en `prisma.zona.findMany()`, obteniendo todas las zonas activas del catálogo limpiamente. Se recompiló el bundle y se desplegó en producción y staging, validando que `/api/clientes/consultar?email=lucianogomez4213@gmail.com` responde inmediatamente con `ultimoTurnoData` (`isWithin90Days: true`, `zonasTexto: "Brazos"`, `duracionMinutos: 30`, `valorTotal: 32000`, `valorSeña: 16000`).
+**Estado:** ✅ FIXED

@@ -2645,4 +2645,28 @@
   - Cancelación de turno: Al cancelar el último turno activo, refresca automáticamente para habilitar la opción de repetir zonas.
 - [x] **Validación y Compilación**:
   - Compilación Next.js Turbopack validada localmente (47/47 rutas OK).
-- [x] **Documentación**: Registrado `D-154 🔒 LOCKED` en `.synapse/decisions.md`.
+- [x] **Corrección Forense de Argumento Prisma `where: { activo: true }` (ERR-68)**:
+  - En `/api/clientes/consultar/route.js`: Se eliminó el filtro inexistente `where: { activo: true }` en `prisma.zona.findMany()`, resolviendo el error `PrismaClientValidationError`.
+  - Desplegado y verificado en VPS Staging y Producción (`7a33fad`).
+  - Verificación en vivo: `POST /api/clientes/consultar?email=lucianogomez4213@gmail.com` devuelve de inmediato `ultimoTurnoData` con `diffDays: 5`, `isWithin90Days: true`, `zonasTexto: "Brazos"`, `duracionMinutos: 30`, `valorTotal: 32000`, `valorSeña: 16000`.
+- [x] **Documentación**: Registrado `D-154 🔒 LOCKED` en `.synapse/decisions.md` y `ERR-68` en `.synapse/errores.md`.
+
+## Ciclo de Trabajo: 5 de Noviembre de 2026 - % de Ocupación de Agenda en Estadísticas y Optimización Responsiva de Recibos Móvil (D-155)
+- [x] **Diagnóstico y Requerimiento**:
+  - Reemplazar "Ticket Promedio" en las tarjetas KPI de `/admin/estadisticas` por el `% de Ocupación de Agenda`, filtrado por rango de fechas (Desde / Hasta), con la fórmula: `Ocupación = minutos ocupados ÷ minutos disponibles × 100`.
+  - Minutos disponibles: Días lunes a viernes del período × 480 min (14:00 a 22:00 hs) menos minutos cargados en Bloqueos entre las 14 y 22 hs.
+  - Minutos ocupados: Suma de la duración de los turnos del período en estado Realizado + Cancelado + Ausente (+ Activos). Los turnos antes de las 14 suman como ocupados manteniendo la base disponible de 8 hs. Los cancelados cubiertos parcial o totalmente por otro turno se descuentan del doble conteo mediante unión de intervalos (`mergeIntervals`).
+  - Corregir el corte de visualización en la tabla de recibos en pantallas móviles (`media_1793887982565_480dec5e.png`).
+- [x] **Implementación en Backend (`/api/admin/estadisticas/route.js`)**:
+  - Helpers `timeToMinutes` y `mergeIntervals`.
+  - Inclusión de `prisma.bloqueo.findMany` para bloques directos, móviles y fijos en el rango.
+  - Bucle día por día calculando minutos disponibles en días hábiles y minutos ocupados consolidados.
+  - Retorno de `ocupacionAgenda` (`porcentaje`, `porcentajeFormateado`, `minutosOcupados`, `minutosDisponibles`, `horasOcupadas`, `horasDisponibles`).
+- [x] **Implementación en Frontend (`src/app/admin/estadisticas/page.js`)**:
+  - Reemplazo de la tarjeta KPI 3 por `% Ocupación de Agenda` con valor formateado y subtítulo detallado de horas y minutos.
+- [x] **Optimización Responsiva de Recibos (`src/app/admin/recibos/[id]/`)**:
+  - Contenedor `.tableWrapper` con scroll horizontal táctil y paddings responsivos en `recibo.module.css`.
+  - Formateo de precios en pesos enteros sin decimales (`toLocaleString('es-AR')`).
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (47/47 rutas OK).
+- [x] **Documentación**: Registrado `D-155 🔒 LOCKED` en `.synapse/decisions.md`.

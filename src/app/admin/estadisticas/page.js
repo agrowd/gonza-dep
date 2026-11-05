@@ -1160,13 +1160,24 @@ export default function EstadisticasPage() {
                 </div>
                 <div className={styles.kpiSub}>Envío automático diario a las 10:00 AM</div>
               </div>
-            ) : currentMetricDef.hasAvg ? (
+            ) : (
               <div className={`${styles.kpiCard} ${styles.kpiCardInfo}`}>
-                <div className={styles.kpiLabel}>Ticket Promedio</div>
-                <div className={styles.kpiValue}>{formatMoney(activeMetricData.avgTicket)}</div>
-                <div className={styles.kpiSub}>Promedio por turno / cliente en esta métrica</div>
+                <div className={styles.kpiLabel}>% Ocupación de Agenda</div>
+                <div
+                  className={styles.kpiValue}
+                  style={{
+                    color: Number(data?.ocupacionAgenda?.porcentaje || 0) >= 70 ? '#15803d' : '#7a1f1e'
+                  }}
+                >
+                  {data?.ocupacionAgenda?.porcentajeFormateado || '0%'}
+                </div>
+                <div className={styles.kpiSub}>
+                  {data?.ocupacionAgenda?.minutosDisponibles > 0
+                    ? `${data.ocupacionAgenda.minutosOcupados} min de ${data.ocupacionAgenda.minutosDisponibles} min (${data.ocupacionAgenda.horasOcupadas} hs de ${data.ocupacionAgenda.horasDisponibles} hs)`
+                    : 'Calculado en horario 14 a 22 hs · Lunes a Viernes'}
+                </div>
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* DESGLOSE DE LOS 3 CONCEPTOS DE GANANCIA NETA (CAPTURA 10.PNG DE LUCIANO) */}

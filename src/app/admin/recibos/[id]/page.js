@@ -103,26 +103,28 @@ export default function ReciboPage({ params }) {
         </div>
 
         {/* Services Table */}
-        <table className={styles.servicesTable}>
-          <thead>
-            <tr>
-              <th style={{ width: '45%', textAlign: 'left' }}>Servicio</th>
-              <th style={{ width: '20%', textAlign: 'right' }}>Precio Unit.</th>
-              <th style={{ width: '15%', textAlign: 'center' }}>Cantidad</th>
-              <th style={{ width: '20%', textAlign: 'right' }}>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {receipt.items.map((item, idx) => (
-              <tr key={idx}>
-                <td style={{ textAlign: 'left' }}>{item.servicio}</td>
-                <td style={{ textAlign: 'right' }}>${Number(item.precioUnitario).toFixed(2)}</td>
-                <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
-                <td style={{ textAlign: 'right' }}>${Number(item.subtotal).toFixed(2)}</td>
+        <div className={styles.tableWrapper}>
+          <table className={styles.servicesTable}>
+            <thead>
+              <tr>
+                <th style={{ width: '45%', textAlign: 'left' }}>Servicio</th>
+                <th style={{ width: '22%', textAlign: 'right' }}>Precio Unit.</th>
+                <th style={{ width: '13%', textAlign: 'center' }}>Cant.</th>
+                <th style={{ width: '20%', textAlign: 'right' }}>Subtotal</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {receipt.items.map((item, idx) => (
+                <tr key={idx}>
+                  <td style={{ textAlign: 'left' }}>{item.servicio}</td>
+                  <td style={{ textAlign: 'right' }}>${Math.round(Number(item.precioUnitario)).toLocaleString('es-AR')}</td>
+                  <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
+                  <td style={{ textAlign: 'right' }}>${Math.round(Number(item.subtotal)).toLocaleString('es-AR')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {/* Total calculation */}
         <div className={styles.totalSection}>

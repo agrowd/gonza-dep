@@ -34,6 +34,28 @@ function mapOrigenCategoria(canalRaw) {
   return 'Orgánico';
 }
 
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const parts = String(timeStr).split(':');
+  return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+}
+
+function mergeIntervals(intervals) {
+  if (!intervals || intervals.length === 0) return [];
+  const sorted = [...intervals].sort((a, b) => a[0] - b[0]);
+  const merged = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i];
+    const last = merged[merged.length - 1];
+    if (current[0] <= last[1]) {
+      last[1] = Math.max(last[1], current[1]);
+    } else {
+      merged.push(current);
+    }
+  }
+  return merged;
+}
+
 function formatTurnoItem(t, extra = {}) {
   const valorTotal = Number(t.valorTotal || 0);
   const valorSeña = Number(t.valorSeña || 0);
@@ -260,7 +282,8 @@ export async function GET(request) {
       turnosSemanaFecha,
       turnosSemanaCreated,
       allClients,
-      zonasCatalog
+      zonasCatalog,
+      bloqueosPeriodo
     ] = await Promise.all([
       prisma.turno.findMany({
         where: { fecha: { gte: startFechaPeriodo, lte: endFechaPeriodo } },
@@ -298,6 +321,15 @@ export async function GET(request) {
       }),
       prisma.zona.findMany({
         orderBy: { nombre: 'asc' }
+      }),
+      prisma.bloqueo.findMany({
+        where: {
+          OR: [
+            { tipo: 'FIJO' },
+            { fecha: { gte: startFechaPeriodo, lte: endFechaPeriodo } },
+            { fechaMovida: { gte: startFechaPeriodo, lte: endFechaPeriodo } }
+          ]
+        }
       })
     ]);
 
@@ -349,6 +381,142 @@ export async function GET(request) {
     const totalPeriodo = entradasTurnosPeriodo + entradasSenasPeriodo;
 
     const bonificacionPeriodo = turnosPeriodo.reduce((acc, t) => acc + (t.bonificacion || 0), 0);
+
+    // ==========================================
+    // CÁLCULO DE % DE OCUPACIÓN DE AGENDA
+    // Criterio solicitado por Gonzalo Siri:
+    // Ocupación = (minutos ocupados ÷ minutos disponibles) × 100
+    // 1) Minutos ocupados: Realizado + Cancelado + Ausente (+ Señados/Activos)
+    //    Los turnos antes de las 14 suman como ocupados.
+    //    Los cancelados se cuentan si no hay un turno ya agendado en ese espacio (unión de intervalos).
+    // 2) Minutos disponibles: Lunes a Viernes del período × 480 min (14 a 22).
+    //    Menos minutos cargados en Bloqueos (solo la parte entre 14 y 22).
+    //    Si empieza antes de las 14, se considera jornada de 8 horas.
+    // ==========================================
+    const bloqueosByDate = new Map();
+    for (const b of (bloqueosPeriodo || [])) {
+      if (b.tipo === 'MOVIL' && b.fechaMovida) {
+        const movedStr = new Date(b.fechaMovida).toISOString().split('T')[0];
+        if (movedStr >= startPeriodStr && movedStr <= endPeriodStr) {
+          if (!bloqueosByDate.has(movedStr)) bloqueosByDate.set(movedStr, []);
+          bloqueosByDate.get(movedStr).push(b);
+        }
+      } else if (b.tipo === 'FIJO') {
+        const bDate = new Date(b.fecha);
+        const m = (b.mes || (bDate.getMonth() + 1));
+        const d = (b.dia || bDate.getDate());
+        const mStr = String(m).padStart(2, '0');
+        const dStr = String(d).padStart(2, '0');
+        const startYear = parseInt(startPeriodStr.slice(0, 4), 10);
+        const endYear = parseInt(endPeriodStr.slice(0, 4), 10);
+        for (let y = startYear; y <= endYear; y++) {
+          const dateKey = `${y}-${mStr}-${dStr}`;
+          if (dateKey >= startPeriodStr && dateKey <= endPeriodStr) {
+            if (!bloqueosByDate.has(dateKey)) bloqueosByDate.set(dateKey, []);
+            bloqueosByDate.get(dateKey).push(b);
+          }
+        }
+      } else {
+        const bDateStr = new Date(b.fecha).toISOString().split('T')[0];
+        if (bDateStr >= startPeriodStr && bDateStr <= endPeriodStr) {
+          if (!bloqueosByDate.has(bDateStr)) bloqueosByDate.set(bDateStr, []);
+          bloqueosByDate.get(bDateStr).push(b);
+        }
+      }
+    }
+
+    const turnosByDate = new Map();
+    for (const t of turnosPeriodo) {
+      if (t.estado === 'BLOQUEADO') continue;
+      const tDateStr = new Date(t.fecha).toISOString().split('T')[0];
+      if (!turnosByDate.has(tDateStr)) turnosByDate.set(tDateStr, []);
+      turnosByDate.get(tDateStr).push(t);
+    }
+
+    let totalMinutosDisponibles = 0;
+    let totalMinutosOcupados = 0;
+
+    const [sy, sm, sd] = startPeriodStr.split('-').map(Number);
+    const [ey, em, ed] = endPeriodStr.split('-').map(Number);
+    const currentCursor = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0));
+    const endCursor = new Date(Date.UTC(ey, em - 1, ed, 12, 0, 0));
+
+    while (currentCursor.getTime() <= endCursor.getTime()) {
+      const dateStr = currentCursor.toISOString().split('T')[0];
+      const dayOfWeek = currentCursor.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+      const isWeekday = (dayOfWeek >= 1 && dayOfWeek <= 5);
+
+      if (isWeekday) {
+        const dayBlocks = bloqueosByDate.get(dateStr) || [];
+        let isFullDayBlocked = false;
+        const clampedBlockIntervals = [];
+
+        for (const b of dayBlocks) {
+          if (b.esDiaCompleto) {
+            isFullDayBlocked = true;
+            break;
+          }
+          const bStart = timeToMinutes(b.horaInicio);
+          const bEnd = timeToMinutes(b.horaFin);
+          const overlapStart = Math.max(840, bStart); // 14:00 = 840 min
+          const overlapEnd = Math.min(1320, bEnd);    // 22:00 = 1320 min
+          if (overlapEnd > overlapStart) {
+            clampedBlockIntervals.push([overlapStart, overlapEnd]);
+          }
+        }
+
+        let minutosBloqueados = 0;
+        if (isFullDayBlocked) {
+          minutosBloqueados = 480;
+        } else {
+          const mergedBlocks = mergeIntervals(clampedBlockIntervals);
+          minutosBloqueados = mergedBlocks.reduce((acc, [s, e]) => acc + (e - s), 0);
+        }
+
+        const availableDay = Math.max(0, 480 - minutosBloqueados);
+        totalMinutosDisponibles += availableDay;
+      }
+
+      const dayTurnos = turnosByDate.get(dateStr) || [];
+      const turnoIntervals = [];
+
+      for (const t of dayTurnos) {
+        if (!['REALIZADO', 'CANCELADO', 'NO_ASISTIO', 'SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION', 'PENDIENTE_PAGO'].includes(t.estado)) {
+          continue;
+        }
+        const startM = timeToMinutes(t.horaInicio);
+        let endM = timeToMinutes(t.horaFin);
+        if (!endM || endM <= startM) {
+          endM = startM + Number(t.duracionMinutos || 30);
+        }
+        if (endM > startM) {
+          turnoIntervals.push([startM, endM]);
+        }
+      }
+
+      const mergedTurnos = mergeIntervals(turnoIntervals);
+      const occupiedDay = mergedTurnos.reduce((acc, [s, e]) => acc + (e - s), 0);
+      totalMinutosOcupados += occupiedDay;
+
+      currentCursor.setUTCDate(currentCursor.getUTCDate() + 1);
+    }
+
+    const porcentajeOcupacion = totalMinutosDisponibles > 0
+      ? Math.round((totalMinutosOcupados / totalMinutosDisponibles) * 1000) / 10
+      : 0;
+
+    const porcentajeFormateado = porcentajeOcupacion % 1 === 0
+      ? `${porcentajeOcupacion}%`
+      : `${porcentajeOcupacion.toFixed(1)}%`;
+
+    const ocupacionAgenda = {
+      porcentaje: porcentajeOcupacion,
+      porcentajeFormateado,
+      minutosOcupados: totalMinutosOcupados,
+      minutosDisponibles: totalMinutosDisponibles,
+      horasOcupadas: Math.round((totalMinutosOcupados / 60) * 10) / 10,
+      horasDisponibles: Math.round((totalMinutosDisponibles / 60) * 10) / 10
+    };
 
     // ==========================================
     // 12 CATEGORÍAS DE ESTADÍSTICAS AVANZADAS
@@ -803,6 +971,7 @@ export async function GET(request) {
         year,
         month
       },
+      ocupacionAgenda,
       // Desglose de Caja Diaria, Semanal y Mensual (Gonzalo Rule)
       caja: {
         hoy: {

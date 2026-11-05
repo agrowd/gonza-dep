@@ -1783,3 +1783,31 @@
 4. **Validación y Despliegue**:
    - Compilación Next.js Turbopack exitosa (47/47 rutas).
    - Sincronización en Git (`main` y `staging`) y despliegue en VPS Hostinger.
+   - Corrección forense de `prisma.zona.findMany` (remoción de `where: { activo: true }`, ERR-68).
+   - Verificación en vivo: Luciano Gómez (`lucianogomez4213@gmail.com`) recibe correctamente `ultimoTurnoData` con `diffDays: 5`, `isWithin90Days: true`, `zonasTexto: "Brazos"`, `duracionMinutos: 30`, `valorTotal: $32.000`, `valorSeña: $16.000`, visualizando la nueva tarjeta de repetición de zonas.
+
+---
+
+## 📅 Sesión: 5 de Noviembre de 2026 - Reemplazo de Ticket Promedio por % de Ocupación de Agenda y Optimización Responsiva de Recibos Web (D-155)
+
+### Requerimientos Solicitados:
+1. **% de Ocupación de Agenda en Estadísticas**:
+   - Reemplazar "Ticket Promedio" en las 3 tarjetas KPI por el `% de Ocupación de Agenda`, filtrado por rango de fechas (Desde / Hasta).
+   - Fórmula: `Ocupación = minutos ocupados ÷ minutos disponibles × 100`
+   - **Minutos ocupados**: Suma de duración de turnos del período en estado Realizado + Cancelado + Ausente (+ Activos). Turnos antes de las 14 suman como ocupados. Turnos cancelados cubiertos parcial o totalmente por otro turno se descuentan del doble cómputo mediante unión de intervalos (`mergeIntervals`).
+   - **Minutos disponibles**: Días de lunes a viernes del período × 480 min (14:00 a 22:00 hs) menos minutos cargados en Bloqueos entre las 14 y 22 hs.
+2. **Visualización de Recibos en Móvil**:
+   - Resolver el recorte horizontal de la tabla y encabezado en smartphones (`media_1793887982565_480dec5e.png`).
+
+### Implementación Realizada:
+1. **Backend (`/api/admin/estadisticas/route.js`)**:
+   - Algoritmo de unión de intervalos para cálculo no solapado de minutos ocupados y filtrado de bloqueos en franja 14-22 hs.
+   - Retorno de objeto `ocupacionAgenda` (`porcentaje`, `porcentajeFormateado`, `minutosOcupados`, `minutosDisponibles`, `horasOcupadas`, `horasDisponibles`).
+2. **Frontend Estadísticas (`/admin/estadisticas/page.js`)**:
+   - Sustitución de tarjeta KPI 3 por `% Ocupación de Agenda` con formateo y detalle de horas/minutos.
+3. **Frontend Recibos (`src/app/admin/recibos/[id]/`)**:
+   - Envoltura de tabla en `.tableWrapper` con scroll táctil acelerado.
+   - Reglas responsive en `recibo.module.css` adaptando paddings y tipografía para móviles.
+   - Formateo de precios en pesos enteros sin decimales (`toLocaleString('es-AR')`).
+4. **Validación y Despliegue**:
+   - Compilación local validada con Next.js Turbopack (47/47 rutas OK).

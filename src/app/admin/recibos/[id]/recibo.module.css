@@ -235,6 +235,120 @@
   margin: 0;
 }
 
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 1rem 0.5rem;
+  }
+
+  .actionBar {
+    padding: 0.6rem 0.8rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btnPrint {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.8rem;
+  }
+
+  .btnSecondary {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.75rem;
+  }
+
+  .receiptBox {
+    padding: 1.25rem 0.75rem;
+    min-height: auto;
+    border-radius: 4px;
+  }
+
+  .headerSection {
+    margin-bottom: 1rem;
+  }
+
+  .headerLeft {
+    padding: 0.6rem 0.5rem;
+    flex: 3;
+  }
+
+  .brandTitle {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .domicilio {
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .headerCenter {
+    padding: 0.4rem 0.2rem;
+    flex: 1.2;
+  }
+
+  .letterX {
+    font-size: 1.4rem;
+  }
+
+  .noValido {
+    font-size: 0.52rem;
+    max-width: 65px;
+  }
+
+  .headerRight {
+    padding: 0.6rem 0.5rem;
+    flex: 2.8;
+  }
+
+  .reciboWord {
+    font-size: 1rem;
+  }
+
+  .reciboNumero {
+    font-size: 0.85rem;
+  }
+
+  .reciboFecha {
+    font-size: 0.75rem;
+  }
+
+  .clientBar {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .servicesTable th {
+    padding: 0.5rem 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  .servicesTable td {
+    padding: 0.55rem 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  .totalRow {
+    gap: 1rem;
+  }
+
+  .totalLabel {
+    font-size: 1rem;
+  }
+
+  .totalValue {
+    font-size: 1.15rem;
+  }
+}
+
 /* Print Optimization */
 @media print {
   body {
