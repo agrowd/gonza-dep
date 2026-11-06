@@ -2713,3 +2713,15 @@
 - [x] **Validación y Compilación**:
   - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
 - [x] **Documentación**: Registrado `D-157 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 5 de Noviembre de 2026 - Restauración de Señas en Agenda Diaria y Blindaje Táctil en Modal de Ficha en iOS (D-158)
+- [x] **Diagnóstico e Implementación Integral**:
+  1. **Restauración de Bloque de Señas de Nuevos Turnos**:
+     - En `/api/admin/turnos/senas-dia`, corrección del filtro de señas excluyendo `SALDO_A_FAVOR` a nivel JavaScript (`turnosValidos`) en lugar de `NOT: { señaEstado: 'SALDO_A_FAVOR' }` en Prisma/SQL, eliminando el fallo de SQL que descartaba todas las citas con `señaEstado` NULL.
+     - En `src/app/admin/agenda/page.js`, remoción del badge redundante `NUEVO TURNO` debajo de cada turno en la lista de señas.
+  2. **Blindaje Táctil en Modal de Ficha en iOS / Acceso Directo (Cierre y Comentarios)**:
+     - En `src/app/admin/agenda/agenda.module.css`, remoción de `-webkit-overflow-scrolling: touch !important;` dentro de `@media (max-width: 600px)` en `.modalContent`, resolviendo definitivamente el desfase del hit-testing de la cabecera sticky (`.stickyModalHeader` y `.closeBtn`).
+     - En `src/app/admin/agenda/page.js`, remoción de los listeners `onTouchStart` y `onTouchEnd` con cálculo restrictivo `dist < 12px` en los botones de cierre, permitiendo interacción nativa sin pérdidas de eventos.
+     - Incorporación de auto-guardado en `onBlur` y al cerrar (`handleCloseDetailsModal`) para comentarios del turno, observaciones generales y notas de operador.
+- [x] **Validación y Compilación**: Compilación Turbopack validada localmente (48/48 rutas OK).
+- [x] **Documentación**: Registrado `D-158 🔒 LOCKED` en `.synapse/decisions.md`.

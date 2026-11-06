@@ -1191,7 +1191,6 @@
     max-height: calc(100dvh - 0.9rem) !important;
     height: auto !important;
     overflow-y: auto !important; /* The ONLY element that scrolls */
-    -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
     touch-action: auto !important;
     position: relative !important;

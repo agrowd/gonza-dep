@@ -2966,28 +2966,15 @@ export default function AgendaPage() {
     }
   };
 
-  const touchStartPosRef = useRef({ x: 0, y: 0 });
-
-  const handleTouchStartClose = (e) => {
-    if (e.touches && e.touches[0]) {
-      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-  };
-
-  const handleTouchEndClose = (e) => {
-    if (e.changedTouches && e.changedTouches[0]) {
-      const endX = e.changedTouches[0].clientX;
-      const endY = e.changedTouches[0].clientY;
-      const dist = Math.hypot(endX - touchStartPosRef.current.x, endY - touchStartPosRef.current.y);
-      if (dist < 12) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleCloseDetailsModal();
-      }
-    }
-  };
 
   const handleCloseDetailsModal = async () => {
+    // Auto-guardar silenciosamente observaciones del turno y generales si fueron editadas (D-158)
+    if (selectedTurno && tempTurnoObservaciones !== (selectedTurno.observaciones || '')) {
+      handleSaveTurnoObservaciones(true).catch(e => console.error('Error auto-saving turno obs:', e));
+    }
+    if (selectedTurno && ((selectedTurno.clienteId && tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '')) || (tempClientNotasGonzalo || '').trim() !== (selectedTurno.notasGonzalo || '').trim())) {
+      handleSaveClientObservaciones(true).catch(e => console.error('Error auto-saving client obs:', e));
+    }
     setIsDetailsOpen(false);
     setIsEditing(false);
     setSelectedTurno(null);
@@ -3819,16 +3806,6 @@ export default function AgendaPage() {
                                   }}>
                                     📅 Turno: {fechaTurnoStr} {s.horaInicio} hs
                                   </span>
-                                  <span style={{
-                                    fontSize: '0.68rem',
-                                    fontWeight: 700,
-                                    color: '#15803d',
-                                    backgroundColor: '#dcfce7',
-                                    padding: '1px 5px',
-                                    borderRadius: '4px'
-                                  }}>
-                                    NUEVO TURNO
-                                  </span>
                                 </div>
                                 <span style={{ fontWeight: 800, color: '#15803d', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
                                   +${Number(s.valorSeña || 0).toLocaleString('es-AR')}
@@ -4401,7 +4378,7 @@ export default function AgendaPage() {
                   <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
                     Editar / Reprogramar Turno
                   </h3>
-                  <button type="button" onClick={handleCloseDetailsModal} onTouchStart={handleTouchStartClose} onTouchEnd={handleTouchEndClose} className={styles.closeBtn} aria-label="Cerrar edición">&times;</button>
+                  <button type="button" onClick={handleCloseDetailsModal} className={styles.closeBtn} aria-label="Cerrar edición">&times;</button>
                 </div>
                 <div className={styles.detailGrid}>
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
@@ -4923,8 +4900,6 @@ export default function AgendaPage() {
                     <button
                       type="button"
                       onClick={handleCloseDetailsModal}
-                      onTouchStart={handleTouchStartClose}
-                      onTouchEnd={handleTouchEndClose}
                       className={styles.closeBtn}
                       title="Cerrar detalle"
                       aria-label="Cerrar detalle"
@@ -5897,6 +5872,11 @@ export default function AgendaPage() {
                         <textarea
                           value={tempClientObservaciones}
                           onChange={(e) => setTempClientObservaciones(e.target.value)}
+                          onBlur={() => {
+                            if (tempClientObservaciones !== (selectedTurno?.cliente?.observaciones || '')) {
+                              handleSaveClientObservaciones(true);
+                            }
+                          }}
                           placeholder="Escribe observaciones generales del cliente que se guardarán para todos sus turnos..."
                           rows={expandedObsGeneral ? 8 : 2}
                           style={{
@@ -5951,6 +5931,11 @@ export default function AgendaPage() {
                       <textarea
                         value={tempClientNotasGonzalo}
                         onChange={(e) => setTempClientNotasGonzalo(e.target.value)}
+                        onBlur={() => {
+                          if ((tempClientNotasGonzalo || '').trim() !== (selectedTurno?.notasGonzalo || '').trim()) {
+                            handleSaveClientObservaciones(true);
+                          }
+                        }}
                         placeholder="Potencia utilizada (J), tolerancia al dolor, zonas sensibles o notas clínicas..."
                         rows={expandedNotasGonzalo ? 8 : 3}
                         style={{
@@ -6030,6 +6015,11 @@ export default function AgendaPage() {
                       <textarea
                         value={tempTurnoObservaciones}
                         onChange={(e) => setTempTurnoObservaciones(e.target.value)}
+                        onBlur={() => {
+                          if (tempTurnoObservaciones !== (selectedTurno?.observaciones || '')) {
+                            handleSaveTurnoObservaciones(true);
+                          }
+                        }}
                         placeholder="Comentarios exclusivos de este turno (no se repiten en turnos futuros)..."
                         rows={expandedTurnoObs ? 8 : 3}
                         style={{
@@ -6288,8 +6278,6 @@ export default function AgendaPage() {
                     <button
                       type="button"
                       onClick={handleCloseDetailsModal}
-                      onTouchStart={handleTouchStartClose}
-                      onTouchEnd={handleTouchEndClose}
                       className="btn"
                       style={{
                         width: '100%',

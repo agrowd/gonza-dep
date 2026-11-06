@@ -51,9 +51,6 @@ export async function GET(request) {
         valorSeña: {
           gt: 0
         },
-        NOT: {
-          señaEstado: 'SALDO_A_FAVOR'
-        },
         OR: [
           { estado: { not: 'CANCELADO' } },
           { estado: 'CANCELADO', señaEstado: 'PERDIDA' }
@@ -80,14 +77,17 @@ export async function GET(request) {
       }
     });
 
-    const totalSenas = turnos.reduce((sum, t) => sum + Number(t.valorSeña || 0), 0);
+    // Excluir turnos cuya seña provino de saldo a favor de un turno previo (no ingresó dinero nuevo a caja hoy) (D-157)
+    const turnosValidos = turnos.filter(t => t.señaEstado !== 'SALDO_A_FAVOR');
+
+    const totalSenas = turnosValidos.reduce((sum, t) => sum + Number(t.valorSeña || 0), 0);
 
     // Identificar clientes que tuvieron un turno activo/realizado en la agenda de esta misma fecha
     // Quienes tuvieron turno hoy y agendaron un turno futuro realizaron un "Turno Siguiente" (D-138)
     const startOfDay = new Date(`${fecha}T00:00:00.000Z`);
     const endOfDay = new Date(`${fecha}T23:59:59.999Z`);
 
-    const clienteIds = [...new Set(turnos.map(t => t.clienteId).filter(Boolean))];
+    const clienteIds = [...new Set(turnosValidos.map(t => t.clienteId).filter(Boolean))];
 
     const turnosEnEstaFecha = await prisma.turno.findMany({
       where: {
@@ -97,7 +97,7 @@ export async function GET(request) {
           lte: endOfDay
         },
         estado: { not: 'CANCELADO' },
-        id: { notIn: turnos.map(t => t.id) }
+        id: { notIn: turnosValidos.map(t => t.id) }
       },
       select: {
         clienteId: true
@@ -106,7 +106,7 @@ export async function GET(request) {
 
     const clientsWithTurnoToday = new Set(turnosEnEstaFecha.map(t => t.clienteId));
 
-    const turnosEnriquecidos = turnos.map(t => {
+    const turnosEnriquecidos = turnosValidos.map(t => {
       const esTurnoSiguiente = clientsWithTurnoToday.has(t.clienteId);
       return {
         ...t,
@@ -167,7 +167,7 @@ export async function GET(request) {
     });
 
     // 2) Señas que ingresaron hoy a caja (excluyendo saldo a favor)
-    turnos.forEach(t => {
+    turnosValidos.forEach(t => {
       const seña = Math.max(0, Number(t.valorSeña || 0));
       const metodo = String(t.metodoPago || '').toUpperCase();
       if (metodo === 'AMBOS') {
@@ -198,7 +198,7 @@ export async function GET(request) {
       totalEfectivo,             // Desglose efectivo ingresado a caja hoy
       totalTransferencia,        // Desglose transferencia ingresado a caja hoy
       ingresoNeto,               // Caja total real del día (Saldos + Señas + Dinero a favor)
-      count: turnos.length,
+      count: turnosValidos.length,
       turnos: turnosEnriquecidos,
       turnosNuevos,              // Solo clientes que agendan un NUEVO turno (excluye turno siguiente)
       countNuevos: turnosNuevos.length,

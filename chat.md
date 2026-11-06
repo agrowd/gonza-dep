@@ -1880,3 +1880,23 @@
 - Frontend: /admin/estadisticas (dashboard mensual + gráficos 13 meses), /admin/estadisticas/informe-mensual (reporte PDF a 2 páginas con cortes CSS), /admin/agenda (botones 'Todos', desglose neto y auto box), /admin/configuracion (box bajo rol y scroll), /admin/recibos/[id] (diseño responsive e impresión).
 - Base de Datos: Actualizado turno 443660a7-c763-4b0e-9ac7-b830978587a3 a señaEstado = 'SALDO_A_FAVOR'.
 - Despliegue: Compilación exitosa (48/48 rutas) y despliegue en VPS Staging y Producción respondiendo HTTP 200 OK.
+
+---
+
+## 📌 Sesión: 5 de Noviembre de 2026 - Restauración de Señas en Agenda Diaria y Blindaje Táctil en Modal de Ficha en iOS (D-158)
+
+### Requerimientos y Diagnóstico:
+1. **Cartel de Señas de Nuevos Turnos**:
+   - Gonzalo reportó en WhatsApp que no aparecía el bloque verde de señas de nuevos turnos en la agenda del día.
+   - Diagnóstico: En la query de Prisma para excluir turnos con saldo a favor, la condición `NOT: { señaEstado: 'SALDO_A_FAVOR' }` en SQL descartaba todas las filas donde `señaEstado` era NULL (lógica ternaria de SQL). Esto hacía que la API devolviera 0 turnos con seña y el bloque se ocultara automáticamente.
+   - Solución: Migrado el filtro de exclusión a JavaScript (`turnosValidos = turnos.filter(t => t.señaEstado !== 'SALDO_A_FAVOR')`) e implementada la solicitud de Gonzalo de retirar el cartelito redundante "Nuevo turno" debajo de cada seña.
+2. **Falla Táctil Intermitente en Modal de Ficha en iPhone / Acceso Directo (Cerrar y Comentarios)**:
+   - Gonzalo y Luciano reportaron que a veces en el iPhone "no le toma los botones para cerrar o los comentarios" y debe salir y volver a entrar.
+   - Diagnóstico:
+     a) En `agenda.module.css` para móviles (`<= 600px`), la regla `-webkit-overflow-scrolling: touch !important;` separaba el compositor asíncrono de scroll en WebKit, haciendo que al scrollear la caja de hit-testing de la cabecera sticky (`.closeBtn`) se desplazara fuera de la pantalla.
+     b) En `page.js`, los botones de cerrar tenían listeners `onTouchStart` y `onTouchEnd` con validación `dist < 12px` que cancelaban el evento nativo si el dedo se movía levemente o si WebKit disparaba cancelación táctil.
+     c) En los textareas de comentarios, si el operador escribía y tocaba cerrar sin presionar explícitamente "Guardar", los cambios no se persistían.
+   - Solución:
+     a) Eliminado `-webkit-overflow-scrolling: touch !important;` de `.modalContent`.
+     b) Eliminados los touch listeners restrictivos en los botones de cierre para dejar eventos de click nativos limpios y fiables.
+     c) Implementado auto-guardado en `onBlur` y al cerrar (`handleCloseDetailsModal`) para comentarios del turno, notas del operador y observaciones generales.
