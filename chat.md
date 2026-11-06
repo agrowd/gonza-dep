@@ -1900,3 +1900,27 @@
      a) Eliminado `-webkit-overflow-scrolling: touch !important;` de `.modalContent`.
      b) Eliminados los touch listeners restrictivos en los botones de cierre para dejar eventos de click nativos limpios y fiables.
      c) Implementado auto-guardado en `onBlur` y al cerrar (`handleCloseDetailsModal`) para comentarios del turno, notas del operador y observaciones generales.
+
+
+---
+
+## 📌 Sesión: 6 de Noviembre de 2026 - Impresión Nativa y Exportación PDF en iPhone / iOS PWA (AirPrint) para Turnos Diarios, Informe Mensual y Recibos Oficiales (D-159)
+
+### Requerimientos y Diagnóstico:
+1. **Reporte de Gonzalo Siri en WhatsApp**:
+   - *"Quiero imprimir desde el iPhone y no me deja. Nada, no lo toma."*
+   - *"Compré una impresora para poder tener impreso los Clientes del día la estuve probando, funciona muy bien con el celular con otros archivos, pero no me imprime los Turnos."*
+   - *"Estoy probando con otro informe de estadística, y tampoco reconoce nada."*
+2. **Causa Raíz Diagnosticada**:
+   - En dispositivos Apple iOS, cuando una aplicación web se instala en la pantalla de inicio como PWA standalone (WebClip) o se ejecuta en contenedores WebKit en pantalla completa, Apple deshabilita `window.print()` por diseño interno del sistema operativo. Al presionar botones que ejecutan `window.print()`, no se abre ningún cuadro de diálogo y el sistema no genera ningún error ("no lo toma").
+   - Las invocaciones automáticas a `window.print()` dentro de `setTimeout` son adicionalmente bloqueadas por Safari por falta de gesto táctil explícito del usuario.
+3. **Solución Técnica Implementada (`src/lib/pdfExport.js`)**:
+   - Se desarrolló una librería de exportación e impresión universal con `jspdf` y `html2canvas` con importación dinámica asíncrona.
+   - En iPhone / iOS / dispositivos móviles: genera el documento PDF en alta resolución con paginación A4 exacta y despacha el archivo mediante la Web Share API (`navigator.share({ files: [pdfFile] })`).
+   - Al compartir el archivo PDF en iOS, la hoja nativa del sistema presenta inmediatamente la opción **"Imprimir" (AirPrint)** que se conecta de forma directa a la impresora Wi-Fi de Gonzalo, así como "Guardar en Archivos" o "WhatsApp".
+   - En computadoras de escritorio y laptops: mantiene la llamada instantánea a `window.print()`.
+   - Ofrece botón dual `🖨️ Imprimir / AirPrint` y `📄 Descargar PDF` en:
+     - `/admin/agenda/imprimir` (Turnos Programados del día).
+     - `/admin/estadisticas/informe-mensual` (Consolidado Mensual a 2 páginas).
+     - `/admin/recibos/[id]` (Recibos comerciales oficiales).
+   - Se desactivó el auto-print en `setTimeout` para iOS/PWA, permitiendo interacción táctil manual y previsible.

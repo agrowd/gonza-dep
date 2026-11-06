@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
+import { exportOrPrintElement } from '@/lib/pdfExport.js';
 
 function formatMoney(amount) {
   if (amount === undefined || amount === null) return '$ 0';
@@ -12,10 +13,12 @@ export default function InformeMensualPage({ searchParams }) {
   const unwrappedParams = use(searchParams);
   const initialMes = unwrappedParams?.mes || '';
 
+  const reportRef = useRef(null);
   const [mes, setMes] = useState(initialMes);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -36,8 +39,39 @@ export default function InformeMensualPage({ searchParams }) {
       .finally(() => setLoading(false));
   }, [mes]);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (isGenerating || !reportRef.current) return;
+    try {
+      setIsGenerating(true);
+      await exportOrPrintElement({
+        element: reportRef.current,
+        filename: `Informe_Mensual_DPH_${selectedMonth || mes || 'informe'}.pdf`,
+        title: `Informe Mensual DPH — ${mesLabel || selectedMonth || 'General'}`
+      });
+    } catch (err) {
+      console.error('Error al imprimir informe mensual:', err);
+      alert('No se pudo generar la vista de impresión.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (isGenerating || !reportRef.current) return;
+    try {
+      setIsGenerating(true);
+      await exportOrPrintElement({
+        element: reportRef.current,
+        filename: `Informe_Mensual_DPH_${selectedMonth || mes || 'informe'}.pdf`,
+        title: `Informe Mensual DPH — ${mesLabel || selectedMonth || 'General'}`,
+        forcePdf: true
+      });
+    } catch (err) {
+      console.error('Error al descargar PDF:', err);
+      alert('No se pudo descargar el archivo PDF.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (loading) {
@@ -128,30 +162,57 @@ export default function InformeMensualPage({ searchParams }) {
           </div>
         </div>
 
-        <button
-          onClick={handlePrint}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.6rem 1.25rem',
-            backgroundColor: '#7a1f1e',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 2px 6px rgba(122, 31, 30, 0.25)'
-          }}
-        >
-          🖨️ Imprimir / Guardar como PDF (2 Páginas)
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handlePrint}
+            disabled={isGenerating}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.6rem 1.15rem',
+              backgroundColor: '#7a1f1e',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              cursor: isGenerating ? 'not-allowed' : 'pointer',
+              opacity: isGenerating ? 0.7 : 1,
+              boxShadow: '0 2px 6px rgba(122, 31, 30, 0.25)'
+            }}
+          >
+            {isGenerating ? '⏳ Procesando...' : '🖨️ Imprimir / AirPrint'}
+          </button>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isGenerating}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.6rem 1.15rem',
+              backgroundColor: '#1d4ed8',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              cursor: isGenerating ? 'not-allowed' : 'pointer',
+              opacity: isGenerating ? 0.7 : 1,
+              boxShadow: '0 2px 6px rgba(29, 78, 216, 0.25)'
+            }}
+          >
+            📄 Descargar PDF (2 Páginas)
+          </button>
+        </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* PÁGINA 1: INFORME EJECUTIVO Y RESUMEN DEL MES               */}
-      {/* ============================================================ */}
+      {/* Printable Report Container (Enclosing both pages) */}
+      <div ref={reportRef} id="printableReport">
+        {/* ============================================================ */}
+        {/* PÁGINA 1: INFORME EJECUTIVO Y RESUMEN DEL MES               */}
+        {/* ============================================================ */}
       <div className="pdf-page" style={{
         maxWidth: '900px',
         margin: '0 auto',
@@ -538,6 +599,7 @@ export default function InformeMensualPage({ searchParams }) {
           <span>* s/d: sin datos en meses anteriores al inicio del registro en el sistema.</span>
           <span>Página 2 de 2</span>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1,18 +1,21 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import styles from './imprimir.module.css';
+import { exportOrPrintElement } from '@/lib/pdfExport.js';
 
 function PrintContent() {
   const searchParams = useSearchParams();
   const fecha = searchParams.get('fecha');
 
+  const sheetRef = useRef(null);
   const [turnos, setTurnos] = useState([]);
   const [bloqueos, setBloqueos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/session')
@@ -58,15 +61,62 @@ function PrintContent() {
     fetchTurnos();
   }, [fecha]);
 
-  // Trigger print dialog automatically once loaded
+  // Trigger print dialog automatically once loaded (Desktop only)
   useEffect(() => {
     if (!loading && (turnos.length > 0 || bloqueos.length > 0) && !error) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 800);
-      return () => clearTimeout(timer);
+      const isIOS = typeof navigator !== 'undefined' && (
+        /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      );
+      const isStandalone = typeof window !== 'undefined' && (
+        window.navigator.standalone === true || 
+        (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches)
+      );
+
+      // On iOS / standalone WebClip, auto-print is blocked or ignored; let user click directly
+      if (!isIOS && !isStandalone) {
+        const timer = setTimeout(() => {
+          window.print();
+        }, 800);
+        return () => clearTimeout(timer);
+      }
     }
   }, [loading, turnos, bloqueos, error]);
+
+  const handlePrint = async () => {
+    if (isGenerating || !sheetRef.current) return;
+    try {
+      setIsGenerating(true);
+      await exportOrPrintElement({
+        element: sheetRef.current,
+        filename: `turnos_${fecha || 'agenda'}.pdf`,
+        title: `Turnos Programados - ${formatDateLabel(fecha)}`
+      });
+    } catch (err) {
+      console.error('Error al imprimir/exportar:', err);
+      alert('No se pudo generar la vista para imprimir.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (isGenerating || !sheetRef.current) return;
+    try {
+      setIsGenerating(true);
+      await exportOrPrintElement({
+        element: sheetRef.current,
+        filename: `turnos_${fecha || 'agenda'}.pdf`,
+        title: `Turnos Programados - ${formatDateLabel(fecha)}`,
+        forcePdf: true
+      });
+    } catch (err) {
+      console.error('Error al descargar PDF:', err);
+      alert('No se pudo descargar el archivo PDF.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const timeToMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -171,8 +221,20 @@ function PrintContent() {
     <div className={styles.printWrapper}>
       {/* Action buttons (hidden when printing) */}
       <div className={styles.actionsBar}>
-        <button onClick={() => window.print()} className={styles.printBtn}>
-          🖨️ Imprimir / Guardar PDF
+        <button
+          onClick={handlePrint}
+          className={styles.printBtn}
+          disabled={isGenerating}
+        >
+          {isGenerating ? '⏳ Procesando...' : '🖨️ Imprimir / AirPrint'}
+        </button>
+        <button
+          onClick={handleDownloadPdf}
+          className={styles.printBtn}
+          disabled={isGenerating}
+          style={{ backgroundColor: '#1d4ed8' }}
+        >
+          📄 Descargar PDF
         </button>
         <button onClick={() => window.close()} className={styles.closeBtn}>
           Cerrar
@@ -180,7 +242,7 @@ function PrintContent() {
       </div>
 
       {/* Printable Sheet */}
-      <div className={styles.sheet}>
+      <div ref={sheetRef} className={styles.sheet}>
         <header className={styles.header}>
           <div className={styles.logoArea}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

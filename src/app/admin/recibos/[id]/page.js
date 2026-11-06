@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import styles from './recibo.module.css';
+import { exportOrPrintElement } from '@/lib/pdfExport.js';
 
 export default function ReciboPage({ params }) {
   const unwrappedParams = use(params);
   const id = unwrappedParams.id;
 
+  const receiptRef = useRef(null);
   const [receipt, setReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -24,8 +27,39 @@ export default function ReciboPage({ params }) {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (isGenerating || !receiptRef.current) return;
+    try {
+      setIsGenerating(true);
+      await exportOrPrintElement({
+        element: receiptRef.current,
+        filename: `Recibo_${receipt?.recibo?.numero || id}.pdf`,
+        title: `Recibo Nº ${receipt?.recibo?.numero || id}`
+      });
+    } catch (err) {
+      console.error('Error al imprimir recibo:', err);
+      alert('No se pudo preparar la impresión del recibo.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (isGenerating || !receiptRef.current) return;
+    try {
+      setIsGenerating(true);
+      await exportOrPrintElement({
+        element: receiptRef.current,
+        filename: `Recibo_${receipt?.recibo?.numero || id}.pdf`,
+        title: `Recibo Nº ${receipt?.recibo?.numero || id}`,
+        forcePdf: true
+      });
+    } catch (err) {
+      console.error('Error al descargar PDF:', err);
+      alert('No se pudo descargar el archivo PDF.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (loading) {
@@ -60,13 +94,28 @@ export default function ReciboPage({ params }) {
             Recibo Nº {receipt.recibo.numero}
           </span>
         </div>
-        <button onClick={handlePrint} className={styles.btnPrint}>
-          🖨️ Imprimir / Guardar como PDF
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handlePrint}
+            className={styles.btnPrint}
+            disabled={isGenerating}
+            style={{ opacity: isGenerating ? 0.7 : 1, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
+          >
+            {isGenerating ? '⏳ Procesando...' : '🖨️ Imprimir / AirPrint'}
+          </button>
+          <button
+            onClick={handleDownloadPdf}
+            className={styles.btnPrint}
+            disabled={isGenerating}
+            style={{ backgroundColor: '#1d4ed8', borderColor: '#1e40af', opacity: isGenerating ? 0.7 : 1, cursor: isGenerating ? 'not-allowed' : 'pointer' }}
+          >
+            📄 Descargar PDF
+          </button>
+        </div>
       </div>
 
       {/* Official Receipt Box (Matching image3.png) */}
-      <div className={styles.receiptBox}>
+      <div ref={receiptRef} className={styles.receiptBox}>
         {/* Header section with border */}
         <div className={styles.headerSection}>
           <div className={styles.headerLeft}>

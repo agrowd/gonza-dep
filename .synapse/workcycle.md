@@ -2725,3 +2725,23 @@
      - Incorporación de auto-guardado en `onBlur` y al cerrar (`handleCloseDetailsModal`) para comentarios del turno, observaciones generales y notas de operador.
 - [x] **Validación y Compilación**: Compilación Turbopack validada localmente (48/48 rutas OK).
 - [x] **Documentación**: Registrado `D-158 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 6 de Noviembre de 2026 - Impresión Nativa y Exportación PDF en iPhone / iOS PWA (AirPrint) para Turnos Diarios, Informe Mensual y Recibos Oficiales (D-159)
+- [x] **Diagnóstico e Implementación Integral**:
+  1. **Análisis de Causa Raíz**:
+     - En WebKit iOS, cuando la aplicación web se ejecuta en modo standalone PWA (agregada a la pantalla de inicio como WebClip), Apple desactiva deliberadamente `window.print()`, provocando que el diálogo de impresión no aparezca ("Nada, no lo toma").
+     - Asimismo, llamadas a `window.print()` dentro de `setTimeout` son interceptadas por los bloqueadores de ventanas emergentes de Safari sin gesto táctil activo.
+  2. **Creación de Exportador Universal PDF y AirPrint (`src/lib/pdfExport.js`)**:
+     - Implementado módulo universal con `jspdf` y `html2canvas` mediante importaciones dinámicas para cero impacto en el bundle inicial.
+     - Captura en escala 2x con fondo blanco limpio y formateo A4 (210x297mm) con márgenes de seguridad de 8mm.
+     - Soporte para documentos paginados fijos (`.pdf-page` en Informe Mensual de 2 páginas) con escalado proporcional que previene desbordes.
+     - Segmentación limpia en canvas para tablas continuas extensas (Turnos del día) eliminando fallos de recorte por coordenadas negativas.
+     - Detección de dispositivos iOS/móviles y despacho mediante `navigator.share({ files: [pdfFile] })`: la hoja de compartir nativa de iOS presenta inmediatamente la acción **"Imprimir" (AirPrint)** para enviar directamente a la impresora Wi-Fi de Gonzalo, además de "Guardar en Archivos" o WhatsApp.
+     - En computadoras de escritorio y laptops, preserva la llamada instantánea a `window.print()`.
+  3. **Integración en Vistas Clave**:
+     - `src/app/admin/agenda/imprimir/page.js`: agregados botones `🖨️ Imprimir / AirPrint`, `📄 Descargar PDF` y estado de carga `isGenerating`. Desactivado auto-print en iOS/PWA para respetar las políticas de interacción táctil.
+     - `src/app/admin/estadisticas/informe-mensual/page.js`: integrado `reportRef` abarcando ambas páginas del informe con botones `🖨️ Imprimir / AirPrint` y `📄 Descargar PDF (2 Páginas)`.
+     - `src/app/admin/recibos/[id]/page.js`: integrado `receiptRef` abarcando el recibo comercial oficial con soporte de impresión AirPrint y descarga directa.
+- [x] **Validación y Compilación**:
+  - Compilación Turbopack validada localmente (48/48 rutas OK).
+- [x] **Documentación**: Registrado `D-159 🔒 LOCKED` en `.synapse/decisions.md`.
