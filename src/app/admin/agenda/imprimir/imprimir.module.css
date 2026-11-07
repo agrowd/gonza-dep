@@ -346,9 +346,153 @@
   margin-bottom: 1.5rem;
 }
 
+/* Fixed A4 Desktop/Print Layout for html2canvas Capture (Matches Luciano's Compact Printout Exactly) */
+:global(.pdfCaptureA4),
+:global([data-a4-sheet="true"].pdfCaptureA4) {
+  width: 780px !important;
+  min-width: 780px !important;
+  max-width: 780px !important;
+  padding: 14px 18px !important;
+  margin: 0 auto !important;
+  background-color: #ffffff !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+:global(.pdfCaptureA4) .header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  border-bottom: 2px solid #7a1f1e !important;
+  padding-bottom: 0.35rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+:global(.pdfCaptureA4) .logo {
+  height: 38px !important;
+  width: auto !important;
+  max-width: 110px !important;
+}
+
+:global(.pdfCaptureA4) .headerTitle h1 {
+  font-size: 1.15rem !important;
+  color: #7a1f1e !important;
+  margin: 0 0 0.1rem 0 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+}
+
+:global(.pdfCaptureA4) .date {
+  font-size: 0.8rem !important;
+  color: #444444 !important;
+}
+
+:global(.pdfCaptureA4) .countBadge {
+  font-size: 0.72rem !important;
+  padding: 0.12rem 0.45rem !important;
+  background-color: #7a1f1e !important;
+  color: #ffffff !important;
+}
+
+:global(.pdfCaptureA4) .printTable {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  margin-top: 0.25rem !important;
+}
+
+:global(.pdfCaptureA4) .colTime {
+  width: 26% !important;
+}
+
+:global(.pdfCaptureA4) .colClient {
+  width: 32% !important;
+}
+
+:global(.pdfCaptureA4) .colZones {
+  width: 42% !important;
+}
+
+:global(.pdfCaptureA4) .printTable th {
+  background-color: #f7f6f2 !important;
+  border-bottom: 2px solid #7a1f1e !important;
+  color: #7a1f1e !important;
+  padding: 0.35rem 0.45rem !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+
+:global(.pdfCaptureA4) .printTable td {
+  border-bottom: 1px solid #e0e0e0 !important;
+  padding: 0.35rem 0.45rem !important;
+  font-size: 0.8rem !important;
+  line-height: 1.22 !important;
+}
+
+:global(.pdfCaptureA4) .timeCol {
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  color: #7a1f1e !important;
+  white-space: nowrap !important;
+}
+
+:global(.pdfCaptureA4) .timeRange {
+  font-size: 0.78rem !important;
+}
+
+:global(.pdfCaptureA4) .timeValor {
+  font-size: 0.75rem !important;
+  margin-top: 2px !important;
+}
+
+:global(.pdfCaptureA4) .clientName {
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  line-height: 1.2 !important;
+  margin-bottom: 0.05rem !important;
+}
+
+:global(.pdfCaptureA4) .clientPhone {
+  font-size: 0.68rem !important;
+  color: #555555 !important;
+}
+
+:global(.pdfCaptureA4) .zonesCol {
+  font-size: 0.78rem !important;
+  color: #111111 !important;
+  line-height: 1.22 !important;
+}
+
+:global(.pdfCaptureA4) .obsText {
+  font-size: 0.7rem !important;
+  color: #555555 !important;
+}
+
+:global(.pdfCaptureA4) .freeSlotRow td,
+:global(.pdfCaptureA4) .bloqueoRow td {
+  padding: 0.3rem 0.45rem !important;
+}
+
+:global(.pdfCaptureA4) .freeBadge,
+:global(.pdfCaptureA4) .bloqueoBadge {
+  font-size: 0.7rem !important;
+}
+
+:global(.pdfCaptureA4) .footer {
+  display: block !important;
+  margin-top: 0.6rem !important;
+  padding-top: 0.3rem !important;
+  font-size: 0.65rem !important;
+  border-top: 1px solid #e5e5e5 !important;
+}
+
 /* Screen Mobile Rules (Clean Full-Width View on Phones) */
 @media screen and (max-width: 650px) {
-  .printWrapper {
+  .printWrapper:not(:global(.pdfCaptureA4)) {
     padding: 0.5rem 0.25rem !important;
     background-color: #ffffff !important;
   }
@@ -358,7 +502,7 @@
     margin-bottom: 0.5rem !important;
   }
 
-  .sheet {
+  .sheet:not(:global(.pdfCaptureA4)) {
     padding: 0.5rem 0.35rem !important;
     box-shadow: none !important;
     border-radius: 0 !important;

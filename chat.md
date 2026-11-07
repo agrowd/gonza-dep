@@ -1924,3 +1924,25 @@
      - `/admin/estadisticas/informe-mensual` (Consolidado Mensual a 2 páginas).
      - `/admin/recibos/[id]` (Recibos comerciales oficiales).
    - Se desactivó el auto-print en `setTimeout` para iOS/PWA, permitiendo interacción táctil manual y previsible.
+
+
+---
+
+## 📌 Sesión: 7 de Noviembre de 2026 - Formato A4 Compacto Idéntico en iPhone AirPrint y Android: Impresión en Media Carilla (1 Sola Hoja) (D-160)
+
+### Requerimientos y Diagnóstico:
+1. **Reporte de Gonzalo Siri en WhatsApp**:
+   - Gonzalo envió fotos comparando la impresión desde su iPhone con la de Luciano en Android (`media_1794073116623_befff69a.jpg`, `media_1794073155145_869db4d5.jpg`, `media_1794073179388_6b32083a.jpg`, `media_1794073196709_a92fc702.jpg`, `media_1794073212746_eb6ce3ac.jpg`).
+   - *"Uno es Android y el otro es iPhone. Ahora te das cuenta que uno sale impreso en dos hojas, contexto muy grande y en el otro contexto normal en media carilla? Que esté así como le sale a Luciano desde su celular"*.
+2. **Causa Raíz Diagnosticada**:
+   - En el Android de Luciano se usaba el motor nativo del navegador (`window.print()`), el cual aplicaba los estilos `@media print` a ancho completo de papel A4 (~794px), resultando en una tabla compacta en media carilla.
+   - En el iPhone de Gonzalo, `html2canvas` capturaba el DOM tal como se renderizaba en la pantalla estrecha del teléfono (390px, bajo `@media screen and (max-width: 650px)`). Al trasladar esa imagen angosta al ancho A4 de 194mm del PDF, el texto se magnificaba al 250% y la altura excedía los 297mm de la hoja, provocando que AirPrint generara 2 páginas e imprimiera una segunda hoja física con solo el pie de página.
+3. **Solución Implementada**:
+   - En `src/lib/pdfExport.js`:
+     - Se añadió `windowWidth: 850` a `html2canvas` para neutralizar las reglas de pantalla móvil.
+     - En `onclone`, se fijó el ancho del documento a 850px y el de la hoja a 780px.
+     - Se inyectó una hoja de estilos prioritaria en el iframe de captura con las proporciones exactas de impresión de escritorio (26% Horario, 32% Cliente, 42% Zonas, padding compacto y fuentes en 0.8rem).
+     - Se incorporó `singlePageThresholdMm = maxPageHeightMm * 1.15` para asegurar que las jornadas habituales (hasta 14-16 turnos) se ajusten siempre en 1 sola hoja, garantizando que jornadas normales de 8-10 turnos salgan en media carilla (Página 1 de 1).
+   - En `src/app/admin/agenda/imprimir/imprimir.module.css`:
+     - Se incorporó la clase `:global(.pdfCaptureA4)`.
+     - Se blindó `@media screen and (max-width: 650px)` con `:not(:global(.pdfCaptureA4))`.

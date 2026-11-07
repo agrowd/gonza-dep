@@ -242,7 +242,7 @@ function PrintContent() {
       </div>
 
       {/* Printable Sheet */}
-      <div ref={sheetRef} className={styles.sheet}>
+      <div ref={sheetRef} data-a4-sheet="true" className={styles.sheet}>
         <header className={styles.header}>
           <div className={styles.logoArea}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

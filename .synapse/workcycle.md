@@ -2745,3 +2745,20 @@
 - [x] **Validación y Compilación**:
   - Compilación Turbopack validada localmente (48/48 rutas OK).
 - [x] **Documentación**: Registrado `D-159 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 7 de Noviembre de 2026 - Formato A4 Compacto Idéntico en iPhone AirPrint y Android: Impresión en Media Carilla (1 Sola Hoja) para Turnos del Día (D-160)
+- [x] **Diagnóstico e Implementación Integral**:
+  1. **Análisis de Causa Raíz (iPhone vs Android)**:
+     - En Android (Luciano), se ejecutaba `window.print()` que utilizaba `@media print` a ancho A4 (~794px), resultando en una tabla compacta que ocupa media carilla en 1 sola hoja.
+     - En iPhone (Gonzalo), se ejecutaba `html2canvas` capturando el DOM como se renderizaba para la pantalla de 390px del celular (`@media screen and (max-width: 650px)`). Al escalar esa captura angosta a 194mm A4 en jsPDF, las fuentes se agrandaban al 250% y la altura excedía los 297mm, generando 2 páginas con solo 1 o 2 turnos huérfanos en la segunda hoja.
+  2. **Configuración de Captura A4 en `pdfExport.js`**:
+     - Configurado `windowWidth: 850` en `html2canvas` para desactivar las reglas `@media screen and (max-width: 650px)`.
+     - En `onclone`, cuerpo del iframe fijado a 850px y hoja imprimible fijada a 780px.
+     - Inyectada hoja de estilos prioritaria en el iframe clonado garantizando ancho de columnas (26% Horario, 32% Cliente, 42% Zonas), tipografía compacta (0.8rem) y paddings reducidos (0.35rem 0.45rem).
+     - Incorporado `singlePageThresholdMm = maxPageHeightMm * 1.15`: ajuste de escala proporcional para que cualquier jornada de hasta 14-16 turnos entre al 100% en 1 sola hoja, imprimiéndose en media carilla para las jornadas típicas de 8-10 turnos.
+  3. **Aislamiento en `imprimir.module.css`**:
+     - Creada clase `:global(.pdfCaptureA4)`.
+     - Blindado `@media screen and (max-width: 650px)` con `:not(:global(.pdfCaptureA4))`.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
+- [x] **Documentación**: Registrado `D-160 🔒 LOCKED` en `.synapse/decisions.md`.
