@@ -667,7 +667,7 @@ export async function PUT(request, { params }) {
               clienteId: updatedTurno.clienteId,
               turnoId: updatedTurno.id,
               canal: 'EMAIL',
-              mensaje: `Correo enviado por inasistencia al turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+              mensaje: `Lamentamos informarte que, según nuestras políticas de cancelación y de reserva vigentes, la seña abonada de $${Number(updatedTurno.valorSeña || 0).toLocaleString('es-AR')} se retiene para cubrir los costos logísticos y operativos de la sesión reservada del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs que no pudimos utilizar.\n\nSi deseas programar una nueva sesión de depilación láser, puedes hacerlo en cualquier momento a través de nuestro portal web ingresando con tu usuario habitual o reservando un nuevo turno.`,
               estado: 'ENVIADO'
             }
           });
@@ -755,7 +755,9 @@ export async function PUT(request, { params }) {
               clienteId: updatedTurno.clienteId,
               turnoId: updatedTurno.id,
               canal: 'EMAIL',
-              mensaje: `Correo enviado por cancelación de turno del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+              mensaje: withLossOfDeposit
+                ? `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.\n\nDe acuerdo con nuestras políticas de reserva y cancelación, la seña abonada de $${Number(updatedTurno.valorSeña || 0).toLocaleString('es-AR')} ha sido retenida para cubrir los costos logísticos del horario reservado.`
+                : `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.\n\nAl haberse realizado con la anticipación correspondiente, tu seña queda registrada a tu favor. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`,
               estado: 'ENVIADO'
             }
           });
@@ -859,7 +861,7 @@ export async function PUT(request, { params }) {
                 clienteId: updatedTurno.clienteId,
                 turnoId: updatedTurno.id,
                 canal: 'EMAIL',
-                mensaje: `Correo enviado por reprogramación de turno al ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio}.`,
+                mensaje: `Te informamos que tu turno para depilación láser ha sido reprogramado con éxito.\n\nA continuación te detallamos los nuevos datos de tu turno:\n\n- Fecha: ${formatDate(updatedTurno.fecha)}\n- Horario: ${updatedTurno.horaInicio} hs\n\nDirección: Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)\n\nRecordá que tenés que venir afeitado al ras. Si tenés alguna duda, comunicate con nosotros.\n\n¡Te esperamos!`,
                 estado: 'ENVIADO'
               }
             });

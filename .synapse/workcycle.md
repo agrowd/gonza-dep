@@ -2762,3 +2762,22 @@
 - [x] **Validación y Compilación**:
   - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
 - [x] **Documentación**: Registrado `D-160 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 7 de Noviembre de 2026 - Vista Previa Real de Emails en Historial de Avisos, Filtro "Sin Turno Futuro" en Métricas de Retención y Títulos Limpios en Estadísticas (D-161)
+- [x] **Diagnóstico e Implementación Integral**:
+  1. **Vista Previa Fiel de Emails en Modal de Avisos (`/admin/clientes`)**:
+     - *Causa Raíz*: El modal `Detalle del Aviso Enviado` comprobaba `viewNoticeModal.tipo` (inexistente en Prisma `Notificacion`) en lugar de `viewNoticeModal.canal === 'EMAIL'`, provocando que siempre evaluara a falso y mostrara la insignia `📲 WHATSAPP` y el teléfono del cliente.
+     - *Solución*: Implementado `isEmail = viewNoticeModal.canal === 'EMAIL' || viewNoticeModal.tipo?.toLowerCase().includes('email')` y visualización de `selectedClient?.email`.
+     - *Tarjeta de Previsualización*: Recreación visual de la tarjeta oscura de correo oficial (`#1e1e1e`, borde dorado `#d4a54d`, encabezado "GONZALO DEPILACIÓN LÁSER", saludo personalizado, viñetas con resaltado dorado de Fecha, Horario, Zonas, Dirección e indicaciones previas) idéntica a la recibida por el cliente en su correo.
+     - *Reconstrucción de Avisos Históricos*: En caso de notificaciones antiguas con texto resumen ("Confirmación de turno enviada por email..."), se extraen dinámicamente los datos del turno asociado para reconstruir el correo con sus fechas y zonas reales. Para WhatsApp, se renderiza la burbuja verde con hora y doble tilde azul.
+  2. **Persistencia de Cuerpo Real en Notificaciones**:
+     - En `turnos/route.js` y `turnos/[id]/route.js`, se reemplazaron los mensajes de resumen por el texto estructurado del correo de confirmación, inasistencia, cancelación y reprogramación.
+  3. **Filtro de Seguimiento "Sin Turno Futuro" en Métricas de Retención (`/admin/estadisticas`)**:
+     - En `cancelados`, `ausentes`, `vaAAvisar` y `mantenimiento`, se añadió el selector de píldoras (`🔘 Todos` vs `⚠️ Solo sin turno futuro` vs `🟢 Con turno agendado`) para detectar a los clientes que no volvieron a agendar.
+     - En `/api/admin/estadisticas/route.js`, cómputo de `hasFutureTurno` evaluando citas activas futuras (`SEÑADO`, `REPROGRAMADO`, `PENDIENTE_AUTORIZACION`, `PENDIENTE_PAGO`) o sesiones realizadas posteriores a la fecha analizada.
+     - Inclusión de todos los clientes en `vaAAvisar` y `mantenimiento` para que el filtro dinámico recalcule registros y totales en vivo. Insignias visuales añadidas en la tabla de escritorio y tarjetas móviles.
+  4. **Limpieza de Títulos en Selector de Métricas**:
+     - Removidos textos aclaratorios entre paréntesis en `METRIC_DEFINITIONS` para un desplegable limpio y conciso.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
+- [x] **Documentación**: Registrado `D-161 🔒 LOCKED` en `.synapse/decisions.md`.

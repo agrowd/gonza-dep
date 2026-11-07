@@ -209,6 +209,144 @@ function ClientesPageContent() {
 
     return { title, body };
   };
+
+  const getFormattedNoticeView = (n, client) => {
+    if (!n) return { isEmail: false, recipient: '', body: '', isReconstructed: false };
+    const isEmail = n.canal === 'EMAIL' || n.tipo?.toLowerCase().includes('email');
+    const recipient = isEmail ? (client?.email || 'Sin email') : (client?.whatsapp || 'Sin WhatsApp');
+    const rawMsg = (n.mensaje || '').trim();
+
+    if (!isEmail) {
+      return { isEmail: false, recipient, body: rawMsg, isReconstructed: false };
+    }
+
+    // Detectar si el mensaje es un texto resumen interno / placeholder en lugar del cuerpo real del email
+    const isPlaceholder = !rawMsg ||
+      rawMsg.startsWith('Confirmación de turno enviada por email') ||
+      rawMsg.startsWith('Correo enviado por') ||
+      rawMsg.startsWith('Notificación de reprogramación') ||
+      rawMsg.includes('enviada por email al crearse manualmente') ||
+      rawMsg.length < 90;
+
+    if (isPlaceholder) {
+      // Reconstruir los detalles del correo oficial a partir del turno asociado
+      const linkedTurno = (client?.turnos || []).find(t => t.id === n.turnoId) || (client?.turnos || [])[0];
+      const clientName = client?.nombreCompleto || 'Cliente';
+      const address = 'Paraná 597, Piso 8, Depto 48 (Tribunales, CABA)';
+
+      let formattedDate = 'Fecha acordada';
+      let timeStr = 'Horario acordado';
+      let zonesText = 'Zonas seleccionadas';
+      let senaStr = '$0';
+      let totalStr = '$0';
+
+      if (linkedTurno) {
+        try {
+          const dObj = new Date(linkedTurno.fecha);
+          const rawWeekday = dObj.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
+          const diaCap = rawWeekday ? (rawWeekday.charAt(0).toUpperCase() + rawWeekday.slice(1)) : '';
+          const dayNum = dObj.getUTCDate();
+          const rawMonth = dObj.toLocaleDateString('es-AR', { month: 'long', timeZone: 'UTC' });
+          const monthCap = rawMonth ? (rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1)) : '';
+          const yearNum = dObj.getUTCFullYear();
+          formattedDate = `${diaCap}, ${dayNum} De ${monthCap} De ${yearNum}`;
+        } catch {
+          formattedDate = linkedTurno.fecha || 'Fecha acordada';
+        }
+        timeStr = linkedTurno.horaInicio ? `${linkedTurno.horaInicio} hs` : 'Horario a confirmar';
+        try {
+          const zArr = typeof linkedTurno.zonas === 'string' ? JSON.parse(linkedTurno.zonas) : linkedTurno.zonas;
+          zonesText = Array.isArray(zArr) ? zArr.map(z => z.nombre || z).join(', ') : (linkedTurno.zonas || 'Zonas a depilar');
+        } catch {
+          zonesText = linkedTurno.zonas || 'Zonas a depilar';
+        }
+        senaStr = `$${Number(linkedTurno.valorSeña || 0).toLocaleString('es-AR')}`;
+        totalStr = `$${Number(linkedTurno.valorTotal || 0).toLocaleString('es-AR')}`;
+      }
+
+      const lower = rawMsg.toLowerCase();
+      if (lower.includes('reprogram') || lower.includes('reprogramado')) {
+        return {
+          isEmail: true,
+          recipient,
+          asunto: 'Reprogramación de turno - Gonzalo Depilación',
+          saludo: `Hola ${clientName},`,
+          intro: 'Te informamos que tu turno para depilación láser ha sido reprogramado con éxito.',
+          detalleIntro: 'A continuación te detallamos los nuevos datos de tu turno:',
+          bullets: [
+            { label: 'Fecha', value: formattedDate, highlight: true },
+            { label: 'Horario', value: timeStr, highlight: true },
+            { label: 'Zonas', value: zonesText, highlight: false },
+          ],
+          direccion: address,
+          instrucciones: 'Recordá que tenés que venir afeitado al ras. Si tenés alguna duda, comunicate con nosotros.',
+          despedida: '¡Te esperamos!',
+          isReconstructed: true
+        };
+      } else if (lower.includes('inasistencia') || lower.includes('no_asistio') || lower.includes('no asistió')) {
+        return {
+          isEmail: true,
+          recipient,
+          asunto: 'Aviso de turno no asistido - Gonzalo Depilación',
+          saludo: `Hola ${clientName},`,
+          intro: `Lamentamos informarte que, según nuestras políticas de cancelación y de reserva vigentes, la seña abonada de ${senaStr} se retiene para cubrir los costos logísticos y operativos de la sesión reservada que no pudimos utilizar.`,
+          detalleIntro: '',
+          bullets: [],
+          direccion: address,
+          instrucciones: 'Si deseas programar una nueva sesión de depilación láser, puedes hacerlo en cualquier momento a través de nuestro portal web ingresando con tu usuario habitual o reservando un nuevo turno.',
+          despedida: 'Saludos cordiales, Gonzalo Depilación Láser.',
+          isReconstructed: true
+        };
+      } else if (lower.includes('cancel')) {
+        return {
+          isEmail: true,
+          recipient,
+          asunto: 'Cancelación de turno - Gonzalo Depilación',
+          saludo: `Hola ${clientName},`,
+          intro: 'Te informamos que tu turno para depilación láser ha sido cancelado.',
+          detalleIntro: 'Datos de la sesión cancelada:',
+          bullets: [
+            { label: 'Fecha', value: formattedDate, highlight: true },
+            { label: 'Horario', value: timeStr, highlight: true },
+            { label: 'Zonas', value: zonesText, highlight: false },
+          ],
+          direccion: address,
+          instrucciones: 'Si deseas agendar una nueva cita en el futuro, podés hacerlo cuando quieras ingresando a nuestro sitio web.',
+          despedida: '¡Saludos cordiales!',
+          isReconstructed: true
+        };
+      } else {
+        // Default: Confirmación de turno
+        return {
+          isEmail: true,
+          recipient,
+          asunto: 'Confirmación de turno - Gonzalo Depilación',
+          saludo: `Hola ${clientName},`,
+          intro: '¡Tu reserva ha sido confirmada con éxito!',
+          detalleIntro: 'A continuación te detallamos los datos de tu turno:',
+          bullets: [
+            { label: 'Fecha', value: formattedDate, highlight: true },
+            { label: 'Horario', value: timeStr, highlight: true },
+            { label: 'Zonas', value: zonesText, highlight: false },
+            { label: 'Seña abonada', value: senaStr, highlight: true }
+          ],
+          direccion: address,
+          instrucciones: 'Recordá que tenés que venir afeitado al ras. En caso de no poder asistir, te pedimos que avises con un mínimo de 72 hs de anticipación para reprogramar tu seña.',
+          despedida: '¡Te esperamos!',
+          isReconstructed: true
+        };
+      }
+    }
+
+    return {
+      isEmail: true,
+      recipient,
+      asunto: 'Aviso por Correo Electrónico',
+      saludo: `Hola ${client?.nombreCompleto || 'Cliente'},`,
+      body: rawMsg,
+      isReconstructed: false
+    };
+  };
   const calculateAge = (dateInput) => {
     if (!dateInput) return null;
     const birthDate = new Date(dateInput);
@@ -2878,97 +3016,254 @@ function ClientesPageContent() {
         </div>
       )}
 
-      {/* FULL NOTIFICATION READER MODAL (D-151) */}
-      {viewNoticeModal && (
-        <div className={agendaStyles.modalOverlay} style={{ zIndex: 10001 }}>
-          <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '580px', width: '100%', boxSizing: 'border-box' }}>
-            <div className={agendaStyles.modalHeader}>
-              <h3 style={{ fontSize: '1.15rem', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                <span>{viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '📧' : '📲'}</span>
-                Detalle del Aviso Enviado
-              </h3>
-              <button type="button" onClick={() => setViewNoticeModal(null)} className={agendaStyles.closeBtn}>&times;</button>
-            </div>
+      {/* FULL NOTIFICATION READER MODAL (D-151 / D-161) */}
+      {viewNoticeModal && (() => {
+        const noticeView = getFormattedNoticeView(viewNoticeModal, selectedClient);
+        const isEmail = noticeView.isEmail;
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
-              {/* Meta card */}
-              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <span style={{
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    backgroundColor: viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '#eff6ff' : '#f0fdf4',
-                    color: viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '#1d4ed8' : '#15803d',
-                    border: viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '1px solid #bfdbfe' : '1px solid #bbf7d0'
-                  }}>
-                    {viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? '📧 EMAIL' : '📲 WHATSAPP'}
-                  </span>
-                  <span style={{
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    backgroundColor: viewNoticeModal.estado === 'ENVIADO' ? '#dcfce7' : '#fee2e2',
-                    color: viewNoticeModal.estado === 'ENVIADO' ? '#166534' : '#991b1b',
-                    border: viewNoticeModal.estado === 'ENVIADO' ? '1px solid #bbf7d0' : '1px solid #fecaca'
-                  }}>
-                    {viewNoticeModal.estado}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  <strong>Fecha y hora:</strong> {new Date(viewNoticeModal.fechaEnvio).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  <strong>Destinatario:</strong> {selectedClient?.nombreCompleto} ({viewNoticeModal.tipo?.toLowerCase().includes('email') || viewNoticeModal.tipo === 'EMAIL' ? selectedClient?.email : selectedClient?.whatsapp})
-                </div>
+        return (
+          <div className={agendaStyles.modalOverlay} style={{ zIndex: 10001 }}>
+            <div className={`glass-card premium-border ${agendaStyles.modalContent}`} style={{ maxWidth: '600px', width: '100%', boxSizing: 'border-box' }}>
+              <div className={agendaStyles.modalHeader}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                  <span>{isEmail ? '📧' : '📲'}</span>
+                  Detalle del Aviso Enviado
+                </h3>
+                <button type="button" onClick={() => setViewNoticeModal(null)} className={agendaStyles.closeBtn}>&times;</button>
               </div>
 
-              {/* Message Content */}
-              <div>
-                <label className={styles.inputLabel} style={{ marginBottom: '0.4rem', fontWeight: 600 }}>Contenido del Mensaje:</label>
-                <div style={{
-                  backgroundColor: '#ffffff',
-                  color: '#1e293b',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '0.88rem',
-                  lineHeight: '1.5',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  maxHeight: '320px',
-                  overflowY: 'auto'
-                }}>
-                  {viewNoticeModal.mensaje}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+                {/* Meta card */}
+                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span style={{
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      backgroundColor: isEmail ? '#eff6ff' : '#f0fdf4',
+                      color: isEmail ? '#1d4ed8' : '#15803d',
+                      border: isEmail ? '1px solid #bfdbfe' : '1px solid #bbf7d0'
+                    }}>
+                      {isEmail ? '📧 EMAIL' : '📲 WHATSAPP'}
+                    </span>
+                    <span style={{
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      backgroundColor: viewNoticeModal.estado === 'ENVIADO' ? '#dcfce7' : '#fee2e2',
+                      color: viewNoticeModal.estado === 'ENVIADO' ? '#166534' : '#991b1b',
+                      border: viewNoticeModal.estado === 'ENVIADO' ? '1px solid #bbf7d0' : '1px solid #fecaca'
+                    }}>
+                      {viewNoticeModal.estado}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <strong>Fecha y hora de envío:</strong> {new Date(viewNoticeModal.fechaEnvio).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <strong>Destinatario:</strong> {selectedClient?.nombreCompleto} ({noticeView.recipient})
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setViewNoticeModal(null)}
-                  style={{
-                    backgroundColor: '#7a1f1e',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '0.6rem 1.4rem',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cerrar
-                </button>
+                {/* Content rendering */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label className={styles.inputLabel} style={{ marginBottom: 0, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {isEmail ? '📧 Vista Previa del Email Recibido por el Cliente:' : '📲 Contenido del Mensaje de WhatsApp:'}
+                    </label>
+                  </div>
+
+                  {isEmail ? (
+                    /* DARK EMAIL TEMPLATE CARD MATCHING PRODUCTION DESIGN */
+                    <div style={{
+                      backgroundColor: '#18181b',
+                      borderRadius: '10px',
+                      padding: '0.85rem',
+                      border: '1px solid #27272a',
+                      maxHeight: '440px',
+                      overflowY: 'auto'
+                    }}>
+                      <div style={{
+                        maxWidth: '520px',
+                        margin: '0 auto',
+                        backgroundColor: '#1e1e1e',
+                        border: '1px solid #d4a54d',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                      }}>
+                        {/* Gold email header */}
+                        <div style={{
+                          backgroundColor: '#282a2b',
+                          borderBottom: '2px solid #d4a54d',
+                          padding: '1.1rem 1.25rem',
+                          textAlign: 'center'
+                        }}>
+                          <h1 style={{
+                            color: '#d4a54d',
+                            margin: 0,
+                            fontSize: '1.05rem',
+                            fontWeight: 800,
+                            letterSpacing: '1px',
+                            textTransform: 'uppercase'
+                          }}>
+                            GONZALO DEPILACIÓN LÁSER
+                          </h1>
+                        </div>
+
+                        {/* Email Body Content */}
+                        <div style={{
+                          padding: '1.5rem 1.35rem',
+                          color: '#f0ede6',
+                          fontSize: '0.9rem',
+                          lineHeight: '1.6'
+                        }}>
+                          <div style={{
+                            fontSize: '1.08rem',
+                            fontWeight: 'bold',
+                            color: '#ffffff',
+                            marginBottom: '1rem'
+                          }}>
+                            {noticeView.saludo}
+                          </div>
+
+                          {noticeView.isReconstructed ? (
+                            <>
+                              {noticeView.intro && (
+                                <p style={{ margin: '0 0 1rem 0', color: '#f0ede6' }}>
+                                  {noticeView.intro}
+                                </p>
+                              )}
+
+                              {noticeView.detalleIntro && (
+                                <p style={{ margin: '0 0 0.85rem 0', color: '#f0ede6' }}>
+                                  {noticeView.detalleIntro}
+                                </p>
+                              )}
+
+                              {noticeView.bullets && noticeView.bullets.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '1.25rem' }}>
+                                  {noticeView.bullets.map((b, idx) => (
+                                    <div key={idx} style={{ color: '#f0ede6' }}>
+                                      <span>– {b.label}: </span>
+                                      <strong style={{ color: b.highlight ? '#d4a54d' : '#ffffff', fontWeight: 800 }}>
+                                        {b.value}
+                                      </strong>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {noticeView.direccion && (
+                                <p style={{ margin: '0 0 1rem 0', color: '#f0ede6' }}>
+                                  Dirección: <strong style={{ color: '#ffffff' }}>{noticeView.direccion}</strong>
+                                </p>
+                              )}
+
+                              {noticeView.instrucciones && (
+                                <p style={{ margin: '0 0 1rem 0', color: '#cbd5e1', fontSize: '0.86rem' }}>
+                                  {noticeView.instrucciones}
+                                </p>
+                              )}
+
+                              {noticeView.despedida && (
+                                <p style={{ margin: '0', color: '#d4a54d', fontWeight: 700 }}>
+                                  {noticeView.despedida}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#f0ede6' }}>
+                              {noticeView.body}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Email Footer */}
+                        <div style={{
+                          backgroundColor: '#121212',
+                          padding: '1rem 1.25rem',
+                          textAlign: 'center',
+                          fontSize: '0.72rem',
+                          color: '#777777',
+                          borderTop: '1px solid #282a2b',
+                          lineHeight: '1.4'
+                        }}>
+                          © {new Date().getFullYear()} Gonzalo Depilación. Todos los derechos reservados.<br />
+                          Paraná 597, Piso 8, Depto 48 (Tribunales, CABA).
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* WHATSAPP CHAT BUBBLE VIEW */
+                    <div style={{
+                      backgroundColor: '#0b141a',
+                      borderRadius: '10px',
+                      padding: '1rem',
+                      border: '1px solid #202c33',
+                      maxHeight: '360px',
+                      overflowY: 'auto'
+                    }}>
+                      <div style={{
+                        maxWidth: '85%',
+                        marginLeft: 'auto',
+                        backgroundColor: '#005c4b',
+                        color: '#e9edef',
+                        borderRadius: '8px 8px 0 8px',
+                        padding: '0.75rem 0.95rem',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        fontSize: '0.88rem',
+                        lineHeight: '1.45',
+                        wordBreak: 'break-word'
+                      }}>
+                        <div style={{ whiteSpace: 'pre-wrap' }}>
+                          {noticeView.body}
+                        </div>
+                        <div style={{
+                          textAlign: 'right',
+                          fontSize: '0.68rem',
+                          color: '#8696a0',
+                          marginTop: '0.35rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: '0.25rem'
+                        }}>
+                          <span>{new Date(viewNoticeModal.fechaEnvio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span style={{ color: '#53bdeb' }}>✓✓</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setViewNoticeModal(null)}
+                    style={{
+                      backgroundColor: '#7a1f1e',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '0.6rem 1.4rem',
+                      borderRadius: '6px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Toast Notification */}
       {toast.show && (

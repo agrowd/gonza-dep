@@ -178,6 +178,7 @@ function formatTurnoItem(t, extra = {}) {
     estado: t.estado,
     subEstado: t.subEstado || null,
     señaEstado: t.señaEstado || null,
+    hasFutureTurno: extra.hasFutureTurno !== undefined ? !!extra.hasFutureTurno : false,
     ultimoEstadoLabel,
     estadoTurnoLabel,
     tipoValor,
@@ -522,13 +523,23 @@ export async function GET(request) {
     // 12 CATEGORÍAS DE ESTADÍSTICAS AVANZADAS
     // ==========================================
 
-    // Helper: verificar si un cliente tiene un turno activo/señado posterior a su última sesión realizada
-    const hasFutureActiveTurno = (c, lastRealizadoFecha) => {
-      if (!c) return false;
-      const lastTime = new Date(lastRealizadoFecha).getTime();
+    // Helper: verificar si un cliente tiene un turno activo/señado posterior a su última sesión realizada o agendado en el futuro
+    const hasFutureActiveTurno = (c, refFecha) => {
+      if (!c || !c.turnos || c.turnos.length === 0) return false;
+      const refTime = refFecha ? new Date(refFecha).getTime() : 0;
       return (c.turnos || []).some(t => {
-        if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'].includes(t.estado)) return false;
-        return new Date(t.fecha).getTime() > lastTime;
+        const isActiveBooking = ['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION', 'PENDIENTE_PAGO'].includes(t.estado);
+        const isCompleted = t.estado === 'REALIZADO';
+        const tTime = new Date(t.fecha).getTime();
+        const tFechaStr = typeof t.fecha === 'string' ? t.fecha.split('T')[0] : t.fecha.toISOString().split('T')[0];
+
+        // 1) Turno activo en el futuro (hoy o después de hoy)
+        if (isActiveBooking && tFechaStr >= todayStr) return true;
+
+        // 2) Turno activo o completado posterior a la fecha del turno analizado
+        if ((isActiveBooking || isCompleted) && tTime > refTime) return true;
+
+        return false;
       });
     };
 
@@ -660,11 +671,19 @@ export async function GET(request) {
     const ticketPromedioSenados = itemsSenados.length > 0 ? Math.round(totalSenados / itemsSenados.length) : 0;
 
     // 3. Turnos Cancelados (Pérdida = Valor del turno - Seña retenida)
-    const itemsCancelados = turnosPeriodo.filter(t => t.estado === 'CANCELADO').map(t => formatTurnoItem(t));
+    const itemsCancelados = turnosPeriodo.filter(t => t.estado === 'CANCELADO').map(t => {
+      const fullClient = t.clienteId ? allClients.find(c => c.id === t.clienteId) : null;
+      const hasFuture = hasFutureActiveTurno(fullClient || t.cliente, t.fecha);
+      return formatTurnoItem(t, { hasFutureTurno: hasFuture });
+    });
     const totalPerdidaCancelados = itemsCancelados.reduce((acc, item) => acc + item.oportunidadNoConcretada, 0);
 
     // 4. Turnos Ausentes (No asistió: Pérdida = Valor del turno - Seña retenida)
-    const itemsAusentes = turnosPeriodo.filter(t => t.estado === 'NO_ASISTIO').map(t => formatTurnoItem(t));
+    const itemsAusentes = turnosPeriodo.filter(t => t.estado === 'NO_ASISTIO').map(t => {
+      const fullClient = t.clienteId ? allClients.find(c => c.id === t.clienteId) : null;
+      const hasFuture = hasFutureActiveTurno(fullClient || t.cliente, t.fecha);
+      return formatTurnoItem(t, { hasFutureTurno: hasFuture });
+    });
     const totalPerdidaAusentes = itemsAusentes.reduce((acc, item) => acc + item.oportunidadNoConcretada, 0);
 
     // 5. Turnos Sin Marcar (ya pasaron de fecha/hora pero siguen en SEÑADO, PENDIENTE_PAGO o PENDIENTE_AUTORIZACION)
@@ -676,17 +695,18 @@ export async function GET(request) {
       return false;
     }).map(t => formatTurnoItem(t));
 
-    // 6. Clientes "Va a avisar" (Clientes que actualmente están en ese estado y aún no agendaron un nuevo turno)
+    // 6. Clientes "Va a avisar" (Seguimiento de clientes cuyo último turno quedó en 'Va a avisar')
     const itemsVaAAvisar = [];
     let totalPerdidaVaAAvisar = 0;
     allClients.forEach(c => {
       const turnosRealizadosCliente = (c.turnos || []).filter(isCompletedSession);
       if (turnosRealizadosCliente.length > 0) {
         const lastRealizado = turnosRealizadosCliente[0]; // ordenado desc
-        if (lastRealizado.subEstado === 'VA_A_AVISAR' && !hasFutureActiveTurno(c, lastRealizado.fecha)) {
+        if (lastRealizado.subEstado === 'VA_A_AVISAR') {
+          const hasFuture = hasFutureActiveTurno(c, lastRealizado.fecha);
           const item = formatTurnoItem(
             { ...lastRealizado, cliente: c },
-            { esSeguimiento: true, ultimoEstadoLabel: 'Va a avisar' }
+            { esSeguimiento: true, ultimoEstadoLabel: 'Va a avisar', hasFutureTurno: hasFuture }
           );
           itemsVaAAvisar.push(item);
           totalPerdidaVaAAvisar += item.valorTotal;
@@ -694,17 +714,18 @@ export async function GET(request) {
       }
     });
 
-    // 7. Clientes "Mantenimiento" (Se toma el valor del último turno realizado sin descontar su seña)
+    // 7. Clientes "Mantenimiento" (Seguimiento de clientes en etapa de sesiones de mantenimiento periódico)
     const itemsMantenimiento = [];
     let totalValorMantenimiento = 0;
     allClients.forEach(c => {
       const turnosRealizadosCliente = (c.turnos || []).filter(isCompletedSession);
       if (turnosRealizadosCliente.length > 0) {
         const lastRealizado = turnosRealizadosCliente[0];
-        if (lastRealizado.subEstado === 'MANTENIMIENTO' && !hasFutureActiveTurno(c, lastRealizado.fecha)) {
+        if (lastRealizado.subEstado === 'MANTENIMIENTO') {
+          const hasFuture = hasFutureActiveTurno(c, lastRealizado.fecha);
           const item = formatTurnoItem(
             { ...lastRealizado, cliente: c },
-            { esSeguimiento: true, ultimoEstadoLabel: 'Mantenimiento' }
+            { esSeguimiento: true, ultimoEstadoLabel: 'Mantenimiento', hasFutureTurno: hasFuture }
           );
           itemsMantenimiento.push(item);
           totalValorMantenimiento += item.valorTotal;

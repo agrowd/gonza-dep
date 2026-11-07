@@ -1946,3 +1946,41 @@
    - En `src/app/admin/agenda/imprimir/imprimir.module.css`:
      - Se incorporó la clase `:global(.pdfCaptureA4)`.
      - Se blindó `@media screen and (max-width: 650px)` con `:not(:global(.pdfCaptureA4))`.
+
+
+---
+
+## 📌 Sesión: 7 de Noviembre de 2026 - Vista Previa Real de Emails en Historial de Avisos, Filtro "Sin Turno Futuro" en Métricas de Retención y Títulos Limpios en Estadísticas (D-161)
+
+### Requerimientos de Gonzalo Siri y Luciano Gómez:
+1. **Historial de Avisos y Vista de Email (`media_1794074423906_c12a355f.png`, `media_1794074432608_93f3c2fa.jpg`)**:
+   - Gonzalo reportó: *"Acá entré al historial de avisos de un cliente, toqué un mail para ver qué le mandamos y me aparece WhatsApp arriba no Mail, además no me muestra el mail, solo una notificación de lo que se hizo, quiero poder ver el mail como le aparece a él"*.
+   - **Causa Raíz**: En `src/app/admin/clientes/page.js`, el modal de aviso leía `viewNoticeModal.tipo` en lugar de `viewNoticeModal.canal === 'EMAIL'`, provocando que siempre evaluara falso y mostrara la insignia de WhatsApp y el teléfono del cliente. Además, se guardaba y mostraba una simple frase resumen interna en una caja blanca.
+   - **Solución Implementada**:
+     - Se corrigió la validación de canal a `isEmail = viewNoticeModal.canal === 'EMAIL' || viewNoticeModal.tipo?.toLowerCase().includes('email')` y se muestra `selectedClient?.email`.
+     - Se implementó un renderizador de correo premium que replica con exactitud la plantilla oscura oficial (`#1e1e1e`, borde dorado `#d4a54d`, encabezado "GONZALO DEPILACIÓN LÁSER", saludo personalizado, viñetas con resaltado dorado de Fecha, Horario, Zonas, Dirección e indicaciones previas) tal como la recibe el cliente en su bandeja de entrada.
+     - En caso de avisos históricos con textos resumen ("Confirmación de turno enviada por email..."), el sistema detecta el aviso y reconstruye fielmente el contenido a partir de los datos del turno asociado. Para avisos de WhatsApp, se renderiza la burbuja verde con hora y doble tilde azul.
+     - En el backend (`turnos/route.js` y `turnos/[id]/route.js`), se actualizaron los disparadores de email para guardar el cuerpo completo del mensaje en `notificacion.mensaje`.
+2. **Filtro de Seguimiento "Sin Turno Futuro" en Métricas de Retención (`media_1794074443263_fac23e4e.png`)**:
+   - Solicitud: *"Acá en cancelados, ausentes, va a avisar, y mantenimiento agrega un filtro para elegir verlos a todos o solo a los que no agendaron un nuevo turno futuro, para saber quién quedó sin agendar"*.
+   - **Solución Implementada**:
+     - En `src/app/admin/estadisticas/page.js`: se añadió una botonera de píldoras con conteos dinámicos en vivo (`🔘 Todos` vs `⚠️ Solo sin turno futuro` vs `🟢 Con turno agendado`) para las métricas de `cancelados`, `ausentes`, `vaAAvisar` y `mantenimiento`.
+     - Al alternar el filtro, se recalculan instantáneamente la cantidad de registros, el monto total de pérdida/oportunidad y las exportaciones a Excel.
+     - Se incorporaron insignias de estado visuales en cada fila de la tabla de escritorio y en las tarjetas móviles (`🟢 Con turno agendado` vs `⚠️ Sin turno agendado`).
+     - En el backend (`/api/admin/estadisticas/route.js`): se implementó el cómputo de `hasFutureTurno` evaluando turnos activos futuros (`SEÑADO`, `REPROGRAMADO`, `PENDIENTE_AUTORIZACION`, `PENDIENTE_PAGO`) o sesiones realizadas posteriores a la fecha del turno analizado, e incluyendo a todos los clientes en `vaAAvisar` y `mantenimiento` para que el filtro dinámico funcione con la totalidad de los datos.
+3. **Limpieza de Títulos en Selector de Métricas (`media_1794074459130_7276ab32.png`)**:
+   - Solicitud: *"Acá sácale la info extra, solo el título está bien"*.
+   - **Solución Implementada**: En `METRIC_DEFINITIONS`, se eliminaron todos los textos aclaratorios entre paréntesis, dejando una lista limpia y concisa:
+     - `📊 Consolidado Mensual`
+     - `Turnos Realizados`
+     - `Ganancia Neta`
+     - `Turnos Señados`
+     - `Turnos Cancelados`
+     - `Turnos Ausentes`
+     - `Clientes en "Va a avisar"`
+     - `Clientes en "Mantenimiento"`
+     - `Clientes que "Finalizaron Tratamiento"`
+     - `Clientes Nuevos en el Período`
+     - `Turnos Sin Marcar`
+     - `Zonas Más Demandadas`
+     - `Clientes que Cumplen Años en el Período`

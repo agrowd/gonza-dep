@@ -10,7 +10,7 @@ import styles from './estadisticas.module.css';
 const METRIC_DEFINITIONS = [
   {
     id: 'consolidado_mensual',
-    label: '📊 Consolidado Mensual (Informe Ejecutivo y PDF 13 Meses)',
+    label: '📊 Consolidado Mensual',
     valueLabel: 'Mes Seleccionado',
     isDanger: false,
     hasAvg: false,
@@ -28,7 +28,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'gananciaNeta',
-    label: 'Ganancia Neta (Ingresos Reales del Período)',
+    label: 'Ganancia Neta',
     valueLabel: 'Ganancia Neta Ingresada',
     isDanger: false,
     hasAvg: true,
@@ -37,7 +37,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'senados',
-    label: 'Turnos Señados / Confirmados',
+    label: 'Turnos Señados',
     valueLabel: 'Total de Señas (Turnos Señados)',
     isDanger: false,
     hasAvg: true,
@@ -46,7 +46,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'cancelados',
-    label: 'Turnos Cancelados (Pérdidas)',
+    label: 'Turnos Cancelados',
     valueLabel: 'Pérdida por Cancelaciones',
     isDanger: true,
     hasAvg: false,
@@ -55,7 +55,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'ausentes',
-    label: 'Turnos Ausentes (No asistió)',
+    label: 'Turnos Ausentes',
     valueLabel: 'Pérdida por Inasistencias',
     isDanger: true,
     hasAvg: false,
@@ -100,7 +100,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'sinMarcar',
-    label: 'Turnos Sin Marcar (Pasados de hora)',
+    label: 'Turnos Sin Marcar',
     valueLabel: 'Monto Pendiente de Cierre',
     isDanger: true,
     hasAvg: false,
@@ -109,7 +109,7 @@ const METRIC_DEFINITIONS = [
   },
   {
     id: 'zonas',
-    label: 'Zonas Más Demandadas (Histograma y Filtros)',
+    label: 'Zonas Más Demandadas',
     valueLabel: 'Facturación de Zonas Seleccionadas',
     isDanger: false,
     hasAvg: true,
@@ -201,6 +201,9 @@ export default function EstadisticasPage() {
   const [selectedZonesFilter, setSelectedZonesFilter] = useState([]);
   const [selectedCanalesFilter, setSelectedCanalesFilter] = useState([]);
 
+  // Filtro de seguimiento para re-agendados (Cancelados, Ausentes, Va a avisar, Mantenimiento)
+  const [followUpFilter, setFollowUpFilter] = useState('ALL'); // 'ALL' | 'WITHOUT_FUTURE' | 'WITH_FUTURE'
+
   // Consolidado Mensual State (D-157)
   const [selectedConsolidadoMonth, setSelectedConsolidadoMonth] = useState(() => {
     const nowBA = new Date(Date.now() - 3 * 3600 * 1000);
@@ -268,6 +271,7 @@ export default function EstadisticasPage() {
     setExcludedIds(new Set());
     setSelectedZonesFilter([]);
     setSelectedCanalesFilter([]);
+    setFollowUpFilter('ALL');
   };
 
   const toggleExcludeId = (id) => {
@@ -396,8 +400,24 @@ export default function EstadisticasPage() {
       rawItems = av[selectedMetric]?.items || [];
     }
 
+    const isFollowUpMetric = ['cancelados', 'ausentes', 'vaAAvisar', 'mantenimiento'].includes(selectedMetric);
+    const followUpCounts = {
+      total: rawItems.length,
+      withoutFuture: rawItems.filter(i => !i.hasFutureTurno).length,
+      withFuture: rawItems.filter(i => !!i.hasFutureTurno).length
+    };
+
+    let itemsAfterFollowUp = rawItems;
+    if (isFollowUpMetric) {
+      if (followUpFilter === 'WITHOUT_FUTURE') {
+        itemsAfterFollowUp = rawItems.filter(i => !i.hasFutureTurno);
+      } else if (followUpFilter === 'WITH_FUTURE') {
+        itemsAfterFollowUp = rawItems.filter(i => !!i.hasFutureTurno);
+      }
+    }
+
     // Filtrar los excluidos con el botón 'X'
-    const filteredItems = rawItems.filter(item => !excludedIds.has(item.id));
+    const filteredItems = itemsAfterFollowUp.filter(item => !excludedIds.has(item.id));
 
     // Recalcular monto según la naturaleza de la métrica
     let totalMoney = 0;
@@ -421,9 +441,10 @@ export default function EstadisticasPage() {
       filteredItems,
       count,
       totalMoney,
-      avgTicket
+      avgTicket,
+      followUpCounts
     };
-  }, [data, selectedMetric, excludedIds, selectedZonesFilter, selectedCanalesFilter]);
+  }, [data, selectedMetric, excludedIds, selectedZonesFilter, selectedCanalesFilter, followUpFilter]);
 
   // ==========================================
   // CÁLCULO DE RESÚMENES PARA EL INFORME EXCEL (MODELOS A y B)
@@ -830,6 +851,39 @@ export default function EstadisticasPage() {
                           Seña: {item.señaEstado}
                         </div>
                       )}
+                      {['cancelados', 'ausentes', 'vaAAvisar', 'mantenimiento'].includes(selectedMetric) && (
+                        <div style={{ marginTop: '0.35rem' }}>
+                          {item.hasFutureTurno ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '4px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              backgroundColor: '#dcfce7',
+                              color: '#15803d',
+                              border: '1px solid #86efac'
+                            }}>
+                              🟢 Con turno agendado
+                            </span>
+                          ) : (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '4px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              backgroundColor: '#fef3c7',
+                              color: '#b45309',
+                              border: '1px solid #fde68a'
+                            }}>
+                              ⚠️ Sin turno agendado
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className={styles.td}>
                       <div style={{ fontWeight: 700, color: '#1d1d1d', fontSize: '0.82rem' }}>
@@ -1014,7 +1068,20 @@ export default function EstadisticasPage() {
 
                 <div className={styles.mobileCardBottomRow}>
                   <div className={styles.mobileCardStatus}>
-                    {estadoLabel}
+                    <div>{estadoLabel}</div>
+                    {['cancelados', 'ausentes', 'vaAAvisar', 'mantenimiento'].includes(selectedMetric) && (
+                      <div style={{ marginTop: '0.2rem' }}>
+                        {item.hasFutureTurno ? (
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#4ade80' }}>
+                            🟢 Con turno agendado
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fbbf24' }}>
+                            ⚠️ Sin turno agendado
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className={styles.mobileCardActions}>
                     <button
@@ -1745,6 +1812,40 @@ export default function EstadisticasPage() {
                 </div>
               </div>
             </>
+          )}
+
+          {/* SECCIÓN ESPECIAL: CANCELADOS, AUSENTES, VA A AVISAR, MANTENIMIENTO (FILTRO SEGUIMIENTO DE RE-AGENDADO) */}
+          {['cancelados', 'ausentes', 'vaAAvisar', 'mantenimiento'].includes(selectedMetric) && (
+            <div className={styles.filtersCard} style={{ marginTop: '0.75rem' }}>
+              <div className={styles.filtersHeader}>
+                🎯 Filtrar por Estado de Re-agendado:
+              </div>
+              <div className={styles.pillsRow}>
+                <button
+                  type="button"
+                  className={`${styles.pillBtn} ${followUpFilter === 'ALL' ? styles.pillBtnActive : ''}`}
+                  onClick={() => setFollowUpFilter('ALL')}
+                >
+                  🔘 Todos ({activeMetricData.followUpCounts?.total || 0})
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.pillBtn} ${followUpFilter === 'WITHOUT_FUTURE' ? styles.pillBtnActive : ''}`}
+                  style={followUpFilter === 'WITHOUT_FUTURE' ? { backgroundColor: '#b45309', borderColor: '#b45309', color: '#ffffff' } : {}}
+                  onClick={() => setFollowUpFilter('WITHOUT_FUTURE')}
+                >
+                  ⚠️ Solo sin turno futuro ({activeMetricData.followUpCounts?.withoutFuture || 0})
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.pillBtn} ${followUpFilter === 'WITH_FUTURE' ? styles.pillBtnActive : ''}`}
+                  style={followUpFilter === 'WITH_FUTURE' ? { backgroundColor: '#15803d', borderColor: '#15803d', color: '#ffffff' } : {}}
+                  onClick={() => setFollowUpFilter('WITH_FUTURE')}
+                >
+                  🟢 Con turno agendado ({activeMetricData.followUpCounts?.withFuture || 0})
+                </button>
+              </div>
+            </div>
           )}
 
           {excludedIds.size > 0 && (

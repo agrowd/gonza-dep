@@ -547,7 +547,7 @@ export async function POST(request) {
               clienteId: newTurno.clienteId,
               turnoId: newTurno.id,
               canal: 'EMAIL',
-              mensaje: `Confirmación de turno enviada por email al crearse manualmente.`,
+              mensaje: `¡Tu reserva ha sido confirmada con éxito!\n\nTe esperamos para tu sesión de depilación láser en Paraná 597, Piso 8, Depto 48. Recordá venir afeitado al ras.`,
               estado: 'ENVIADO'
             }
           });
