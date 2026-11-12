@@ -1984,3 +1984,39 @@
      - `Turnos Sin Marcar`
      - `Zonas Más Demandadas`
      - `Clientes que Cumplen Años en el Período`
+
+
+---
+
+## 📅 Sesión: 12 de Noviembre de 2026 - Gestión de Señas en Múltiples Turnos Futuros con Checkbox, Resumen de Zonas Realizadas, Semanas desde Último Turno y Consolidado Mensual de Octubre (D-162)
+
+### Requerimientos de Gonzalo Siri y Luciano Gómez:
+1. **Siguientes Turnos Agendados con Selección Manual de Seña (`media_1794488312306_14c6f934.png`)**:
+   - Solicitud: *"Agregar un apartado desplegable que aparezca cuando el cliente tenga múltiples turnos futuros agendados, mostrando: Fecha del turno, Zonas a realizar, Valor de la seña, Checkbox para seleccionar si esa seña se cobra en la sesión actual. Las señas seleccionadas deben sumarse al cobro de la sesión actual, evitando contabilizar señas que ya fueron pagadas anteriormente. Importante: Si el cliente tiene un solo turno siguiente agendado, el sistema debe seguir funcionando como hasta ahora. La selección manual solamente se aplicaría cuando tenga múltiples turnos futuros. A estos no se les cobra automáticamente el turno siguiente y sumándolos en estadísticas, solo si se pulsa el check"*.
+   - **Solución Implementada**:
+     - En `src/app/admin/agenda/page.js`: se incorporó el acordeón `📅 Siguientes turnos agendados` que se muestra únicamente cuando el cliente tiene más de 1 turno futuro activo (`SEÑADO`, `REPROGRAMADO`, `PENDIENTE_AUTORIZACION`, `PENDIENTE_PAGO`) posterior a la fecha y hora de la cita actual.
+     - Tabla interactiva con columnas: `FECHA` (formato `DD/MM/YYYY`), `ZONAS` (formateadas de forma legible), `SEÑA` (`$XX.XXX`) y un checkbox para cobrar en la sesión actual.
+     - Al tildar/destildar, se computa dinámicamente `Total a cobrar en sesión = Saldo pendiente de este turno + Señas seleccionadas de turnos siguientes`, y en caso de método de pago `AMBOS`, la validación de suma de Efectivo y Transferencia se contrasta contra este total compuesto.
+     - Se persiste la selección en `Turno.senasCobradasIds` tanto en la base de datos local como en PostgreSQL del VPS.
+     - En `/api/admin/estadisticas/route.js`: para clientes con múltiples turnos futuros, no se suma automáticamente ninguna seña en la recaudación neta; solo se computan aquellas señas que hayan sido explícitamente marcadas por el checkbox. Cuando el cliente tiene exactamente 1 turno siguiente agendado, se mantiene intacto el comportamiento automático existente.
+2. **Resumen de Zonas Realizadas (`media_1794488277507_4f027da5.png`)**:
+   - Solicitud: *"En la ficha del turno, debajo de Fecha 1° Turno / Sesiones Realizadas, agregar el resumen de zonas realizadas"*.
+   - **Solución Implementada**:
+     - Se integró el bloque desplegable `📊 Zonas realizadas (Resumen de todas sus sesiones)` que procesa todo el historial de citas en estado `REALIZADO` del cliente, totaliza la cantidad de veces que se realizó cada zona y las presenta ordenadas de mayor a menor (`[Zona] — X veces / 1 vez`), excluyendo zonas con 0 aplicaciones.
+3. **Métrica 'Último turno hace: X semanas' (`media_1794488335573_43f370a1.png`)**:
+   - Solicitud: *"Debajo de Frecuencia Estimada del Tratamiento (Semanas), mostrar hace cuántas semanas fue su último turno"*.
+   - **Solución Implementada**:
+     - Se calcula la diferencia cronológica exacta en semanas respecto a la última sesión completada previa del cliente, mostrando `📅 Último turno hace: X semanas (DD/MM/YYYY)`.
+4. **Corrección de Octubre (1 al 31) en Consolidado Mensual (`media_1794488230236_2c985d55.png`)**:
+   - Solicitud: *"En el PDF del consolidado Mensual, que elegí para Octubre, da mal los datos porque toma del 1 al 30, no toma el 31 de Octubre. Además los colores ahí que te marco, ponelo con la paleta de colores del PDF que te mandé, y arregla los valores porque aparecen mal"*.
+   - **Causa Raíz**: En `/api/admin/estadisticas/consolidado-mensual/route.js`, el filtrado mensual calculaba fechas en zona horaria local `03:00:00Z`, provocando que 10 turnos cargados el 1° de octubre a las 00:00:00Z fueran ignorados por el operador `>=`.
+   - **Solución Implementada**:
+     - Se migró la comparación mensual a coincidencia estricta de prefijo `YYYY-MM` (`2026-10`), garantizando la inclusión íntegra del mes del 1 al 31.
+     - Verificado en PostgreSQL: Octubre arroja exactamente 181 turnos agendados, 165 atendidos y $10.716.500 de facturación bruta, 100% idéntico al informe contable oficial de Gonzalo.
+     - Se actualizaron las 4 tarjetas KPI con la paleta de marca bordó y blanco (`#7a1f1e` y `#ffffff`).
+     - Se agregaron etiquetas con los valores numéricos sobre las barras en el Gráfico 2 (Facturación, Gastos y Neta), Gráfico 3 (Altas vs Bajas) y Gráfico 4 (Detalle de Bajas).
+     - Se optimizaron las reglas `@media print` y espaciados de la Página 2 para prevenir desbordes de impresión a múltiples páginas.
+5. **Descarga y AirPrint de PDF en iPhone / Móviles (`media_1794488256391_c732a36a.png`)**:
+   - En `src/lib/pdfExport.js`, se implementó el despacho mediante la Web Share API nativa (`navigator.share({ files: [pdfFile] })`), permitiendo a Safari en iOS desplegar de inmediato la opción de "Guardar en Archivos" o enviar directamente a la impresora Wi-Fi (AirPrint), con fallback a apertura segura de pestaña `window.open` para el resto de navegadores móviles.
+6. **Auditoría de Inasistencia**:
+   - Al marcar un turno como `NO_ASISTIO`, se genera automáticamente la etiqueta de auditoría `[Ausente - Pierde seña de $... - Nombre (Rol)]`, garantizando que al agendar un nuevo turno futuro el sistema advierta que el cliente perdió la seña por inasistencia en su turno anterior.

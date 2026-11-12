@@ -2781,3 +2781,30 @@
 - [x] **Validación y Compilación**:
   - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
 - [x] **Documentación**: Registrado `D-161 🔒 LOCKED` en `.synapse/decisions.md`.
+
+## Ciclo de Trabajo: 12 de Noviembre de 2026 - Gestión de Señas en Múltiples Turnos Futuros, Resumen de Zonas Realizadas, Semanas desde Último Turno y Consolidado Mensual de Octubre (D-162)
+- [x] **Diagnóstico e Implementación Integral**:
+  1. **Siguientes Turnos Agendados con Checkbox Manual (/admin/agenda)**:
+     - En el modal de detalle del turno, detección de turnos futuros activos del cliente ('SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION', 'PENDIENTE_PAGO') con fecha y hora posterior a la cita actual.
+     - Si el cliente posee > 1 turnos futuros, despliegue del acordeón interactivo '📅 Siguientes turnos agendados' con tabla de Fecha (DD/MM/YYYY), Zonas formateadas, Seña ($XX.XXX) y checkbox para cobrar en la sesión actual.
+     - Selección dinámica que suma las señas tildadas al total a cobrar en la sesión y recalcula la validación de pago dividido 'AMBOS' (Efectivo + Transferencia).
+     - Persistencia de los IDs seleccionados en 'Turno.senasCobradasIds' (migrado en SQLite local y PostgreSQL VPS con ALTER TABLE).
+     - En '/api/admin/estadisticas', exclusión de señas automáticas para clientes con múltiples turnos futuros, contabilizando únicamente las señas explícitamente marcadas. Si el cliente tiene solo 1 turno siguiente, se preserva el flujo automático sin intervención manual.
+  2. **Resumen de Zonas Realizadas**:
+     - Debajo de 'Sesiones Realizadas', incorporación del acordeón '📊 Zonas realizadas (Resumen de todas sus sesiones)'.
+     - Cómputo de todas las zonas depiladas a lo largo de su historial en sesiones con estado 'REALIZADO', ordenadas de mayor a menor frecuencia excluyendo zonas en 0.
+  3. **Métrica 'Último turno hace: X semanas'**:
+     - Debajo de 'Frecuencia Estimada del Tratamiento (Semanas)', cálculo exacto de días y semanas transcurridas desde su última cita realizada previa con fecha y hora anterior a la sesión seleccionada, mostrando '📅 Último turno hace: X semanas (DD/MM/YYYY)'.
+  4. **Corrección de Octubre (1 al 31) en Consolidado Mensual**:
+     - En '/api/admin/estadisticas/consolidado-mensual', sustitución de rangos Date por concordancia estricta de string 'YYYY-MM' ('2026-10'), recuperando las 10 citas del 1° de octubre almacenadas a las 00:00:00Z.
+     - Cifras en PostgreSQL verificadas: 181 agendados, 165 atendidos y $10.716.500 de facturación bruta, exactamente idéntico al PDF de Gonzalo.
+     - Tarjetas KPI unificadas a la paleta de marca (#7a1f1e / #ffffff), etiquetas numéricas añadidas sobre las barras de los gráficos 2, 3 y 4, y maquetación de 2 páginas blindada con @media print.
+  5. **Descarga y AirPrint de PDF en Smartphones (iOS Safari / Android)**:
+     - En 'src/lib/pdfExport.js', despacho nativo mediante 'navigator.share({ files: [pdfFile] })' que habilita AirPrint inmediato y guardado en archivos en iPhone, con fallback a 'window.open' en nueva pestaña.
+  6. **Auditoría de Inasistencia**:
+     - En '/api/admin/turnos/[id]', generación del tag '[Ausente - Pierde seña de $... - Nombre (Rol)]' al marcar 'NO_ASISTIO', activando el aviso de seña perdida al cargar nuevos turnos.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
+- [x] **Despliegue en VPS**:
+  - Ejecutado despliegue completo en Staging (puerto 3008) y Producción (puerto 3006). Base de datos 'agenda_db' y 'agenda_db_staging' sincronizadas con éxito. Verificada respuesta HTTP 200 OK.
+- [x] **Documentación**: Registrado 'D-162 🔒 LOCKED' en '.synapse/decisions.md'.
