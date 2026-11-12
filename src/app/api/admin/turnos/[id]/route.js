@@ -94,8 +94,17 @@ export async function GET(request, { params }) {
               select: {
                 id: true,
                 fecha: true,
-                estado: true
-              }
+                horaInicio: true,
+                horaFin: true,
+                estado: true,
+                subEstado: true,
+                zonas: true,
+                valorTotal: true,
+                valorSeña: true,
+                saldoPendiente: true,
+                senasCobradasIds: true
+              },
+              orderBy: { fecha: 'desc' }
             }
           }
         }
@@ -478,8 +487,18 @@ export async function PUT(request, { params }) {
       }
     } else if (estado === 'NO_ASISTIO') {
       // Inasistencia: el cliente pierde la seña abonada para cubrir costos logísticos
+      const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
       if (Number(oldTurn.valorSeña) > 0) {
         updateData.señaEstado = 'PERDIDA';
+        const lossTag = `[Ausente - Pierde seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} - ${authorLabel}]`;
+        if (!currentTurnoObs.includes(lossTag)) {
+          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${lossTag}`.trim() : lossTag;
+        }
+      } else {
+        const ausenteTag = `[Ausente - ${authorLabel}]`;
+        if (!currentTurnoObs.includes(ausenteTag)) {
+          updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${ausenteTag}`.trim() : ausenteTag;
+        }
       }
     } else if (body.señaEstado !== undefined) {
       updateData.señaEstado = body.señaEstado;
@@ -503,6 +522,9 @@ export async function PUT(request, { params }) {
           data: { saldoAFavor: dineroAFavorNum }
         }).catch(err => console.error('Error updating client saldoAFavor:', err));
       }
+    }
+    if (body.senasCobradasIds !== undefined) {
+      updateData.senasCobradasIds = body.senasCobradasIds ? String(body.senasCobradasIds) : null;
     }
 
     if (selectedZoneIds !== undefined) {

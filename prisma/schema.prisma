@@ -89,6 +89,7 @@ model Turno {
   montoEfectivo    Float?   @default(0)
   montoTransferencia Float? @default(0)
   dineroAFavor     Float?   @default(0)
+  senasCobradasIds String?  // IDs en JSON de turnos futuros cuyas señas se cobraron en esta sesión
   enviarNotificaciones Boolean @default(true)
   boxId            String?
   box              Box?     @relation(fields: [boxId], references: [id], onDelete: SetNull)

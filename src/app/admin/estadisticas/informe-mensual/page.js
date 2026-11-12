@@ -248,7 +248,7 @@ export default function InformeMensualPage({ searchParams }) {
         }}>
           {/* KPI 1: Turnos Atendidos */}
           <div style={{
-            backgroundColor: '#f8fafc',
+            backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
             borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
@@ -261,16 +261,21 @@ export default function InformeMensualPage({ searchParams }) {
             <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
               {kpis.turnosAtendidos.valor}
             </div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: kpis.turnosAtendidos.comparacion ? '#16a34a' : '#64748b', marginTop: '0.35rem' }}>
+            <div style={{
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              color: kpis.turnosAtendidos.comparacion ? (kpis.turnosAtendidos.comparacion.startsWith('-') || kpis.turnosAtendidos.comparacion.startsWith('−') ? '#dc2626' : '#16a34a') : '#64748b',
+              marginTop: '0.35rem'
+            }}>
               {kpis.turnosAtendidos.comparacion ? `${kpis.turnosAtendidos.comparacion} vs mes anterior` : 's/d vs mes anterior'}
             </div>
           </div>
 
           {/* KPI 2: Facturación */}
           <div style={{
-            backgroundColor: '#f8fafc',
+            backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderTop: '4px solid #d97706',
+            borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
             textAlign: 'left'
@@ -281,16 +286,21 @@ export default function InformeMensualPage({ searchParams }) {
             <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1, wordBreak: 'break-word' }}>
               {formatMoney(kpis.facturacion.valor)}
             </div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: kpis.facturacion.comparacion ? '#16a34a' : '#64748b', marginTop: '0.35rem' }}>
+            <div style={{
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              color: kpis.facturacion.comparacion ? (kpis.facturacion.comparacion.startsWith('-') || kpis.facturacion.comparacion.startsWith('−') ? '#dc2626' : '#16a34a') : '#64748b',
+              marginTop: '0.35rem'
+            }}>
               {kpis.facturacion.comparacion ? `${kpis.facturacion.comparacion} vs mes anterior` : 's/d vs mes anterior'}
             </div>
           </div>
 
           {/* KPI 3: Facturación Neta */}
           <div style={{
-            backgroundColor: '#f8fafc',
+            backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderTop: '4px solid #16a34a',
+            borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
             textAlign: 'left'
@@ -308,9 +318,9 @@ export default function InformeMensualPage({ searchParams }) {
 
           {/* KPI 4: Clientes Nuevos */}
           <div style={{
-            backgroundColor: '#f8fafc',
+            backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderTop: '4px solid #2563eb',
+            borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
             textAlign: 'left'
@@ -321,7 +331,12 @@ export default function InformeMensualPage({ searchParams }) {
             <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
               {kpis.clientesNuevos.valor}
             </div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: kpis.clientesNuevos.comparacion ? '#16a34a' : '#64748b', marginTop: '0.35rem' }}>
+            <div style={{
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              color: kpis.clientesNuevos.comparacion ? (kpis.clientesNuevos.comparacion.startsWith('-') || kpis.clientesNuevos.comparacion.startsWith('−') ? '#dc2626' : '#16a34a') : '#64748b',
+              marginTop: '0.35rem'
+            }}>
               {kpis.clientesNuevos.comparacion ? `${kpis.clientesNuevos.comparacion} vs mes anterior` : 's/d vs mes anterior'}
             </div>
           </div>
@@ -409,48 +424,48 @@ export default function InformeMensualPage({ searchParams }) {
         maxWidth: '900px',
         margin: '0 auto',
         backgroundColor: '#ffffff',
-        padding: '2.5rem 2.8rem',
+        padding: '1.6rem 2.2rem',
         borderRadius: '8px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
         boxSizing: 'border-box'
       }}>
         {/* Header Page 2 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #7a1f1e', paddingBottom: '0.85rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #7a1f1e', paddingBottom: '0.65rem', marginBottom: '1rem' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.3px' }}>
+            <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.3px' }}>
               Evolución de los últimos 13 meses
             </h2>
-            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#64748b', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748b', marginTop: '0.15rem' }}>
               Desde {evolucion13Meses[0].fullLabel} hasta {evolucion13Meses[evolucion13Meses.length - 1].fullLabel}
             </div>
           </div>
-          <div style={{ textAlign: 'right', fontSize: '0.82rem', color: '#64748b' }}>
+          <div style={{ textAlign: 'right', fontSize: '0.78rem', color: '#64748b' }}>
             <div>GONZALO Depilación para Hombres</div>
           </div>
         </div>
 
         {/* 4 Comparative Charts */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {/* Gráfico 1: Turnos Atendidos */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.65rem 0.85rem', backgroundColor: '#fcfcfd' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
                 1. Turnos Atendidos
               </span>
-              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Cantidad de citas realizadas</span>
+              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Cantidad de citas realizadas</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '88px', gap: '5px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
               {evolucion13Meses.map((m, idx) => {
                 const heightPct = maxTurnos > 0 ? (m.turnosAtendidos / maxTurnos) * 100 : 0;
                 const isSelected = idx === evolucion13Meses.length - 1;
                 return (
                   <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: m.turnosAtendidos > 0 ? '#0f172a' : '#cbd5e1', marginBottom: '3px' }}>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: m.turnosAtendidos > 0 ? '#0f172a' : '#cbd5e1', marginBottom: '2px', whiteSpace: 'nowrap' }}>
                       {m.turnosAtendidos > 0 ? m.turnosAtendidos : 's/d'}
                     </span>
                     <div style={{
                       width: '100%',
-                      maxWidth: '36px',
+                      maxWidth: '34px',
                       height: `${Math.max(heightPct, 4)}%`,
                       backgroundColor: m.turnosAtendidos > 0 ? (isSelected ? '#7a1f1e' : '#b45309') : '#e2e8f0',
                       borderRadius: '3px 3px 0 0',
@@ -460,9 +475,9 @@ export default function InformeMensualPage({ searchParams }) {
                 );
               })}
             </div>
-            <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', gap: '5px', marginTop: '3px' }}>
               {evolucion13Meses.map(m => (
-                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.62rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                   {m.label}
                 </div>
               ))}
@@ -470,42 +485,46 @@ export default function InformeMensualPage({ searchParams }) {
           </div>
 
           {/* Gráfico 2: Facturación vs Gastos vs Facturación Neta */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.65rem 0.85rem', backgroundColor: '#fcfcfd' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem', flexWrap: 'wrap', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
                 2. Facturación, Gastos y Facturación Neta ($)
               </span>
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#d97706' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#d97706', borderRadius: '2px' }} /> Facturación
+              <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.68rem', fontWeight: 700 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#d97706' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#d97706', borderRadius: '2px' }} /> Facturación
                 </span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#dc2626' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> Gastos
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#dc2626' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> Gastos
                 </span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#16a34a', borderRadius: '2px' }} /> Neta
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#16a34a' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#16a34a', borderRadius: '2px' }} /> Neta
                 </span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '88px', gap: '5px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
               {evolucion13Meses.map((m) => {
                 const fPct = maxFacturacion > 0 ? (m.facturacion / maxFacturacion) * 100 : 0;
                 const gPct = maxFacturacion > 0 ? (m.gastos / maxFacturacion) * 100 : 0;
                 const nPct = maxFacturacion > 0 ? (m.facturacionNeta / maxFacturacion) * 100 : 0;
+                const fmtFact = m.facturacion > 0 ? (m.facturacion >= 1000000 ? `$${(m.facturacion / 1000000).toFixed(1).replace('.', ',')}M` : `$${Math.round(m.facturacion / 1000)}k`) : 's/d';
                 return (
                   <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '1.5px', justifyContent: 'center' }}>
-                      <div title={`Facturación: ${formatMoney(m.facturacion)}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(fPct, m.facturacion > 0 ? 4 : 0)}%`, backgroundColor: '#d97706', borderRadius: '2px 2px 0 0' }} />
-                      <div title={`Gastos: ${formatMoney(m.gastos)}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(gPct, m.gastos > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
-                      <div title={`Neta: ${formatMoney(m.facturacionNeta)}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(nPct, m.facturacionNeta > 0 ? 4 : 0)}%`, backgroundColor: '#16a34a', borderRadius: '2px 2px 0 0' }} />
+                    <span style={{ fontSize: '0.58rem', fontWeight: 700, color: m.facturacion > 0 ? '#b45309' : '#cbd5e1', marginBottom: '2px', whiteSpace: 'nowrap' }}>
+                      {fmtFact}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '1px', justifyContent: 'center' }}>
+                      <div title={`Facturación: ${formatMoney(m.facturacion)}`} style={{ flex: 1, maxWidth: '9px', height: `${Math.max(fPct, m.facturacion > 0 ? 4 : 0)}%`, backgroundColor: '#d97706', borderRadius: '2px 2px 0 0' }} />
+                      <div title={`Gastos: ${formatMoney(m.gastos)}`} style={{ flex: 1, maxWidth: '9px', height: `${Math.max(gPct, m.gastos > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
+                      <div title={`Neta: ${formatMoney(m.facturacionNeta)}`} style={{ flex: 1, maxWidth: '9px', height: `${Math.max(nPct, m.facturacionNeta > 0 ? 4 : 0)}%`, backgroundColor: '#16a34a', borderRadius: '2px 2px 0 0' }} />
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', gap: '5px', marginTop: '3px' }}>
               {evolucion13Meses.map(m => (
-                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.62rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                   {m.label}
                 </div>
               ))}
@@ -513,37 +532,50 @@ export default function InformeMensualPage({ searchParams }) {
           </div>
 
           {/* Gráfico 3: Altas (Clientes Nuevos) vs Total Bajas */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.65rem 0.85rem', backgroundColor: '#fcfcfd' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem', flexWrap: 'wrap', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
                 3. Altas (Clientes Nuevos) vs Total de Bajas
               </span>
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2563eb' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#2563eb', borderRadius: '2px' }} /> Altas (Nuevos)
+              <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.68rem', fontWeight: 700 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#2563eb' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#2563eb', borderRadius: '2px' }} /> Altas (Nuevos)
                 </span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#dc2626' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> Total Bajas
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#dc2626' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> Total Bajas
                 </span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '88px', gap: '5px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
               {evolucion13Meses.map((m) => {
                 const aPct = maxAltasBajas > 0 ? (m.clientesNuevos / maxAltasBajas) * 100 : 0;
                 const bPct = maxAltasBajas > 0 ? (m.totalBajas / maxAltasBajas) * 100 : 0;
+                const hasData = m.clientesNuevos > 0 || m.totalBajas > 0;
                 return (
                   <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                    {hasData ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '2px', width: '100%', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '0.60rem', fontWeight: 700, color: '#2563eb', flex: 1, maxWidth: '12px', textAlign: 'center' }}>
+                          {m.clientesNuevos > 0 ? m.clientesNuevos : ''}
+                        </span>
+                        <span style={{ fontSize: '0.60rem', fontWeight: 700, color: '#dc2626', flex: 1, maxWidth: '12px', textAlign: 'center' }}>
+                          {m.totalBajas > 0 ? m.totalBajas : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.60rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '2px' }}>s/d</span>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '2px', justifyContent: 'center' }}>
-                      <div title={`Altas: ${m.clientesNuevos}`} style={{ flex: 1, maxWidth: '14px', height: `${Math.max(aPct, m.clientesNuevos > 0 ? 4 : 0)}%`, backgroundColor: '#2563eb', borderRadius: '2px 2px 0 0' }} />
-                      <div title={`Bajas: ${m.totalBajas}`} style={{ flex: 1, maxWidth: '14px', height: `${Math.max(bPct, m.totalBajas > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
+                      <div title={`Altas: ${m.clientesNuevos}`} style={{ flex: 1, maxWidth: '12px', height: `${Math.max(aPct, m.clientesNuevos > 0 ? 4 : 0)}%`, backgroundColor: '#2563eb', borderRadius: '2px 2px 0 0' }} />
+                      <div title={`Bajas: ${m.totalBajas}`} style={{ flex: 1, maxWidth: '12px', height: `${Math.max(bPct, m.totalBajas > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', gap: '5px', marginTop: '3px' }}>
               {evolucion13Meses.map(m => (
-                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.62rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                   {m.label}
                 </div>
               ))}
@@ -551,42 +583,58 @@ export default function InformeMensualPage({ searchParams }) {
           </div>
 
           {/* Gráfico 4: Detalle de Bajas */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', backgroundColor: '#fcfcfd' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.65rem 0.85rem', backgroundColor: '#fcfcfd' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem', flexWrap: 'wrap', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
                 4. Detalle de Bajas
               </span>
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#475569' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#64748b', borderRadius: '2px' }} /> Finalizaron
+              <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.68rem', fontWeight: 700 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#475569' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#64748b', borderRadius: '2px' }} /> Finalizaron
                 </span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#d97706' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#d97706', borderRadius: '2px' }} /> Cancelaron
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#d97706' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#d97706', borderRadius: '2px' }} /> Cancelaron
                 </span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#dc2626' }}>
-                  <span style={{ width: '10px', height: '10px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> No Vinieron
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#dc2626' }}>
+                  <span style={{ width: '8px', height: '8px', backgroundColor: '#dc2626', borderRadius: '2px' }} /> No Vinieron
                 </span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', height: '110px', gap: '6px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '88px', gap: '5px', paddingTop: '15px', borderBottom: '1px solid #cbd5e1' }}>
               {evolucion13Meses.map((m) => {
                 const finPct = maxDetalleBajas > 0 ? (m.finalizados / maxDetalleBajas) * 100 : 0;
                 const canPct = maxDetalleBajas > 0 ? (m.cancelados / maxDetalleBajas) * 100 : 0;
                 const ausPct = maxDetalleBajas > 0 ? (m.ausentes / maxDetalleBajas) * 100 : 0;
+                const hasData = m.finalizados > 0 || m.cancelados > 0 || m.ausentes > 0;
                 return (
                   <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '1.5px', justifyContent: 'center' }}>
-                      <div title={`Finalizaron: ${m.finalizados}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(finPct, m.finalizados > 0 ? 4 : 0)}%`, backgroundColor: '#64748b', borderRadius: '2px 2px 0 0' }} />
-                      <div title={`Cancelaron: ${m.cancelados}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(canPct, m.cancelados > 0 ? 4 : 0)}%`, backgroundColor: '#d97706', borderRadius: '2px 2px 0 0' }} />
-                      <div title={`No vinieron: ${m.ausentes}`} style={{ flex: 1, maxWidth: '10px', height: `${Math.max(ausPct, m.ausentes > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
+                    {hasData ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '1px', width: '100%', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '0.58rem', fontWeight: 700, color: '#64748b', flex: 1, maxWidth: '9px', textAlign: 'center' }}>
+                          {m.finalizados > 0 ? m.finalizados : ''}
+                        </span>
+                        <span style={{ fontSize: '0.58rem', fontWeight: 700, color: '#d97706', flex: 1, maxWidth: '9px', textAlign: 'center' }}>
+                          {m.cancelados > 0 ? m.cancelados : ''}
+                        </span>
+                        <span style={{ fontSize: '0.58rem', fontWeight: 700, color: '#dc2626', flex: 1, maxWidth: '9px', textAlign: 'center' }}>
+                          {m.ausentes > 0 ? m.ausentes : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.58rem', fontWeight: 700, color: '#cbd5e1', marginBottom: '2px' }}>s/d</span>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', height: '100%', gap: '1px', justifyContent: 'center' }}>
+                      <div title={`Finalizaron: ${m.finalizados}`} style={{ flex: 1, maxWidth: '9px', height: `${Math.max(finPct, m.finalizados > 0 ? 4 : 0)}%`, backgroundColor: '#64748b', borderRadius: '2px 2px 0 0' }} />
+                      <div title={`Cancelaron: ${m.cancelados}`} style={{ flex: 1, maxWidth: '9px', height: `${Math.max(canPct, m.cancelados > 0 ? 4 : 0)}%`, backgroundColor: '#d97706', borderRadius: '2px 2px 0 0' }} />
+                      <div title={`No vinieron: ${m.ausentes}`} style={{ flex: 1, maxWidth: '9px', height: `${Math.max(ausPct, m.ausentes > 0 ? 4 : 0)}%`, backgroundColor: '#dc2626', borderRadius: '2px 2px 0 0' }} />
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', gap: '5px', marginTop: '3px' }}>
               {evolucion13Meses.map(m => (
-                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.66rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                <div key={m.key} style={{ flex: 1, textAlign: 'center', fontSize: '0.62rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                   {m.label}
                 </div>
               ))}
@@ -595,12 +643,47 @@ export default function InformeMensualPage({ searchParams }) {
         </div>
 
         {/* Footnote Page 2 */}
-        <div style={{ marginTop: '2rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#94a3b8' }}>
+        <div style={{ marginTop: '1.25rem', paddingTop: '0.6rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem', color: '#94a3b8' }}>
           <span>* s/d: sin datos en meses anteriores al inicio del registro en el sistema.</span>
           <span>Página 2 de 2</span>
         </div>
       </div>
       </div>
+
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm;
+          }
+          body {
+            background-color: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .informe-wrapper {
+            background-color: #ffffff !important;
+            padding: 0 !important;
+          }
+          .pdf-page {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 auto !important;
+            padding: 1.2rem 1.6rem !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            max-height: 275mm !important;
+            box-sizing: border-box !important;
+          }
+          .pdf-page:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

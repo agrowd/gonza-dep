@@ -274,9 +274,11 @@ export async function exportOrPrintElement({
   const pdfBlob = pdf.output('blob');
   const pdfFile = new File([pdfBlob], safeFilename, { type: 'application/pdf' });
 
+  const isMobileDevice = isIOS || (typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+
   // On iOS / mobile devices:
-  // Sharing a PDF file summons the native OS Share sheet with AirPrint built-in!
-  if (!forcePdf && typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+  // Sharing a PDF file summons the native OS Share sheet with AirPrint, "Guardar en Archivos" and WhatsApp!
+  if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
     try {
       await navigator.share({
         files: [pdfFile],
@@ -286,12 +288,21 @@ export async function exportOrPrintElement({
       return;
     } catch (err) {
       if (err.name === 'AbortError') return; // User cancelled share sheet
-      console.warn('navigator.share failed, falling back to download:', err);
+      console.warn('navigator.share failed, falling back to open/download:', err);
     }
   }
 
-  // Fallback: Trigger download / open blob URL
   const blobUrl = URL.createObjectURL(pdfBlob);
+
+  if (isMobileDevice) {
+    // Mobile WebKit / Chrome blocks programmatic <a download> on blob URLs.
+    // Opening in a new window/tab displays the PDF natively with full save/share controls.
+    window.open(blobUrl, '_blank');
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    return;
+  }
+
+  // Desktop: Standard download link
   const a = document.createElement('a');
   a.href = blobUrl;
   a.download = pdfFile.name;

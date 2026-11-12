@@ -89,13 +89,13 @@ export async function GET(request) {
       });
     }
 
-    // Range for all 13 months query in DB
+    // Range for all 13 months query in DB (D-162: resilient UTC window)
     const oldestMonth = months13[0];
     const newestMonth = months13[months13.length - 1];
 
-    const rangeStart = new Date(`${oldestMonth.year}-${String(oldestMonth.month).padStart(2, '0')}-01T00:00:00.000-03:00`);
+    const rangeStart = new Date(`${oldestMonth.year}-${String(oldestMonth.month).padStart(2, '0')}-01T00:00:00.000Z`);
     const lastDayNewest = new Date(newestMonth.year, newestMonth.month, 0).getDate();
-    const rangeEnd = new Date(`${newestMonth.year}-${String(newestMonth.month).padStart(2, '0')}-${String(lastDayNewest).padStart(2, '0')}T23:59:59.999-03:00`);
+    const rangeEnd = new Date(`${newestMonth.year}-${String(newestMonth.month).padStart(2, '0')}-${String(lastDayNewest).padStart(2, '0')}T23:59:59.999Z`);
 
     // Fetch all turnos and gastos in this 13-month window
     const [allTurnos13, allGastos13, allBloqueos13, allClientes] = await Promise.all([
@@ -155,23 +155,21 @@ export async function GET(request) {
 
     // Process each month in the 13-month window
     const monthlyStats = months13.map(mInfo => {
-      const startMonthDate = new Date(`${mInfo.year}-${String(mInfo.month).padStart(2, '0')}-01T00:00:00.000-03:00`);
       const lastDay = new Date(mInfo.year, mInfo.month, 0).getDate();
-      const endMonthDate = new Date(`${mInfo.year}-${String(mInfo.month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59.999-03:00`);
 
       const turnosMes = allTurnos13.filter(t => {
-        const tf = new Date(t.fecha).getTime();
-        return tf >= startMonthDate.getTime() && tf <= endMonthDate.getTime();
+        const dStr = typeof t.fecha === 'string' ? t.fecha.slice(0, 10) : t.fecha.toISOString().slice(0, 10);
+        return dStr.startsWith(mInfo.key);
       });
 
       const gastosMes = allGastos13.filter(g => {
-        const gf = new Date(g.fecha).getTime();
-        return gf >= startMonthDate.getTime() && gf <= endMonthDate.getTime();
+        const dStr = typeof g.fecha === 'string' ? g.fecha.slice(0, 10) : g.fecha.toISOString().slice(0, 10);
+        return dStr.startsWith(mInfo.key);
       });
 
       const bloqueosMes = allBloqueos13.filter(b => {
-        const bf = new Date(b.fecha).getTime();
-        return bf >= startMonthDate.getTime() && bf <= endMonthDate.getTime();
+        const dStr = typeof b.fecha === 'string' ? b.fecha.slice(0, 10) : b.fecha.toISOString().slice(0, 10);
+        return dStr.startsWith(mInfo.key);
       });
 
       // Atendidos
@@ -208,7 +206,7 @@ export async function GET(request) {
       // Agenda Occupancy (% Ocupación de Agenda según D-155)
       const bloqueosByDate = new Map();
       for (const b of bloqueosMes) {
-        const bDateStr = new Date(b.fecha).toISOString().split('T')[0];
+        const bDateStr = typeof b.fecha === 'string' ? b.fecha.slice(0, 10) : b.fecha.toISOString().slice(0, 10);
         if (!bloqueosByDate.has(bDateStr)) bloqueosByDate.set(bDateStr, []);
         bloqueosByDate.get(bDateStr).push(b);
       }
@@ -216,7 +214,7 @@ export async function GET(request) {
       const turnosByDate = new Map();
       for (const t of turnosMes) {
         if (t.estado === 'BLOQUEADO') continue;
-        const tDateStr = new Date(t.fecha).toISOString().split('T')[0];
+        const tDateStr = typeof t.fecha === 'string' ? t.fecha.slice(0, 10) : t.fecha.toISOString().slice(0, 10);
         if (!turnosByDate.has(tDateStr)) turnosByDate.set(tDateStr, []);
         turnosByDate.get(tDateStr).push(t);
       }

@@ -588,38 +588,62 @@ export async function GET(request) {
       const saldo = Math.max(0, vTotal - vSena);
       const fueCreadoEnPeriodo = createdInPeriodIds.has(t.id);
 
-      // Verificar si este cliente agendó un próximo turno con seña durante este período
-      const clientFutureTurnos = (futureSenasByClient.get(t.clienteId) || []).filter(ft => !consumedFutureTurnoIds.has(ft.id));
-      let nextTurnoBooked = clientFutureTurnos.length > 0 ? clientFutureTurnos[0] : null;
+      // Verificar turnos futuros activos del cliente (D-162)
+      const cl = t.clienteId ? allClients.find(c => c.id === t.clienteId) : null;
+      const allActiveFutureTurnos = (cl?.turnos || []).filter(ft => {
+        if (ft.id === t.id) return false;
+        if (consumedFutureTurnoIds.has(ft.id)) return false;
+        if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION', 'PENDIENTE_PAGO'].includes(ft.estado)) return false;
+        return new Date(ft.fecha).getTime() > new Date(t.fecha).getTime() && Number(ft.valorSeña || 0) > 0;
+      }).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 
-      // NUEVO (Requerimiento Gonzalo): Si el cliente no agendó nuevo turno en este período, pero ya tenía
-      // un turno agendado a futuro en el sistema (turnos múltiples adelantados), la seña se le suma igual
-      // porque en el sistema la seña se va pasando de uno a otro.
-      if (!nextTurnoBooked && t.clienteId) {
-        const cl = allClients.find(c => c.id === t.clienteId);
-        const existingFuture = (cl?.turnos || []).find(ft => {
-          if (consumedFutureTurnoIds.has(ft.id)) return false;
-          if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION'].includes(ft.estado)) return false;
-          return new Date(ft.fecha).getTime() > new Date(t.fecha).getTime() && Number(ft.valorSeña || 0) > 0;
-        });
-        if (existingFuture) {
-          nextTurnoBooked = existingFuture;
+      let senaSiguiente = 0;
+      const nextTurnosAdded = [];
+
+      // Parse explicit selected future turnos if any were checked in this session (D-162)
+      let selectedFutureIds = [];
+      try {
+        if (t.senasCobradasIds) {
+          selectedFutureIds = JSON.parse(t.senasCobradasIds);
+          if (!Array.isArray(selectedFutureIds)) selectedFutureIds = [];
         }
+      } catch (e) {
+        selectedFutureIds = [];
       }
 
-      if (nextTurnoBooked) {
-        consumedFutureTurnoIds.add(nextTurnoBooked.id);
-        const senaSiguiente = Number(nextTurnoBooked.valorSeña || 0);
+      if (allActiveFutureTurnos.length > 1) {
+        // Múltiples turnos futuros: SOLO se cobran las señas seleccionadas explícitamente con checkbox
+        if (selectedFutureIds.length > 0) {
+          const checkedTurnos = allActiveFutureTurnos.filter(ft => selectedFutureIds.includes(ft.id));
+          checkedTurnos.forEach(ft => {
+            consumedFutureTurnoIds.add(ft.id);
+            senaSiguiente += Number(ft.valorSeña || 0);
+            nextTurnosAdded.push(ft);
+          });
+        }
+      } else if (allActiveFutureTurnos.length === 1) {
+        // Un solo turno siguiente agendado: mantiene el comportamiento automático habitual
+        const singleTurno = allActiveFutureTurnos[0];
+        consumedFutureTurnoIds.add(singleTurno.id);
+        senaSiguiente = Number(singleTurno.valorSeña || 0);
+        nextTurnosAdded.push(singleTurno);
+      }
+
+      if (senaSiguiente > 0) {
         const senaPropiaEnPeriodo = fueCreadoEnPeriodo ? vSena : 0;
         const ingresoTotalFila = saldo + senaSiguiente + senaPropiaEnPeriodo;
         montoTurnosSiguientes += ingresoTotalFila;
+
+        const subDesc = nextTurnosAdded.length > 1
+          ? `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + ${nextTurnosAdded.length} señas próx. $${senaSiguiente.toLocaleString('es-AR')})`
+          : `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + Seña próx. $${senaSiguiente.toLocaleString('es-AR')})`;
 
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
             ingresoCobradoPeriodo: ingresoTotalFila,
             señaCobradaPeriodo: senaSiguiente + senaPropiaEnPeriodo,
             saldoCobradoPeriodo: saldo,
-            subtipoGanancia: `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + Seña próx. $${senaSiguiente.toLocaleString('es-AR')})`
+            subtipoGanancia: subDesc
           })
         );
       } else {

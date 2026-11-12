@@ -500,6 +500,10 @@ export default function AgendaPage() {
   const [expandedTurnoObs, setExpandedTurnoObs] = useState(false);
   const [sendingReceipt, setSendingReceipt] = useState({});
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
+  // Siguientes Turnos Agendados & Resumen de Zonas (D-162)
+  const [isFutureSenasOpen, setIsFutureSenasOpen] = useState(true);
+  const [selectedFutureSenas, setSelectedFutureSenas] = useState({});
+  const [isZonasRealizadasOpen, setIsZonasRealizadasOpen] = useState(false);
   const [cancelModalTurno, setCancelModalTurno] = useState(null);
   const [isCanceling, setIsCanceling] = useState(false);
   const [resendEmailModalTurno, setResendEmailModalTurno] = useState(null);
@@ -1169,6 +1173,23 @@ export default function AgendaPage() {
         setTempClientSesionesPrevias(0);
         tempClientSesionesPreviasRef.current = 0;
       }
+
+      // Initialize selected future senas from selectedTurno.senasCobradasIds (D-162)
+      let initialChecked = {};
+      if (selectedTurno.senasCobradasIds) {
+        try {
+          const ids = JSON.parse(selectedTurno.senasCobradasIds);
+          if (Array.isArray(ids)) {
+            ids.forEach(id => { initialChecked[id] = true; });
+          }
+        } catch {
+          selectedTurno.senasCobradasIds.split(',').forEach(id => {
+            const trimmed = id.trim();
+            if (trimmed) initialChecked[trimmed] = true;
+          });
+        }
+      }
+      setSelectedFutureSenas(initialChecked);
     } else {
       setTempTurnoObservaciones('');
       setTempClientObservaciones('');
@@ -1182,11 +1203,147 @@ export default function AgendaPage() {
       setTempClientSesionesTotal(0);
       setTempClientSesionesPrevias(0);
       tempClientSesionesPreviasRef.current = 0;
+      setSelectedFutureSenas({});
+      setIsZonasRealizadasOpen(false);
       setExpandedObsGeneral(false);
       setExpandedNotasGonzalo(false);
       setExpandedTurnoObs(false);
     }
   }, [selectedTurno]);
+
+  // Siguientes turnos agendados y resumen de zonas (D-162)
+  const getClientFutureTurnos = useCallback((turno) => {
+    if (!turno || !turno.cliente?.turnos) return [];
+    const currentFechaStr = turno.fecha ? new Date(turno.fecha).toISOString().split('T')[0] : '';
+    const currentStartMin = timeToMinutes(turno.horaInicio || '00:00');
+
+    return (turno.cliente.turnos || []).filter(t => {
+      if (t.id === turno.id) return false;
+      if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION', 'PENDIENTE_PAGO'].includes(t.estado)) return false;
+
+      const tFechaStr = t.fecha ? new Date(t.fecha).toISOString().split('T')[0] : '';
+      if (tFechaStr > currentFechaStr) return true;
+      if (tFechaStr === currentFechaStr) {
+        return timeToMinutes(t.horaInicio || '00:00') > currentStartMin;
+      }
+      return false;
+    }).sort((a, b) => {
+      const aDate = a.fecha ? new Date(a.fecha).toISOString().split('T')[0] : '';
+      const bDate = b.fecha ? new Date(b.fecha).toISOString().split('T')[0] : '';
+      if (aDate !== bDate) return aDate.localeCompare(bDate);
+      return timeToMinutes(a.horaInicio || '00:00') - timeToMinutes(b.horaInicio || '00:00');
+    });
+  }, []);
+
+  const formatTurnoZonasList = (zonasRaw) => {
+    if (!zonasRaw) return '—';
+    let parsed = [];
+    if (Array.isArray(zonasRaw)) {
+      parsed = zonasRaw;
+    } else if (typeof zonasRaw === 'string') {
+      try {
+        parsed = JSON.parse(zonasRaw);
+      } catch {
+        return zonasRaw;
+      }
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) return '—';
+    return parsed.map(z => z.nombre || z.id || z).filter(Boolean).join(', ');
+  };
+
+  const getZonasRealizadasSummary = (turnos) => {
+    if (!Array.isArray(turnos)) return [];
+    const counts = {};
+    turnos.forEach(t => {
+      if (t.estado !== 'REALIZADO') return;
+      let list = [];
+      if (Array.isArray(t.zonas)) {
+        list = t.zonas;
+      } else if (typeof t.zonas === 'string') {
+        try {
+          list = JSON.parse(t.zonas);
+        } catch {
+          list = [];
+        }
+      }
+      if (Array.isArray(list)) {
+        list.forEach(z => {
+          let name = z?.nombre || (typeof z === 'string' ? z : null);
+          if (name) {
+            name = name.trim();
+            counts[name] = (counts[name] || 0) + 1;
+          }
+        });
+      }
+    });
+    return Object.entries(counts)
+      .map(([nombre, count]) => ({ nombre, count }))
+      .filter(item => item.count > 0)
+      .sort((a, b) => b.count - a.count);
+  };
+
+  const getPreviousTurnoWeeksInfo = (currentTurno) => {
+    if (!currentTurno || !currentTurno.cliente?.turnos) return null;
+    const currentFechaStr = currentTurno.fecha ? new Date(currentTurno.fecha).toISOString().split('T')[0] : '';
+    const currentStartMin = timeToMinutes(currentTurno.horaInicio || '00:00');
+
+    const prevTurnos = (currentTurno.cliente.turnos || []).filter(t => {
+      if (t.id === currentTurno.id) return false;
+      if (t.estado !== 'REALIZADO') return false;
+      const tFechaStr = t.fecha ? new Date(t.fecha).toISOString().split('T')[0] : '';
+      if (tFechaStr < currentFechaStr) return true;
+      if (tFechaStr === currentFechaStr) {
+        return timeToMinutes(t.horaInicio || '00:00') < currentStartMin;
+      }
+      return false;
+    }).sort((a, b) => {
+      const aDate = a.fecha ? new Date(a.fecha).toISOString().split('T')[0] : '';
+      const bDate = b.fecha ? new Date(b.fecha).toISOString().split('T')[0] : '';
+      if (aDate !== bDate) return bDate.localeCompare(aDate);
+      return timeToMinutes(b.horaInicio || '00:00') - timeToMinutes(a.horaInicio || '00:00');
+    });
+
+    if (prevTurnos.length === 0) return null;
+    const lastCompleted = prevTurnos[0];
+    const lastDate = new Date(lastCompleted.fecha);
+    const curDate = new Date(currentTurno.fecha);
+    const diffDays = Math.max(0, Math.round((curDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const weeks = Math.round(diffDays / 7);
+    const dateFormatted = lastCompleted.fecha ? new Date(lastCompleted.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+    return { weeks, dateFormatted, days: diffDays };
+  };
+
+  const handleToggleFutureSena = async (futureTurnoId) => {
+    if (!selectedTurno) return;
+    const nextChecked = {
+      ...selectedFutureSenas,
+      [futureTurnoId]: !selectedFutureSenas[futureTurnoId]
+    };
+    if (!nextChecked[futureTurnoId]) {
+      delete nextChecked[futureTurnoId];
+    }
+    setSelectedFutureSenas(nextChecked);
+
+    const checkedIds = Object.keys(nextChecked);
+    const serialized = JSON.stringify(checkedIds);
+
+    setSelectedTurno(prev => ({
+      ...prev,
+      senasCobradasIds: serialized
+    }));
+
+    try {
+      await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ senasCobradasIds: serialized })
+      });
+      fetchAppointments();
+    } catch (err) {
+      console.error('Error saving senasCobradasIds:', err);
+    }
+  };
 
   // Persist draft notas for current turno in case of accidental tab close or session expiration
   useEffect(() => {
@@ -5133,6 +5290,13 @@ export default function AgendaPage() {
                     <>
                       {(() => {
                         const dynPrices = getUpdatedTurnoPrices(selectedTurno);
+                        const clientFutureTurnos = getClientFutureTurnos(selectedTurno);
+                        const sumSelectedFutureSenas = clientFutureTurnos
+                          .filter(ft => selectedFutureSenas[ft.id])
+                          .reduce((sum, ft) => sum + Number(ft.valorSeña || 0), 0);
+                        const saldoPendiente = Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0));
+                        const totalACobrarSesion = saldoPendiente + sumSelectedFutureSenas;
+
                         return (
                           <>
                             {/* Swapped order per Gonzalo's request: VALOR TOTAL in big gold box on top */}
@@ -5166,9 +5330,29 @@ export default function AgendaPage() {
                                 Saldo Pendiente en Local
                               </span>
                               <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                ${(Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0))).toLocaleString('es-ES')}
+                                ${saldoPendiente.toLocaleString('es-ES')}
                               </span>
                             </div>
+                            {sumSelectedFutureSenas > 0 && (
+                              <>
+                                <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
+                                  <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.78rem', wordBreak: 'break-word', color: '#16a34a' }}>
+                                    + Señas seleccionadas de turnos siguientes
+                                  </span>
+                                  <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#16a34a', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                    +${sumSelectedFutureSenas.toLocaleString('es-ES')}
+                                  </span>
+                                </div>
+                                <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', borderTop: '1px dashed #cbd5e1', paddingTop: '0.35rem', marginTop: '0.2rem' }}>
+                                  <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                                    Total a cobrar en sesión
+                                  </span>
+                                  <span className={styles.detailValue} style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563eb', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                    ${totalACobrarSesion.toLocaleString('es-ES')}
+                                  </span>
+                                </div>
+                              </>
+                            )}
                             <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.2rem' }}>
                               <span className={styles.detailLabel} style={{ margin: 0, textAlign: 'left', flex: '1 1 auto', minWidth: 0, wordBreak: 'break-word', fontSize: '0.8rem', fontWeight: 600 }}>
                                 💳 Método de Pago
@@ -5295,9 +5479,8 @@ export default function AgendaPage() {
                                   </div>
                                 </div>
                                 {(() => {
-                                  const saldoPendiente = Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0));
                                   const sumSplit = Number(selectedTurno.montoEfectivo || 0) + Number(selectedTurno.montoTransferencia || 0);
-                                  const matches = sumSplit === saldoPendiente;
+                                  const matches = sumSplit === totalACobrarSesion;
                                   return (
                                     <div style={{
                                       fontSize: '0.75rem',
@@ -5312,7 +5495,7 @@ export default function AgendaPage() {
                                       marginTop: '0.15rem'
                                     }}>
                                       <span>Total ingresado: ${sumSplit.toLocaleString('es-AR')}</span>
-                                      <span>{matches ? '✓ Coincide con el total' : `Faltan/Sobran $${Math.abs(saldoPendiente - sumSplit).toLocaleString('es-AR')}`}</span>
+                                      <span>{matches ? '✓ Coincide con el total' : `Faltan/Sobran $${Math.abs(totalACobrarSesion - sumSplit).toLocaleString('es-AR')}`}</span>
                                     </div>
                                   );
                                 })()}
@@ -5376,6 +5559,109 @@ export default function AgendaPage() {
                                 />
                               </div>
                             </div>
+
+                            {/* Accordion: Siguientes Turnos Agendados (D-162) - Solo si tiene múltiples turnos futuros */}
+                            {clientFutureTurnos.length > 1 && (
+                              <div style={{
+                                gridColumn: '1 / -1',
+                                marginTop: '0.65rem',
+                                marginBottom: '0.45rem',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                backgroundColor: '#ffffff',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                              }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsFutureSenasOpen(!isFutureSenasOpen)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.55rem 0.75rem',
+                                    backgroundColor: '#f8fafc',
+                                    border: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 700,
+                                    color: '#1e293b'
+                                  }}
+                                >
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    📅 Siguientes turnos agendados ({clientFutureTurnos.length})
+                                  </span>
+                                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                    {isFutureSenasOpen ? '▲ Ocultar' : '▼ Ver'}
+                                  </span>
+                                </button>
+                                {isFutureSenasOpen && (
+                                  <div style={{ padding: '0.5rem 0.6rem' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                      <thead>
+                                        <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
+                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700 }}>FECHA</th>
+                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700 }}>ZONAS</th>
+                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700, textAlign: 'right' }}>SEÑA</th>
+                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700, textAlign: 'center', width: '55px' }}>COBRAR</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {clientFutureTurnos.map(ft => {
+                                          const isChecked = Boolean(selectedFutureSenas[ft.id]);
+                                          const ftDateFormatted = ft.fecha ? new Date(ft.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '—';
+                                          return (
+                                            <tr key={ft.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: isChecked ? '#f0fdf4' : 'transparent' }}>
+                                              <td style={{ padding: '0.4rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                                                {ftDateFormatted}
+                                              </td>
+                                              <td style={{ padding: '0.4rem', color: '#475569' }}>
+                                                {formatTurnoZonasList(ft.zonas)}
+                                              </td>
+                                              <td style={{ padding: '0.4rem', textAlign: 'right', fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap' }}>
+                                                ${Number(ft.valorSeña || 0).toLocaleString('es-ES')}
+                                              </td>
+                                              <td style={{ padding: '0.4rem', textAlign: 'center' }}>
+                                                <input
+                                                  type="checkbox"
+                                                  checked={isChecked}
+                                                  onChange={() => handleToggleFutureSena(ft.id)}
+                                                  style={{
+                                                    width: '18px',
+                                                    height: '18px',
+                                                    cursor: 'pointer',
+                                                    accentColor: '#16a34a'
+                                                  }}
+                                                />
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                    {sumSelectedFutureSenas > 0 && (
+                                      <div style={{
+                                        marginTop: '0.5rem',
+                                        padding: '0.4rem 0.6rem',
+                                        backgroundColor: '#f0fdf4',
+                                        border: '1px solid #bbf7d0',
+                                        borderRadius: '6px',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 700,
+                                        color: '#166534',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                      }}>
+                                        <span>Señas seleccionadas a cobrar:</span>
+                                        <span>+${sumSelectedFutureSenas.toLocaleString('es-ES')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </>
                         );
                       })()}
@@ -5561,6 +5847,73 @@ export default function AgendaPage() {
                           title={currentUserRole === 'OPERADOR' ? 'Solo administradores pueden modificar la cantidad de sesiones' : ''}
                         />
                       </div>
+
+                      {/* Resumen de Zonas Realizadas (D-162) */}
+                      {(() => {
+                        const zonasSummary = getZonasRealizadasSummary(selectedTurno.cliente?.turnos);
+                        return (
+                          <div style={{
+                            width: '100%',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                            marginTop: '0.2rem',
+                            marginBottom: '0.2rem',
+                            boxSizing: 'border-box'
+                          }}>
+                            <button
+                              type="button"
+                              onClick={() => setIsZonasRealizadasOpen(!isZonasRealizadasOpen)}
+                              style={{
+                                width: '100%',
+                                padding: '0.5rem 0.65rem',
+                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                cursor: 'pointer',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)'
+                              }}
+                            >
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                📊 Zonas realizadas ({zonasSummary.length})
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                {isZonasRealizadasOpen ? '▲ Ocultar' : '▼ Ver'}
+                              </span>
+                            </button>
+                            {isZonasRealizadasOpen && (
+                              <div style={{ padding: '0.5rem 0.65rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                {zonasSummary.length === 0 ? (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                    Sin sesiones realizadas registradas
+                                  </span>
+                                ) : (
+                                  zonasSummary.map((item, idx) => (
+                                    <div key={idx} style={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      fontSize: '0.78rem',
+                                      padding: '0.2rem 0',
+                                      borderBottom: idx < zonasSummary.length - 1 ? '1px solid rgba(255, 255, 255, 0.06)' : 'none'
+                                    }}>
+                                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.nombre}</span>
+                                      <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>
+                                        {item.count} {item.count === 1 ? 'vez' : 'veces'}
+                                      </span>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Fila 3: Fecha de Cumpleaños (Día y Mes) */}
                       <div style={{
@@ -5771,6 +6124,28 @@ export default function AgendaPage() {
                           </button>
                         )}
                       </div>
+
+                      {/* Último turno hace X semanas (D-162) */}
+                      {(() => {
+                        const prevInfo = getPreviousTurnoWeeksInfo(selectedTurno);
+                        if (!prevInfo) return null;
+                        return (
+                          <div style={{
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            color: 'var(--text-secondary)',
+                            marginTop: '0.45rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            <span>📅</span>
+                            <span>
+                              Último turno hace: <strong style={{ color: 'var(--color-gold)' }}>{prevInfo.weeks} {prevInfo.weeks === 1 ? 'semana' : 'semanas'}</strong> ({prevInfo.dateFormatted})
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 

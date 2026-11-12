@@ -156,8 +156,17 @@ export async function GET(request) {
               select: {
                 id: true,
                 fecha: true,
-                estado: true
-              }
+                horaInicio: true,
+                horaFin: true,
+                estado: true,
+                subEstado: true,
+                zonas: true,
+                valorTotal: true,
+                valorSeña: true,
+                saldoPendiente: true,
+                senasCobradasIds: true
+              },
+              orderBy: { fecha: 'desc' }
             }
           }
         }
