@@ -918,22 +918,22 @@
   gap: 0.4rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  background-color: #fffbeb;
-  border: 1.5px dashed #f59e0b;
-  border-left: 6px solid #d97706;
+  background-color: #ffffff;
+  border: 1.5px dashed #94a3b8;
+  border-left: 6px solid #475569;
   cursor: pointer;
   transition: all 0.18s ease;
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   width: 100%;
 }
 
 .neocitaFreeSlot:hover {
-  background-color: #fef3c7;
-  border-color: #d97706;
-  border-left-color: #b45309;
+  background-color: #f8fafc;
+  border-color: #64748b;
+  border-left-color: #334155;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.18);
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.16);
 }
 
 .neocitaFreeSlotRowTop {
@@ -950,16 +950,16 @@
   gap: 0.45rem;
   font-size: 0.96rem;
   font-weight: 800;
-  color: #b45309;
+  color: #0f172a;
   line-height: 1.2;
 }
 
 .neocitaFreeSlotDuration {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #92400e;
-  background-color: rgba(245, 158, 11, 0.18);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #475569;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
   padding: 2px 8px;
   border-radius: 12px;
   white-space: nowrap;
@@ -976,8 +976,8 @@
 
 .neocitaFreeSlotLabel {
   font-size: 0.82rem;
-  color: #78350f;
-  font-weight: 600;
+  color: #16a34a;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.35rem;
