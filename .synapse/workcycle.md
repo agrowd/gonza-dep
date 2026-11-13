@@ -2838,3 +2838,27 @@
   - Registrado `D-163 🔒 LOCKED` en `.synapse/decisions.md`.
   - Registrado ciclo de trabajo en `.synapse/workcycle.md`.
   - Actualizado `chat.md`.
+
+## Ciclo de Trabajo: 13 de Noviembre de 2026 - Sincronización Automática de Precios en Turnos Futuros Activos, Buscador Opcional de Cliente en Alta Rápida de Turno y Scroll Suave en Usuarios (D-164)
+- [x] **Diagnóstico e Implementación Integral**:
+  1. **Sincronización Automática de Precios de Zonas en Turnos Futuros Activos (`src/lib/turnoPriceSync.js`)**:
+     - *Causa Raíz*: Cuando se aumentaba el precio de una zona en el catálogo de Zonas (ej. Piernas a $42.000), los turnos futuros agendados en la agenda diaria y en PostgreSQL conservaban el valor viejo ($39.000 / $89.000), mientras que al abrir el modal se calculaba dinámicamente con `getUpdatedTurnoPrices` mostrando $92.000, generando discrepancias en las tarjetas `.neocitaCard` y en la cabecera diaria.
+     - *Solución*: Implementado `syncActiveFutureTurnosPrices(prisma)` que recalcula los precios de citas activas futuras (`SEÑADO`, `REPROGRAMADO`, `PENDIENTE_PAGO`, `PENDIENTE_AUTORIZACION`) según el catálogo vigente de `Zona`, actualizando `valorTotal`, `bonificacion`, `saldoPendiente` y el array JSON `zonas`. Integrado en la API de Zonas (`/api/zonas/[id]`), en el listado de citas (`/api/admin/turnos`), y en el renderizado diario de la agenda (`/admin/agenda`) en `.neocitaCard` y `totalRevenue`. Turnos históricos (`REALIZADO`, `CANCELADO`, `NO_ASISTIO`) quedan 100% protegidos bajo D-25.
+     - *Ejecución*: Sincronizados 40 turnos en `agenda_db` (Producción) y 21 turnos en `agenda_db_staging` (Staging).
+  2. **Buscador Opcional de Cliente en Alta Rápida de Turno (`/admin/alta-turno`)**:
+     - *Requerimiento*: *"En alta rápida de turno, que me de la opción (no obligatoriamente) de buscar el cliente para que se auto completen las zonas, duracion y los datos a la hora de agendar un nuevo turno"*.
+     - *Solución*: Incorporada la tarjeta `👤 Cliente (Opcional)` al inicio del formulario con autocompletado reactivo contra `/api/admin/clientes`. Al seleccionar un cliente, se leen sus citas previas, se extraen y tildan sus zonas habituales en el catálogo (incluyendo "Otros"), se precarga la duración de la sesión y se transfieren sus datos (ID, nombre, WhatsApp, email, DNI, frecuencia, descuentos) por parámetros a la agenda para agendar de inmediato con un solo clic. Si no se selecciona cliente, el flujo continúa completamente manual como siempre.
+  3. **Scroll Suave Automático al Formulario de Usuarios (`/admin/configuracion`)**:
+     - *Requerimiento*: *"Acá en Usuarios, al tocar nuevo usuario o al modificar uno le debería mandar con el scroll hasta abajo"*.
+     - *Solución*: En la pestaña `users`, al tocar "+ Nuevo Usuario / Operador" o el botón de edición `✏️` en las tarjetas de operadores, se dispara `scrollIntoView({ behavior: 'smooth', block: 'start' })` llevando automáticamente la vista hasta el formulario (`#userFormSection`), y al cancelar o guardar (`handleCloseUserModal`) se desplaza suavemente de regreso hacia `#userCardsGridSection`.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente y en VPS (48/48 rutas OK).
+- [x] **Control de Versiones y Despliegue en VPS**:
+  - Commit `6b15675`: `feat: sincronizacion automatica de precios en turnos futuros, buscador opcional de cliente en alta-turno y scroll automatico en usuarios (D-164)`.
+  - Push exitoso a ramas `main` y `staging`.
+  - Despliegue completado con `deploy_full_safe.mjs` en Staging (puerto 3008) y Producción (puerto 3006).
+  - Verificada respuesta HTTP 200 OK en `https://agenda.depilacionparahombres.com` y `http://187.127.9.216:3008`.
+- [x] **Documentación**:
+  - Registrado `D-164 🔒 LOCKED` en `.synapse/decisions.md`.
+  - Registrado ciclo de trabajo en `.synapse/workcycle.md`.
+  - Actualizado `chat.md`.

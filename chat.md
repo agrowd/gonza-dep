@@ -2050,3 +2050,54 @@
   - Staging (puerto 3008): HTTP 200 OK.
   - Producción (puerto 3006, `https://agenda.depilacionparahombres.com`): HTTP 200 OK.
 - Registrada Decisión `D-163 🔒 LOCKED` en `.synapse/decisions.md`.
+
+---
+
+## 📅 13 de Noviembre de 2026 - Sincronización Automática de Precios en Turnos Futuros Activos, Buscador Opcional de Cliente en Alta Rápida y Scroll Suave en Usuarios (D-164)
+
+### Requerimientos de Gonzalo Siri y Luciano Gómez en WhatsApp:
+1. `media_1794578011065_58b88d7d.png`:
+   > *"Cuando entro al turno, el valor de la sesión dice 92.000 (que está bien porque hizo el aumento automático por piernas) pero desde la agenda aparece el valor sin el aumento, y nosé si eso cambiará las estadísticas o algo, tienen que actualizarse juntos. También hubo turnos que directamente no actualizaba de forma automática los valores de las zonas, osea había un turno de piernas (que paso de 39 a 42) y le seguía diciendo que era 39"*
+2. `media_1794578024114_d7e18052.jpg`:
+   > *"En alta rápida de turno, que me de la opción (no obligatoriamente) de buscar el cliente para que se auto completen las zonas, duracion y los datos a la hora de agendar un nuevo turno"*
+3. `media_1794578036215_732c1d81.png`:
+   > *"Acá en Usuarios, al tocar nuevo usuario o al modificar uno le debería mandar con el scroll hasta abajo"*
+
+---
+
+### Solución Implementada:
+
+#### 1. Sincronizador Automático de Precios de Turnos (`src/lib/turnoPriceSync.js`)
+- Creado módulo `syncActiveFutureTurnosPrices(prisma, targetTurnoId = null)`:
+  - Busca los precios vigentes de catálogo en `Zona`.
+  - Recalcula `valorTotal`, `bonificacion`, `saldoPendiente` y el array JSON `zonas` de las citas activas futuras (`SEÑADO`, `REPROGRAMADO`, `PENDIENTE_PAGO`, `PENDIENTE_AUTORIZACION`).
+  - Respeta zonas extras "Otros" y recalcula descuentos `%` o `$`.
+  - Blindado según D-25: turnos históricos (`REALIZADO`, `CANCELADO`, `NO_ASISTIO`) nunca se alteran.
+- **Integración**:
+  - `src/app/api/zonas/[id]/route.js`: disparado automáticamente tras cualquier actualización de precio de zona.
+  - `src/app/api/admin/turnos/route.js`: disparado en segundo plano al consultar citas.
+  - `src/app/admin/agenda/page.js`: tarjetas `.neocitaCard` y cabecera diaria `totalRevenue` calculan con precios actualizados dinámicamente.
+- **Sincronización en Base de Datos**:
+  - Ejecutado script que actualizó 40 turnos en `agenda_db` (Producción) y 21 turnos en `agenda_db_staging` (Staging).
+
+#### 2. Buscador Opcional de Cliente en Alta Rápida de Turno (`src/app/admin/alta-turno/page.js`)
+- Incorporada la tarjeta `👤 Cliente (Opcional)` al inicio del formulario cuando `modo === 'nuevo'`.
+- Autocompletado reactivo contra `/api/admin/clientes` por nombre, teléfono o DNI.
+- Al seleccionar cliente, se leen sus citas previas, se extraen y tildan sus zonas habituales en el catálogo, se precarga la duración de la sesión y se transfieren sus datos (ID, nombre, WhatsApp, email, DNI, frecuencia, descuentos) por URL hacia `/admin/agenda`.
+- Si no se selecciona cliente, el formulario sigue 100% abierto y manual.
+
+#### 3. Scroll Suave Automático en Gestión de Usuarios (`src/app/admin/configuracion/page.js`)
+- En `handleOpenNewUser` y `handleOpenEditUser`:
+  `document.getElementById('userFormSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });`
+- Al cancelar o guardar (`handleCloseUserModal`), retorno suave hacia `#userCardsGridSection`.
+
+---
+
+### Verificación y Despliegue:
+- Compilación Next.js Turbopack validada localmente y en el servidor (48/48 rutas OK).
+- Commiteado y empujado a GitHub en ramas `main` y `staging` (`6b15675`).
+- Desplegado en VPS Hostinger (`187.127.9.216`):
+  - Staging (puerto 3008): HTTP 200 OK.
+  - Producción (puerto 3006, `https://agenda.depilacionparahombres.com`): HTTP 200 OK.
+- Sincronizados 40 turnos en PostgreSQL de producción y 21 en staging.
+- Registrada Decisión `D-164 🔒 LOCKED` en `.synapse/decisions.md`.
