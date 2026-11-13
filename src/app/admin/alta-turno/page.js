@@ -36,6 +36,13 @@ function AltaTurnoContent() {
   const prevTurnoIdParam = searchParams.get('prevTurnoId');
   const señaParam = searchParams.get('seña') ?? searchParams.get('valorSeña');
 
+  // 0. Optional Client Selection (for 'nuevo' mode)
+  const [allClients, setAllClients] = useState([]);
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [clientAutoInfo, setClientAutoInfo] = useState(null);
+
   // 1. Zones Catalog & Selection
   const [zones, setZones] = useState([]);
   const [selectedZoneIds, setSelectedZoneIds] = useState([]);
@@ -175,6 +182,94 @@ function AltaTurnoContent() {
       })
       .catch(err => console.error('Error fetching config:', err));
   }, []);
+
+  // Fetch clients for optional autocomplete in 'nuevo' mode
+  useEffect(() => {
+    if (modo === 'nuevo') {
+      fetch('/api/admin/clientes')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setAllClients(data);
+        })
+        .catch(err => console.error('Error fetching clients for alta-turno:', err));
+    }
+  }, [modo]);
+
+  // Filter clients by search query
+  const filteredClients = useMemo(() => {
+    if (!clientSearchQuery.trim()) return [];
+    const q = clientSearchQuery.toLowerCase().trim();
+    return allClients.filter(c => 
+      c.nombreCompleto?.toLowerCase().includes(q) ||
+      c.whatsapp?.includes(q) ||
+      (c.dni && c.dni.includes(q)) ||
+      (c.email && c.email.toLowerCase().includes(q))
+    ).slice(0, 8);
+  }, [allClients, clientSearchQuery]);
+
+  // Select client & autocomplete habitual zones, duration and notes
+  const handleSelectClient = (client) => {
+    setSelectedClient(client);
+    setClientSearchQuery('');
+    setIsClientDropdownOpen(false);
+
+    // Find latest appointment
+    const sortedTurnos = (client.turnos || []).slice().sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    const lastTurno = sortedTurnos.find(t => t.estado === 'REALIZADO' || t.estado === 'SEÑADO' || t.estado === 'REPROGRAMADO') || sortedTurnos[0];
+
+    let zoneCount = 0;
+    if (lastTurno && lastTurno.zonas) {
+      let parsedZones = [];
+      try {
+        parsedZones = typeof lastTurno.zonas === 'string' ? JSON.parse(lastTurno.zonas) : (lastTurno.zonas || []);
+      } catch {
+        parsedZones = [];
+      }
+
+      const matchedIds = [];
+      let detectedOtros = false;
+      let detectedOtrosTexto = '';
+      let detectedOtrosPrecio = 0;
+
+      parsedZones.forEach(pz => {
+        const pzName = (pz.nombre || pz.name || '').toLowerCase().trim();
+        if (pzName.includes('otro')) {
+          detectedOtros = true;
+          detectedOtrosTexto = pz.nombre || '';
+          detectedOtrosPrecio = Number(pz.precio || 0);
+          return;
+        }
+        const match = zones.find(z => 
+          (pz.id && z.id === pz.id) || 
+          z.nombre.toLowerCase().trim() === pzName
+        );
+        if (match && !matchedIds.includes(match.id)) {
+          matchedIds.push(match.id);
+        }
+      });
+
+      if (matchedIds.length > 0) {
+        setSelectedZoneIds(matchedIds);
+        zoneCount = matchedIds.length;
+      }
+      if (detectedOtros) {
+        setHasOtros(true);
+        setOtrosTexto(detectedOtrosTexto);
+        setOtrosPrecio(detectedOtrosPrecio);
+      }
+      if (lastTurno.duracionMinutos || lastTurno.duracion) {
+        setCustomDuration(lastTurno.duracionMinutos || lastTurno.duracion);
+      }
+    }
+
+    setClientAutoInfo(`✓ Datos autocompletados: ${zoneCount > 0 ? `${zoneCount} zonas habituales, ` : ''}duración y datos de contacto.`);
+  };
+
+  const handleClearClient = () => {
+    setSelectedClient(null);
+    setClientAutoInfo(null);
+    setClientSearchQuery('');
+  };
 
   // Compute calculated duration and values
   const activeZoneObjs = useMemo(() => {
@@ -443,6 +538,15 @@ function AltaTurnoContent() {
       hasOtros: hasOtros ? 'true' : 'false',
       otrosTexto: otrosTexto || '',
       otrosPrecio: otrosPrecio.toString(),
+      ...(selectedClient ? {
+        clienteId: selectedClient.id,
+        nombre: selectedClient.nombreCompleto || '',
+        whatsapp: selectedClient.whatsapp || '',
+        email: selectedClient.email || '',
+        dni: selectedClient.dni || '',
+        frecuencia: (selectedClient.frecuencia || 4).toString(),
+        ...(selectedClient.descuentoTipo ? { descuentoTipo: selectedClient.descuentoTipo, descuentoValor: (selectedClient.descuentoValor || 0).toString() } : {})
+      } : {}),
       ...(hasExplicitSeña ? { seña: displaySeña.toString() } : {})
     });
     window.location.href = `/admin/agenda?${params.toString()}`;
@@ -489,6 +593,110 @@ function AltaTurnoContent() {
           Encontrá horarios libres al instante filtrando por zonas requeridas, franjas horarias y días específicos.
         </p>
       </div>
+
+      {/* Optional Client Search Card (Mode: nuevo) */}
+      {modo === 'nuevo' && (
+        <div className={styles.clientSearchCard}>
+          <div className={styles.clientSearchHeader}>
+            <span className={styles.clientSearchTitle}>👤 Cliente (Opcional)</span>
+            {selectedClient ? (
+              <span className={styles.clientTagBadge}>✓ Cliente seleccionado</span>
+            ) : (
+              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Buscá para autocompletar zonas y datos</span>
+            )}
+          </div>
+
+          {!selectedClient ? (
+            <div className={styles.clientSearchWrapper}>
+              <div className={styles.clientSearchInputBox}>
+                <span className={styles.clientSearchIcon}>🔍</span>
+                <input
+                  type="text"
+                  className={styles.clientSearchInput}
+                  placeholder="Buscar cliente por nombre, WhatsApp o DNI (opcional)..."
+                  value={clientSearchQuery}
+                  onChange={(e) => {
+                    setClientSearchQuery(e.target.value);
+                    setIsClientDropdownOpen(true);
+                  }}
+                  onFocus={() => {
+                    if (clientSearchQuery.trim()) setIsClientDropdownOpen(true);
+                  }}
+                />
+                {clientSearchQuery && (
+                  <button
+                    type="button"
+                    className={styles.clientSearchClearBtn}
+                    onClick={() => {
+                      setClientSearchQuery('');
+                      setIsClientDropdownOpen(false);
+                    }}
+                    title="Limpiar búsqueda"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {isClientDropdownOpen && filteredClients.length > 0 && (
+                <div className={styles.clientDropdown}>
+                  {filteredClients.map(c => {
+                    const lastT = (c.turnos || [])[0];
+                    return (
+                      <div
+                        key={c.id}
+                        className={styles.clientOption}
+                        onClick={() => handleSelectClient(c)}
+                      >
+                        <div>
+                          <div className={styles.clientOptionName}>{c.nombreCompleto}</div>
+                          <div className={styles.clientOptionMeta}>
+                            <span>📱 {c.whatsapp}</span>
+                            {c.dni && <span> • DNI {c.dni}</span>}
+                          </div>
+                        </div>
+                        {lastT && (
+                          <div className={styles.clientOptionLast}>
+                            <span>Último: {new Date(lastT.fecha).toLocaleDateString('es-AR')}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={styles.clientSelectedBox}>
+              <div className={styles.clientSelectedInfo}>
+                <span className={styles.clientSelectedAvatar}>👤</span>
+                <div>
+                  <div className={styles.clientSelectedName}>{selectedClient.nombreCompleto}</div>
+                  <div className={styles.clientSelectedMeta}>
+                    <span>📱 {selectedClient.whatsapp}</span>
+                    {selectedClient.email && <span> • ✉️ {selectedClient.email}</span>}
+                    {selectedClient.dni && <span> • DNI {selectedClient.dni}</span>}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.clientRemoveBtn}
+                onClick={handleClearClient}
+                title="Quitar cliente seleccionado"
+              >
+                ✕ Quitar
+              </button>
+            </div>
+          )}
+
+          {clientAutoInfo && (
+            <div className={styles.clientSuccessNotice}>
+              {clientAutoInfo}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Top Filter Cards */}
       <div className={styles.filtersGrid}>

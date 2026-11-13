@@ -5,6 +5,7 @@ import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
 import { normalizeWhatsApp, sendWhatsAppMessage, parseTemplate } from '@/lib/whatsapp.js';
+import { syncActiveFutureTurnosPrices } from '@/lib/turnoPriceSync.js';
 
 // Convert HH:MM to minutes from midnight
 import { ensureDefaultBox } from '../boxes/route';
@@ -185,6 +186,9 @@ export async function GET(request) {
         duracionMinutos: realDuration
       };
     });
+
+    // Sincronizar en segundo plano precios de turnos futuros si el catálogo de zonas fue actualizado (D-164)
+    syncActiveFutureTurnosPrices(prisma).catch(err => console.error('Error background price sync:', err));
 
     return NextResponse.json(sanitizedTurnos);
   } catch (error) {

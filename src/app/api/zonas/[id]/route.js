@@ -33,6 +33,10 @@ export async function PUT(request, { params }) {
       }
     });
 
+    // Auto-sincronizar precios en turnos activos futuros (D-164)
+    const { syncActiveFutureTurnosPrices } = await import('@/lib/turnoPriceSync.js');
+    syncActiveFutureTurnosPrices(prisma).catch(err => console.error('Error auto-syncing prices after zone update:', err));
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating zone:', error);

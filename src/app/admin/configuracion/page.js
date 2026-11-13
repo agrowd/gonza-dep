@@ -1104,6 +1104,12 @@ export default function ConfiguracionPage() {
       boxPredeterminadoId: ''
     });
     setIsUserModalOpen(true);
+    setTimeout(() => {
+      const el = document.getElementById('userFormSection');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
   };
 
   const handleOpenEditUser = (u) => {
@@ -1129,6 +1135,22 @@ export default function ConfiguracionPage() {
       boxPredeterminadoId: u.boxPredeterminadoId || ''
     });
     setIsUserModalOpen(true);
+    setTimeout(() => {
+      const el = document.getElementById('userFormSection');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
+  };
+
+  const handleCloseUserModal = () => {
+    setIsUserModalOpen(false);
+    setTimeout(() => {
+      const grid = document.getElementById('userCardsGridSection');
+      if (grid) {
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   };
 
   const handleToggleUserActive = async (u) => {
@@ -1177,7 +1199,7 @@ export default function ConfiguracionPage() {
       const data = await res.json();
       if (res.ok) {
         showToast(editingUser ? 'Usuario actualizado con éxito.' : 'Usuario creado con éxito.');
-        setIsUserModalOpen(false);
+        handleCloseUserModal();
         fetchUsers();
       } else {
         showToast(data.error || 'Error al guardar usuario.', 'error');
@@ -3533,11 +3555,11 @@ export default function ConfiguracionPage() {
 
       {/* User Create / Edit Modal */}
       {isUserModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsUserModalOpen(false)}>
+        <div className="modal-overlay" id="userFormSection" onClick={handleCloseUserModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h3>{editingUser ? 'Editar Usuario / Operador' : 'Nuevo Usuario / Operador'}</h3>
-              <button className="modal-close" onClick={() => setIsUserModalOpen(false)}>&times;</button>
+              <button className="modal-close" onClick={handleCloseUserModal}>&times;</button>
             </div>
             <form onSubmit={handleSaveUser}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -3836,7 +3858,7 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
               <div className="modal-footer" style={{ justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsUserModalOpen(false)}>Cancelar</button>
+                <button type="button" className="btn btn-secondary" onClick={handleCloseUserModal}>Cancelar</button>
                 <button type="submit" className="btn btn-primary">{editingUser ? 'Guardar Cambios' : 'Crear Usuario'}</button>
               </div>
             </form>

@@ -3724,7 +3724,7 @@ export default function AgendaPage() {
 
               const totalRevenue = !isFilteredView && daySenas?.totalRevenue !== undefined
                 ? Number(daySenas.totalRevenue)
-                : dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorTotal || 0), 0);
+                : dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(getUpdatedTurnoPrices(a).valorTotal || a.valorTotal || 0), 0);
 
               const totalSenas = dayApps.filter(a => a.estado !== 'CANCELADO' && a.estado !== 'NO_ASISTIO').reduce((sum, a) => sum + Number(a.valorSeña || 0), 0);
               const totalSaldos = Math.max(0, totalRevenue - totalSenas);
@@ -4305,19 +4305,23 @@ export default function AgendaPage() {
                                   <strong>Zonas:</strong> {zonasText || 'Sin zonas'}
                                 </div>
 
-                                {currentUserRole !== 'OPERADOR' && (
-                                  <div className={styles.neocitaFinancialRow}>
-                                    <div className={styles.neocitaFinItem}>
-                                      <span style={{ color: 'var(--text-secondary)' }}>Total:</span>
-                                      <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>${Number(app.valorTotal || 0).toLocaleString('es-ES')}</span>
+                                {currentUserRole !== 'OPERADOR' && (() => {
+                                  const dynAppPrices = getUpdatedTurnoPrices(app);
+                                  const cardTotal = dynAppPrices.valorTotal || app.valorTotal || 0;
+                                  return (
+                                    <div className={styles.neocitaFinancialRow}>
+                                      <div className={styles.neocitaFinItem}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>Total:</span>
+                                        <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>${Number(cardTotal).toLocaleString('es-ES')}</span>
+                                      </div>
+                                      {app.descuentoTipo && app.descuentoTipo !== 'NINGUNO' && (
+                                        <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(239, 83, 80, 0.15)', color: '#ef5350', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, marginLeft: 'auto' }}>
+                                          🏷️ {app.descuentoTipo === 'PORCENTAJE' ? `${app.descuentoValor}% OFF` : `$${app.descuentoValor} OFF`}
+                                        </span>
+                                      )}
                                     </div>
-                                    {app.descuentoTipo && app.descuentoTipo !== 'NINGUNO' && (
-                                      <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(239, 83, 80, 0.15)', color: '#ef5350', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, marginLeft: 'auto' }}>
-                                        🏷️ {app.descuentoTipo === 'PORCENTAJE' ? `${app.descuentoValor}% OFF` : `$${app.descuentoValor} OFF`}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
+                                  );
+                                })()}
                               </div>
                             </div>
                           );
