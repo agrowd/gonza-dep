@@ -2020,3 +2020,33 @@
    - En `src/lib/pdfExport.js`, se implementó el despacho mediante la Web Share API nativa (`navigator.share({ files: [pdfFile] })`), permitiendo a Safari en iOS desplegar de inmediato la opción de "Guardar en Archivos" o enviar directamente a la impresora Wi-Fi (AirPrint), con fallback a apertura segura de pestaña `window.open` para el resto de navegadores móviles.
 6. **Auditoría de Inasistencia**:
    - Al marcar un turno como `NO_ASISTIO`, se genera automáticamente la etiqueta de auditoría `[Ausente - Pierde seña de $... - Nombre (Rol)]`, garantizando que al agendar un nuevo turno futuro el sistema advierta que el cliente perdió la seña por inasistencia en su turno anterior.
+
+---
+
+## 📅 Sesión: 13 de Noviembre de 2026 - Diferenciación Visual de Turnos Libres en Agenda Diaria (D-163)
+
+### Requerimiento de Gonzalo Siri en WhatsApp (`media_1794576418741_1e084ba7.png`):
+> *"El color de fondo de turno libre lo podes hacer diferente al resto? Es similar al de reprogramado"*
+
+### Diagnóstico del Problema:
+- En la vista de agenda diaria móvil (`/admin/agenda`), los turnos con estado `REPROGRAMADO` utilizaban una tarjeta con fondo pastel naranja/ámbar (`#fff3e0`) y borde lateral naranja (`#ef6c00`).
+- Los espacios libres entre turnos (`.neocitaFreeSlot`) utilizaban también un fondo ámbar claro (`#fffbeb`) con borde discontinuo ámbar (`#f59e0b`) e icono `🟡`, lo que provocaba que en pantallas de teléfonos móviles ambos elementos parecieran prácticamente idénticos a simple vista.
+
+### Solución Implementada:
+1. **Diseño Visual de Turno Libre (`src/app/admin/agenda/agenda.module.css`)**:
+   - **Fondo**: Blanco puro neutral (`#ffffff`), representativo de un espacio vacío / disponible para agendar.
+   - **Bordes**: Borde discontinuo pizarra suave (`1.5px dashed #94a3b8`) con acento lateral pizarra oscuro (`border-left: 6px solid #475569`).
+   - **Tipografía y Horario**: Texto en pizarra oscuro (`#0f172a`), eliminando los tonos ámbar.
+   - **Píldora de Duración**: Fondo gris neutral claro (`#f1f5f9`), borde `#cbd5e1` y texto slate `#475569`.
+   - **Estado y Disponibilidad**: Texto destacado en verde éxito (`#16a34a`, font-weight 700).
+   - **Interacción (`:hover`)**: Fondo pizarra ultra suave (`#f8fafc`) y bordes oscurecidos a `#64748b` y `#334155`.
+2. **Icono en la Agenda Diaria (`src/app/admin/agenda/page.js`)**:
+   - Se reemplazó el icono amarillo `🟡` por el punto verde `🟢` (`🟢 Libre`), unificando la convención visual con la planilla de impresión oficial.
+
+### Verificación y Despliegue:
+- Compilación Next.js Turbopack exitosa (48/48 rutas generadas sin errores).
+- Commiteado y empujado a GitHub en ramas `main` y `staging` (`51ef73d`).
+- Desplegado en VPS Hostinger (`187.127.9.216`):
+  - Staging (puerto 3008): HTTP 200 OK.
+  - Producción (puerto 3006, `https://agenda.depilacionparahombres.com`): HTTP 200 OK.
+- Registrada Decisión `D-163 🔒 LOCKED` en `.synapse/decisions.md`.

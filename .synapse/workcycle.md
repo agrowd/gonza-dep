@@ -2808,3 +2808,33 @@
 - [x] **Despliegue en VPS**:
   - Ejecutado despliegue completo en Staging (puerto 3008) y Producción (puerto 3006). Base de datos 'agenda_db' y 'agenda_db_staging' sincronizadas con éxito. Verificada respuesta HTTP 200 OK.
 - [x] **Documentación**: Registrado 'D-162 🔒 LOCKED' en '.synapse/decisions.md'.
+
+## Ciclo de Trabajo: 13 de Noviembre de 2026 - Diferenciación Visual de Turnos Libres en Agenda Diaria (D-163)
+- [x] **Requerimiento**:
+  - Gonzalo Siri en WhatsApp (`media_1794576418741_1e084ba7.png`): *"El color de fondo de turno libre lo podes hacer diferente al resto? Es similar al de reprogramado"*.
+- [x] **Causa Raíz Diagnosticada**:
+  - En la vista diaria móvil (`/admin/agenda`), los turnos con estado `REPROGRAMADO` utilizaban fondo pastel ámbar/naranja (`#fff3e0`) y borde lateral naranja (`#ef6c00`).
+  - Los slots de disponibilidad (`.neocitaFreeSlot`) utilizaban fondo ámbar claro (`#fffbeb`), borde discontinuo ámbar (`#f59e0b`) e icono `🟡`, viéndose casi indistinguibles de una cita reprogramada en pantallas de smartphones.
+- [x] **Solución Implementada**:
+  1. **Nuevo Estilo Visual en `src/app/admin/agenda/agenda.module.css`**:
+     - Fondo blanco puro neutral (`background-color: #ffffff`).
+     - Borde discontinuo pizarra (`border: 1.5px dashed #94a3b8`).
+     - Acento lateral pizarra oscuro (`border-left: 6px solid #475569`).
+     - Sombra suave (`box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05)`).
+     - Tipografía de horario en pizarra oscuro (`color: #0f172a`).
+     - Duración en píldora neutral limpia (`background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #475569`).
+     - Etiqueta de estado en verde éxito (`color: #16a34a; font-weight: 700`).
+     - Efecto `:hover` sutil en pizarra claro (`background-color: #f8fafc; border-color: #64748b; border-left-color: #334155`).
+  2. **Icono de Disponibilidad en `src/app/admin/agenda/page.js`**:
+     - Actualizado de `🟡` a `🟢` (`🟢 Libre`), coincidiendo con la estética de disponibilidad de la planilla imprimible.
+- [x] **Validación y Compilación**:
+  - Compilación Next.js Turbopack validada localmente (48/48 rutas OK).
+- [x] **Control de Versiones y Despliegue en VPS**:
+  - Commit `51ef73d`: `fix: nuevo color de fondo blanco neutral y borde pizarra para turnos libres en agenda diaria (D-163)`.
+  - Push exitoso a ramas `main` y `staging`.
+  - Despliegue completado con `deploy_full_safe.mjs` en Staging (puerto 3008) y Producción (puerto 3006).
+  - Verificada respuesta HTTP 200 OK en `https://agenda.depilacionparahombres.com` y `http://187.127.9.216:3008`.
+- [x] **Documentación**:
+  - Registrado `D-163 🔒 LOCKED` en `.synapse/decisions.md`.
+  - Registrado ciclo de trabajo en `.synapse/workcycle.md`.
+  - Actualizado `chat.md`.
