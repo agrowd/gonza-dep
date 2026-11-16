@@ -61,7 +61,7 @@ async function main() {
     { key: "wtsp_confirmation_template", value: "¡Hola [Nombre]! Tu reserva para el día [Día] [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
     { key: "wtsp_confirmation_manual_template", value: "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] para [Zonas] fue agendado con éxito. Recordá venir afeitado al ras. ¡Te esperamos!" },
     { key: "wtsp_noshow_template", value: "¡Hola [Nombre]! Lamentamos que no hayas asistido a tu turno del día [Día] [FechaTurno] a las [Horario]. Según nuestras políticas, la seña de [Seña] no es reembolsable para cubrir los costos del horario reservado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web." },
-    { key: "wtsp_cancellation_template", value: "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!" },
+    { key: "wtsp_cancellation_template", value: "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nTené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada se pierde y no es reembolsable.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com" },
     { key: "wtsp_reschedule_template", value: "¡Hola [Nombre]! Tu turno fue reprogramado con éxito para el día [Día] [FechaTurno] a las [Horario] para [Zonas]. Recordá venir afeitado al ras. ¡Te esperamos!" },
     { key: "address", value: "Paraná 597, piso 8, depto 48" },
     { key: "work_start", value: "12:30" },

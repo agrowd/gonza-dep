@@ -6841,9 +6841,11 @@ export default function AgendaPage() {
                     placeholder="Ej. Juan"
                     autoComplete="off"
                   />
-                  {showAutocomplete && newTurno.nombre && allClients.filter(c =>
-                    c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase())
-                  ).length > 0 && (
+                  {showAutocomplete && newTurno.nombre && allClients.filter(c => {
+                    const normQ = (newTurno.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+                    const normName = (c.nombreCompleto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                    return normName.includes(normQ);
+                  }).length > 0 && (
                     <ul style={{
                       position: 'absolute',
                       top: '100%',
@@ -6861,7 +6863,11 @@ export default function AgendaPage() {
                       boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                     }}>
                       {allClients
-                        .filter(c => c.nombreCompleto.toLowerCase().includes(newTurno.nombre.toLowerCase()))
+                        .filter(c => {
+                          const normQ = (newTurno.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+                          const normName = (c.nombreCompleto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                          return normName.includes(normQ);
+                        })
                         .map(client => (
                           <li
                             key={client.id}

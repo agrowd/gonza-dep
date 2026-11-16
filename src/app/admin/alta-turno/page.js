@@ -195,16 +195,20 @@ function AltaTurnoContent() {
     }
   }, [modo]);
 
-  // Filter clients by search query
+  // Filter clients by search query (accent/diacritic-resilient)
   const filteredClients = useMemo(() => {
     if (!clientSearchQuery.trim()) return [];
-    const q = clientSearchQuery.toLowerCase().trim();
-    return allClients.filter(c => 
-      c.nombreCompleto?.toLowerCase().includes(q) ||
-      c.whatsapp?.includes(q) ||
-      (c.dni && c.dni.includes(q)) ||
-      (c.email && c.email.toLowerCase().includes(q))
-    ).slice(0, 8);
+    const q = clientSearchQuery.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    return allClients.filter(c => {
+      const normName = (c.nombreCompleto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const normEmail = (c.email || '').toLowerCase();
+      return (
+        normName.includes(q) ||
+        (c.whatsapp && c.whatsapp.includes(q)) ||
+        (c.dni && c.dni.includes(q)) ||
+        normEmail.includes(q)
+      );
+    }).slice(0, 8);
   }, [allClients, clientSearchQuery]);
 
   // Select client & autocomplete habitual zones, duration and notes

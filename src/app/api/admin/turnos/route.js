@@ -329,6 +329,10 @@ export async function POST(request) {
         });
       } else {
         const updateClientData = {};
+        if (nombreCompleto && nombreCompleto.trim() && nombreCompleto.trim() !== clientRecord.nombreCompleto) {
+          updateClientData.nombreCompleto = nombreCompleto.trim();
+          clientRecord.nombreCompleto = nombreCompleto.trim();
+        }
         if (email && email.trim() && email.trim() !== clientRecord.email) {
           updateClientData.email = email.trim();
           clientRecord.email = email.trim();

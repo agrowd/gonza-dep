@@ -811,7 +811,8 @@ export async function PUT(request, { params }) {
             where: { key: 'address' }
           });
 
-          let templateVal = wppCancelConfig?.value || "¡Hola [Nombre]! Tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Si querés agendar un nuevo turno, podés hacerlo desde nuestra web. ¡Saludos!";
+          const defaultCancelTpl = "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nTené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada se pierde y no es reembolsable.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
+          let templateVal = wppCancelConfig?.value || defaultCancelTpl;
           if (body.preserveDeposit && Number(updatedTurno.valorSeña) > 0) {
             templateVal = "¡Hola [Nombre]! Te informamos que tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Tu seña de $[Seña] queda registrada A TU FAVOR para tu próxima sesión. Comunicate con nosotros cuando desees coordinar tu nueva cita. ¡Saludos!";
           }

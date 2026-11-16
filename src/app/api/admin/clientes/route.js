@@ -21,17 +21,52 @@ export async function GET(request) {
     const operadorFilter = searchParams.get('operadorId') || 'ALL';
 
 
+    // Helper to normalize strings (remove accents / diacritics and lower case)
+    const stripAccents = (str) => {
+      return (str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    };
+
     // Query builder
     let whereClause = {};
 
-    // Search by name, email, whatsapp, or dni
+    // Search by name, email, whatsapp, or dni (accent-insensitive via unaccent in PostgreSQL with fallback)
+    let usedRawSearch = false;
     if (search) {
-      whereClause.OR = [
-        { nombreCompleto: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { whatsapp: { contains: search, mode: 'insensitive' } },
-        { dni: { contains: search, mode: 'insensitive' } }
-      ];
+      let matchedIds = null;
+      try {
+        const pattern = `%${search}%`;
+        const cleanDigits = search.replace(/\D/g, '');
+        const digitsPattern = cleanDigits.length >= 6 ? `%${cleanDigits}%` : '';
+
+        const rawMatches = await prisma.$queryRawUnsafe(
+          'SELECT id FROM "Cliente" WHERE unaccent("nombreCompleto") ILIKE unaccent($1) OR "whatsapp" ILIKE $1 OR ($2 <> \'\' AND "whatsapp" ILIKE $2) OR "email" ILIKE $1 OR "dni" ILIKE $1',
+          pattern,
+          digitsPattern
+        );
+        if (Array.isArray(rawMatches)) {
+          matchedIds = rawMatches.map(r => r.id);
+          usedRawSearch = true;
+        }
+      } catch (err) {
+        // Fallback if unaccent or raw query is unavailable (e.g. SQLite in local dev)
+        matchedIds = null;
+        usedRawSearch = false;
+      }
+
+      if (matchedIds !== null) {
+        whereClause.id = { in: matchedIds };
+      } else {
+        whereClause.OR = [
+          { nombreCompleto: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { whatsapp: { contains: search, mode: 'insensitive' } },
+          { dni: { contains: search, mode: 'insensitive' } }
+        ];
+      }
     }
 
     // Load clients

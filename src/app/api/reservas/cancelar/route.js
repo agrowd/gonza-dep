@@ -130,7 +130,8 @@ export async function POST(request) {
         const addressConfig = await prisma.configuracion.findUnique({
           where: { key: 'address' }
         });
-        const wppTemplate = wppCancelConfig?.value || "¡Hola [Nombre]! Tu turno del [FechaTurno] a las [Horario] fue cancelado con éxito.";
+        const defaultCancelTpl = "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nTené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada se pierde y no es reembolsable.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
+        const wppTemplate = wppCancelConfig?.value || defaultCancelTpl;
         const wppMsg = parseWppTemplate(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
 
         if (updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
