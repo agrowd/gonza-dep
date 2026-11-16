@@ -2862,3 +2862,27 @@
   - Registrado `D-164 🔒 LOCKED` en `.synapse/decisions.md`.
   - Registrado ciclo de trabajo en `.synapse/workcycle.md`.
   - Actualizado `chat.md`.
+
+
+## Sesión 16/11/2026 - Corrección de Alta de Turno "Ramon", Búsqueda con Unaccent y Normalización Diacrítica (D-165)
+
+### Contexto y Reporte
+Gonzalo Siri reportó en WhatsApp (`media_1794869221478_f163ae8c.jpg` a `media_1794869257533_fb16ca41.jpg`): *"No reconoce un alta nueva que hice"*.
+- Modal "Agendar Nuevo Turno" con Nombre: "Ramon".
+- Búsqueda en `/admin/clientes` con "Ramon": *"No se encontraron clientes con los filtros aplicados."*
+- Turno del 19 de Noviembre de 2026 14:30 hs: Cliente: "Ramón José González".
+
+### Hallazgos de Investigación (Root Causes)
+1. **Discrepancia en Base de Datos**: El cliente asociado al teléfono `5491139142336` (`id = db65db14-105f-4bc9-948e-070a1c3b4c17`) tenía en PostgreSQL `nombreCompleto: "Jose González"`.
+2. **Omisión de Actualización de Nombre en Alta de Turno**: En `src/app/api/admin/turnos/route.js`, al crear un turno manual para un cliente existente por teléfono o email, el backend actualizaba teléfono, email y DNI, pero omitía `nombreCompleto`.
+3. **Sensibilidad a Acentos en PostgreSQL**: En `src/app/api/admin/clientes/route.js`, Prisma `mode: 'insensitive'` se traduce a `ILIKE '%search%'` en PostgreSQL, que ignora mayúsculas/minúsculas pero es sensible a tildes (`'Ramón'` != `'Ramon'`). Al tipear "Ramon" desde un móvil, la base de datos devolvía 0 resultados.
+4. **Autocomplete en Frontend sin Normalización Diacrítica**: En `/admin/agenda` y `/admin/alta-turno`, los autocompletados en memoria comparaban con `.toLowerCase().includes(...)` sin quitar diacríticos con `normalize('NFD')`.
+
+### Cambios Realizados
+1. **PostgreSQL**: Se habilitó la extensión `unaccent` en `agenda_db` (producción) y `agenda_db_staging`.
+2. **Corrección de Cliente en BD**: Se actualizó el registro `db65db14-105f-4bc9-948e-070a1c3b4c17` a `"Ramón José González"`.
+3. **`src/app/api/admin/turnos/route.js`**: Se incorporó actualización de `nombreCompleto` cuando se crea un turno manual con un nombre corregido o más completo.
+4. **`src/app/api/admin/clientes/route.js`**: Se implementó búsqueda resiliente a tildes mediante `unaccent("nombreCompleto") ILIKE unaccent($1)` y matching numérico de teléfono limpio, con fallback diacrítico en memoria.
+5. **`src/app/admin/agenda/page.js` y `src/app/admin/alta-turno/page.js`**: Se normalizaron las cadenas con `.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()` en los buscadores y autocompletados de clientes.
+6. **Compilación y Despliegue**: Build exitoso local y en VPS. Despliegue con `deploy_full_safe.mjs` completado con código 0 y verificación HTTP 200 OK.
+7. **Verificación en Vivo**: Verificado con script que tanto `ramon` (sin tilde) como `Ramón` (con tilde) retornan `Ramón José González`.

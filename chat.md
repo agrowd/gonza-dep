@@ -2101,3 +2101,18 @@
   - Producción (puerto 3006, `https://agenda.depilacionparahombres.com`): HTTP 200 OK.
 - Sincronizados 40 turnos en PostgreSQL de producción y 21 en staging.
 - Registrada Decisión `D-164 🔒 LOCKED` en `.synapse/decisions.md`.
+
+
+### 16/11/2026 - Solución al error de búsqueda y alta de cliente Ramón José González (D-165)
+- **Reporte del cliente**: Gonzalo reportó en WhatsApp *"No reconoce un alta nueva que hice"*, mostrando que al buscar "Ramon" en Clientes daba 0 resultados y no autocompletaba al agendar nuevo turno, a pesar de tener el turno agendado para el 19 de noviembre como Ramón José González.
+- **Causa Raíz**:
+  1. En la BD el cliente había quedado registrado originalmente como "Jose González" (desde WhatsApp), y al crear el turno `POST /api/admin/turnos` no actualizaba el `nombreCompleto`.
+  2. En PostgreSQL, `mode: 'insensitive'` de Prisma se compila a `ILIKE '%search%'`, el cual es sensible a acentos/tildes (`'Ramón'` != `'Ramon'`). Al tipear en el celular "Ramon" (sin tilde), la base de datos no lo encontraba.
+  3. En el frontend de `/admin/agenda` y `/admin/alta-turno`, los autocompletados no eliminaban diacríticos con `normalize('NFD')`.
+- **Solución Implementada**:
+  1. Se habilitó la extensión `unaccent` en PostgreSQL (`agenda_db` y `agenda_db_staging`).
+  2. Se actualizó el cliente a `"Ramón José González"`.
+  3. En `POST /api/admin/turnos`, se agregó la actualización de `nombreCompleto` si el operador ingresa un nombre explícito.
+  4. En `GET /api/admin/clientes`, se implementó búsqueda con `unaccent("nombreCompleto") ILIKE unaccent($1)` y normalización numérica de teléfono.
+  5. En `/admin/agenda` y `/admin/alta-turno`, se normalizaron los textos eliminando acentos en tiempo real.
+  6. Desplegado y verificado en producción y staging con HTTP 200 OK.
