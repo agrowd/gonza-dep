@@ -457,9 +457,11 @@ export async function PUT(request, { params }) {
     // Append deposit preservation / loss tag to TURNO observaciones (exclusive to this session)
     if (estado === 'CANCELADO') {
       const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
+      let depositToPreserve = 0;
       if (Number(oldTurn.valorSeña) > 0) {
         if (body.preserveDeposit) {
           updateData.señaEstado = 'CONSERVADA';
+          depositToPreserve = Number(oldTurn.valorSeña);
           const creditTag = `[Cancelado - Seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - ${authorLabel}]`;
           if (!currentTurnoObs.includes(creditTag)) {
             updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${creditTag}`.trim() : creditTag;
@@ -480,10 +482,26 @@ export async function PUT(request, { params }) {
 
       // Al cancelar un turno, el cliente no debe quedar como FINALIZADO para evitar recordatorios de mantenimiento
       if (oldTurn.clienteId) {
+        let newSaldo = undefined;
+        if (depositToPreserve > 0) {
+          try {
+            const currentClient = await prisma.cliente.findUnique({
+              where: { id: oldTurn.clienteId },
+              select: { saldoAFavor: true }
+            });
+            newSaldo = Math.max(0, Number(currentClient?.saldoAFavor || 0) + depositToPreserve);
+          } catch (fetchErr) {
+            console.error('Error fetching client saldoAFavor:', fetchErr);
+          }
+        }
+
         await prisma.cliente.update({
           where: { id: oldTurn.clienteId },
-          data: { estado: 'ACTIVO' }
-        }).catch(err => console.error('Error resetting client status to ACTIVO upon cancellation:', err));
+          data: {
+            estado: 'ACTIVO',
+            ...(newSaldo !== undefined ? { saldoAFavor: newSaldo } : {})
+          }
+        }).catch(err => console.error('Error resetting client status / updating saldoAFavor to ACTIVO upon cancellation:', err));
       }
     } else if (estado === 'NO_ASISTIO') {
       // Inasistencia: el cliente pierde la seña abonada para cubrir costos logísticos

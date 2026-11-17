@@ -36,6 +36,7 @@ export default function SidebarNav({ user }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [wppStatus, setWppStatus] = useState(null);
+  const [pendingAutogestionCount, setPendingAutogestionCount] = useState(0);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -49,6 +50,23 @@ export default function SidebarNav({ user }) {
     };
     checkStatus();
     const interval = setInterval(checkStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchPendingAutogestion = async () => {
+      try {
+        const res = await fetch('/api/admin/autogestion-solicitudes?estado=PENDIENTE');
+        if (res.ok) {
+          const data = await res.json();
+          setPendingAutogestionCount(data.pendingCount || 0);
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    fetchPendingAutogestion();
+    const interval = setInterval(fetchPendingAutogestion, 25000);
     return () => clearInterval(interval);
   }, []);
 
@@ -66,6 +84,10 @@ const FlashIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
 );
 
+const InboxIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+);
+
 const DollarIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
 );
@@ -73,6 +95,7 @@ const DollarIcon = () => (
   const allNavItems = [
     { name: 'Alta de Turno', path: '/admin/alta-turno', icon: <FlashIcon />, roles: ['ADMIN', 'RECEPCION'] },
     { name: 'Agenda de Turnos', path: '/admin/agenda', icon: <CalendarIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
+    { name: 'Turnos Autogestión', path: '/admin/turnos-autogestion', icon: <InboxIcon />, roles: ['ADMIN', 'RECEPCION'], hasBadge: true },
     { name: 'Clientes', path: '/admin/clientes', icon: <UsersIcon />, roles: ['ADMIN', 'RECEPCION'] },
     { name: 'Estadísticas', path: '/admin/estadisticas', icon: <ChartIcon />, roles: ['ADMIN'] },
     { name: 'Gastos', path: '/admin/gastos', icon: <DollarIcon />, roles: ['ADMIN'] },
@@ -164,6 +187,23 @@ const DollarIcon = () => (
               >
                 {item.icon}
                 <span>{item.name}</span>
+                {item.hasBadge && pendingAutogestionCount > 0 && (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      backgroundColor: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '9999px',
+                      boxShadow: '0 1px 3px rgba(239, 68, 68, 0.4)',
+                      lineHeight: '1.2'
+                    }}
+                  >
+                    {pendingAutogestionCount}
+                  </span>
+                )}
                 {isNotifications && wppStatus && (
                   <span 
                     title={wppStatus === 'CONNECTED' ? 'WhatsApp Conectado' : 'WhatsApp Desconectado (Escanea QR)'} 

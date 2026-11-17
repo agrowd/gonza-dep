@@ -1599,6 +1599,10 @@ export default function AgendaPage() {
       const descuentoValorParam = searchParams.get('descuentoValor');
       const prevTurnoIdParam = searchParams.get('prevTurnoId');
       const señaParam = searchParams.get('seña') ?? searchParams.get('valorSeña');
+      const operadorIdParam = searchParams.get('operadorId');
+      const boxIdParam = searchParams.get('boxId');
+      const solicitudIdParam = searchParams.get('solicitudId');
+      const valorTotalParam = searchParams.get('valorTotal');
       const initialSeña = (señaParam !== null && señaParam !== undefined && señaParam !== '')
         ? Number(señaParam)
         : undefined;
@@ -1653,6 +1657,10 @@ export default function AgendaPage() {
           valorSeña: initialSeña !== undefined ? initialSeña : prev.valorSeña,
           manualSeñaOverride: initialSeña !== undefined ? initialSeña : prev.manualSeñaOverride,
           prevTurnoId: prevTurnoIdParam || null,
+          operadorId: operadorIdParam || prev.operadorId,
+          boxId: boxIdParam || prev.boxId,
+          solicitudId: solicitudIdParam || null,
+          ...(valorTotalParam ? { valorTotal: Number(valorTotalParam) } : {}),
           metodoPago: searchParams.get('metodoPago') || prev.metodoPago || 'TRANSFERENCIA'
         }));
         setIsNewOpen(true);

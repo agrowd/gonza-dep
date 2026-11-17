@@ -265,13 +265,115 @@ Quedo a la espera de los datos para realizar el pago de la seña y confirmar el 
 
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMessage)}`;
 
+    // 7. Resolve suggested operator for this request
+    let finalOpId = null;
+    let finalOpNombre = 'Gonzalo';
+
+    try {
+      const existingTurnoOnDay = await prisma.turno.findFirst({
+        where: {
+          fecha: { gte: targetDate, lt: nextDate },
+          estado: { notIn: ['CANCELADO', 'NO_ASISTIO'] },
+          operadorId: { not: null }
+        },
+        include: { operador: true }
+      });
+
+      if (existingTurnoOnDay?.operador) {
+        finalOpId = existingTurnoOnDay.operador.id;
+        finalOpNombre = existingTurnoOnDay.operador.nombre || 'Gonzalo';
+      } else {
+        const clientLastTurno = client?.id ? await prisma.turno.findFirst({
+          where: { clienteId: client.id, operadorId: { not: null } },
+          orderBy: { fecha: 'desc' },
+          include: { operador: true }
+        }) : null;
+
+        if (clientLastTurno?.operador) {
+          finalOpId = clientLastTurno.operador.id;
+          finalOpNombre = clientLastTurno.operador.nombre || 'Gonzalo';
+        } else {
+          const defaultAdminOp = await prisma.usuario.findFirst({
+            where: {
+              OR: [
+                { nombre: { contains: 'gonzalo', mode: 'insensitive' } },
+                { usuario: { contains: 'gonzalo', mode: 'insensitive' } },
+                { rol: 'ADMIN' }
+              ]
+            }
+          });
+          if (defaultAdminOp) {
+            finalOpId = defaultAdminOp.id;
+            finalOpNombre = defaultAdminOp.nombre || 'Gonzalo';
+          }
+        }
+      }
+    } catch (opErr) {
+      console.error('Error resolving operator for autogestion solicitud:', opErr);
+    }
+
+    // 8. Save or update queue request (SolicitudAutogestion)
+    // Avoid duplicates: if the same client has an existing PENDIENTE request, replace it with the new one
+    let savedSolicitud = null;
+    try {
+      const existingPendingSolicitud = await prisma.solicitudAutogestion.findFirst({
+        where: {
+          estado: 'PENDIENTE',
+          OR: [
+            ...(client?.id ? [{ clienteId: client.id }] : []),
+            ...(email ? [{ email: email.trim().toLowerCase() }] : []),
+            ...(finalWhatsapp ? [{ whatsapp: finalWhatsapp }] : [])
+          ]
+        }
+      });
+
+      const solicitudPayload = {
+        clienteId: client?.id || null,
+        nombreCompleto: client.nombreCompleto,
+        whatsapp: finalWhatsapp,
+        email: email.trim().toLowerCase(),
+        dni: dni ? dni.trim() : (client.dni || null),
+        fecha: targetDate,
+        fechaStr,
+        horaInicio,
+        horaFin,
+        duracionMinutos,
+        zonas: JSON.stringify(dbZones.map(z => ({ id: z.id, nombre: z.nombre, precio: z.precio, duracion: z.duracion }))),
+        zonasTexto: zonasNombres,
+        selectedZoneIds: (selectedZoneIds || []).join(','),
+        valorTotal,
+        valorSeña,
+        operadorId: finalOpId,
+        operadorNombre: finalOpNombre,
+        observaciones: observaciones ? observaciones.trim() : null,
+        estado: 'PENDIENTE'
+      };
+
+      if (existingPendingSolicitud) {
+        savedSolicitud = await prisma.solicitudAutogestion.update({
+          where: { id: existingPendingSolicitud.id },
+          data: solicitudPayload
+        });
+        console.log(`[Autogestión] Updated existing pending request ${savedSolicitud.id} for client ${client.nombreCompleto}`);
+      } else {
+        savedSolicitud = await prisma.solicitudAutogestion.create({
+          data: solicitudPayload
+        });
+        console.log(`[Autogestión] Created new pending request ${savedSolicitud.id} for client ${client.nombreCompleto}`);
+      }
+    } catch (solErr) {
+      console.error('Error persisting autogestion solicitud:', solErr);
+    }
+
     // Note: Conforme a la indicación de Luciano, NO se crea el Turno en base de datos
     // para no bloquear el slot en la agenda hasta que el cliente abone efectivamente la seña por WhatsApp.
     return NextResponse.json({
       success: true,
       clienteId: client.id,
       whatsappUrl,
+      solicitudId: savedSolicitud?.id || null,
       solicitud: {
+        id: savedSolicitud?.id || null,
         nombre: client.nombreCompleto,
         fecha: fechaStr,
         fechaLegible,
@@ -280,7 +382,8 @@ Quedo a la espera de los datos para realizar el pago de la seña y confirmar el 
         duracionMinutos,
         zonas: zonasNombres,
         valorTotal,
-        valorSeña
+        valorSeña,
+        operadorNombre: finalOpNombre
       }
     });
   } catch (error) {

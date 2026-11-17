@@ -512,7 +512,19 @@ export async function POST(request) {
       }
     }
 
-    // Si el cliente tenÃ­a saldo a favor que se aplicÃ³ a este nuevo turno, resetear saldoAFavor
+    if (body.solicitudId) {
+      try {
+        await prisma.solicitudAutogestion.update({
+          where: { id: String(body.solicitudId) },
+          data: { estado: 'AGENDADO' }
+        });
+        console.log(`[Turno Create] Solicitud autogestión ${body.solicitudId} marked as AGENDADO.`);
+      } catch (solErr) {
+        console.error('Error updating solicitud autogestión to AGENDADO:', solErr);
+      }
+    }
+
+    // Si el cliente tenía saldo a favor que se aplicó a este nuevo turno, resetear saldoAFavor
     if (finalClienteId) {
       await prisma.cliente.update({
         where: { id: finalClienteId },

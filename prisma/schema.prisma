@@ -63,6 +63,7 @@ model Cliente {
   turnos           Turno[]
   notificaciones   Notificacion[]
   conversaciones   ConversacionWsp[]
+  solicitudesAutogestion SolicitudAutogestion[]
 }
 
 model Turno {
@@ -301,4 +302,32 @@ model IaSyncLog {
   duracionMs          Int      @default(0)
   timestamp           DateTime @default(now())
 }
+
+model SolicitudAutogestion {
+  id              String    @id @default(uuid())
+  clienteId       String?
+  cliente         Cliente?  @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  nombreCompleto  String
+  whatsapp        String
+  email           String
+  dni             String?
+  fecha           DateTime
+  fechaStr        String    // "YYYY-MM-DD"
+  horaInicio      String    // "HH:MM"
+  horaFin         String    // "HH:MM"
+  duracionMinutos Int
+  zonas           String    // JSON string array o lista de zonas
+  zonasTexto      String    // "Axilas, Pecho y abdomen"
+  selectedZoneIds String?   // Comma-separated zone IDs for preselection
+  valorTotal      Float
+  valorSeña       Float
+  operadorId      String?
+  operadorNombre  String?   // "Gonzalo", "Luciano", etc.
+  boxId           String?
+  observaciones   String?
+  estado          String    @default("PENDIENTE") // "PENDIENTE", "AGENDADO", "DESCARTADO"
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
 
