@@ -2942,3 +2942,32 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - `duracionMinutos > 45`: se muestra junto al título sobre las zonas depiladas.
 3. Se reforzó el fallback de box en la vista diaria (tarjetas Neocita).
 4. Se validó la compilación Turbopack (50/50 rutas OK) y se desplegó en Staging y Producción.
+
+## Sesión 17/11/2026 - Planilla PDF con Número de Sesión, Imágenes de Bienvenida para Clientes Nuevos, Promociones por Cantidad y Cupones con Zonas (D-168)
+
+### Requerimientos Implementados
+1. **Número de Sesión en Planilla PDF de Turnos del Día (`/admin/agenda/imprimir`)**:
+   - Cómputo exacto: `numeroSesion = (Number(cliente.sesionesPrevias) || 0) + (cliente.turnos.filter(t => t.id !== turno.id).length) + 1`.
+   - Insignia destacada en formato cuadrado bordó (`#5c1817`, texto blanco) ubicada al lado del horario y valor.
+   - Reglas `-webkit-print-color-adjust: exact !important` inyectadas en CSS y en el clon de canvas A4 para impresiones limpias desde iPhone / AirPrint y exportaciones a PDF.
+2. **Envío Automático de 2 Imágenes de Bienvenida en WhatsApp a Clientes Nuevos**:
+   - Detecta si el cliente tiene 0 sesiones previas realizadas (`completedSessionsCount === 0`).
+   - Envía automáticamente Imagen 1 (Dirección y ubicación) e Imagen 2 (Indicaciones previas) en mensajes separados tras el texto de confirmación.
+   - ABM de imágenes en `/admin/configuracion` con previsualizaciones, subida a `/uploads/` y eliminación.
+   - Soporte para envío de `media` (`MessageMedia`) en relay `ia-gonzadep` (`http://localhost:3007/api/whatsapp/send`).
+3. **Scroll Suave Automático en Promociones y Cupones**:
+   - Al hacer clic en "+ Nueva Promoción" o "+ Nuevo Cupón" en `/admin/configuracion`, la pantalla se desplaza suavemente hasta el formulario de creación correspondiente (`#promoFormSection` y `#cuponFormSection`).
+4. **Promociones por Cantidad de Zonas vs Combinación de Zonas Específicas**:
+   - Campo `tipo` (`POR_ZONAS` vs `POR_CANTIDAD`) y `cantidadZonas` en `model Promocion`.
+   - Selector en el modal de promociones con validación adecuada.
+   - En agenda (`newTurno` y `editTurno`), detección reactiva de promociones por cantidad (ej: 3 zonas = 10% OFF, 4 o más zonas = 15% OFF) eligiendo la que otorgue el mejor beneficio.
+5. **Cupones con Zonas Precargadas en Autogestión Online (`/`)**:
+   - Campo `zonas` en `model Cupon`.
+   - Asignación opcional de zonas desde el panel de administración.
+   - Input interactivo de cupón en el flujo de reserva web: al ingresar un código válido con zonas asociadas, se seleccionan automáticamente las zonas, se aplica el descuento y se avanza de inmediato al Paso 3 (selección de fecha y horarios).
+
+### Validaciones y Despliegue
+- Compilación Next.js Turbopack validada localmente (50/50 rutas OK).
+- SQL migrations ejecutadas en PostgreSQL de `agenda_db` y `agenda_db_staging` en el VPS.
+- Relay `ia-gonzadep` actualizado y reiniciado en PM2 con soporte multimedia.
+- Despliegue automático con `scratch/deploy_full_safe.mjs` completado con código 0 y verificación HTTP 200 OK en Producción (`https://agenda.depilacionparahombres.com`) y Staging.

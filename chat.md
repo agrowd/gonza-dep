@@ -2137,3 +2137,20 @@
 - **Causa Raíz**: El 100% de los turnos en la base de datos poseen `boxId` asignado correctamente (`Box 1`), pero el frontend solo incluía el badge dentro de la condición `app.duracionMinutos <= 45` omitiéndolo en citas de 20 minutos (como Leonardo Ugartemendia) y citas largas > 45 min (Ivan Burgos 70 min, Sebastian Ruiz 60 min, Diego Bolemi 90 min, Pablo Dominguez 50 min).
 - **Solución**: Se incorporó el badge de Box con su color distintivo en todas las ramas de duración de la grilla semanal (`<= 25 min`, `<= 45 min`, `> 45 min`), garantizando visualización universal y uniforme.
 - **Despliegue**: Build exitoso (50/50 rutas OK), push a `main` y `staging`, y despliegue a producción y staging con HTTP 200 OK.
+
+---
+
+## Sesión 17/11/2026 - Planilla PDF con Número de Sesión, Imágenes de Bienvenida en WhatsApp, Promociones por Cantidad y Cupones con Zonas (D-168)
+- **Requerimientos**:
+  1. Mostrar el número de sesión (`sesiones realizadas previas + 1`) como una insignia destacada al lado del horario y valor en la planilla imprimible/PDF del día.
+  2. Enviar automáticamente 2 imágenes por WhatsApp (Dirección e Indicaciones) en mensajes separados exclusivamente a clientes nuevos (0 sesiones completadas) tras la confirmación del turno.
+  3. Desplazar la pantalla con scroll suave hasta el formulario al presionar "+ Nueva Promoción" o "+ Nuevo Cupón" en `/admin/configuracion`.
+  4. Soportar promociones por combinación de zonas específicas y también por cantidad de zonas (ej. 3 zonas = 10% OFF), con detección inteligente en agenda.
+  5. Cupones con zonas asociadas precargadas: al ingresarlo en autogestión, seleccionan automáticamente las zonas y avanzan directo a la elección de horario.
+- **Implementación**:
+  - `model Promocion` actualizado con `tipo` y `cantidadZonas`. `model Cupon` actualizado con `zonas`.
+  - Esquema y base de datos sincronizados en SQLite local y PostgreSQL de producción/staging en el VPS.
+  - Endpoints de subida de imágenes, configuración y validación actualizados.
+  - Relay de WhatsApp en `ia-gonzadep` actualizado para despachar archivos multimedia con `MessageMedia`.
+  - Autogestión web (`/`) actualizada con el módulo interactivo de cupón y precarga automática de zonas.
+- **Despliegue**: Compilación Turbopack validada (50/50 rutas OK) y despliegue completado con éxito con HTTP 200 OK.
