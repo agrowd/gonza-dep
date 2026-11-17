@@ -192,6 +192,36 @@
   padding: 0.5rem 0.5rem;
 }
 
+.timeCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.timeInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.sessionBadge {
+  background-color: #5c1817;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 800;
+  border-radius: 8px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
 .timeRange {
   white-space: nowrap;
   display: block;
@@ -446,6 +476,18 @@
 :global(.pdfCaptureA4) .timeValor {
   font-size: 0.75rem !important;
   margin-top: 2px !important;
+}
+
+:global(.pdfCaptureA4) .sessionBadge {
+  background-color: #5c1817 !important;
+  color: #ffffff !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 :global(.pdfCaptureA4) .clientName {

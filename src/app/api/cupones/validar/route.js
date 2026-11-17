@@ -32,13 +32,23 @@ export async function POST(request) {
       return NextResponse.json({ valido: false, error: 'Este cupón ha alcanzado el límite máximo de usos' }, { status: 400 });
     }
 
+    let zonasList = null;
+    if (cupon.zonas) {
+      try {
+        zonasList = typeof cupon.zonas === 'string' ? JSON.parse(cupon.zonas) : cupon.zonas;
+      } catch {
+        zonasList = null;
+      }
+    }
+
     return NextResponse.json({
       valido: true,
       cupon: {
         id: cupon.id,
         codigo: cupon.codigo,
         descuentoTipo: cupon.descuentoTipo,
-        descuentoValor: cupon.descuentoValor
+        descuentoValor: cupon.descuentoValor,
+        zonas: zonasList
       }
     });
   } catch (error) {

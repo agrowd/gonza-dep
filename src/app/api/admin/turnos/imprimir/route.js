@@ -48,16 +48,35 @@ export async function GET(request) {
     const turnos = await prisma.turno.findMany({
       where: whereClause,
       include: {
-        cliente: true,
+        cliente: {
+          include: {
+            turnos: {
+              where: { estado: 'REALIZADO' },
+              select: { id: true, estado: true }
+            }
+          }
+        },
         operador: true
       }
     });
 
-    // Filter turnos matching exact YYYY-MM-DD date string
+    // Filter turnos matching exact YYYY-MM-DD date string and compute session number (sesiones realizadas previas + 1)
     const filteredTurnos = turnos.filter(t => {
       if (!t.fecha) return false;
       const rawIsoStr = typeof t.fecha === 'string' ? t.fecha.split('T')[0] : t.fecha.toISOString().split('T')[0];
       return rawIsoStr === fecha;
+    }).map(t => {
+      const cliente = t.cliente;
+      let prevCount = 0;
+      if (cliente) {
+        const sesionesPrevias = Number(cliente.sesionesPrevias) || 0;
+        const realizedBefore = (cliente.turnos || []).filter(rt => rt.id !== t.id).length;
+        prevCount = sesionesPrevias + realizedBefore;
+      }
+      return {
+        ...t,
+        numeroSesion: prevCount + 1
+      };
     });
 
     // Fetch bloqueos for the date (only if not OPERADOR)

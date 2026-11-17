@@ -4,7 +4,7 @@ import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
-import { normalizeWhatsApp, sendWhatsAppMessage, parseTemplate } from '@/lib/whatsapp.js';
+import { normalizeWhatsApp, sendWhatsAppMessage, sendNewClientWelcomeImages, parseTemplate } from '@/lib/whatsapp.js';
 import { syncActiveFutureTurnosPrices } from '@/lib/turnoPriceSync.js';
 
 // Convert HH:MM to minutes from midnight
@@ -484,7 +484,14 @@ export async function POST(request) {
         notasGonzalo: finalNotasGonzalo
       },
       include: {
-        cliente: true,
+        cliente: {
+          include: {
+            turnos: {
+              where: { estado: 'REALIZADO' },
+              select: { id: true }
+            }
+          }
+        },
         box: true,
         operador: {
           select: {
@@ -610,6 +617,12 @@ export async function POST(request) {
         const msg = parseTemplate(templateVal, newTurno.cliente, newTurno, addressVal);
 
         await sendWhatsAppMessage(newTurno.cliente.whatsapp, msg);
+
+        // SOLO para clientes nuevos (0 sesiones realizadas en el sistema), enviar imágenes de bienvenida
+        const completedSessionsCount = (Number(newTurno.cliente?.sesionesPrevias) || 0) + (newTurno.cliente?.turnos ? newTurno.cliente.turnos.filter(t => t.id !== newTurno.id).length : 0);
+        if (completedSessionsCount === 0) {
+          sendNewClientWelcomeImages(newTurno.cliente.whatsapp).catch(e => console.error('Error sending welcome images to new client:', e));
+        }
 
         await prisma.notificacion.create({
           data: {

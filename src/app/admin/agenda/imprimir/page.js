@@ -333,12 +333,19 @@ function PrintContent() {
                   return (
                     <tr key={turno.id}>
                       <td className={styles.timeCol}>
-                        <span className={styles.timeRange}>{turno.horaInicio} - {turno.horaFin}</span>
-                        {currentUserRole !== 'OPERADOR' && (
-                          <div className={styles.timeValor}>
-                            Valor: ${Number(turno.valorTotal || 0).toLocaleString('es-AR')}
+                        <div className={styles.timeCellInner}>
+                          <div className={styles.timeInfo}>
+                            <span className={styles.timeRange}>{turno.horaInicio} - {turno.horaFin}</span>
+                            {currentUserRole !== 'OPERADOR' && (
+                              <div className={styles.timeValor}>
+                                Valor: ${Number(turno.valorTotal || 0).toLocaleString('es-AR')}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div className={styles.sessionBadge} title={`Sesión N° ${turno.numeroSesion || 1}`}>
+                            {turno.numeroSesion || 1}
+                          </div>
+                        </div>
                       </td>
                       <td className={styles.clientCol}>
                         <div className={styles.clientName}>{turno.cliente?.nombreCompleto || turno.nombreCompleto || 'Cliente'}</div>

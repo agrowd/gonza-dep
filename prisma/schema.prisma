@@ -198,6 +198,8 @@ model Gasto {
 model Promocion {
   id             String    @id @default(uuid())
   nombre         String
+  tipo           String    @default("POR_ZONAS") // "POR_ZONAS" o "POR_CANTIDAD"
+  cantidadZonas  Int?      // Si tipo === "POR_CANTIDAD"
   zonas          String    // JSON stringified array de IDs o nombres de zonas requeridas
   descuentoTipo  String    @default("PORCENTAJE") // "PORCENTAJE" o "MONTO_FIJO"
   descuentoValor Float
@@ -210,6 +212,7 @@ model Promocion {
 model Cupon {
   id               String    @id @default(uuid())
   codigo           String    @unique
+  zonas            String?   // JSON stringified array de IDs de zonas específicas para autogestión
   descuentoTipo    String    @default("PORCENTAJE") // "PORCENTAJE" o "MONTO_FIJO"
   descuentoValor   Float
   usosPermitidos   Int       @default(1)

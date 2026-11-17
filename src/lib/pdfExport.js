@@ -151,6 +151,21 @@ export async function exportOrPrintElement({
             line-height: 1.22 !important;
           }
 
+          .sessionBadge, [data-a4-sheet="true"] .sessionBadge, .pdfCaptureA4 .sessionBadge {
+            background-color: #5c1817 !important;
+            color: #ffffff !important;
+            font-size: 0.82rem !important;
+            font-weight: 800 !important;
+            min-width: 26px !important;
+            height: 26px !important;
+            border-radius: 6px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
           .pdfCaptureA4 footer, [data-a4-sheet="true"] footer {
             display: block !important;
             margin-top: 0.6rem !important;

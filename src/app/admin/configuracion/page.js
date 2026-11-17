@@ -88,6 +88,8 @@ export default function ConfiguracionPage() {
     email_va_a_avisar_subject: '',
     email_va_a_avisar_body: '',
     wtsp_birthday_template: '',
+    wtsp_new_client_img_direccion: '',
+    wtsp_new_client_img_indicaciones: '',
     email_birthday_subject: '',
     email_birthday_body: '',
     seña_retencion_horas: '72',
@@ -107,6 +109,8 @@ export default function ConfiguracionPage() {
   const [editingPromo, setEditingPromo] = useState(null);
   const [promoForm, setPromoForm] = useState({
     nombre: '',
+    tipo: 'POR_ZONAS',
+    cantidadZonas: 3,
     zonas: [],
     descuentoTipo: 'PORCENTAJE',
     descuentoValor: '',
@@ -122,6 +126,7 @@ export default function ConfiguracionPage() {
   const [editingCupon, setEditingCupon] = useState(null);
   const [cuponForm, setCuponForm] = useState({
     codigo: '',
+    zonas: [],
     descuentoTipo: 'PORCENTAJE',
     descuentoValor: '',
     usosPermitidos: 1,
@@ -541,6 +546,8 @@ export default function ConfiguracionPage() {
             email_va_a_avisar_subject: data.email_va_a_avisar_subject || '',
             email_va_a_avisar_body: data.email_va_a_avisar_body || '',
             wtsp_birthday_template: data.wtsp_birthday_template || '',
+            wtsp_new_client_img_direccion: data.wtsp_new_client_img_direccion || '',
+            wtsp_new_client_img_indicaciones: data.wtsp_new_client_img_indicaciones || '',
             email_birthday_subject: data.email_birthday_subject || '',
             email_birthday_body: data.email_birthday_body || '',
             seña_retencion_horas: data.seña_retencion_horas || '72',
@@ -828,6 +835,37 @@ export default function ConfiguracionPage() {
     showToast(`Copiado al portapapeles: ${variable}`);
   };
 
+  const handleUploadWelcomeImage = async (e, type) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    try {
+      showToast('Subiendo imagen...', 'info');
+      const res = await fetch('/api/admin/configuracion/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        if (type === 'direccion') {
+          setConfigs(prev => ({ ...prev, wtsp_new_client_img_direccion: data.url }));
+        } else {
+          setConfigs(prev => ({ ...prev, wtsp_new_client_img_indicaciones: data.url }));
+        }
+        showToast('Imagen cargada con éxito. Recuerda pulsar "Guardar Configuración".', 'success');
+      } else {
+        showToast(data.error || 'Error al subir la imagen', 'error');
+      }
+    } catch (err) {
+      console.error('Error uploading welcome image:', err);
+      showToast('Error al subir la imagen', 'error');
+    }
+  };
+
   // Generating work hours slots for the selector (07:00 to 22:00 every 30 minutes)
   const hourSlots = [];
   for (let h = 7; h <= 22; h++) {
@@ -847,6 +885,8 @@ export default function ConfiguracionPage() {
     setEditingPromo(null);
     setPromoForm({
       nombre: '',
+      tipo: 'POR_ZONAS',
+      cantidadZonas: 3,
       zonas: [],
       descuentoTipo: 'PORCENTAJE',
       descuentoValor: '',
@@ -855,6 +895,9 @@ export default function ConfiguracionPage() {
       activo: true
     });
     setIsPromoModalOpen(true);
+    setTimeout(() => {
+      document.getElementById('promoFormSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
   };
 
   const handleOpenEditPromo = (promo) => {
@@ -867,6 +910,8 @@ export default function ConfiguracionPage() {
     }
     setPromoForm({
       nombre: promo.nombre || '',
+      tipo: promo.tipo || 'POR_ZONAS',
+      cantidadZonas: promo.cantidadZonas || 3,
       zonas: parsedZonas,
       descuentoTipo: promo.descuentoTipo || 'PORCENTAJE',
       descuentoValor: promo.descuentoValor !== undefined ? promo.descuentoValor : '',
@@ -875,6 +920,9 @@ export default function ConfiguracionPage() {
       activo: promo.activo !== undefined ? promo.activo : true
     });
     setIsPromoModalOpen(true);
+    setTimeout(() => {
+      document.getElementById('promoFormSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
   };
 
   const togglePromoZone = (zoneName) => {
@@ -893,9 +941,16 @@ export default function ConfiguracionPage() {
       showToast('Ingresa un nombre para la promoción.', 'error');
       return;
     }
-    if (promoForm.zonas.length === 0) {
-      showToast('Selecciona al menos una zona para la promoción.', 'error');
-      return;
+    if (promoForm.tipo === 'POR_CANTIDAD') {
+      if (!promoForm.cantidadZonas || Number(promoForm.cantidadZonas) < 2) {
+        showToast('Ingresa una cantidad válida de zonas (mínimo 2).', 'error');
+        return;
+      }
+    } else {
+      if (promoForm.zonas.length === 0) {
+        showToast('Selecciona al menos una zona para la promoción.', 'error');
+        return;
+      }
     }
     if (!promoForm.descuentoValor || Number(promoForm.descuentoValor) <= 0) {
       showToast('Ingresa un descuento válido mayor a 0.', 'error');
@@ -962,6 +1017,7 @@ export default function ConfiguracionPage() {
     setEditingCupon(null);
     setCuponForm({
       codigo: '',
+      zonas: [],
       descuentoTipo: 'PORCENTAJE',
       descuentoValor: '',
       usosPermitidos: 1,
@@ -969,12 +1025,22 @@ export default function ConfiguracionPage() {
       activo: true
     });
     setIsCuponModalOpen(true);
+    setTimeout(() => {
+      document.getElementById('cuponFormSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
   };
 
   const handleOpenEditCupon = (cupon) => {
     setEditingCupon(cupon);
+    let parsedZonas = [];
+    try {
+      parsedZonas = typeof cupon.zonas === 'string' ? JSON.parse(cupon.zonas) : (cupon.zonas || []);
+    } catch {
+      parsedZonas = [];
+    }
     setCuponForm({
       codigo: cupon.codigo || '',
+      zonas: parsedZonas,
       descuentoTipo: cupon.descuentoTipo || 'PORCENTAJE',
       descuentoValor: cupon.descuentoValor !== undefined ? cupon.descuentoValor : '',
       usosPermitidos: cupon.usosPermitidos !== undefined ? cupon.usosPermitidos : 1,
@@ -982,6 +1048,20 @@ export default function ConfiguracionPage() {
       activo: cupon.activo !== undefined ? cupon.activo : true
     });
     setIsCuponModalOpen(true);
+    setTimeout(() => {
+      document.getElementById('cuponFormSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
+  };
+
+  const toggleCuponZone = (zoneName) => {
+    setCuponForm(prev => {
+      const current = prev.zonas || [];
+      const exists = current.includes(zoneName);
+      return {
+        ...prev,
+        zonas: exists ? current.filter(z => z !== zoneName) : [...current, zoneName]
+      };
+    });
   };
 
   const handleSaveCupon = async (e) => {
@@ -2129,6 +2209,188 @@ export default function ConfiguracionPage() {
                 />
               </div>
 
+              {/* Imágenes Automáticas para Clientes Nuevos */}
+              <div style={{
+                marginTop: '1.25rem',
+                marginBottom: '1.25rem',
+                padding: '1.25rem',
+                backgroundColor: 'rgba(212, 165, 77, 0.08)',
+                border: '1px solid rgba(212, 165, 77, 0.35)',
+                borderRadius: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '1.25rem' }}>📸</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--color-gold)', fontWeight: 700 }}>
+                    Imágenes Automáticas de Bienvenida para Clientes Nuevos
+                  </h4>
+                </div>
+                <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  SOLO para clientes que sean <strong>nuevos (con 0 sesiones cargadas en el sistema)</strong>, estas 2 imágenes se enviarán automáticamente por WhatsApp en mensajes separados al momento de agendarles su primer turno (la imagen de dirección y la de indicaciones previas).
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+                  {/* Imagen 1: Dirección */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>📍</span> Imagen 1: Dirección y Ubicación
+                    </div>
+
+                    {configs.wtsp_new_client_img_direccion ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', alignItems: 'center' }}>
+                        <div style={{
+                          width: '100%',
+                          height: '140px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          backgroundColor: '#000',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={configs.wtsp_new_client_img_direccion} 
+                            alt="Dirección" 
+                            style={{ maxWidth: '100%', maxHeight: '140px', objectFit: 'contain' }} 
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                          <label className="btn btn-secondary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}>
+                            🔄 Cambiar
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              style={{ display: 'none' }} 
+                              onChange={(e) => handleUploadWelcomeImage(e, 'direccion')} 
+                            />
+                          </label>
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            style={{ color: '#ff5252', padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}
+                            onClick={() => setConfigs(prev => ({ ...prev, wtsp_new_client_img_direccion: '' }))}
+                          >
+                            🗑️ Quitar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label style={{
+                        border: '2px dashed var(--border-color)',
+                        borderRadius: '8px',
+                        padding: '1.5rem 1rem',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: 'rgba(255,255,255,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <span style={{ fontSize: '1.75rem' }}>📤</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-gold)' }}>Subir Imagen de Dirección</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>JPG, PNG o WEBP (Máx 8MB)</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          style={{ display: 'none' }} 
+                          onChange={(e) => handleUploadWelcomeImage(e, 'direccion')} 
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Imagen 2: Indicaciones Previas */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>📋</span> Imagen 2: Indicaciones Previas
+                    </div>
+
+                    {configs.wtsp_new_client_img_indicaciones ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', alignItems: 'center' }}>
+                        <div style={{
+                          width: '100%',
+                          height: '140px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          backgroundColor: '#000',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={configs.wtsp_new_client_img_indicaciones} 
+                            alt="Indicaciones Previas" 
+                            style={{ maxWidth: '100%', maxHeight: '140px', objectFit: 'contain' }} 
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                          <label className="btn btn-secondary" style={{ flex: 1, padding: '0.4rem', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}>
+                            🔄 Cambiar
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              style={{ display: 'none' }} 
+                              onChange={(e) => handleUploadWelcomeImage(e, 'indicaciones')} 
+                            />
+                          </label>
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            style={{ color: '#ff5252', padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}
+                            onClick={() => setConfigs(prev => ({ ...prev, wtsp_new_client_img_indicaciones: '' }))}
+                          >
+                            🗑️ Quitar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label style={{
+                        border: '2px dashed var(--border-color)',
+                        borderRadius: '8px',
+                        padding: '1.5rem 1rem',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: 'rgba(255,255,255,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <span style={{ fontSize: '1.75rem' }}>📤</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-gold)' }}>Subir Imagen de Indicaciones</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>JPG, PNG o WEBP (Máx 8MB)</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          style={{ display: 'none' }} 
+                          onChange={(e) => handleUploadWelcomeImage(e, 'indicaciones')} 
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className={styles.formGroup}>
                 <label className={styles.label}>Aviso de Inasistencia (No Asistió) por WhatsApp</label>
                 <textarea 
@@ -2675,7 +2937,7 @@ export default function ConfiguracionPage() {
                   <thead>
                     <tr>
                       <th className={styles.th}>Promoción</th>
-                      <th className={styles.th}>Zonas Incluidas</th>
+                      <th className={styles.th}>Zonas / Cantidad</th>
                       <th className={styles.th}>Descuento</th>
                       <th className={styles.th}>Vigencia</th>
                       <th className={styles.th}>Estado</th>
@@ -2696,11 +2958,27 @@ export default function ConfiguracionPage() {
                             {promo.nombre}
                           </td>
                           <td className={styles.td} data-label="Zonas">
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                              {promoZonas.map((z, idx) => (
-                                <span key={idx} className={styles.zoneChip}>{z}</span>
-                              ))}
-                            </div>
+                            {promo.tipo === 'POR_CANTIDAD' ? (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                background: 'rgba(212, 165, 77, 0.15)',
+                                color: 'var(--color-gold)',
+                                padding: '0.25rem 0.6rem',
+                                borderRadius: '6px',
+                                fontWeight: 700,
+                                fontSize: '0.85rem'
+                              }}>
+                                🔢 {promo.cantidadZonas || 2} o más zonas
+                              </span>
+                            ) : (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                {promoZonas.map((z, idx) => (
+                                  <span key={idx} className={styles.zoneChip}>{z}</span>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className={styles.td} data-label="Descuento">
                             <span className={styles.promoBadge}>
@@ -2783,6 +3061,7 @@ export default function ConfiguracionPage() {
                     <tr>
                       <th className={styles.th}>Código</th>
                       <th className={styles.th}>Beneficio</th>
+                      <th className={styles.th}>Zonas Asociadas</th>
                       <th className={styles.th}>Usos / Límite</th>
                       <th className={styles.th}>Vencimiento</th>
                       <th className={styles.th}>Estado</th>
@@ -2790,54 +3069,73 @@ export default function ConfiguracionPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cupones.map(cupon => (
-                      <tr key={cupon.id} className={styles.tr}>
-                        <td className={styles.td} data-label="Código">
-                          <span className={styles.cuponCode}>{cupon.codigo}</span>
-                        </td>
-                        <td className={styles.td} data-label="Beneficio">
-                          <span className={styles.promoBadge}>
-                            {cupon.descuentoTipo === 'PORCENTAJE' ? `${cupon.descuentoValor}% OFF` : `${formatMoney(cupon.descuentoValor)} OFF`}
-                          </span>
-                        </td>
-                        <td className={styles.td} data-label="Usos">
-                          <span style={{ fontWeight: 600 }}>{cupon.usosActuales || 0}</span>
-                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}> / {cupon.usosPermitidos ? cupon.usosPermitidos : '∞'} usos</span>
-                        </td>
-                        <td className={styles.td} data-label="Vencimiento" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          {cupon.fechaVencimiento ? new Date(cupon.fechaVencimiento).toLocaleDateString('es-AR') : 'Sin vencimiento'}
-                        </td>
-                        <td className={styles.td} data-label="Estado">
-                          <span 
-                            className={cupon.activo ? styles.statusActive : styles.statusInactive}
-                            onClick={() => handleToggleCuponActivo(cupon)}
-                            title="Haz clic para activar/pausar"
-                          >
-                            {cupon.activo ? '🟢 Activo' : '⚪ Pausado'}
-                          </span>
-                        </td>
-                        <td className={styles.td} data-label="Acciones" style={{ textAlign: 'right' }}>
-                          <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '0.35rem 0.65rem' }} 
-                              onClick={() => handleOpenEditCupon(cupon)}
-                              title="Editar cupón"
+                    {cupones.map(cupon => {
+                      let cuponZonas = [];
+                      try {
+                        cuponZonas = typeof cupon.zonas === 'string' ? JSON.parse(cupon.zonas) : (cupon.zonas || []);
+                      } catch {
+                        cuponZonas = [];
+                      }
+                      return (
+                        <tr key={cupon.id} className={styles.tr}>
+                          <td className={styles.td} data-label="Código">
+                            <span className={styles.cuponCode}>{cupon.codigo}</span>
+                          </td>
+                          <td className={styles.td} data-label="Beneficio">
+                            <span className={styles.promoBadge}>
+                              {cupon.descuentoTipo === 'PORCENTAJE' ? `${cupon.descuentoValor}% OFF` : `${formatMoney(cupon.descuentoValor)} OFF`}
+                            </span>
+                          </td>
+                          <td className={styles.td} data-label="Zonas Asociadas">
+                            {cuponZonas.length > 0 ? (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                {cuponZonas.map((z, idx) => (
+                                  <span key={idx} className={styles.zoneChip}>{z}</span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Todas las zonas</span>
+                            )}
+                          </td>
+                          <td className={styles.td} data-label="Usos">
+                            <span style={{ fontWeight: 600 }}>{cupon.usosActuales || 0}</span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}> / {cupon.usosPermitidos ? cupon.usosPermitidos : '∞'} usos</span>
+                          </td>
+                          <td className={styles.td} data-label="Vencimiento" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            {cupon.fechaVencimiento ? new Date(cupon.fechaVencimiento).toLocaleDateString('es-AR') : 'Sin vencimiento'}
+                          </td>
+                          <td className={styles.td} data-label="Estado">
+                            <span 
+                              className={cupon.activo ? styles.statusActive : styles.statusInactive}
+                              onClick={() => handleToggleCuponActivo(cupon)}
+                              title="Haz clic para activar/pausar"
                             >
-                              <EditIcon />
-                            </button>
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
-                              onClick={() => handleDeleteCupon(cupon.id)}
-                              title="Eliminar cupón"
-                            >
-                              <TrashIcon />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {cupon.activo ? '🟢 Activo' : '⚪ Pausado'}
+                            </span>
+                          </td>
+                          <td className={styles.td} data-label="Acciones" style={{ textAlign: 'right' }}>
+                            <div className={styles.actionCell} style={{ justifyContent: 'flex-end' }}>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.35rem 0.65rem' }} 
+                                onClick={() => handleOpenEditCupon(cupon)}
+                                title="Editar cupón"
+                              >
+                                <EditIcon />
+                              </button>
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.35rem 0.65rem', color: '#ff5252', borderColor: 'rgba(198, 40, 40, 0.15)' }} 
+                                onClick={() => handleDeleteCupon(cupon.id)}
+                                title="Eliminar cupón"
+                              >
+                                <TrashIcon />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -3340,10 +3638,10 @@ export default function ConfiguracionPage() {
 
       {/* Promocion Create / Edit Modal */}
       {isPromoModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsPromoModalOpen(false)}>
+        <div className="modal-overlay" id="promoFormSection" onClick={() => setIsPromoModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '580px' }}>
             <div className="modal-header">
-              <h3>{editingPromo ? 'Editar Promoción' : 'Nueva Promoción por Zonas'}</h3>
+              <h3>{editingPromo ? 'Editar Promoción' : 'Nueva Promoción'}</h3>
               <button className="modal-close" onClick={() => setIsPromoModalOpen(false)}>&times;</button>
             </div>
             <form onSubmit={handleSavePromo}>
@@ -3355,9 +3653,37 @@ export default function ConfiguracionPage() {
                     className={styles.input} 
                     value={promoForm.nombre}
                     onChange={(e) => setPromoForm({ ...promoForm, nombre: e.target.value })}
-                    placeholder="Ej: Combo Espalda + Pecho 15% OFF"
+                    placeholder="Ej: Combo 3 Zonas 10% OFF"
                     required
                   />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Modalidad de la Promoción</label>
+                  <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.35rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+                      <input 
+                        type="radio" 
+                        name="promoTipo" 
+                        value="POR_ZONAS" 
+                        checked={promoForm.tipo === 'POR_ZONAS'}
+                        onChange={() => setPromoForm({ ...promoForm, tipo: 'POR_ZONAS' })}
+                        style={{ accentColor: 'var(--color-gold)', cursor: 'pointer' }}
+                      />
+                      Por Zonas Específicas
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+                      <input 
+                        type="radio" 
+                        name="promoTipo" 
+                        value="POR_CANTIDAD" 
+                        checked={promoForm.tipo === 'POR_CANTIDAD'}
+                        onChange={() => setPromoForm({ ...promoForm, tipo: 'POR_CANTIDAD' })}
+                        style={{ accentColor: 'var(--color-gold)', cursor: 'pointer' }}
+                      />
+                      Por Cantidad de Zonas
+                    </label>
+                  </div>
                 </div>
 
                 <div className={styles.formRow}>
@@ -3388,31 +3714,51 @@ export default function ConfiguracionPage() {
                   </div>
                 </div>
 
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>
-                    Zonas Requeridas para Aplicar el Combo ({promoForm.zonas.length} seleccionadas)
-                  </label>
-                  <div className={styles.zoneSelectorGrid}>
-                    {zones.map(z => {
-                      const isSelected = promoForm.zonas.includes(z.nombre);
-                      return (
-                        <div 
-                          key={z.id}
-                          className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
-                          onClick={() => togglePromoZone(z.nombre)}
-                        >
-                          <input 
-                            type="checkbox" 
-                            checked={isSelected}
-                            onChange={() => {}} 
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span>{z.nombre}</span>
-                        </div>
-                      );
-                    })}
+                {promoForm.tipo === 'POR_CANTIDAD' ? (
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Cantidad Mínima de Zonas Requeridas
+                    </label>
+                    <input 
+                      type="number" 
+                      className={styles.input} 
+                      value={promoForm.cantidadZonas || 3}
+                      onChange={(e) => setPromoForm({ ...promoForm, cantidadZonas: Math.max(2, parseInt(e.target.value) || 2) })}
+                      min="2"
+                      max="15"
+                      required
+                    />
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0 0' }}>
+                      Se aplicará automáticamente a cualquier sesión donde el cliente elija {promoForm.cantidadZonas || 3} o más zonas.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Zonas Requeridas para Aplicar el Combo ({promoForm.zonas.length} seleccionadas)
+                    </label>
+                    <div className={styles.zoneSelectorGrid}>
+                      {zones.map(z => {
+                        const isSelected = promoForm.zonas.includes(z.nombre);
+                        return (
+                          <div 
+                            key={z.id}
+                            className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
+                            onClick={() => togglePromoZone(z.nombre)}
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={isSelected}
+                              onChange={() => {}} 
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <span>{z.nombre}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
@@ -3459,8 +3805,8 @@ export default function ConfiguracionPage() {
 
       {/* Cupon Create / Edit Modal */}
       {isCuponModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsCuponModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+        <div className="modal-overlay" id="cuponFormSection" onClick={() => setIsCuponModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
             <div className="modal-header">
               <h3>{editingCupon ? 'Editar Cupón de Descuento' : 'Nuevo Cupón de Descuento'}</h3>
               <button className="modal-close" onClick={() => setIsCuponModalOpen(false)}>&times;</button>
@@ -3505,6 +3851,35 @@ export default function ConfiguracionPage() {
                       min="1"
                       required
                     />
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>
+                    Zonas Asociadas Precargadas (Opcional - {(cuponForm.zonas || []).length} seleccionadas)
+                  </label>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>
+                    Si seleccionas zonas, cuando el cliente ingrese este cupón en la web de autogestión se cargarán automáticamente y pasará directo a elegir horario.
+                  </p>
+                  <div className={styles.zoneSelectorGrid}>
+                    {zones.map(z => {
+                      const isSelected = (cuponForm.zonas || []).includes(z.nombre);
+                      return (
+                        <div 
+                          key={z.id}
+                          className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
+                          onClick={() => toggleCuponZone(z.nombre)}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            onChange={() => {}} 
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span>{z.nombre}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

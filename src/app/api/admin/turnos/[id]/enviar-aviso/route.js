@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { sendReminder7DaysEmail, sendConfirmationEmail, sendReceiptEmail, applyEmailTemplatePlaceholdersPlain } from '@/lib/email.js';
-import { sendWhatsAppMessage, parseTemplate, getWhatsAppStatus, checkRelayStatus } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, sendNewClientWelcomeImages, parseTemplate, getWhatsAppStatus, checkRelayStatus } from '@/lib/whatsapp.js';
 
 export async function POST(request, { params }) {
   try {
@@ -25,7 +25,16 @@ export async function POST(request, { params }) {
 
     const turno = await prisma.turno.findUnique({
       where: { id },
-      include: { cliente: true }
+      include: {
+        cliente: {
+          include: {
+            turnos: {
+              where: { estado: 'REALIZADO' },
+              select: { id: true }
+            }
+          }
+        }
+      }
     });
 
     if (!turno) {
@@ -93,6 +102,14 @@ export async function POST(request, { params }) {
       }
 
       await sendWhatsAppMessage(targetWhatsapp, rawMessage);
+
+      // SOLO para clientes nuevos (0 sesiones realizadas en el sistema), enviar imágenes de bienvenida
+      if (tipo === 'CONFIRMACION') {
+        const completedSessionsCount = (Number(turno.cliente?.sesionesPrevias) || 0) + (turno.cliente?.turnos ? turno.cliente.turnos.filter(t => t.id !== turno.id).length : 0);
+        if (completedSessionsCount === 0) {
+          sendNewClientWelcomeImages(targetWhatsapp).catch(e => console.error('Error sending welcome images to new client on manual reenvio:', e));
+        }
+      }
 
       // Log notification in DB
       await prisma.notificacion.create({

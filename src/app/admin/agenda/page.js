@@ -4901,12 +4901,19 @@ export default function AgendaPage() {
                   {/* Matching Promotion Suggestion */}
                   {(() => {
                     const selectedNames = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
-                    const matching = activePromos.find(p => {
-                      let pZonas = [];
-                      try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
-                      if (pZonas.length === 0) return false;
-                      return pZonas.every(pz => selectedNames.includes(pz));
+                    const matchingList = activePromos.filter(p => {
+                      if (p.tipo === 'POR_CANTIDAD') {
+                        const minQty = Number(p.cantidadZonas) || 2;
+                        return selectedNames.length >= minQty;
+                      } else {
+                        let pZonas = [];
+                        try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
+                        if (pZonas.length === 0) return false;
+                        return pZonas.every(pz => selectedNames.includes(pz));
+                      }
                     });
+                    if (matchingList.length === 0) return null;
+                    const matching = matchingList.sort((a, b) => (Number(b.descuentoValor) || 0) - (Number(a.descuentoValor) || 0))[0];
                     if (!matching) return null;
                     return (
                       <div style={{
@@ -7361,12 +7368,19 @@ export default function AgendaPage() {
                 {/* Matching Promotion Suggestion */}
                 {(() => {
                   const selectedNames = zones.filter(z => (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
-                  const matching = activePromos.find(p => {
-                    let pZonas = [];
-                    try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
-                    if (pZonas.length === 0) return false;
-                    return pZonas.every(pz => selectedNames.includes(pz));
+                  const matchingList = activePromos.filter(p => {
+                    if (p.tipo === 'POR_CANTIDAD') {
+                      const minQty = Number(p.cantidadZonas) || 2;
+                      return selectedNames.length >= minQty;
+                    } else {
+                      let pZonas = [];
+                      try { pZonas = typeof p.zonas === 'string' ? JSON.parse(p.zonas) : (p.zonas || []); } catch { return false; }
+                      if (pZonas.length === 0) return false;
+                      return pZonas.every(pz => selectedNames.includes(pz));
+                    }
                   });
+                  if (matchingList.length === 0) return null;
+                  const matching = matchingList.sort((a, b) => (Number(b.descuentoValor) || 0) - (Number(a.descuentoValor) || 0))[0];
                   if (!matching) return null;
                   return (
                     <div style={{

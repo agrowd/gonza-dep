@@ -1,9 +1,10 @@
 import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
+const { Client, LocalAuth, MessageMedia } = pkg;
 import prisma from './db.js';
 import { sendMaintenanceEmail, sendWhatsAppDisconnectAlertEmail, sendWhatsAppReconnectedAlertEmail, sendReminder7DaysEmail, sendBirthdayEmail, applyEmailTemplatePlaceholdersPlain } from './email.js';
 import { canSendNotification } from './notifications.js';
 import fs from 'fs';
+import path from 'path';
 
 // Use globalThis to cache the client across hot-reloads in development
 if (!globalThis.whatsappStatus) {
@@ -382,6 +383,113 @@ export async function sendWhatsAppMessage(phone, text) {
       throw new Error(`No se pudo entregar el mensaje al número ${phone} (${relayErr.message}). Verificá el formato del número en la ficha del cliente.`);
     }
     throw new Error(`El servicio de WhatsApp no está conectado (Local: ${globalThis.whatsappStatus}, Relay: ${relayErr.message})`);
+  }
+}
+
+export async function sendWhatsAppMedia(phone, { relativeUrl, caption = '' }) {
+  if (!relativeUrl || !phone) return null;
+  const client = globalThis.whatsappClient;
+
+  // Resolve absolute path from public directory
+  const cleanUrl = relativeUrl.startsWith('/') ? relativeUrl.slice(1) : relativeUrl;
+  const absPath = path.resolve(process.cwd(), 'public', cleanUrl);
+
+  if (!fs.existsSync(absPath)) {
+    console.warn(`[WhatsApp Media] Image file not found on disk: ${absPath}`);
+    return null;
+  }
+
+  try {
+    const fileBuffer = fs.readFileSync(absPath);
+    const base64Data = fileBuffer.toString('base64');
+    const ext = path.extname(absPath).toLowerCase().replace('.', '');
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const filename = path.basename(absPath);
+
+    // 1. Try local client first if connected
+    if (client && globalThis.whatsappStatus === 'CONNECTED') {
+      try {
+        const formattedPhone = formatArgentinaPhone(phone);
+        let targetChatId = formattedPhone;
+
+        try {
+          const cleanDigits = (phone || '').replace(/\D/g, '');
+          let numberId = await client.getNumberId(formattedPhone).catch(() => null);
+          if (!numberId && cleanDigits.startsWith('549')) {
+            numberId = await client.getNumberId('54' + cleanDigits.slice(3)).catch(() => null);
+          }
+          if (numberId && numberId._serialized) {
+            targetChatId = numberId._serialized;
+          }
+        } catch (e) {}
+
+        console.log(`[WhatsApp Media] Sending media locally to ${targetChatId} (${filename})...`);
+        const media = new MessageMedia(mimeType, base64Data, filename);
+        const response = await client.sendMessage(targetChatId, media, { caption: caption || undefined });
+        return response;
+      } catch (localErr) {
+        console.warn(`[WhatsApp Media] Local media send failed (${localErr.message}). Fallback to relay (port 3007)...`);
+      }
+    }
+
+    // 2. Relay via ia-gonzadep (port 3007)
+    const normalizedTarget = normalizeWhatsApp(phone) || (phone || '').replace(/\D/g, '');
+    console.log(`[WhatsApp Relay] Relaying media for ${phone} (${filename}) to http://localhost:3007/api/whatsapp/send...`);
+    const res = await fetch('http://localhost:3007/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target: normalizedTarget,
+        media: {
+          data: base64Data,
+          mimetype: mimeType,
+          filename,
+          caption: caption || undefined
+        }
+      }),
+      signal: AbortSignal.timeout(35000)
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${res.status} desde relay`);
+    }
+
+    const data = await res.json();
+    console.log(`[WhatsApp Relay] Media sent successfully via ia-gonzadep:`, data);
+    return data;
+  } catch (err) {
+    console.error(`[WhatsApp Media] Error sending media to ${phone}:`, err.message);
+    return null;
+  }
+}
+
+export async function sendNewClientWelcomeImages(phone) {
+  try {
+    if (!phone) return;
+    const direccionConfig = await prisma.configuracion.findUnique({
+      where: { key: 'wtsp_new_client_img_direccion' }
+    });
+    const indicacionesConfig = await prisma.configuracion.findUnique({
+      where: { key: 'wtsp_new_client_img_indicaciones' }
+    });
+
+    const imgDir = direccionConfig?.value;
+    const imgInd = indicacionesConfig?.value;
+
+    if (imgDir && imgDir.trim()) {
+      console.log(`[WhatsApp Welcome] Sending dirección image to new client ${phone}...`);
+      await new Promise(r => setTimeout(r, 1500));
+      await sendWhatsAppMedia(phone, { relativeUrl: imgDir.trim() });
+    }
+
+    if (imgInd && imgInd.trim()) {
+      console.log(`[WhatsApp Welcome] Sending indicaciones previas image to new client ${phone}...`);
+      await new Promise(r => setTimeout(r, 1500));
+      await sendWhatsAppMedia(phone, { relativeUrl: imgInd.trim() });
+    }
+  } catch (err) {
+    console.error('[WhatsApp Welcome] Error sending welcome images to new client:', err);
   }
 }
 

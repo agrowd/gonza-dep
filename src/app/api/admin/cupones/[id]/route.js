@@ -13,10 +13,11 @@ export async function PUT(request, context) {
 
     const { id } = await context.params;
     const body = await request.json();
-    const { codigo, descuentoTipo, descuentoValor, usosPermitidos, fechaVencimiento, activo } = body;
+    const { codigo, zonas, descuentoTipo, descuentoValor, usosPermitidos, fechaVencimiento, activo } = body;
 
     const updateData = {};
     if (codigo !== undefined) updateData.codigo = codigo.trim().toUpperCase();
+    if (zonas !== undefined) updateData.zonas = zonas ? (typeof zonas === 'string' ? zonas : JSON.stringify(zonas)) : null;
     if (descuentoTipo !== undefined) updateData.descuentoTipo = descuentoTipo;
     if (descuentoValor !== undefined) updateData.descuentoValor = parseFloat(descuentoValor);
     if (usosPermitidos !== undefined) updateData.usosPermitidos = parseInt(usosPermitidos, 10);

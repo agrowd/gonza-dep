@@ -31,7 +31,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { codigo, descuentoTipo, descuentoValor, usosPermitidos, fechaVencimiento, activo } = body;
+    const { codigo, zonas, descuentoTipo, descuentoValor, usosPermitidos, fechaVencimiento, activo } = body;
 
     if (!codigo || !codigo.trim()) {
       return NextResponse.json({ error: 'El código del cupón es requerido' }, { status: 400 });
@@ -51,9 +51,12 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Ya existe un cupón con ese código' }, { status: 400 });
     }
 
+    const zonasJson = zonas ? (typeof zonas === 'string' ? zonas : JSON.stringify(zonas)) : null;
+
     const nuevo = await prisma.cupon.create({
       data: {
         codigo: cleanCodigo,
+        zonas: zonasJson,
         descuentoTipo: descuentoTipo === 'MONTO_FIJO' ? 'MONTO_FIJO' : 'PORCENTAJE',
         descuentoValor: numericDesc,
         usosPermitidos: usosPermitidos ? parseInt(usosPermitidos, 10) : 1,

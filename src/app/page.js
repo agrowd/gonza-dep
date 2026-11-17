@@ -72,6 +72,12 @@ export default function Home() {
   const [selectedZoneIds, setSelectedZoneIds] = useState([]);
   const [isClientBlocked, setIsClientBlocked] = useState(false);
 
+  // Cupon de descuento state
+  const [cuponCodeInput, setCuponCodeInput] = useState('');
+  const [validatingCupon, setValidatingCupon] = useState(false);
+  const [appliedCupon, setAppliedCupon] = useState(null);
+  const [cuponMessage, setCuponMessage] = useState(null);
+
   // Repeat last zones (< 90 days)
   const [ultimoTurnoData, setUltimoTurnoData] = useState(null);
   const [isRepeatingLastZones, setIsRepeatingLastZones] = useState(false);
@@ -112,14 +118,29 @@ export default function Home() {
     return calculateTurnDetails(activeZoneObjs, false);
   }, [activeZoneObjs]);
 
-  const valorTotal = (rescheduleMode && activeTurno?.valorTotal)
+  const baseValorTotal = (rescheduleMode && activeTurno?.valorTotal)
     ? Number(activeTurno.valorTotal)
     : (isRepeatingLastZones && repeatTurnoData?.valorTotal)
       ? Number(repeatTurnoData.valorTotal)
       : calculations.valorTotal;
-  const valorSeña = (isRepeatingLastZones && repeatTurnoData?.valorSeña)
-    ? Number(repeatTurnoData.valorSeña)
-    : calculations.valorSeña;
+
+  const valorTotal = useMemo(() => {
+    if (!appliedCupon) return baseValorTotal;
+    if (appliedCupon.descuentoTipo === 'PORCENTAJE') {
+      return Math.max(0, Math.round(baseValorTotal * (1 - (Number(appliedCupon.descuentoValor) || 0) / 100)));
+    } else {
+      return Math.max(0, Math.round(baseValorTotal - (Number(appliedCupon.descuentoValor) || 0)));
+    }
+  }, [baseValorTotal, appliedCupon]);
+
+  const valorSeña = useMemo(() => {
+    if (isRepeatingLastZones && repeatTurnoData?.valorSeña) {
+      return Number(repeatTurnoData.valorSeña);
+    }
+    if (!appliedCupon) return calculations.valorSeña;
+    return Math.round(valorTotal * 0.5);
+  }, [isRepeatingLastZones, repeatTurnoData, appliedCupon, calculations.valorSeña, valorTotal]);
+
   const duracionMinutos = (rescheduleMode && activeTurno?.duracionMinutos)
     ? Number(activeTurno.duracionMinutos)
     : (isRepeatingLastZones && repeatTurnoData?.duracionMinutos)
@@ -453,6 +474,67 @@ export default function Home() {
     });
   };
 
+  // Cupon validation & auto-selection of zones
+  const handleApplyCupon = async (overrideCode) => {
+    const code = (overrideCode || cuponCodeInput || '').trim();
+    if (!code) return;
+    setValidatingCupon(true);
+    setCuponMessage(null);
+    try {
+      const res = await fetch('/api/cupones/validar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: code })
+      });
+      const data = await res.json();
+      if (res.ok && data.valido) {
+        setAppliedCupon(data.cupon);
+        let cuponZonas = data.cupon.zonas;
+        if (typeof cuponZonas === 'string') {
+          try { cuponZonas = JSON.parse(cuponZonas); } catch { cuponZonas = []; }
+        }
+        if (Array.isArray(cuponZonas) && cuponZonas.length > 0) {
+          const matchingIds = zones
+            .filter(z => cuponZonas.includes(z.id) || cuponZonas.includes(z.nombre))
+            .map(z => z.id);
+          if (matchingIds.length > 0) {
+            setSelectedZoneIds(matchingIds);
+            setCuponMessage({
+              type: 'success',
+              text: `¡Cupón ${data.cupon.codigo} aplicado! Cargamos las zonas correspondientes y avanzamos a la elección de horario.`
+            });
+            setTimeout(() => {
+              setStep(3);
+            }, 600);
+            return;
+          }
+        }
+        setCuponMessage({
+          type: 'success',
+          text: `¡Cupón ${data.cupon.codigo} aplicado con éxito!`
+        });
+      } else {
+        setCuponMessage({
+          type: 'error',
+          text: data.error || 'El cupón ingresado no es válido o está vencido.'
+        });
+      }
+    } catch {
+      setCuponMessage({
+        type: 'error',
+        text: 'Error de conexión al validar el cupón.'
+      });
+    } finally {
+      setValidatingCupon(false);
+    }
+  };
+
+  const handleRemoveCupon = () => {
+    setAppliedCupon(null);
+    setCuponCodeInput('');
+    setCuponMessage(null);
+  };
+
   // 8. Fetch Monthly Availability (Alta de Turno model)
   const fetchMonthAvailability = useCallback(async (year, month, dur, total) => {
     setLoadingMonth(true);
@@ -630,9 +712,10 @@ Duración: ${duracionMinutos} min`;
             observaciones: formData.observaciones.trim() || undefined,
             fechaNacimiento: calculatedFechaNacimiento,
             isRepeatLastZones: isRepeatingLastZones,
+            cuponCodigo: appliedCupon?.codigo || undefined,
             customDuracion: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.duracionMinutos : undefined,
-            customValorTotal: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.valorTotal : undefined,
-            customValorSeña: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.valorSeña : undefined,
+            customValorTotal: valorTotal,
+            customValorSeña: valorSeña,
             customZonasText: isRepeatingLastZones && repeatTurnoData ? repeatTurnoData.zonasTexto : undefined
           })
         });
@@ -1351,6 +1434,115 @@ Duración: ${duracionMinutos} min`;
                   </p>
                 </div>
 
+                {/* Cupón de descuento interactivo */}
+                <div style={{
+                  background: '#ffffff',
+                  border: appliedCupon ? '2px solid #16a34a' : '1.5px dashed #cbd5e1',
+                  borderRadius: '12px',
+                  padding: '14px 18px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '1.3rem' }}>🎟️</span>
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                          ¿Tenés un cupón de descuento?
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          Ingresá tu código para aplicar el descuento y precargar tus zonas si corresponde.
+                        </div>
+                      </div>
+                    </div>
+
+                    {!appliedCupon ? (
+                      <div style={{ display: 'flex', gap: '8px', width: '100%', maxWidth: '340px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Ej: PROMOVERANO" 
+                          value={cuponCodeInput}
+                          onChange={(e) => setCuponCodeInput(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyCupon(); } }}
+                          style={{
+                            flex: 1,
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: '1.5px solid #cbd5e1',
+                            textTransform: 'uppercase',
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            outline: 'none'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleApplyCupon()}
+                          disabled={validatingCupon || !cuponCodeInput.trim()}
+                          style={{
+                            background: 'var(--color-gold)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '9px 16px',
+                            fontWeight: '800',
+                            fontSize: '0.85rem',
+                            cursor: (validatingCupon || !cuponCodeInput.trim()) ? 'not-allowed' : 'pointer',
+                            opacity: (validatingCupon || !cuponCodeInput.trim()) ? 0.6 : 1,
+                            transition: 'opacity 0.2s'
+                          }}
+                        >
+                          {validatingCupon ? 'Validando...' : 'Aplicar'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                          background: 'rgba(22, 163, 74, 0.12)',
+                          color: '#16a34a',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontWeight: '800',
+                          fontSize: '0.85rem'
+                        }}>
+                          ✅ {appliedCupon.codigo} ({appliedCupon.descuentoTipo === 'PORCENTAJE' ? `${appliedCupon.descuentoValor}% OFF` : `$${Number(appliedCupon.descuentoValor).toLocaleString('es-AR')} OFF`})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCupon}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: '700',
+                            textDecoration: 'underline'
+                          }}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {cuponMessage && (
+                    <div style={{
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      color: cuponMessage.type === 'error' ? '#ef4444' : '#16a34a',
+                      background: cuponMessage.type === 'error' ? '#fee2e2' : '#dcfce7',
+                      padding: '6px 10px',
+                      borderRadius: '6px'
+                    }}>
+                      {cuponMessage.text}
+                    </div>
+                  )}
+                </div>
+
                 {/* Zones Catalog Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px', marginBottom: '24px' }}>
                   {zones.map(z => {
@@ -1399,6 +1591,11 @@ Duración: ${duracionMinutos} min`;
                     </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '4px' }}>
                       Total: ${Number(valorTotal).toLocaleString('es-AR')}
+                      {appliedCupon && (
+                        <span style={{ fontSize: '0.82rem', color: '#16a34a', marginLeft: '8px', fontWeight: '700' }}>
+                          (Cupón {appliedCupon.codigo} aplicado)
+                        </span>
+                      )}
                       <span style={{ fontSize: '0.9rem', color: '#7a1f1e', marginLeft: '12px', fontWeight: '700' }}>
                         (Seña: ${Number(valorSeña).toLocaleString('es-AR')})
                       </span>
@@ -1733,6 +1930,12 @@ Duración: ${duracionMinutos} min`;
                         <span>Valor Total del Servicio:</span>
                         <strong>${Number(valorTotal).toLocaleString('es-AR')}</strong>
                       </div>
+                      {appliedCupon && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.95rem', color: '#16a34a', fontWeight: '700' }}>
+                          <span>Cupón aplicado ({appliedCupon.codigo}):</span>
+                          <span>{appliedCupon.descuentoTipo === 'PORCENTAJE' ? `${appliedCupon.descuentoValor}% OFF` : `-$${Number(appliedCupon.descuentoValor).toLocaleString('es-AR')}`}</span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1.15rem', color: '#16a34a', fontWeight: '800' }}>
                         <span>Seña Requerida:</span>
                         <span>${Number(valorSeña).toLocaleString('es-AR')}</span>

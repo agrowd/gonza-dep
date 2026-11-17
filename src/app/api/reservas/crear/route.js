@@ -89,7 +89,8 @@ export async function POST(request) {
       customDuracion,
       customValorTotal,
       customValorSeña,
-      customZonasText
+      customZonasText,
+      cuponCodigo
     } = body;
 
     if (!nombreCompleto || !whatsapp || !email || !fechaStr || !horaInicio || !selectedZoneIds || selectedZoneIds.length === 0) {
@@ -218,6 +219,24 @@ export async function POST(request) {
       zonasNombres = dbZones.map(z => z.nombre).join(', ');
     }
 
+    let appliedCuponRecord = null;
+    if (cuponCodigo && cuponCodigo.trim()) {
+      const cleanCodigo = cuponCodigo.trim().toUpperCase();
+      const dbCupon = await prisma.cupon.findUnique({ where: { codigo: cleanCodigo } });
+      if (dbCupon && dbCupon.activo && (!dbCupon.fechaVencimiento || new Date(dbCupon.fechaVencimiento) >= new Date()) && dbCupon.usosActuales < dbCupon.usosPermitidos) {
+        appliedCuponRecord = dbCupon;
+        if (dbCupon.descuentoTipo === 'PORCENTAJE') {
+          valorTotal = Math.max(0, Math.round(valorTotal * (1 - (Number(dbCupon.descuentoValor) || 0) / 100)));
+        } else {
+          valorTotal = Math.max(0, Math.round(valorTotal - (Number(dbCupon.descuentoValor) || 0)));
+        }
+        valorSeña = Math.round(valorTotal * 0.5);
+      }
+    } else if (customValorTotal !== undefined && !isNaN(Number(customValorTotal)) && Number(customValorTotal) > 0) {
+      valorTotal = Number(customValorTotal);
+      valorSeña = customValorSeña !== undefined ? Number(customValorSeña) : Math.round(valorTotal * 0.5);
+    }
+
     const startMinutes = timeToMinutes(horaInicio);
     const endMinutes = startMinutes + duracionMinutos;
     const horaFin = minutesToTime(endMinutes);
@@ -257,7 +276,7 @@ Nombre: ${client.nombreCompleto}
 Fecha: ${fechaLegible}
 Horario: ${horaInicio} hs
 Zonas: ${zonasNombres}
-Duración: ${duracionMinutos} min
+Duración: ${duracionMinutos} min${appliedCuponRecord ? `\nCupón aplicado: ${appliedCuponRecord.codigo}` : ''}
 Total: $${Math.round(valorTotal).toLocaleString('es-AR')}
 Seña a abonar: $${Math.round(valorSeña).toLocaleString('es-AR')}
 
@@ -345,7 +364,9 @@ Quedo a la espera de los datos para realizar el pago de la seña y confirmar el 
         valorSeña,
         operadorId: finalOpId,
         operadorNombre: finalOpNombre,
-        observaciones: observaciones ? observaciones.trim() : null,
+        observaciones: observaciones
+          ? (appliedCuponRecord ? `${observaciones.trim()} [Cupón: ${appliedCuponRecord.codigo}]` : observaciones.trim())
+          : (appliedCuponRecord ? `[Cupón: ${appliedCuponRecord.codigo}]` : null),
         estado: 'PENDIENTE'
       };
 
@@ -360,6 +381,17 @@ Quedo a la espera de los datos para realizar el pago de la seña y confirmar el 
           data: solicitudPayload
         });
         console.log(`[Autogestión] Created new pending request ${savedSolicitud.id} for client ${client.nombreCompleto}`);
+      }
+
+      if (appliedCuponRecord) {
+        try {
+          await prisma.cupon.update({
+            where: { id: appliedCuponRecord.id },
+            data: { usosActuales: { increment: 1 } }
+          });
+        } catch (cupErr) {
+          console.error('Error incrementing cupon uses:', cupErr);
+        }
       }
     } catch (solErr) {
       console.error('Error persisting autogestion solicitud:', solErr);

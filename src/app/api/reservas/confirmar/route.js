@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { mpPayment } from '@/lib/mercadopago.js';
 import { sendConfirmationEmail } from '@/lib/email.js';
-import { sendWhatsAppMessage, parseWppTemplate } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, sendNewClientWelcomeImages, parseWppTemplate } from '@/lib/whatsapp.js';
 
 // Helper to format date
 function formatDate(date) {
@@ -129,6 +129,12 @@ export async function POST(request) {
         const wppMsg = parseWppTemplate(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
 
         await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);
+
+        // SOLO para clientes nuevos (0 sesiones realizadas en el sistema), enviar imágenes de bienvenida
+        const completedSessionsCount = (Number(updatedTurno.cliente?.sesionesPrevias) || 0) + (updatedTurno.cliente?.turnos ? updatedTurno.cliente.turnos.filter(t => t.estado === 'REALIZADO' && t.id !== updatedTurno.id).length : 0);
+        if (completedSessionsCount === 0) {
+          sendNewClientWelcomeImages(updatedTurno.cliente.whatsapp).catch(e => console.error('Error sending welcome images to new client in confirm API:', e));
+        }
 
         await prisma.notificacion.create({
           data: {

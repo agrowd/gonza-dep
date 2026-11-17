@@ -31,7 +31,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { nombre, zonas, descuentoTipo, descuentoValor, fechaInicio, fechaFin, activo } = body;
+    const { nombre, tipo = 'POR_ZONAS', cantidadZonas, zonas, descuentoTipo, descuentoValor, fechaInicio, fechaFin, activo } = body;
 
     if (!nombre || !nombre.trim()) {
       return NextResponse.json({ error: 'El nombre de la promoción es requerido' }, { status: 400 });
@@ -42,11 +42,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'El valor de descuento debe ser mayor a 0' }, { status: 400 });
     }
 
+    const promoTipo = tipo === 'POR_CANTIDAD' ? 'POR_CANTIDAD' : 'POR_ZONAS';
+    const parsedCantidad = promoTipo === 'POR_CANTIDAD' ? (parseInt(cantidadZonas, 10) || 2) : null;
     const zonasJson = typeof zonas === 'string' ? zonas : JSON.stringify(zonas || []);
 
     const nueva = await prisma.promocion.create({
       data: {
         nombre: nombre.trim(),
+        tipo: promoTipo,
+        cantidadZonas: parsedCantidad,
         zonas: zonasJson,
         descuentoTipo: descuentoTipo === 'MONTO_FIJO' ? 'MONTO_FIJO' : 'PORCENTAJE',
         descuentoValor: numericDesc,
