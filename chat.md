@@ -2116,3 +2116,18 @@
   4. En `GET /api/admin/clientes`, se implementó búsqueda con `unaccent("nombreCompleto") ILIKE unaccent($1)` y normalización numérica de teléfono.
   5. En `/admin/agenda` y `/admin/alta-turno`, se normalizaron los textos eliminando acentos en tiempo real.
   6. Desplegado y verificado en producción y staging con HTTP 200 OK.
+
+### 17/11/2026 - Módulo Turnos de Autogestión y Acreditación Automática de Seña a Dinero a Favor (D-166)
+- **Requerimientos**:
+  1. Módulo "Turnos de Autogestión" (`/admin/turnos-autogestion`): Solicitudes recibidas desde la web de autogestión al elegir fecha y horario y mandar el WhatsApp automático.
+     - Datos: Cliente, fecha y horario, zonas, valor y seña, operador, disponibilidad dinámica.
+     - Badges de disponibilidad: `🟢 Horario disponible` vs `🔴 Horario Ocupado`.
+     - Botón `[ 📅 Agendar ]`: Precarga la ventana de agendado con todos los datos y marca la solicitud como `AGENDADO`. Deshabilitado si el horario está ocupado.
+     - Botón `[ 🗑️ Borrar ]`: Elimina la solicitud de la cola.
+     - Desduplicación automática: Si un mismo cliente genera una nueva solicitud mientras tiene una pendiente, la nueva reemplaza a la anterior.
+     - Verificación de disponibilidad en tiempo real contra `Turno` y `Bloqueo`.
+     - Badge en la barra lateral con el conteo de solicitudes pendientes.
+  2. Acreditación automática a Dinero a Favor:
+     - Al cancelar un turno marcando "Conservar seña", el monto se suma automáticamente a `Cliente.saldoAFavor` para aparecer en `🎁 DINERO A FAVOR` en su perfil y en la próxima sesión.
+     - Regularización en PostgreSQL de Esteban Cuesta a $22.500 de saldo a favor.
+- **Estado**: ✅ Completado, testeado localmente, sincronizado en Prisma, commiteado a `main` y `staging`, y desplegado al VPS de producción con respuesta HTTP 200 OK.

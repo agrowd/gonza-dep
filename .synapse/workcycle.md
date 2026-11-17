@@ -2886,3 +2886,37 @@ Gonzalo Siri reportó en WhatsApp (`media_1794869221478_f163ae8c.jpg` a `media_1
 5. **`src/app/admin/agenda/page.js` y `src/app/admin/alta-turno/page.js`**: Se normalizaron las cadenas con `.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()` en los buscadores y autocompletados de clientes.
 6. **Compilación y Despliegue**: Build exitoso local y en VPS. Despliegue con `deploy_full_safe.mjs` completado con código 0 y verificación HTTP 200 OK.
 7. **Verificación en Vivo**: Verificado con script que tanto `ramon` (sin tilde) como `Ramón` (con tilde) retornan `Ramón José González`.
+
+## Sesión 17/11/2026 - Módulo Turnos de Autogestión y Acreditación Automática de Seña a Dinero a Favor (D-166)
+
+### Requerimientos
+1. **Nuevo Módulo "Turnos de Autogestión" (`/admin/turnos-autogestion`)**:
+   - Cola de solicitudes generadas desde la web al elegir fecha y horario y enviar el mensaje automático por WhatsApp.
+   - Datos por tarjeta: Nombre y apellido, fecha y horario, zonas, valor total y seña, operador, disponibilidad del horario.
+   - Badges de disponibilidad dinámica: `🟢 Horario disponible` vs `🔴 Horario Ocupado`.
+   - Botón `[ 📅 Agendar ]`: Redirige a agendar nuevo turno con todos los datos precargados; si el horario está ocupado, se desactiva.
+   - Botón `[ 🗑️ Borrar ]`: Elimina la solicitud de la cola.
+   - Desduplicación: Si un cliente genera una segunda solicitud mientras tiene una pendiente, la nueva reemplaza automáticamente a la anterior.
+   - Actualización en tiempo real contra `Turno` y `Bloqueo`.
+   - Al agendar, la solicitud cambia a `AGENDADO`.
+2. **Acreditación Automática a Dinero a Favor**:
+   - Al cancelar un turno marcando "Conservar seña" (`preserveDeposit: true`), el valor de la seña debe acreditarse automáticamente a `Cliente.saldoAFavor` para aparecer en `🎁 DINERO A FAVOR` en su perfil y aplicarse en el siguiente turno.
+   - Caso Esteban Cuesta: Regularizar saldo a favor a $22.500.
+
+### Cambios Realizados
+1. **Prisma Schema (`prisma/schema.prisma`)**:
+   - Creado modelo `SolicitudAutogestion` con campos completos y relación con `Cliente`.
+   - Sincronizado en SQLite local y PostgreSQL de VPS (producción y staging).
+2. **Backend**:
+   - `src/app/api/reservas/crear/route.js`: Almacena y desduplica solicitudes pendientes en autogestión.
+   - `src/app/api/admin/autogestion-solicitudes/route.js`: Endpoint GET con cálculo de disponibilidad en vivo contra citas activas y bloqueos, contador de pendientes y filtros por estado y operador.
+   - `src/app/api/admin/autogestion-solicitudes/[id]/route.js`: DELETE y PATCH de solicitudes.
+   - `src/app/api/admin/turnos/route.js`: Marca la solicitud como `AGENDADO` al persistir el turno.
+   - `src/app/api/admin/turnos/[id]/route.js`: Al cancelar con `preserveDeposit: true`, incrementa `Cliente.saldoAFavor` con el monto de la seña.
+3. **Frontend**:
+   - `src/app/admin/turnos-autogestion/page.js` y `autogestion.module.css`: Vista idéntica al diseño solicitado con tarjetas, badges verde/bordó, filtros y polling de 25s.
+   - `src/app/admin/SidebarNav.js`: Añadido ítem "Turnos Autogestión" con ícono de bandeja y badge de contador de solicitudes pendientes.
+   - `src/app/admin/agenda/page.js`: Parser de query params para recibir `solicitudId`, `operadorId`, `boxId` y precargar el modal de agendado.
+4. **Base de Datos y Despliegue**:
+   - Actualizado `Cliente.saldoAFavor = 22500` para Esteban Cuesta en PostgreSQL de producción.
+   - Despliegue completo con `deploy_full_safe.mjs` en Staging y Producción (HTTP 200 OK).
