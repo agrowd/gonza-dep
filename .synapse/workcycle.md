@@ -2920,3 +2920,25 @@ Gonzalo Siri reportó en WhatsApp (`media_1794869221478_f163ae8c.jpg` a `media_1
 4. **Base de Datos y Despliegue**:
    - Actualizado `Cliente.saldoAFavor = 22500` para Esteban Cuesta en PostgreSQL de producción.
    - Despliegue completo con `deploy_full_safe.mjs` en Staging y Producción (HTTP 200 OK).
+
+## Sesión 17/11/2026 - Visualización Universal de Badge de Box en Agenda Semanal (D-167)
+
+### Contexto y Reporte
+Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos que no reflejan el box"*, marcando turnos específicos en el calendario semanal de los días Mié 11 y Jue 12 de noviembre donde no figuraba la etiqueta `[Box 1]`.
+
+### Diagnóstico de Causa Raíz
+1. Se consultó PostgreSQL en producción y se verificó que el 100% de los turnos (896 citas) tienen `boxId` asignado y válido (`Box 1`), con 0 turnos huérfanos sin box.
+2. En `src/app/admin/agenda/page.js`, en la vista semanal (`styles.appointmentBlock`), el renderizado de la insignia `app.box.nombre` estaba condicionado **exclusivamente dentro de la rama `app.duracionMinutos <= 45`**.
+3. En consecuencia:
+   - Para turnos `<= 25 min` (ej. Leonardo Ugartemendia 21:20-21:40 = 20 min) no se renderizaba el box.
+   - Para turnos `> 45 min` (ej. Ivan Burgos = 70 min, Sebastian Ruiz = 60 min, Diego Bolemi = 90 min, Pablo Dominguez = 50 min) no se renderizaba el box.
+   - Solo los turnos de entre 30 y 45 minutos (Alejandro Teran 40 min, Gustavo Damonte 40 min, Emanuel Amprino 30 min, Facundo Granado 40 min) mostraban la etiqueta.
+
+### Solución Implementada
+1. Se extrajo la resolución del box con fallback dinámico contra `boxes` en memoria.
+2. Se incorporó la insignia del box (`Box 1`, `Box 2`) con sus estilos de color distintivo en las **tres ramas de renderizado** de la vista semanal:
+   - `duracionMinutos <= 25`: se muestra junto al nombre y hora.
+   - `duracionMinutos <= 45`: se muestra junto al título.
+   - `duracionMinutos > 45`: se muestra junto al título sobre las zonas depiladas.
+3. Se reforzó el fallback de box en la vista diaria (tarjetas Neocita).
+4. Se validó la compilación Turbopack (50/50 rutas OK) y se desplegó en Staging y Producción.

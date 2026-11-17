@@ -4276,25 +4276,31 @@ export default function AgendaPage() {
                                     {app.cliente?.nombreCompleto || 'Cliente'}
                                   </span>
                                   <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                    {app.box && (
-                                      <span
-                                        style={{
-                                          fontSize: '0.72rem',
-                                          padding: '2px 8px',
-                                          borderRadius: '10px',
-                                          backgroundColor: `${app.box.color || '#7a1f1e'}20`,
-                                          color: app.box.color || '#7a1f1e',
-                                          border: `1px solid ${app.box.color || '#7a1f1e'}50`,
-                                          fontWeight: 700,
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '4px'
-                                        }}
-                                      >
-                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: app.box.color || '#7a1f1e' }} />
-                                        {app.box.nombre}
-                                      </span>
-                                    )}
+                                    {(() => {
+                                      const neocitaBox = app.box || boxes.find(b => b.id === app.boxId);
+                                      const neocitaBoxNombre = neocitaBox?.nombre || (app.boxId ? 'Box 1' : null);
+                                      const neocitaBoxColor = neocitaBox?.color || '#7a1f1e';
+                                      if (!neocitaBoxNombre) return null;
+                                      return (
+                                        <span
+                                          style={{
+                                            fontSize: '0.72rem',
+                                            padding: '2px 8px',
+                                            borderRadius: '10px',
+                                            backgroundColor: `${neocitaBoxColor}20`,
+                                            color: neocitaBoxColor,
+                                            border: `1px solid ${neocitaBoxColor}50`,
+                                            fontWeight: 700,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                          }}
+                                        >
+                                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: neocitaBoxColor }} />
+                                          {neocitaBoxNombre}
+                                        </span>
+                                      );
+                                    })()}
                                     <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 600 }}>
                                       👤 {app.operador?.nombre || 'Gonzalo'}
                                     </span>
@@ -4475,6 +4481,10 @@ export default function AgendaPage() {
                           zonasText = app.zonas;
                         }
 
+                        const currentBox = app.box || boxes.find(b => b.id === app.boxId);
+                        const boxNombre = currentBox?.nombre || (app.boxId ? 'Box 1' : null);
+                        const boxColor = currentBox?.color || '#7a1f1e';
+
                         return (
                           <div
                             key={app.id}
@@ -4488,10 +4498,15 @@ export default function AgendaPage() {
                             }}
                           >
                             {app.duracionMinutos <= 25 ? (
-                              <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3px', height: '100%', padding: '0 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
                                 <span className={styles.appTitle} style={{ fontSize: '0.72rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.1' }}>
                                   {app.cliente?.nombreCompleto || 'Cliente'} <span style={{ opacity: 0.9, fontWeight: '500', fontSize: '0.67rem' }}>({app.horaInicio})</span>
                                 </span>
+                                {boxNombre && (
+                                  <span style={{ fontSize: '0.58rem', fontWeight: 800, padding: '1px 3px', borderRadius: '3px', backgroundColor: `${boxColor}25`, color: boxColor || '#f59e0b', border: `1px solid ${boxColor}50`, flexShrink: 0 }}>
+                                    {boxNombre}
+                                  </span>
+                                )}
                               </div>
                             ) : app.duracionMinutos <= 45 ? (
                               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '2px 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
@@ -4499,9 +4514,9 @@ export default function AgendaPage() {
                                   <span className={styles.appTitle} style={{ fontSize: '0.78rem', fontWeight: '700', lineHeight: '1.15', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {app.cliente?.nombreCompleto || 'Cliente'}
                                   </span>
-                                  {app.box && selectedBoxId === 'ALL' && (
-                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 4px', borderRadius: '3px', backgroundColor: `${app.box.color || '#7a1f1e'}25`, color: app.box.color || '#f59e0b', border: `1px solid ${app.box.color || '#7a1f1e'}50` }}>
-                                      {app.box.nombre}
+                                  {boxNombre && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 4px', borderRadius: '3px', backgroundColor: `${boxColor}25`, color: boxColor || '#f59e0b', border: `1px solid ${boxColor}50` }}>
+                                      {boxNombre}
                                     </span>
                                   )}
                                 </div>
@@ -4511,9 +4526,16 @@ export default function AgendaPage() {
                               </div>
                             ) : (
                               <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '3px 4px', boxSizing: 'border-box', overflow: 'hidden' }}>
-                                <span className={styles.appTitle} style={{ fontSize: '0.82rem', fontWeight: '700', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {app.cliente?.nombreCompleto || 'Cliente Desconocido'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                  <span className={styles.appTitle} style={{ fontSize: '0.82rem', fontWeight: '700', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {app.cliente?.nombreCompleto || 'Cliente Desconocido'}
+                                  </span>
+                                  {boxNombre && (
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '1px 4px', borderRadius: '3px', backgroundColor: `${boxColor}25`, color: boxColor || '#f59e0b', border: `1px solid ${boxColor}50` }}>
+                                      {boxNombre}
+                                    </span>
+                                  )}
+                                </div>
                                 <span style={{ fontSize: '0.7rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0' }}>{zonasText}</span>
                                 <span className={styles.appTime} style={{ fontSize: '0.72rem', opacity: 0.9, marginTop: 'auto', fontWeight: '500' }}>{app.horaInicio} - {app.horaFin}</span>
                               </div>

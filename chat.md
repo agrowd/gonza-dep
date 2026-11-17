@@ -2131,3 +2131,9 @@
      - Al cancelar un turno marcando "Conservar seña", el monto se suma automáticamente a `Cliente.saldoAFavor` para aparecer en `🎁 DINERO A FAVOR` en su perfil y en la próxima sesión.
      - Regularización en PostgreSQL de Esteban Cuesta a $22.500 de saldo a favor.
 - **Estado**: ✅ Completado, testeado localmente, sincronizado en Prisma, commiteado a `main` y `staging`, y desplegado al VPS de producción con respuesta HTTP 200 OK.
+
+### 17/11/2026 - Visualización Universal de Badge de Box en Agenda Semanal (D-167)
+- **Reporte**: Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`) *"Turnos que no reflejan el box"*, marcando turnos específicos en el calendario semanal (Mié 11 y Jue 12 de noviembre) donde no se veía la etiqueta `[Box 1]`.
+- **Causa Raíz**: El 100% de los turnos en la base de datos poseen `boxId` asignado correctamente (`Box 1`), pero el frontend solo incluía el badge dentro de la condición `app.duracionMinutos <= 45` omitiéndolo en citas de 20 minutos (como Leonardo Ugartemendia) y citas largas > 45 min (Ivan Burgos 70 min, Sebastian Ruiz 60 min, Diego Bolemi 90 min, Pablo Dominguez 50 min).
+- **Solución**: Se incorporó el badge de Box con su color distintivo en todas las ramas de duración de la grilla semanal (`<= 25 min`, `<= 45 min`, `> 45 min`), garantizando visualización universal y uniforme.
+- **Despliegue**: Build exitoso (50/50 rutas OK), push a `main` y `staging`, y despliegue a producción y staging con HTTP 200 OK.
