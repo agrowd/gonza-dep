@@ -3012,3 +3012,20 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 3. **Desglose de Pago Dividido (`AMBOS`: Efectivo + Transferencia) en Agenda y Estadísticas**:
    - Diagnóstico: En `senas-dia/route.js`, los turnos con método `AMBOS` sumaban íntegros `montoEfectivo` y `montoTransferencia` aunque su suma fuera igual a `valorTotal` (75.000) superando el saldo real cobrado hoy (45.000), inflando la transferencia en $30.000. Paralelamente, en `estadisticas/page.js`, los turnos con `AMBOS` caían al `else` atribuyendo el 100% a transferencia y $0 a efectivo.
    - Solución: En `senas-dia/route.js` y `estadisticas/page.js`, se desglosan `efCobrado = Math.min(saldoCobrado, ef)` y `trCobrado = Math.max(0, saldoCobrado - efCobrado)`. En el caso del 17 de noviembre (Braian Martinez: $75.000 total, $30.000 seña previa, $45.000 saldo), el desglose refleja con precisión matemática: **$224.000 efectivo** y **$363.500 transferencia**, totalizando exactamente los **$587.500** de ingreso real tanto en la cabecera de la agenda diaria como en el módulo de estadísticas y exportación Excel.
+
+## Sesión 18/11/2026 - Restitución de Fondo Blanco en Espacios Libres de la Agenda Diaria (D-172)
+
+### Reporte de Gonzalo
+- Gonzalo envió la captura `media_1795027530129_9a5c27c3.jpg`: *"Hola Fede, espacio libre lo habías puesto con fondo blanco para que no se confundiera con el resto de colores y ahora volvió a tener un color distinto"*.
+
+### Causa Raíz
+- En `src/app/admin/agenda/agenda.module.css`, la clase `.neocitaFreeSlot` tenía residualmente `background-color: #f0fdfa` (cyan/menta con borde `#5eead4` y `#0d9488`), lo cual generaba una tonalidad que podía confundirse con los turnos señados verdes.
+
+### Solución Implementada
+- En `src/app/admin/agenda/agenda.module.css`:
+  - `background-color: #ffffff !important;` (blanco puro neutro).
+  - `border: 1.5px dashed #94a3b8;` (borde discontinuo gris pizarra).
+  - `border-left: 6px solid #475569;` (borde lateral gris pizarra).
+  - Hover suave en `#f8fafc`.
+- En `src/app/admin/agenda/page.js`: inline style explícito `backgroundColor: '#ffffff'`.
+- Desplegado y verificado en Staging y Producción.

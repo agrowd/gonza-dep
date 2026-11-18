@@ -4235,7 +4235,10 @@ export default function AgendaPage() {
                                   setIsNewOpen(true);
                                 }}
                                 className={styles.neocitaFreeSlot}
-                                style={{ cursor: currentUserRole === 'OPERADOR' ? 'default' : 'pointer' }}
+                                style={{
+                                  cursor: currentUserRole === 'OPERADOR' ? 'default' : 'pointer',
+                                  backgroundColor: '#ffffff'
+                                }}
                                 title={currentUserRole === 'OPERADOR' ? 'Espacio libre' : 'Espacio libre: haz clic para agendar un turno en este horario'}
                               >
                                 {/* Renglón 1: Horario libre destacado y duración */}

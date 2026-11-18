@@ -2201,3 +2201,9 @@
 - **Desglose de Pago Dividido (`AMBOS`: Efectivo + Transferencia)**:
   - En `/api/admin/turnos/senas-dia` y `/admin/estadisticas`: el desglose de turnos con `AMBOS` se acota al saldo cobrado real en la sesión (`saldoCobrado`), imputando `efCobrado = Math.min(saldoCobrado, ef)` y `trCobrado = Math.max(0, saldoCobrado - efCobrado)`.
   - Corregido el caso del 17 de noviembre: $224.000 efectivo y $363.500 transferencia (total $587.500) coincidiendo al 100% en la Agenda Diaria, Estadísticas y Exportación Excel.
+
+### Sesión 18/11/2026 - Restitución de Fondo Blanco en Espacios Libres de la Agenda Diaria (D-172)
+
+- En respuesta a la captura de WhatsApp de Gonzalo (`media_1795027530129_9a5c27c3.jpg`): *"Hola Fede, espacio libre lo habías puesto con fondo blanco para que no se confundiera con el resto de colores y ahora volvió a tener un color distinto"*.
+- Se configuró el fondo blanco puro neutro (`#ffffff !important`), borde discontinuo pizarra (`1.5px dashed #94a3b8`), borde lateral gris pizarra (`border-left: 6px solid #475569`) y sombra suave en `.neocitaFreeSlot` de `agenda.module.css` y `agenda/page.js`.
+- Los huecos disponibles para agendar destacan nítidamente como espacios vacíos en blanco, sin confundirse con el verde de SEÑADO, azul de REALIZADO ni naranja de REPROGRAMADO.
