@@ -2610,7 +2610,7 @@ export default function AgendaPage() {
       if (res.ok) {
         const updatedData = await res.json().catch(() => null);
         setIsEditing(false);
-        setIsDetailsOpen(false);
+        setIsDetailsOpen(true);
         showToast('Turno guardado con éxito.');
         setSelectedTurno(prev => {
           if (!prev) return null;
@@ -2920,7 +2920,18 @@ export default function AgendaPage() {
           if (t.estado === 'CANCELADO') return false;
           const start = timeToMinutes(t.horaInicio);
           const end = timeToMinutes(t.horaFin);
-          return start < newEnd && end > newStart;
+          const timeOverlaps = start < newEnd && end > newStart;
+          if (!timeOverlaps) return false;
+
+          // Multi-agenda: si el box y el operador son ambos distintos, permitir citas en paralelo
+          const targetBoxId = newTurno.boxId;
+          const targetOperadorId = newTurno.operadorId;
+          if (targetBoxId && targetOperadorId && t.boxId && t.operadorId) {
+            if (t.boxId !== targetBoxId && t.operadorId !== targetOperadorId) {
+              return false;
+            }
+          }
+          return true;
         });
 
         if (overlap) {
@@ -2946,7 +2957,7 @@ export default function AgendaPage() {
 
     const delayDebounce = setTimeout(checkNewTurnoOverlap, 300);
     return () => clearTimeout(delayDebounce);
-  }, [newTurno.fechaStr, newTurno.horaInicio, newTurno.horaFin, newTurno.estado, isNewOpen, config.work_start, config.work_end]);
+  }, [newTurno.fechaStr, newTurno.horaInicio, newTurno.horaFin, newTurno.estado, newTurno.boxId, newTurno.operadorId, isNewOpen, config.work_start, config.work_end]);
 
   // Load last client turno info if client is selected or arrives via URL
   useEffect(() => {
@@ -2995,7 +3006,18 @@ export default function AgendaPage() {
           if (t.estado === 'CANCELADO') return false;
           const start = timeToMinutes(t.horaInicio);
           const end = timeToMinutes(t.horaFin);
-          return start < newEnd && end > newStart;
+          const timeOverlaps = start < newEnd && end > newStart;
+          if (!timeOverlaps) return false;
+
+          // Multi-agenda: si el box y el operador son ambos distintos, permitir citas en paralelo
+          const targetBoxId = editTurno.boxId;
+          const targetOperadorId = editTurno.operadorId;
+          if (targetBoxId && targetOperadorId && t.boxId && t.operadorId) {
+            if (t.boxId !== targetBoxId && t.operadorId !== targetOperadorId) {
+              return false;
+            }
+          }
+          return true;
         });
 
         if (overlap) {
@@ -3021,7 +3043,7 @@ export default function AgendaPage() {
 
     const delayDebounce = setTimeout(checkEditTurnoOverlap, 300);
     return () => clearTimeout(delayDebounce);
-  }, [editTurno.fechaStr, editTurno.horaInicio, editTurno.horaFin, editTurno.estado, isEditing, selectedTurno, config.work_start, config.work_end]);
+  }, [editTurno.fechaStr, editTurno.horaInicio, editTurno.horaFin, editTurno.estado, editTurno.boxId, editTurno.operadorId, isEditing, selectedTurno, config.work_start, config.work_end]);
 
   // Submit manual creation
   const handleCreateTurno = async (e) => {
@@ -3059,11 +3081,20 @@ export default function AgendaPage() {
 
   const toggleNewTurnoZone = (zoneId) => {
     const exists = (newTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
+    const targetZone = zones.find(z => String(z.id) === String(zoneId));
 
     setNewTurno(prev => {
-      const newZoneIds = exists
-        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
-        : [...(prev.selectedZoneIds || []), zoneId];
+      let newZoneIds;
+      if (exists) {
+        newZoneIds = (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId));
+      } else {
+        // Exclusividad de servicio: si se selecciona una zona de otro servicio, desmarcar las anteriores
+        const filteredPrev = (prev.selectedZoneIds || []).filter(id => {
+          const z = zones.find(x => String(x.id) === String(id));
+          return z && z.servicioId === targetZone?.servicioId;
+        });
+        newZoneIds = [...filteredPrev, zoneId];
+      }
 
       const newZones = zones.filter(z => newZoneIds.some(id => String(id) === String(z.id)));
       const calcs = calculateTurnDetails(newZones, false);
@@ -3173,11 +3204,20 @@ export default function AgendaPage() {
 
   const toggleEditTurnoZone = (zoneId) => {
     const exists = (editTurno.selectedZoneIds || []).some(id => String(id) === String(zoneId));
+    const targetZone = zones.find(z => String(z.id) === String(zoneId));
 
     setEditTurno(prev => {
-      const newZoneIds = exists
-        ? (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId))
-        : [...(prev.selectedZoneIds || []), zoneId];
+      let newZoneIds;
+      if (exists) {
+        newZoneIds = (prev.selectedZoneIds || []).filter(id => String(id) !== String(zoneId));
+      } else {
+        // Exclusividad de servicio: si se selecciona una zona de otro servicio, desmarcar las anteriores
+        const filteredPrev = (prev.selectedZoneIds || []).filter(id => {
+          const z = zones.find(x => String(x.id) === String(id));
+          return z && z.servicioId === targetZone?.servicioId;
+        });
+        newZoneIds = [...filteredPrev, zoneId];
+      }
 
       const newZones = zones.filter(z => newZoneIds.some(id => String(id) === String(z.id)));
       const calcs = calculateTurnDetails(newZones, false);
@@ -4783,34 +4823,98 @@ export default function AgendaPage() {
                   </div>
 
                   {editTurno.hasOtros && (
-                    <div className={styles.inputRow} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
-                      <div className={styles.inputGroup} style={{ flex: 2 }}>
-                        <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
-                        <input
-                          type="text"
-                          placeholder="Ej: Cintura, Nuca o zonas combinadas"
-                          value={editTurno.otrosTexto || ''}
-                          onChange={(e) => setEditTurno({ ...editTurno, otrosTexto: e.target.value })}
-                          required
-                        />
+                    <div style={{ gridColumn: '1 / -1', marginTop: '-0.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fed7aa', backgroundColor: '#fffaf5' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
+                          Zonas Extra (Otros)
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Valor Zonas Extras ($):</label>
+                          <input
+                            type="number"
+                            placeholder="Ej. 15000"
+                            value={editTurno.otrosPrecio ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditTurno(prev => ({
+                                ...prev,
+                                otrosPrecio: val,
+                                manualTotalOverride: undefined,
+                                manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
+                              }));
+                            }}
+                            style={{ width: '110px', padding: '0.25rem 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                          />
+                        </div>
                       </div>
-                      <div className={styles.inputGroup} style={{ flex: 1 }}>
-                        <label className={styles.inputLabel}>Valor Zonas Extras ($)</label>
-                        <input
-                          type="number"
-                          placeholder="Ej. 15000"
-                          value={editTurno.otrosPrecio ?? ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setEditTurno(prev => ({
-                              ...prev,
-                              otrosPrecio: val,
-                              manualTotalOverride: undefined,
-                              manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
-                            }));
-                          }}
-                        />
+
+                      {/* Lista dinámica de zonas extras */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                        {(() => {
+                          const currentItems = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                          return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', minWidth: '95px', flexShrink: 0 }}>
+                                Zona Extra {idx + 1}
+                              </span>
+                              <input
+                                type="text"
+                                placeholder="Ej. Media Pierna, Nuca..."
+                                value={item}
+                                onChange={(e) => {
+                                  const list = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                                  list[idx] = e.target.value;
+                                  setEditTurno({ ...editTurno, otrosTexto: list.join(', ') });
+                                }}
+                                style={{ flex: 1, padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const list = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                                  list.splice(idx, 1);
+                                  if (list.length === 0) {
+                                    setEditTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
+                                  } else {
+                                    setEditTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
+                                  }
+                                }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem' }}
+                                title="Eliminar esta zona extra"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          ));
+                        })()}
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const list = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                          list.push('');
+                          setEditTurno({ ...editTurno, otrosTexto: list.join(', ') });
+                        }}
+                        style={{
+                          width: '100%',
+                          marginTop: '0.25rem',
+                          padding: '0.4rem',
+                          borderRadius: '6px',
+                          border: '1px solid #7a1f1e',
+                          backgroundColor: '#ffffff',
+                          color: '#7a1f1e',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem'
+                        }}
+                      >
+                        + Agregar otra zona
+                      </button>
                     </div>
                   )}
 
@@ -5060,7 +5164,7 @@ export default function AgendaPage() {
                 )}
 
                 <div className={styles.modalFooter}>
-                  <button type="button" onClick={handleCloseDetailsModal} className="btn btn-secondary">Cancelar</button>
+                  <button type="button" onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancelar</button>
                   <button type="submit" className="btn btn-primary">Guardar Cambios</button>
                 </div>
               </form>
@@ -5554,52 +5658,60 @@ export default function AgendaPage() {
                               </div>
                             )}
 
-                            {/* Monto / Dinero a Favor del Cliente (D-151) */}
-                            <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.35rem', alignItems: 'center' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span className={styles.detailLabel} style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                  🎁 Dinero a favor
-                                </span>
-                                <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                                  Se aplicará en el próximo turno
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <span style={{ fontWeight: 700, color: '#b45309' }}>$</span>
-                                <input
-                                  type="number"
-                                  value={selectedTurno.dineroAFavor ?? ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value === '' ? null : Number(e.target.value);
-                                    setSelectedTurno(prev => ({ ...prev, dineroAFavor: val }));
-                                  }}
-                                  onBlur={async () => {
-                                    try {
-                                      await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
-                                        method: 'PUT',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ dineroAFavor: selectedTurno.dineroAFavor || 0 })
-                                      });
-                                      showToast('Monto a favor actualizado');
-                                    } catch (err) {
-                                      console.error(err);
-                                    }
-                                  }}
-                                  placeholder="0"
-                                  style={{
-                                    width: '95px',
-                                    padding: '0.3rem 0.45rem',
-                                    borderRadius: '6px',
-                                    border: '1px solid #f59e0b',
-                                    backgroundColor: '#fffbeb',
-                                    fontWeight: 700,
-                                    textAlign: 'right',
-                                    fontSize: '0.88rem',
-                                    color: '#b45309'
-                                  }}
-                                />
-                              </div>
-                            </div>
+                            {/* Monto / Dinero a Favor del Cliente (D-151 / D-169) */}
+                            {(() => {
+                              const clientSaldo = Number(selectedTurno.cliente?.saldoAFavor || 0);
+                              const currentVal = (selectedTurno.dineroAFavor !== null && selectedTurno.dineroAFavor !== undefined && selectedTurno.dineroAFavor !== '') 
+                                ? selectedTurno.dineroAFavor 
+                                : (clientSaldo > 0 ? clientSaldo : '');
+                              return (
+                                <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.35rem', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span className={styles.detailLabel} style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      🎁 DINERO A FAVOR
+                                    </span>
+                                    <span style={{ fontSize: '0.68rem', color: clientSaldo > 0 ? '#166534' : '#64748b', fontWeight: clientSaldo > 0 ? 600 : 400 }}>
+                                      {clientSaldo > 0 ? `Saldo disponible del cliente: $${clientSaldo.toLocaleString('es-ES')}` : 'Se aplicará en el próximo turno'}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <span style={{ fontWeight: 700, color: '#b45309' }}>$</span>
+                                    <input
+                                      type="number"
+                                      value={currentVal}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        setSelectedTurno(prev => ({ ...prev, dineroAFavor: val }));
+                                      }}
+                                      onBlur={async () => {
+                                        try {
+                                          await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ dineroAFavor: Number(selectedTurno.dineroAFavor || currentVal || 0) })
+                                          });
+                                          showToast('Monto a favor actualizado');
+                                        } catch (err) {
+                                          console.error(err);
+                                        }
+                                      }}
+                                      placeholder="0"
+                                      style={{
+                                        width: '95px',
+                                        padding: '0.3rem 0.45rem',
+                                        borderRadius: '6px',
+                                        border: '1px solid #f59e0b',
+                                        backgroundColor: '#fffbeb',
+                                        fontWeight: 700,
+                                        textAlign: 'right',
+                                        fontSize: '0.88rem',
+                                        color: '#b45309'
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             {/* Accordion: Siguientes Turnos Agendados (D-162) - Solo si tiene múltiples turnos futuros */}
                             {clientFutureTurnos.length > 1 && (
@@ -5649,13 +5761,19 @@ export default function AgendaPage() {
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {clientFutureTurnos.map(ft => {
+                                        {clientFutureTurnos.map((ft, idx) => {
                                           const isChecked = Boolean(selectedFutureSenas[ft.id]);
+                                          const isFarthest = idx === clientFutureTurnos.length - 1;
                                           const ftDateFormatted = ft.fecha ? new Date(ft.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '—';
                                           return (
                                             <tr key={ft.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: isChecked ? '#f0fdf4' : 'transparent' }}>
                                               <td style={{ padding: '0.4rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>
                                                 {ftDateFormatted}
+                                                {isFarthest && (
+                                                  <span style={{ marginLeft: '6px', fontSize: '0.68rem', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, display: 'inline-block' }}>
+                                                    Más lejano
+                                                  </span>
+                                                )}
                                               </td>
                                               <td style={{ padding: '0.4rem', color: '#475569' }}>
                                                 {formatTurnoZonasList(ft.zonas)}
@@ -7179,34 +7297,98 @@ export default function AgendaPage() {
                 </div>
 
                 {newTurno.hasOtros && (
-                  <div className={styles.inputRow} style={{ gridColumn: '1 / -1', marginTop: '-0.25rem' }}>
-                    <div className={styles.inputGroup} style={{ flex: 2 }}>
-                      <label className={styles.inputLabel}>Escribir Zona Extra (Otros) *</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Cintura, Nuca o zonas combinadas"
-                        value={newTurno.otrosTexto || ''}
-                        onChange={(e) => setNewTurno({ ...newTurno, otrosTexto: e.target.value })}
-                        required
-                      />
+                  <div style={{ gridColumn: '1 / -1', marginTop: '-0.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fed7aa', backgroundColor: '#fffaf5' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
+                        Zonas Extra (Otros)
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Valor Zonas Extras ($):</label>
+                        <input
+                          type="number"
+                          placeholder="Ej. 15000"
+                          value={newTurno.otrosPrecio ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewTurno(prev => ({
+                              ...prev,
+                              otrosPrecio: val,
+                              manualTotalOverride: undefined,
+                              manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
+                            }));
+                          }}
+                          style={{ width: '110px', padding: '0.25rem 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        />
+                      </div>
                     </div>
-                    <div className={styles.inputGroup} style={{ flex: 1 }}>
-                      <label className={styles.inputLabel}>Valor Zonas Extras ($)</label>
-                      <input
-                        type="number"
-                        placeholder="Ej. 15000"
-                        value={newTurno.otrosPrecio ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setNewTurno(prev => ({
-                            ...prev,
-                            otrosPrecio: val,
-                            manualTotalOverride: undefined,
-                            manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
-                          }));
-                        }}
-                      />
+
+                    {/* Lista dinámica de zonas extras */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                      {(() => {
+                        const currentItems = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                        return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', minWidth: '95px', flexShrink: 0 }}>
+                              Zona Extra {idx + 1}
+                            </span>
+                            <input
+                              type="text"
+                              placeholder="Ej. Media Pierna, Nuca..."
+                              value={item}
+                              onChange={(e) => {
+                                const list = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                                list[idx] = e.target.value;
+                                setNewTurno({ ...newTurno, otrosTexto: list.join(', ') });
+                              }}
+                              style={{ flex: 1, padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                                list.splice(idx, 1);
+                                if (list.length === 0) {
+                                  setNewTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
+                                } else {
+                                  setNewTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
+                                }
+                              }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem' }}
+                              title="Eliminar esta zona extra"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        ));
+                      })()}
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const list = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                        list.push('');
+                        setNewTurno({ ...newTurno, otrosTexto: list.join(', ') });
+                      }}
+                      style={{
+                        width: '100%',
+                        marginTop: '0.25rem',
+                        padding: '0.4rem',
+                        borderRadius: '6px',
+                        border: '1px solid #7a1f1e',
+                        backgroundColor: '#ffffff',
+                        color: '#7a1f1e',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.35rem'
+                      }}
+                    >
+                      + Agregar otra zona
+                    </button>
                   </div>
                 )}
 

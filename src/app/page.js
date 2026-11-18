@@ -455,17 +455,29 @@ export default function Home() {
 
   // 7. Toggle Zone Selection (Step 2)
   // Exclusividad mutua: Elegir "Cuerpo Completo" desmarca las demás zonas, y elegir otra desmarca "Cuerpo Completo"
+  // 7. Toggle Zone Selection (Step 2)
+  // Exclusividad de Servicio: En un turno solo se puede elegir un servicio (D-169)
+  // Exclusividad mutua: Elegir "Cuerpo Completo" desmarca las demás zonas, y elegir otra desmarca "Cuerpo Completo"
   const toggleZone = (id) => {
     const clickedZone = zones.find(z => z.id === id);
-    const isCuerpoCompleto = clickedZone?.nombre?.trim()?.toLowerCase() === 'cuerpo completo';
+    if (!clickedZone) return;
+    const clickedServiceId = clickedZone.servicioId || 'default';
+    const isCuerpoCompleto = clickedZone.nombre?.trim()?.toLowerCase() === 'cuerpo completo';
 
     setSelectedZoneIds(prev => {
+      // Filtrar zonas que pertenezcan a un servicio distinto
+      const sameServiceZones = prev.filter(x => {
+        const z = zones.find(item => item.id === x);
+        const sId = z?.servicioId || 'default';
+        return sId === clickedServiceId;
+      });
+
       if (isCuerpoCompleto) {
         // Si se toca Cuerpo Completo: o se desmarca si ya estaba, o queda como única zona seleccionada
-        return prev.includes(id) ? [] : [id];
+        return sameServiceZones.includes(id) ? [] : [id];
       } else {
         // Si se toca cualquier otra zona: desmarcar Cuerpo Completo y hacer toggle de la zona elegida
-        const withoutCC = prev.filter(x => {
+        const withoutCC = sameServiceZones.filter(x => {
           const z = zones.find(item => item.id === x);
           return z?.nombre?.trim()?.toLowerCase() !== 'cuerpo completo';
         });

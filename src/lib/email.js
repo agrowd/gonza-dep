@@ -416,12 +416,10 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
     }
   }
 
-  const defaultSubject = withLossOfDeposit
-    ? 'Cancelación de turno (seña retenida) - Gonzalo Depilación'
-    : 'Cancelación de turno - Gonzalo Depilación';
+  const defaultSubject = 'Cancelación de turno - Gonzalo Depilación';
 
   const defaultBody = withLossOfDeposit
-    ? "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n\nDe acuerdo con nuestras políticas de reserva y cancelación, la seña abonada de {seña} ha sido retenida para cubrir los costos logísticos del horario reservado."
+    ? "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web."
     : "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n\nAl haberse realizado con la anticipación correspondiente, tu seña queda registrada a tu favor. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.";
 
   const rawSubject = subjectTemplate || defaultSubject;

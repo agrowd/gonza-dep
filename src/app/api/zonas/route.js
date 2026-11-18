@@ -5,11 +5,36 @@ import prisma from '@/lib/db.js';
 import { ensureDefaultService } from '@/app/api/admin/servicios/route.js';
 
 // GET: Lista pública de zonas, incluyendo su servicio asociado
-export async function GET() {
+export async function GET(request) {
   try {
     await ensureDefaultService();
 
+    let isAdmin = false;
+    try {
+      const cookieStore = await cookies();
+      const sessionCookie = cookieStore.get('session');
+      isAdmin = sessionCookie ? !!verifySessionToken(sessionCookie.value) : false;
+    } catch (authErr) {
+      isAdmin = false;
+    }
+
+    const { searchParams } = new URL(request.url);
+    const isAutogestion = searchParams.get('autogestion') === 'true' || !isAdmin;
+
+    const where = isAutogestion ? {
+      OR: [
+        {
+          servicio: {
+            activo: true,
+            habilitadoAutogestion: true
+          }
+        },
+        { servicioId: null }
+      ]
+    } : {};
+
     const zonas = await prisma.zona.findMany({
+      where,
       include: {
         servicio: true
       },

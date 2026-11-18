@@ -52,20 +52,18 @@ function isPastDateTime(fechaStr, horaInicio) {
   return false;
 }
 
-async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null, boxId = null) {
+async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null, boxId = null, operadorId = null) {
   const targetDate = new Date(fechaStr + 'T00:00:00');
-  const whereCondition = {
-    fecha: targetDate,
-    estado: { not: 'CANCELADO' },
-    id: excludeTurnoId ? { not: excludeTurnoId } : undefined
-  };
-  if (boxId) {
-    whereCondition.boxId = boxId;
-  }
   const dayTurnos = await prisma.turno.findMany({
-    where: whereCondition,
+    where: {
+      fecha: targetDate,
+      estado: { not: 'CANCELADO' },
+      id: excludeTurnoId ? { not: excludeTurnoId } : undefined
+    },
     include: {
-      cliente: true
+      cliente: true,
+      box: true,
+      operador: true
     }
   });
 
@@ -76,7 +74,26 @@ async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId
     const startMin = timeToMinutes(t.horaInicio);
     const endMin = timeToMinutes(t.horaFin);
     if (startMin < newEndMin && endMin > newStartMin) {
-      return t;
+      if (t.estado === 'BLOQUEADO') {
+        if (!t.boxId || !boxId || String(t.boxId) === String(boxId)) {
+          return t;
+        }
+        continue;
+      }
+
+      // Regla Multi-agenda: Se permite superposición horaria SI Y SOLO SI
+      // se realizan en Boxes distintos Y con Operadores distintos.
+      const tBoxId = t.boxId ? String(t.boxId) : null;
+      const curBoxId = boxId ? String(boxId) : null;
+      const tOpId = t.operadorId ? String(t.operadorId) : null;
+      const curOpId = operadorId ? String(operadorId) : null;
+
+      const sameBox = (tBoxId && curBoxId && tBoxId === curBoxId) || (!tBoxId && !curBoxId);
+      const sameOp = (tOpId && curOpId && tOpId === curOpId) || (!tOpId && !curOpId);
+
+      if (sameBox || sameOp) {
+        return t;
+      }
     }
   }
   return null;
@@ -274,7 +291,8 @@ export async function POST(request) {
     }
 
     // Validation: Overlap Check
-    const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin, null, finalBoxId);
+    let finalOperadorId = operadorId ? String(operadorId) : null;
+    const checkOverlap = await hasOverlappingTurno(fechaStr, horaInicio, horaFin, null, finalBoxId, finalOperadorId);
     if (checkOverlap) {
       const isBlock = checkOverlap.estado === 'BLOQUEADO';
       return NextResponse.json({
@@ -442,7 +460,6 @@ export async function POST(request) {
     }
 
     // 4. Resolve default operator (defaults to Gonzalo / primary Admin if not specified)
-    let finalOperadorId = operadorId ? String(operadorId) : null;
     if (!finalOperadorId) {
       try {
         const allUsers = await prisma.usuario.findMany();

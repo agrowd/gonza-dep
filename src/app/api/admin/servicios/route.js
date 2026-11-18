@@ -87,7 +87,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { nombre, descripcion, icono, orden } = body;
+    const { nombre, descripcion, icono, orden, habilitadoAutogestion } = body;
 
     if (!nombre || !nombre.trim()) {
       return NextResponse.json({ error: 'El nombre del servicio es obligatorio' }, { status: 400 });
@@ -109,7 +109,8 @@ export async function POST(request) {
         descripcion: descripcion ? descripcion.trim() : null,
         icono: icono ? icono.trim() : '✨',
         orden: orden !== undefined ? Number(orden) : 10,
-        activo: true
+        activo: true,
+        habilitadoAutogestion: habilitadoAutogestion !== undefined ? Boolean(habilitadoAutogestion) : true
       },
       include: {
         zonas: true

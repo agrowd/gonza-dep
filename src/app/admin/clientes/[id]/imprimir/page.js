@@ -191,7 +191,26 @@ export default function FichaImprimirPage({ params }) {
                 </tr>
               </thead>
               <tbody>
-                {client.turnos.map((t) => {
+                {(() => {
+                  const sortedTurnos = [...client.turnos].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+                  const weeksMap = {};
+                  for (let i = 0; i < sortedTurnos.length; i++) {
+                    const cur = sortedTurnos[i];
+                    let prev = null;
+                    for (let j = i - 1; j >= 0; j--) {
+                      if (sortedTurnos[j].estado !== 'CANCELADO') {
+                        prev = sortedTurnos[j];
+                        break;
+                      }
+                    }
+                    if (prev) {
+                      const diffDays = Math.round((new Date(cur.fecha).getTime() - new Date(prev.fecha).getTime()) / (1000 * 60 * 60 * 24));
+                      const diffWeeks = Math.max(1, Math.round(diffDays / 7));
+                      weeksMap[cur.id] = diffWeeks;
+                    }
+                  }
+
+                  return client.turnos.map((t) => {
                   let zonas = '';
                   try {
                     zonas = JSON.parse(t.zonas).map(z => z.nombre).join(', ');
@@ -201,7 +220,18 @@ export default function FichaImprimirPage({ params }) {
 
                   return (
                     <tr key={t.id}>
-                      <td>{new Date(t.fecha).toLocaleDateString('es-AR')}</td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{new Date(t.fecha).toLocaleDateString('es-AR')}</div>
+                        {weeksMap[t.id] ? (
+                          <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
+                            ⏱️ {weeksMap[t.id]} {weeksMap[t.id] === 1 ? 'sem' : 'sem'} desde prev.
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600, marginTop: '2px' }}>
+                            🌱 1er Turno
+                          </div>
+                        )}
+                      </td>
                       <td>{t.horaInicio} a {t.horaFin}</td>
                       <td>{zonas}</td>
                       <td>${t.valorTotal.toLocaleString('es-AR')}</td>
@@ -217,8 +247,9 @@ export default function FichaImprimirPage({ params }) {
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
+                });
+              })()}
+            </tbody>
             </table>
           )}
         </div>

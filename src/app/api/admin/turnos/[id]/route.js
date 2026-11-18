@@ -29,20 +29,18 @@ function isPastDateTime(fechaStr) {
   return fechaStr < todayStr;
 }
 
-async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null, boxId = null) {
+async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId = null, boxId = null, operadorId = null) {
   const targetDate = new Date(fechaStr + 'T00:00:00');
-  const whereCondition = {
-    fecha: targetDate,
-    estado: { not: 'CANCELADO' },
-    id: excludeTurnoId ? { not: excludeTurnoId } : undefined
-  };
-  if (boxId) {
-    whereCondition.boxId = boxId;
-  }
   const dayTurnos = await prisma.turno.findMany({
-    where: whereCondition,
+    where: {
+      fecha: targetDate,
+      estado: { not: 'CANCELADO' },
+      id: excludeTurnoId ? { not: excludeTurnoId } : undefined
+    },
     include: {
-      cliente: true
+      cliente: true,
+      box: true,
+      operador: true
     }
   });
 
@@ -53,7 +51,26 @@ async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId
     const startMin = timeToMinutes(t.horaInicio);
     const endMin = timeToMinutes(t.horaFin);
     if (startMin < newEndMin && endMin > newStartMin) {
-      return t;
+      if (t.estado === 'BLOQUEADO') {
+        if (!t.boxId || !boxId || String(t.boxId) === String(boxId)) {
+          return t;
+        }
+        continue;
+      }
+
+      // Regla Multi-agenda: Se permite superposición horaria SI Y SOLO SI
+      // se realizan en Boxes distintos Y con Operadores distintos.
+      const tBoxId = t.boxId ? String(t.boxId) : null;
+      const curBoxId = boxId ? String(boxId) : null;
+      const tOpId = t.operadorId ? String(t.operadorId) : null;
+      const curOpId = operadorId ? String(operadorId) : null;
+
+      const sameBox = (tBoxId && curBoxId && tBoxId === curBoxId) || (!tBoxId && !curBoxId);
+      const sameOp = (tOpId && curOpId && tOpId === curOpId) || (!tOpId && !curOpId);
+
+      if (sameBox || sameOp) {
+        return t;
+      }
     }
   }
   return null;
@@ -254,10 +271,11 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Overlap Check (only when date, time or reactivation changes)
+    // Overlap Check (only when date, time, box, operator or reactivation changes)
     const checkBoxId = body.boxId !== undefined ? (body.boxId ? String(body.boxId) : null) : oldTurn.boxId;
+    const checkOperadorId = body.operadorId !== undefined ? (body.operadorId ? String(body.operadorId) : null) : oldTurn.operadorId;
     if (checkEstado !== 'CANCELADO' && (isDateChanged || isTimeChanged || isStateReactivated)) {
-      const checkOverlap = await hasOverlappingTurno(checkFechaStr, checkHoraInicio, checkHoraFin, id, checkBoxId);
+      const checkOverlap = await hasOverlappingTurno(checkFechaStr, checkHoraInicio, checkHoraFin, id, checkBoxId, checkOperadorId);
       if (checkOverlap) {
         const isBlock = checkOverlap.estado === 'BLOQUEADO';
         return NextResponse.json({
@@ -490,8 +508,35 @@ export async function PUT(request, { params }) {
               select: { saldoAFavor: true }
             });
             newSaldo = Math.max(0, Number(currentClient?.saldoAFavor || 0) + depositToPreserve);
+
+            // Buscar turnos activos futuros del cliente para pasar la seña conservada
+            // Regla de negocio: si tiene múltiples turnos futuros, pasa al turno más lejano; si tiene uno, pasa a ese.
+            const todayStr = new Date().toISOString().split('T')[0];
+            const futureAppointments = await prisma.turno.findMany({
+              where: {
+                clienteId: oldTurn.clienteId,
+                id: { not: oldTurn.id },
+                estado: { in: ['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_PAGO', 'PENDIENTE_AUTORIZACION'] },
+                fecha: { gte: new Date(todayStr + 'T00:00:00.000Z') }
+              },
+              orderBy: [
+                { fecha: 'asc' },
+                { horaInicio: 'asc' }
+              ]
+            });
+
+            if (futureAppointments.length > 0) {
+              const farthestTurno = futureAppointments[futureAppointments.length - 1];
+              await prisma.turno.update({
+                where: { id: farthestTurno.id },
+                data: {
+                  dineroAFavor: Math.max(0, Number(farthestTurno.dineroAFavor || 0) + depositToPreserve)
+                }
+              });
+              console.log(`[Turno Cancel] Seña conservada de $${depositToPreserve} asignada al turno más lejano ${farthestTurno.id} (${farthestTurno.fecha})`);
+            }
           } catch (fetchErr) {
-            console.error('Error fetching client saldoAFavor:', fetchErr);
+            console.error('Error fetching client saldoAFavor or updating future turno:', fetchErr);
           }
         }
 
@@ -796,7 +841,7 @@ export async function PUT(request, { params }) {
               turnoId: updatedTurno.id,
               canal: 'EMAIL',
               mensaje: withLossOfDeposit
-                ? `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.\n\nDe acuerdo con nuestras políticas de reserva y cancelación, la seña abonada de $${Number(updatedTurno.valorSeña || 0).toLocaleString('es-AR')} ha sido retenida para cubrir los costos logísticos del horario reservado.`
+                ? `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`
                 : `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.\n\nAl haberse realizado con la anticipación correspondiente, tu seña queda registrada a tu favor. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`,
               estado: 'ENVIADO'
             }
@@ -829,7 +874,7 @@ export async function PUT(request, { params }) {
             where: { key: 'address' }
           });
 
-          const defaultCancelTpl = "¡Hola [Nombre]! Tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nTené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada se pierde y no es reembolsable.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
+          const defaultCancelTpl = "¡Hola [Nombre]! Te informamos que tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
           let templateVal = wppCancelConfig?.value || defaultCancelTpl;
           if (body.preserveDeposit && Number(updatedTurno.valorSeña) > 0) {
             templateVal = "¡Hola [Nombre]! Te informamos que tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Tu seña de $[Seña] queda registrada A TU FAVOR para tu próxima sesión. Comunicate con nosotros cuando desees coordinar tu nueva cita. ¡Saludos!";

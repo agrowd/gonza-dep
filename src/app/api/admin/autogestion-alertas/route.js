@@ -11,6 +11,14 @@ export async function GET(request) {
     // Exclude old historical turnos from past months (e.g., August, July)
     const minTurnoDate = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
+    // Fecha actual en Argentina (YYYY-MM-DD): Las alertas flotantes de autogestión SOLO deben aparecer el día en que se hizo el cambio
+    const todayArgStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+
     const turnos = await prisma.turno.findMany({
       where: {
         AND: [
@@ -52,7 +60,22 @@ export async function GET(request) {
       take: limit
     });
 
-    const alertas = turnos.map(t => {
+    const turnosHoy = turnos.filter(t => {
+      try {
+        const updateDate = t.updatedAt || t.createdAt;
+        const updatedAtArgStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Argentina/Buenos_Aires',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(new Date(updateDate));
+        return updatedAtArgStr === todayArgStr;
+      } catch (err) {
+        return false;
+      }
+    });
+
+    const alertas = turnosHoy.map(t => {
       let tipo = 'REPROGRAMACION';
       if (
         t.estado === 'CANCELADO' ||

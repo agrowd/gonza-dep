@@ -49,6 +49,7 @@ function AltaTurnoContent() {
   const [isNuevoCliente, setIsNuevoCliente] = useState(false);
   const [hasOtros, setHasOtros] = useState(false);
   const [otrosTexto, setOtrosTexto] = useState('');
+  const [otrosList, setOtrosList] = useState([]);
   const [otrosPrecio, setOtrosPrecio] = useState(0);
 
   // Duration State: automatically calculated, but operator can edit it
@@ -125,7 +126,10 @@ function AltaTurnoContent() {
     const hasOtrosParam = searchParams.get('hasOtros') === 'true';
     if (hasOtrosParam) {
       setHasOtros(true);
-      setOtrosTexto(searchParams.get('otrosTexto') || '');
+      const rawOtros = searchParams.get('otrosTexto') || '';
+      setOtrosTexto(rawOtros);
+      const list = rawOtros ? rawOtros.split(/,\s*/).map(s => s.trim()).filter(Boolean) : [];
+      setOtrosList(list.length > 0 ? list : ['']);
       setOtrosPrecio(parseInt(searchParams.get('otrosPrecio') || '0', 10) || 0);
     }
     const durParam = parseInt(searchParams.get('duracion') || '0', 10);
@@ -324,10 +328,19 @@ function AltaTurnoContent() {
     return calculations.duracionMinutos > 0 ? calculations.duracionMinutos : 30;
   }, [customDuration, calculations.duracionMinutos]);
 
-  // Handle Zone Toggle
+  // Handle Zone Toggle (Exclusividad de Servicio D-169)
   const toggleZone = (id) => {
+    const clickedZone = zones.find(z => z.id === id);
+    const clickedServiceId = clickedZone?.servicioId || 'default';
+
     setSelectedZoneIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      const sameServiceZones = prev.filter(x => {
+        const z = zones.find(item => item.id === x);
+        const sId = z?.servicioId || 'default';
+        return sId === clickedServiceId;
+      });
+
+      const next = sameServiceZones.includes(id) ? sameServiceZones.filter(x => x !== id) : [...sameServiceZones, id];
       setCustomDuration(null);
       return next;
     });
@@ -760,22 +773,87 @@ function AltaTurnoContent() {
             </div>
           </div>
 
-          {/* Fields for OTROS */}
+          {/* Fields for OTROS (D-169: Renglones dinámicos múltiples) */}
           {hasOtros && (
-            <div className={styles.otrosBox}>
-              <div className={styles.formRow} style={{ marginBottom: 0, gap: '12px' }}>
-                <div className={styles.formGroup} style={{ flex: 2 }}>
-                  <label className={styles.label}>Escribir Zona Extra (Otros) *:</label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Patillas, Nuca, Cintura..."
-                    value={otrosTexto}
-                    onChange={(e) => setOtrosTexto(e.target.value)}
-                    className={styles.textInput}
-                  />
-                </div>
+            <div className={styles.otrosBox} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
+                Zonas Extra (Otros)
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                {(otrosList && otrosList.length > 0 ? otrosList : [otrosTexto || '']).map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', minWidth: '95px', flexShrink: 0 }}>
+                      Zona Extra {idx + 1}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Ej. Media Pierna, Nuca..."
+                      value={item}
+                      onChange={(e) => {
+                        const currentList = otrosList && otrosList.length > 0 ? [...otrosList] : [otrosTexto || ''];
+                        currentList[idx] = e.target.value;
+                        const joined = currentList.map(s => s.trim()).filter(Boolean).join(', ');
+                        setOtrosList(currentList);
+                        setOtrosTexto(joined);
+                      }}
+                      className={styles.textInput}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentList = otrosList && otrosList.length > 0 ? [...otrosList] : [otrosTexto || ''];
+                        currentList.splice(idx, 1);
+                        const joined = currentList.map(s => s.trim()).filter(Boolean).join(', ');
+                        if (currentList.length === 0) {
+                          setHasOtros(false);
+                          setOtrosList([]);
+                          setOtrosTexto('');
+                          setOtrosPrecio(0);
+                        } else {
+                          setOtrosList(currentList);
+                          setOtrosTexto(joined);
+                        }
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem' }}
+                      title="Eliminar esta zona extra"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const currentList = otrosList && otrosList.length > 0 ? [...otrosList] : [otrosTexto || ''];
+                  currentList.push('');
+                  setOtrosList(currentList);
+                }}
+                style={{
+                  width: '100%',
+                  marginTop: '0.35rem',
+                  padding: '0.45rem',
+                  borderRadius: '6px',
+                  border: '1px solid #7a1f1e',
+                  backgroundColor: '#ffffff',
+                  color: '#7a1f1e',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                + Agregar otra zona
+              </button>
+
+              <div className={styles.formRow} style={{ marginTop: '0.35rem', marginBottom: 0, gap: '12px' }}>
                 <div className={styles.formGroup} style={{ flex: 1 }}>
-                  <label className={styles.label}>Valor Extras ($):</label>
+                  <label className={styles.label}>Valor Zonas Extras ($):</label>
                   <input
                     type="number"
                     placeholder="Ej. 15000"

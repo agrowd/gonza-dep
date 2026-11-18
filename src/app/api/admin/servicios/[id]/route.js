@@ -15,13 +15,14 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json();
-    const { nombre, descripcion, icono, activo, orden } = body;
+    const { nombre, descripcion, icono, activo, habilitadoAutogestion, orden } = body;
 
     const data = {};
     if (nombre !== undefined) data.nombre = nombre.trim();
     if (descripcion !== undefined) data.descripcion = descripcion ? descripcion.trim() : null;
     if (icono !== undefined) data.icono = icono.trim();
     if (activo !== undefined) data.activo = !!activo;
+    if (habilitadoAutogestion !== undefined) data.habilitadoAutogestion = !!habilitadoAutogestion;
     if (orden !== undefined) data.orden = Number(orden);
 
     const updated = await prisma.servicio.update({

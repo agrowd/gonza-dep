@@ -239,14 +239,14 @@ export default function InformeMensualPage({ searchParams }) {
           </div>
         </div>
 
-        {/* 4 KPI Cards */}
+        {/* 4 KPI Cards (D-169: Paleta de colores oficial diferenciada) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '1rem',
           marginBottom: '2rem'
         }}>
-          {/* KPI 1: Turnos Atendidos */}
+          {/* KPI 1: Turnos Atendidos (Bordó) */}
           <div style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
@@ -255,7 +255,7 @@ export default function InformeMensualPage({ searchParams }) {
             padding: '1rem 0.9rem',
             textAlign: 'left'
           }}>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7a1f1e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               TURNOS ATENDIDOS
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
@@ -271,19 +271,19 @@ export default function InformeMensualPage({ searchParams }) {
             </div>
           </div>
 
-          {/* KPI 2: Facturación */}
+          {/* KPI 2: Facturación (Ámbar / Dorado) */}
           <div style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderTop: '4px solid #7a1f1e',
+            borderTop: '4px solid #d97706',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
             textAlign: 'left'
           }}>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               FACTURACIÓN
             </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1, wordBreak: 'break-word' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
               {formatMoney(kpis.facturacion.valor)}
             </div>
             <div style={{
@@ -296,19 +296,19 @@ export default function InformeMensualPage({ searchParams }) {
             </div>
           </div>
 
-          {/* KPI 3: Facturación Neta */}
+          {/* KPI 3: Facturación Neta (Verde Esmeralda) */}
           <div style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderTop: '4px solid #7a1f1e',
+            borderTop: '4px solid #16a34a',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
             textAlign: 'left'
           }}>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               FACTURACIÓN NETA
             </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#16a34a', lineHeight: 1.1, wordBreak: 'break-word' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#16a34a', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
               {formatMoney(kpis.facturacionNeta.valor)}
             </div>
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginTop: '0.35rem' }}>
@@ -316,16 +316,16 @@ export default function InformeMensualPage({ searchParams }) {
             </div>
           </div>
 
-          {/* KPI 4: Clientes Nuevos */}
+          {/* KPI 4: Clientes Nuevos (Azul) */}
           <div style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderTop: '4px solid #7a1f1e',
+            borderTop: '4px solid #2563eb',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
             textAlign: 'left'
           }}>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               CLIENTES NUEVOS
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>

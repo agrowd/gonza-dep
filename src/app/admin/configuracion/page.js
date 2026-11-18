@@ -40,6 +40,7 @@ export default function ConfiguracionPage() {
 
   // Servicios State (Fase 2 Multidisciplinaria)
   const [servicios, setServicios] = useState([]);
+  const [selectedServicioTabId, setSelectedServicioTabId] = useState(null);
   const [loadingServicios, setLoadingServicios] = useState(true);
   const [isServicioModalOpen, setIsServicioModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState(null);
@@ -47,7 +48,8 @@ export default function ConfiguracionPage() {
     nombre: '',
     descripcion: '',
     icono: '⚡',
-    orden: 0
+    orden: 0,
+    habilitadoAutogestion: true
   });
 
   const [zoneForm, setZoneForm] = useState({
@@ -640,9 +642,14 @@ export default function ConfiguracionPage() {
       nombre: '',
       descripcion: '',
       icono: '💆‍♂️',
-      orden: (servicios.length + 1) * 10
+      orden: (servicios.length + 1) * 10,
+      habilitadoAutogestion: true
     });
     setIsServicioModalOpen(true);
+    setTimeout(() => {
+      const el = document.getElementById('servicioModalContent') || document.querySelector('.modal-content');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
   };
 
   const handleOpenEditServicio = (serv) => {
@@ -651,9 +658,34 @@ export default function ConfiguracionPage() {
       nombre: serv.nombre,
       descripcion: serv.descripcion || '',
       icono: serv.icono || '⚡',
-      orden: serv.orden || 0
+      orden: serv.orden || 0,
+      habilitadoAutogestion: serv.habilitadoAutogestion !== false
     });
     setIsServicioModalOpen(true);
+    setTimeout(() => {
+      const el = document.getElementById('servicioModalContent') || document.querySelector('.modal-content');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+  };
+
+  const handleToggleServicioAutogestion = async (serv) => {
+    const nextVal = serv.habilitadoAutogestion === false ? true : false;
+    try {
+      const res = await fetch(`/api/admin/servicios/${serv.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ habilitadoAutogestion: nextVal })
+      });
+      if (res.ok) {
+        showToast(nextVal ? `"${serv.nombre}" habilitado en autogestión.` : `"${serv.nombre}" ocultado en autogestión.`);
+        fetchServicios();
+      } else {
+        showToast('Error al actualizar estado en autogestión.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error de red al actualizar servicio.', 'error');
+    }
   };
 
   const handleSaveServicio = async (e) => {
@@ -715,9 +747,13 @@ export default function ConfiguracionPage() {
       precioBase: '',
       duracionMinutos: '',
       señaBase: '',
-      servicioId: targetServicioId || (servicios[0]?.id || '')
+      servicioId: targetServicioId || selectedServicioTabId || (servicios[0]?.id || '')
     });
     setIsZoneModalOpen(true);
+    setTimeout(() => {
+      const el = document.getElementById('zoneModalContent') || document.querySelector('.modal-content');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
   };
 
   // 5.1 CRUD Zone: Open inline edit row
@@ -730,6 +766,10 @@ export default function ConfiguracionPage() {
       señaBase: zone.señaBase,
       servicioId: zone.servicioId || (servicios[0]?.id || '')
     });
+    setTimeout(() => {
+      const row = document.getElementById(`zone-edit-row-${zone.id}`);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
   // 5.2 CRUD Zone: Submit inline edit
@@ -1845,8 +1885,52 @@ export default function ConfiguracionPage() {
           ) : servicios.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay servicios configurados. Crea uno para comenzar.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.25rem' }}>
-              {servicios.map((s) => {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1.25rem' }}>
+              {/* Selector desplegable de servicios (D-169) */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem',
+                flexWrap: 'wrap',
+                backgroundColor: '#f8fafc',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 280px' }}>
+                  <label htmlFor="servicioSelectFilter" style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1e293b', whiteSpace: 'nowrap' }}>
+                    🔍 Servicio a Gestionar:
+                  </label>
+                  <select
+                    id="servicioSelectFilter"
+                    value={selectedServicioTabId || (servicios[0]?.id || '')}
+                    onChange={(e) => setSelectedServicioTabId(e.target.value)}
+                    style={{
+                      flex: 1,
+                      maxWidth: '380px',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '0.92rem',
+                      fontWeight: 700,
+                      backgroundColor: '#ffffff',
+                      color: '#1e293b',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {servicios.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.icono || '⚡'} {s.nombre} ({s.zonas?.length || 0} {s.zonas?.length === 1 ? 'zona' : 'zonas'}) {s.habilitadoAutogestion === false ? '⛔ [Oculto en Autogestión]' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {(() => {
+                const s = servicios.find(x => x.id === (selectedServicioTabId || servicios[0]?.id)) || servicios[0];
+                if (!s) return null;
                 const isBase = s.nombre.toLowerCase().includes('depilaci');
                 const sZonas = s.zonas || [];
                 return (
@@ -1863,6 +1947,31 @@ export default function ConfiguracionPage() {
                             ⭐ Servicio Principal
                           </span>
                         )}
+                        <label 
+                          title="Controla si este servicio y sus zonas aparecen disponibles para los clientes en la web de autogestión"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            color: s.habilitadoAutogestion !== false ? '#166534' : '#991b1b',
+                            backgroundColor: s.habilitadoAutogestion !== false ? '#f0fdf4' : '#fef2f2',
+                            border: `1px solid ${s.habilitadoAutogestion !== false ? '#bbf7d0' : '#fecaca'}`,
+                            padding: '0.25rem 0.65rem',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            userSelect: 'none'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={s.habilitadoAutogestion !== false}
+                            onChange={() => handleToggleServicioAutogestion(s)}
+                            style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#16a34a' }}
+                          />
+                          <span>{s.habilitadoAutogestion !== false ? '✅ Habilitado en Autogestión' : '⛔ Oculto en Autogestión'}</span>
+                        </label>
                       </div>
                       <div className={styles.serviceGroupActions}>
                         <button
@@ -2064,7 +2173,7 @@ export default function ConfiguracionPage() {
                   )}
                   </div>
                 );
-              })}
+              })()}
             </div>
           )}
         </div>
@@ -3458,7 +3567,7 @@ export default function ConfiguracionPage() {
       )}
       {isZoneModalOpen && (
         <div className="modal-overlay" onClick={() => setIsZoneModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+          <div id="zoneModalContent" className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div className="modal-header">
               <h3>{editingZone ? 'Editar Zona o Tratamiento' : 'Agregar Nueva Zona o Tratamiento'}</h3>
               <button className="modal-close" onClick={() => setIsZoneModalOpen(false)}>&times;</button>
@@ -3565,7 +3674,7 @@ export default function ConfiguracionPage() {
       {/* Modal Nuevo / Editar Servicio (Fase 2) */}
       {isServicioModalOpen && (
         <div className="modal-overlay" onClick={() => setIsServicioModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+          <div id="servicioModalContent" className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
             <div className="modal-header">
               <h3>{editingServicio ? 'Editar Servicio' : '➕ Crear Nuevo Servicio'}</h3>
               <button className="modal-close" onClick={() => setIsServicioModalOpen(false)}>&times;</button>
@@ -3623,6 +3732,19 @@ export default function ConfiguracionPage() {
                     value={servicioForm.descripcion}
                     onChange={(e) => setServicioForm({ ...servicioForm, descripcion: e.target.value })}
                   />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.75rem', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <input
+                    type="checkbox"
+                    id="habAutogestionModalCheck"
+                    checked={servicioForm.habilitadoAutogestion !== false}
+                    onChange={(e) => setServicioForm({ ...servicioForm, habilitadoAutogestion: e.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#16a34a' }}
+                  />
+                  <label htmlFor="habAutogestionModalCheck" style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1e293b', cursor: 'pointer' }}>
+                    Habilitado en Autogestión (visible para clientes al reservar)
+                  </label>
                 </div>
               </div>
               <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>

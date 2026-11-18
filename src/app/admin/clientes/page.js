@@ -212,9 +212,16 @@ function ClientesPageContent() {
 
   const getFormattedNoticeView = (n, client) => {
     if (!n) return { isEmail: false, recipient: '', body: '', isReconstructed: false };
-    const isEmail = n.canal === 'EMAIL' || n.tipo?.toLowerCase().includes('email');
-    const recipient = isEmail ? (client?.email || 'Sin email') : (client?.whatsapp || 'Sin WhatsApp');
     const rawMsg = (n.mensaje || '').trim();
+    const isEmail = n.canal === 'EMAIL' ||
+      n.tipo?.toLowerCase().includes('email') ||
+      rawMsg.toLowerCase().startsWith('confirmación de turno enviada por email') ||
+      rawMsg.toLowerCase().includes('enviada por email') ||
+      rawMsg.toLowerCase().includes('enviado por email') ||
+      rawMsg.toLowerCase().includes('enviado por correo') ||
+      rawMsg.toLowerCase().includes('comprobante de turno y pago') ||
+      rawMsg.toLowerCase().startsWith('correo ');
+    const recipient = isEmail ? (client?.email || 'Sin email') : (client?.whatsapp || 'Sin WhatsApp');
 
     if (!isEmail) {
       return { isEmail: false, recipient, body: rawMsg, isReconstructed: false };
@@ -1642,6 +1649,28 @@ function ClientesPageContent() {
                             }
                           });
 
+                          // Map weeks since previous turno (D-169)
+                          const weeksSincePrevMap = {};
+                          for (let i = 0; i < chronologicalTurnos.length; i++) {
+                            const cur = chronologicalTurnos[i];
+                            let prev = null;
+                            for (let j = i - 1; j >= 0; j--) {
+                              if (chronologicalTurnos[j].estado !== 'CANCELADO') {
+                                prev = chronologicalTurnos[j];
+                                break;
+                              }
+                            }
+                            if (prev) {
+                              const curTime = new Date(cur.fecha).getTime();
+                              const prevTime = new Date(prev.fecha).getTime();
+                              const diffDays = Math.round((curTime - prevTime) / (1000 * 60 * 60 * 24));
+                              const diffWeeks = Math.max(1, Math.round(diffDays / 7));
+                              weeksSincePrevMap[cur.id] = { diffWeeks, diffDays };
+                            } else {
+                              weeksSincePrevMap[cur.id] = null;
+                            }
+                          }
+
                           return selectedClient.turnos.map((t, idx) => {
                             const isCanceled = t.estado === 'CANCELADO';
                             let zonas = '';
@@ -1662,10 +1691,43 @@ function ClientesPageContent() {
                                 style={{ cursor: 'pointer', transition: 'border-color 0.2s, background-color 0.2s' }}
                                 title="Haz clic para ver y editar este turno en la Agenda"
                               >
-                                <div className={styles.paperItemHeader}>
-                                  <span className={styles.paperDate}>
-                                    {prefix}{formatLocalDate(t.fecha)} - {t.horaInicio} hs
-                                  </span>
+                                <div className={styles.paperItemHeader} style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                    <span className={styles.paperDate}>
+                                      {prefix}{formatLocalDate(t.fecha)} - {t.horaInicio} hs
+                                    </span>
+                                    {weeksSincePrevMap[t.id] ? (
+                                      <span style={{
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        color: '#475569',
+                                        backgroundColor: '#f1f5f9',
+                                        border: '1px solid #cbd5e1',
+                                        padding: '0.12rem 0.45rem',
+                                        borderRadius: '6px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.2rem'
+                                      }}>
+                                        ⏱️ {weeksSincePrevMap[t.id].diffWeeks} {weeksSincePrevMap[t.id].diffWeeks === 1 ? 'semana' : 'semanas'} desde el anterior turno
+                                      </span>
+                                    ) : (
+                                      <span style={{
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        color: '#15803d',
+                                        backgroundColor: '#f0fdf4',
+                                        border: '1px solid #bbf7d0',
+                                        padding: '0.12rem 0.45rem',
+                                        borderRadius: '6px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.2rem'
+                                      }}>
+                                        🌱 1er Turno
+                                      </span>
+                                    )}
+                                  </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                     <span
                                       className={`${agendaStyles.statusPill} ${getStatusLabelClass(t.estado)}`}
@@ -1867,7 +1929,7 @@ function ClientesPageContent() {
                         return n.canal === notifFilterCanal;
                       })
                       .map(n => {
-                        const isEmail = n.canal === 'EMAIL';
+                        const isEmail = n.canal === 'EMAIL' || (n.mensaje && (n.mensaje.toLowerCase().includes('email') || n.mensaje.toLowerCase().includes('correo')));
                         const isEnviado = n.estado === 'ENVIADO';
                         const isExpanded = expandedNotifIds.has(n.id);
                         const { title, body } = parseNotificationContent(n);

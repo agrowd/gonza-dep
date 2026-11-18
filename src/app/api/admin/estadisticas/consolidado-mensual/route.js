@@ -93,9 +93,10 @@ export async function GET(request) {
     const oldestMonth = months13[0];
     const newestMonth = months13[months13.length - 1];
 
-    const rangeStart = new Date(`${oldestMonth.year}-${String(oldestMonth.month).padStart(2, '0')}-01T00:00:00.000Z`);
+    // Generous query window (+/- 48h buffer) to ensure Argentina timezone (UTC-3) dates are never clipped (D-169)
+    const rangeStart = new Date(Date.UTC(oldestMonth.year, oldestMonth.month - 1, 1, 0, 0, 0) - 48 * 3600 * 1000);
     const lastDayNewest = new Date(newestMonth.year, newestMonth.month, 0).getDate();
-    const rangeEnd = new Date(`${newestMonth.year}-${String(newestMonth.month).padStart(2, '0')}-${String(lastDayNewest).padStart(2, '0')}T23:59:59.999Z`);
+    const rangeEnd = new Date(Date.UTC(newestMonth.year, newestMonth.month - 1, lastDayNewest, 23, 59, 59, 999) + 48 * 3600 * 1000);
 
     // Fetch all turnos and gastos in this 13-month window
     const [allTurnos13, allGastos13, allBloqueos13, allClientes] = await Promise.all([
@@ -112,7 +113,15 @@ export async function GET(request) {
               id: true,
               nombreCompleto: true,
               fechaAlta: true,
-              fechaPrimerTurno: true
+              fechaPrimerTurno: true,
+              turnos: {
+                select: {
+                  id: true,
+                  fecha: true,
+                  horaInicio: true,
+                  estado: true
+                }
+              }
             }
           }
         }
@@ -157,18 +166,19 @@ export async function GET(request) {
     const monthlyStats = months13.map(mInfo => {
       const lastDay = new Date(mInfo.year, mInfo.month, 0).getDate();
 
+      // Agrupamiento mensual estricto en huso horario de Argentina (America/Argentina/Buenos_Aires) (D-169)
       const turnosMes = allTurnos13.filter(t => {
-        const dStr = typeof t.fecha === 'string' ? t.fecha.slice(0, 10) : t.fecha.toISOString().slice(0, 10);
+        const dStr = new Date(t.fecha).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
         return dStr.startsWith(mInfo.key);
       });
 
       const gastosMes = allGastos13.filter(g => {
-        const dStr = typeof g.fecha === 'string' ? g.fecha.slice(0, 10) : g.fecha.toISOString().slice(0, 10);
+        const dStr = new Date(g.fecha).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
         return dStr.startsWith(mInfo.key);
       });
 
       const bloqueosMes = allBloqueos13.filter(b => {
-        const dStr = typeof b.fecha === 'string' ? b.fecha.slice(0, 10) : b.fecha.toISOString().slice(0, 10);
+        const dStr = new Date(b.fecha).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
         return dStr.startsWith(mInfo.key);
       });
 
@@ -179,12 +189,24 @@ export async function GET(request) {
       const totalGastos = gastosMes.reduce((sum, g) => sum + Number(g.monto || 0), 0);
       const facturacionNeta = Math.max(0, facturacion - totalGastos);
 
-      // Bajas
-      const cancelados = turnosMes.filter(t => t.estado === 'CANCELADO');
-      const ausentes = turnosMes.filter(t => t.estado === 'NO_ASISTIO');
+      // Bajas: contabilizar únicamente a los clientes que NO agendaron un nuevo turno posterior
+      const hasFutureAppointment = (t) => {
+        if (!t.cliente?.turnos) return false;
+        const tDate = new Date(t.fecha).getTime();
+        return t.cliente.turnos.some(ft => {
+          if (ft.id === t.id) return false;
+          if (ft.estado === 'CANCELADO') return false;
+          const fDate = new Date(ft.fecha).getTime();
+          return fDate > tDate;
+        });
+      };
+
+      const cancelados = turnosMes.filter(t => t.estado === 'CANCELADO' && !hasFutureAppointment(t));
+      const ausentes = turnosMes.filter(t => t.estado === 'NO_ASISTIO' && !hasFutureAppointment(t));
+      const vaAAvisar = turnosMes.filter(t => t.subEstado === 'VA_A_AVISAR' && !hasFutureAppointment(t));
       const finalizados = turnosMes.filter(t => t.subEstado === 'FINALIZADO');
-      const totalBajas = cancelados.length + ausentes.length + finalizados.length;
-      const valorBajas = [...cancelados, ...ausentes].reduce((sum, t) => sum + Number(t.valorTotal || 0), 0);
+      const totalBajas = cancelados.length + ausentes.length + vaAAvisar.length + finalizados.length;
+      const valorBajas = [...cancelados, ...ausentes, ...vaAAvisar].reduce((sum, t) => sum + Number(t.valorTotal || 0), 0);
 
       // Clientes Nuevos
       const newClientsInMonth = new Set();

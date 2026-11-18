@@ -918,22 +918,22 @@
   gap: 0.4rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  background-color: #ffffff;
-  border: 1.5px dashed #94a3b8;
-  border-left: 6px solid #475569;
+  background-color: #f0fdfa; /* Cyan / Menta fresco y distintivo (D-169) */
+  border: 1.5px dashed #5eead4;
+  border-left: 6px solid #0d9488;
   cursor: pointer;
   transition: all 0.18s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 4px rgba(13, 148, 136, 0.08);
   box-sizing: border-box;
   width: 100%;
 }
 
 .neocitaFreeSlot:hover {
-  background-color: #f8fafc;
-  border-color: #64748b;
-  border-left-color: #334155;
+  background-color: #ccfbf1;
+  border-color: #2dd4bf;
+  border-left-color: #0f766e;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.16);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.18);
 }
 
 .neocitaFreeSlotRowTop {
