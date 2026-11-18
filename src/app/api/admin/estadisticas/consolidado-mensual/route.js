@@ -166,19 +166,26 @@ export async function GET(request) {
     const monthlyStats = months13.map(mInfo => {
       const lastDay = new Date(mInfo.year, mInfo.month, 0).getDate();
 
-      // Agrupamiento mensual estricto en huso horario de Argentina (America/Argentina/Buenos_Aires) (D-169)
+      // Helper de extracción de fecha de calendario sin corrimiento de huso horario (D-170)
+      const getFechaKey = (f) => {
+        if (!f) return '';
+        if (typeof f === 'string') return f.slice(0, 10);
+        return f.toISOString().slice(0, 10);
+      };
+
+      // Agrupamiento mensual estricto en calendario (1 al 31 del mes inclusive) (D-170)
       const turnosMes = allTurnos13.filter(t => {
-        const dStr = new Date(t.fecha).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+        const dStr = getFechaKey(t.fecha);
         return dStr.startsWith(mInfo.key);
       });
 
       const gastosMes = allGastos13.filter(g => {
-        const dStr = new Date(g.fecha).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+        const dStr = getFechaKey(g.fecha);
         return dStr.startsWith(mInfo.key);
       });
 
       const bloqueosMes = allBloqueos13.filter(b => {
-        const dStr = new Date(b.fecha).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+        const dStr = getFechaKey(b.fecha);
         return dStr.startsWith(mInfo.key);
       });
 
@@ -320,6 +327,7 @@ export async function GET(request) {
         clientesNuevos: newClientsInMonth.size,
         valorTurnosNuevos,
         finalizados: finalizados.length,
+        vaAAvisar: vaAAvisar.length,
         cancelados: cancelados.length,
         ausentes: ausentes.length,
         totalBajas,
@@ -368,6 +376,7 @@ export async function GET(request) {
       clientesNuevos: currentMonthData.clientesNuevos,
       valorTurnosNuevos: currentMonthData.valorTurnosNuevos,
       clientesFinalizaron: currentMonthData.finalizados,
+      bajasVaAAvisar: currentMonthData.vaAAvisar,
       bajasCancelados: currentMonthData.cancelados,
       bajasNoVinieron: currentMonthData.ausentes,
       totalBajas: currentMonthData.totalBajas,

@@ -867,6 +867,17 @@ export default function AgendaPage() {
     return previas + completedPrior + 1;
   };
 
+  // Helper to normalize zone names (handling plurals, accents, and symbols like '+' vs 'y') (D-170)
+  const normalizeZoneName = (n) => {
+    return String(n || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\+/g, 'y')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   // Helper to robustly extract selected zone IDs and custom "otros" info from any format of turno.zonas
   const extractZoneSelection = (zonasInput, zonesCatalog = []) => {
     let preselectedZoneIds = [];
@@ -913,11 +924,15 @@ export default function AgendaPage() {
         continue;
       }
 
-      // Try matching by ID first, then by exact name (case-insensitive)
-      const matched = (zonesCatalog || []).find(z => 
-        (zId && String(z.id) === String(zId)) || 
-        (zName && z.nombre && z.nombre.trim().toLowerCase() === zName.trim().toLowerCase())
-      );
+      // Try matching by ID first, then by normalized name (D-170)
+      const normZName = normalizeZoneName(zName);
+      const matched = (zonesCatalog || []).find(z => {
+        if (zId && String(z.id) === String(zId)) return true;
+        const normDbName = normalizeZoneName(z.nombre);
+        if (normZName && normDbName === normZName) return true;
+        if (normZName && normDbName && (normDbName.startsWith(normZName) || normZName.startsWith(normDbName))) return true;
+        return false;
+      });
 
       if (matched && !matchedZoneIds.has(matched.id)) {
         matchedZoneIds.add(matched.id);
@@ -928,9 +943,11 @@ export default function AgendaPage() {
 
     // Fallback: match by substring across full text if no objects matched yet
     if (matchedZoneIds.size === 0 && zonesCatalog && zonesCatalog.length > 0) {
-      const fullText = (typeof zonasInput === 'string' ? zonasInput : JSON.stringify(zonasInput || '')).toLowerCase();
+      const fullText = (typeof zonasInput === 'string' ? zonasInput : JSON.stringify(zonasInput || ''));
+      const normFullText = normalizeZoneName(fullText);
       for (const z of zonesCatalog) {
-        if (z.nombre && fullText.includes(z.nombre.toLowerCase().trim())) {
+        const normZ = normalizeZoneName(z.nombre);
+        if (normZ && normFullText.includes(normZ)) {
           matchedZoneIds.add(z.id);
         }
       }
@@ -1001,10 +1018,14 @@ export default function AgendaPage() {
         continue;
       }
 
-      const matched = zones.find(z => 
-        (zId && String(z.id) === String(zId)) || 
-        (zName && z.nombre && z.nombre.trim().toLowerCase() === zName.trim().toLowerCase())
-      );
+      const normZName = normalizeZoneName(zName);
+      const matched = zones.find(z => {
+        if (zId && String(z.id) === String(zId)) return true;
+        const normDbName = normalizeZoneName(z.nombre);
+        if (normZName && normDbName === normZName) return true;
+        if (normZName && normDbName && (normDbName.startsWith(normZName) || normZName.startsWith(normDbName))) return true;
+        return false;
+      });
 
       if (matched && !matchedZoneIds.has(matched.id)) {
         matchedZoneIds.add(matched.id);
@@ -1014,9 +1035,11 @@ export default function AgendaPage() {
 
     // Fallback: match by substring across full text if no objects matched
     if (matchedZoneObjs.length === 0) {
-      const fullText = (typeof turno.zonas === 'string' ? turno.zonas : JSON.stringify(turno.zonas || '')).toLowerCase();
+      const fullText = (typeof turno.zonas === 'string' ? turno.zonas : JSON.stringify(turno.zonas || ''));
+      const normFullText = normalizeZoneName(fullText);
       for (const z of zones) {
-        if (z.nombre && fullText.includes(z.nombre.toLowerCase().trim())) {
+        const normZ = normalizeZoneName(z.nombre);
+        if (normZ && normFullText.includes(normZ)) {
           if (!matchedZoneIds.has(z.id)) {
             matchedZoneIds.add(z.id);
             matchedZoneObjs.push(z);
@@ -2924,11 +2947,18 @@ export default function AgendaPage() {
           if (!timeOverlaps) return false;
 
           // Multi-agenda: si el box y el operador son ambos distintos, permitir citas en paralelo
-          const targetBoxId = newTurno.boxId;
-          const targetOperadorId = newTurno.operadorId;
-          if (targetBoxId && targetOperadorId && t.boxId && t.operadorId) {
-            if (t.boxId !== targetBoxId && t.operadorId !== targetOperadorId) {
-              return false;
+          const defaultBoxId = boxes[0]?.id;
+          const defaultOpId = operadores.find(o => o.rol === 'ADMIN')?.id || operadores[0]?.id;
+
+          const curBoxId = newTurno.boxId || defaultBoxId;
+          const curOpId = newTurno.operadorId || defaultOpId;
+
+          const tBoxId = t.boxId || defaultBoxId;
+          const tOpId = t.operadorId || defaultOpId;
+
+          if (curBoxId && curOpId && tBoxId && tOpId) {
+            if (tBoxId !== curBoxId && tOpId !== curOpId) {
+              return false; // Boxes distintos Y operadores distintos -> No solapa!
             }
           }
           return true;
@@ -3010,11 +3040,18 @@ export default function AgendaPage() {
           if (!timeOverlaps) return false;
 
           // Multi-agenda: si el box y el operador son ambos distintos, permitir citas en paralelo
-          const targetBoxId = editTurno.boxId;
-          const targetOperadorId = editTurno.operadorId;
-          if (targetBoxId && targetOperadorId && t.boxId && t.operadorId) {
-            if (t.boxId !== targetBoxId && t.operadorId !== targetOperadorId) {
-              return false;
+          const defaultBoxId = boxes[0]?.id;
+          const defaultOpId = operadores.find(o => o.rol === 'ADMIN')?.id || operadores[0]?.id;
+
+          const curBoxId = editTurno.boxId || defaultBoxId;
+          const curOpId = editTurno.operadorId || defaultOpId;
+
+          const tBoxId = t.boxId || defaultBoxId;
+          const tOpId = t.operadorId || defaultOpId;
+
+          if (curBoxId && curOpId && tBoxId && tOpId) {
+            if (tBoxId !== curBoxId && tOpId !== curOpId) {
+              return false; // Boxes distintos Y operadores distintos -> No solapa!
             }
           }
           return true;
@@ -4598,7 +4635,11 @@ export default function AgendaPage() {
           className={styles.modalOverlay}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              handleCloseDetailsModal();
+              if (isEditing) {
+                setIsEditing(false);
+              } else {
+                handleCloseDetailsModal();
+              }
             }
           }}
         >
@@ -4609,7 +4650,7 @@ export default function AgendaPage() {
                   <h3 style={{ fontSize: '1.2rem', color: 'var(--color-gold)' }}>
                     Editar / Reprogramar Turno
                   </h3>
-                  <button type="button" onClick={handleCloseDetailsModal} className={styles.closeBtn} aria-label="Cerrar edición">&times;</button>
+                  <button type="button" onClick={() => setIsEditing(false)} className={styles.closeBtn} aria-label="Volver a la ficha del turno">&times;</button>
                 </div>
                 <div className={styles.detailGrid}>
                   <div className={styles.detailItem} style={{ gridColumn: '1 / -1' }}>
@@ -5658,10 +5699,10 @@ export default function AgendaPage() {
                               </div>
                             )}
 
-                            {/* Monto / Dinero a Favor del Cliente (D-151 / D-169) */}
+                            {/* Monto / Dinero a Favor del Cliente (D-151 / D-169 / D-170) */}
                             {(() => {
                               const clientSaldo = Number(selectedTurno.cliente?.saldoAFavor || 0);
-                              const currentVal = (selectedTurno.dineroAFavor !== null && selectedTurno.dineroAFavor !== undefined && selectedTurno.dineroAFavor !== '') 
+                              const currentVal = (Number(selectedTurno.dineroAFavor) > 0) 
                                 ? selectedTurno.dineroAFavor 
                                 : (clientSaldo > 0 ? clientSaldo : '');
                               return (
@@ -5685,10 +5726,11 @@ export default function AgendaPage() {
                                       }}
                                       onBlur={async () => {
                                         try {
+                                          const valToSave = Number(selectedTurno.dineroAFavor ?? currentVal ?? 0);
                                           await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
                                             method: 'PUT',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ dineroAFavor: Number(selectedTurno.dineroAFavor || currentVal || 0) })
+                                            body: JSON.stringify({ dineroAFavor: valToSave })
                                           });
                                           showToast('Monto a favor actualizado');
                                         } catch (err) {

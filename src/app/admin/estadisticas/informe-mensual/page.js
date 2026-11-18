@@ -239,26 +239,27 @@ export default function InformeMensualPage({ searchParams }) {
           </div>
         </div>
 
-        {/* 4 KPI Cards (D-169: Paleta de colores oficial diferenciada) */}
+        {/* 4 KPI Cards (Paleta oficial uniforme DPH: Bordó #7a1f1e y Crema #fcfaf7) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '1rem',
           marginBottom: '2rem'
         }}>
-          {/* KPI 1: Turnos Atendidos (Bordó) */}
+          {/* KPI 1: Turnos Atendidos */}
           <div style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
+            backgroundColor: '#fcfaf7',
+            border: '1px solid #e6ded4',
             borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
-            textAlign: 'left'
+            textAlign: 'left',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}>
             <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7a1f1e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               TURNOS ATENDIDOS
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2a2623', lineHeight: 1.1 }}>
               {kpis.turnosAtendidos.valor}
             </div>
             <div style={{
@@ -271,19 +272,20 @@ export default function InformeMensualPage({ searchParams }) {
             </div>
           </div>
 
-          {/* KPI 2: Facturación (Ámbar / Dorado) */}
+          {/* KPI 2: Facturación */}
           <div style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderTop: '4px solid #d97706',
+            backgroundColor: '#fcfaf7',
+            border: '1px solid #e6ded4',
+            borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
-            textAlign: 'left'
+            textAlign: 'left',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7a1f1e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               FACTURACIÓN
             </div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2a2623', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
               {formatMoney(kpis.facturacion.valor)}
             </div>
             <div style={{
@@ -296,19 +298,20 @@ export default function InformeMensualPage({ searchParams }) {
             </div>
           </div>
 
-          {/* KPI 3: Facturación Neta (Verde Esmeralda) */}
+          {/* KPI 3: Facturación Neta */}
           <div style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderTop: '4px solid #16a34a',
+            backgroundColor: '#fcfaf7',
+            border: '1px solid #e6ded4',
+            borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
-            textAlign: 'left'
+            textAlign: 'left',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7a1f1e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               FACTURACIÓN NETA
             </div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#16a34a', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2a2623', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
               {formatMoney(kpis.facturacionNeta.valor)}
             </div>
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginTop: '0.35rem' }}>
@@ -316,19 +319,20 @@ export default function InformeMensualPage({ searchParams }) {
             </div>
           </div>
 
-          {/* KPI 4: Clientes Nuevos (Azul) */}
+          {/* KPI 4: Clientes Nuevos */}
           <div style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderTop: '4px solid #2563eb',
+            backgroundColor: '#fcfaf7',
+            border: '1px solid #e6ded4',
+            borderTop: '4px solid #7a1f1e',
             borderRadius: '8px',
             padding: '1rem 0.9rem',
-            textAlign: 'left'
+            textAlign: 'left',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
           }}>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
+            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7a1f1e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>
               CLIENTES NUEVOS
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2a2623', lineHeight: 1.1 }}>
               {kpis.clientesNuevos.valor}
             </div>
             <div style={{
@@ -386,18 +390,24 @@ export default function InformeMensualPage({ searchParams }) {
             </tr>
             <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
               <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Clientes que finalizaron tratamiento</td>
-              <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>{resumen.clientesFinalizaron}</td>
+              <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700 }}>{resumen.clientesFinalizaron || 0}</td>
             </tr>
+            {resumen.bajasVaAAvisar !== undefined && (
+              <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
+                <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Bajas: van a avisar (sin nuevo turno)</td>
+                <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{resumen.bajasVaAAvisar}</td>
+              </tr>
+            )}
             <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
-              <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Bajas: turnos cancelados</td>
+              <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Bajas: turnos cancelados (sin nuevo turno)</td>
               <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{resumen.bajasCancelados}</td>
             </tr>
             <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Bajas: no vinieron (ausentes)</td>
+              <td style={{ padding: '0.55rem 0.9rem', color: '#1e293b' }}>Bajas: no vinieron (ausentes sin nuevo turno)</td>
               <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 700, color: '#dc2626' }}>{resumen.bajasNoVinieron}</td>
             </tr>
             <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#fff1f2' }}>
-              <td style={{ padding: '0.55rem 0.9rem', color: '#991b1b', fontWeight: 700 }}>Total bajas</td>
+              <td style={{ padding: '0.55rem 0.9rem', color: '#991b1b', fontWeight: 700 }}>Total bajas reales</td>
               <td style={{ padding: '0.55rem 0.9rem', textAlign: 'right', fontWeight: 800, color: '#991b1b' }}>{resumen.totalBajas}</td>
             </tr>
             <tr>

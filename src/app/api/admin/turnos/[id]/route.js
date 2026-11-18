@@ -47,12 +47,32 @@ async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId
   const newStartMin = timeToMinutes(horaInicio);
   const newEndMin = timeToMinutes(horaFin);
 
+  // Resolver Box y Operador por defecto canónicos para comparaciones robustas (D-170)
+  let defaultBoxId = null;
+  let defaultOpId = null;
+  try {
+    const defaultBox = await prisma.box.findFirst({ where: { activo: true }, orderBy: { esPrincipal: 'desc' } });
+    if (defaultBox) defaultBoxId = String(defaultBox.id);
+  } catch (e) {}
+
+  try {
+    const allUsers = await prisma.usuario.findMany();
+    const defaultOp = allUsers.find(u => u.nombre?.toLowerCase().includes('gonzalo') || u.usuario?.toLowerCase() === 'gonzalo')
+      || allUsers.find(u => u.rol === 'ADMIN')
+      || allUsers[0];
+    if (defaultOp) defaultOpId = String(defaultOp.id);
+  } catch (e) {}
+
+  const effectiveCurBoxId = boxId ? String(boxId) : defaultBoxId;
+  const effectiveCurOpId = operadorId ? String(operadorId) : defaultOpId;
+
   for (const t of dayTurnos) {
     const startMin = timeToMinutes(t.horaInicio);
     const endMin = timeToMinutes(t.horaFin);
     if (startMin < newEndMin && endMin > newStartMin) {
       if (t.estado === 'BLOQUEADO') {
-        if (!t.boxId || !boxId || String(t.boxId) === String(boxId)) {
+        const tBox = t.boxId ? String(t.boxId) : defaultBoxId;
+        if (!t.boxId || !effectiveCurBoxId || tBox === effectiveCurBoxId) {
           return t;
         }
         continue;
@@ -60,13 +80,11 @@ async function hasOverlappingTurno(fechaStr, horaInicio, horaFin, excludeTurnoId
 
       // Regla Multi-agenda: Se permite superposición horaria SI Y SOLO SI
       // se realizan en Boxes distintos Y con Operadores distintos.
-      const tBoxId = t.boxId ? String(t.boxId) : null;
-      const curBoxId = boxId ? String(boxId) : null;
-      const tOpId = t.operadorId ? String(t.operadorId) : null;
-      const curOpId = operadorId ? String(operadorId) : null;
+      const tEffectiveBoxId = t.boxId ? String(t.boxId) : defaultBoxId;
+      const tEffectiveOpId = t.operadorId ? String(t.operadorId) : defaultOpId;
 
-      const sameBox = (tBoxId && curBoxId && tBoxId === curBoxId) || (!tBoxId && !curBoxId);
-      const sameOp = (tOpId && curOpId && tOpId === curOpId) || (!tOpId && !curOpId);
+      const sameBox = (tEffectiveBoxId && effectiveCurBoxId && tEffectiveBoxId === effectiveCurBoxId) || (!tEffectiveBoxId && !effectiveCurBoxId);
+      const sameOp = (tEffectiveOpId && effectiveCurOpId && tEffectiveOpId === effectiveCurOpId) || (!tEffectiveOpId && !effectiveCurOpId);
 
       if (sameBox || sameOp) {
         return t;

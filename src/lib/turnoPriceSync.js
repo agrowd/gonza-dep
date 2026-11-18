@@ -1,5 +1,15 @@
 import { calculateTurnDetails } from './calculations.js';
 
+function normalizeZoneName(n) {
+  return String(n || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\+/g, 'y')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
  * Sincroniza los precios de turnos activos futuros (SEÑADO, REPROGRAMADO, PENDIENTE_PAGO, PENDIENTE_AUTORIZACION)
  * según los precios vigentes del catálogo de Zonas.
@@ -70,10 +80,14 @@ export async function syncActiveFutureTurnosPrices(prisma, targetTurnoId = null)
           continue;
         }
 
-        const matched = zones.find(z =>
-          (zId && String(z.id) === String(zId)) ||
-          (zName && z.nombre && z.nombre.trim().toLowerCase() === zName.trim().toLowerCase())
-        );
+        const normZName = normalizeZoneName(zName);
+        const matched = zones.find(z => {
+          if (zId && String(z.id) === String(zId)) return true;
+          const normDbName = normalizeZoneName(z.nombre);
+          if (normZName && normDbName === normZName) return true;
+          if (normZName && normDbName && (normDbName.startsWith(normZName) || normZName.startsWith(normDbName))) return true;
+          return false;
+        });
 
         if (matched && !matchedZoneIds.has(matched.id)) {
           matchedZoneIds.add(matched.id);
@@ -83,9 +97,11 @@ export async function syncActiveFutureTurnosPrices(prisma, targetTurnoId = null)
 
       // Fallback si no hubo match directo
       if (matchedZoneObjs.length === 0) {
-        const fullText = (typeof turno.zonas === 'string' ? turno.zonas : JSON.stringify(turno.zonas || '')).toLowerCase();
+        const fullText = (typeof turno.zonas === 'string' ? turno.zonas : JSON.stringify(turno.zonas || ''));
+        const normFullText = normalizeZoneName(fullText);
         for (const z of zones) {
-          if (z.nombre && fullText.includes(z.nombre.toLowerCase().trim())) {
+          const normZ = normalizeZoneName(z.nombre);
+          if (normZ && normFullText.includes(normZ)) {
             if (!matchedZoneIds.has(z.id)) {
               matchedZoneIds.add(z.id);
               matchedZoneObjs.push(z);
