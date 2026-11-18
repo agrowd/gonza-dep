@@ -486,7 +486,21 @@ export default function EstadisticasPage() {
         totalSenasAplicadas += vSena;
         totalSaldos += vSaldo;
 
-        if (item.metodoPago === 'EFECTIVO' || item.metodoPagoLabel === 'Efectivo') {
+        const metodo = String(item.metodoPago || '').toUpperCase();
+        if (metodo === 'AMBOS') {
+          const mEf = Math.max(0, Number(item.montoEfectivo || 0));
+          const mTr = Math.max(0, Number(item.montoTransferencia || 0));
+          if (mEf + mTr > 0) {
+            const ef = Math.min(vFinal, mEf > 0 ? mEf : Math.max(0, vFinal - mTr));
+            const tr = Math.max(0, vFinal - ef);
+            valorEfectivo += ef;
+            valorTransferencia += tr;
+          } else {
+            const mitad = Math.round(vFinal / 2);
+            valorEfectivo += mitad;
+            valorTransferencia += (vFinal - mitad);
+          }
+        } else if (metodo === 'EFECTIVO' || item.metodoPagoLabel === 'Efectivo') {
           valorEfectivo += vFinal;
         } else {
           valorTransferencia += vFinal;

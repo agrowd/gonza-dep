@@ -2188,3 +2188,16 @@
 - Desplegado y verificado en el VPS Hostinger (`187.127.9.216`):
   - Staging (`http://187.127.9.216:3008` / `http://187.127.9.216`): HTTP 200 OK.
   - Producción (`https://agenda.depilacionparahombres.com` en puerto 3006): HTTP 200 OK.
+
+### Sesión 18/11/2026 - Reprogramación Excepcional en Autogestión (< 72hs) con Auto-Apagado, Selectores Box y Operador Lado a Lado, y Desglose Exacto de Pago Dividido (AMBOS) en Agenda y Estadísticas (D-171)
+
+- **Checkbox para Reprogramación Excepcional (< 72hs) con Auto-Apagado**:
+  - Se agregó `permitirReprogramacionCorta Boolean @default(false)` al modelo `Cliente` y se migró en PostgreSQL.
+  - En `/admin/clientes` (ABM Clientes) y `/admin/agenda` (Detalle del turno), se sumó el checkbox `🔄 Permitir reprogramar por autogestión dentro de las 72hs (Excepción de única vez)`.
+  - En `/api/clientes/consultar` y `src/app/page.js`: si está activo, se omite el bloqueo de 72 horas y la advertencia de pérdida de seña, permitiendo modificar horario con `🗓️ Reagendar Turno`.
+  - En `/api/reservas/reprogramar`: al concretarse la reprogramación, el check se apaga automáticamente (`permitirReprogramacionCorta = false`).
+- **Selectores Box y Operador Lado a Lado**:
+  - En `/admin/agenda` (Detalle de turno), se ubicaron `📦 Box / Cabina` y `👤 Operador Asignado` en una grilla de 2 columnas con sus etiquetas arriba, optimizando el espacio vertical en dispositivos móviles.
+- **Desglose de Pago Dividido (`AMBOS`: Efectivo + Transferencia)**:
+  - En `/api/admin/turnos/senas-dia` y `/admin/estadisticas`: el desglose de turnos con `AMBOS` se acota al saldo cobrado real en la sesión (`saldoCobrado`), imputando `efCobrado = Math.min(saldoCobrado, ef)` y `trCobrado = Math.max(0, saldoCobrado - efCobrado)`.
+  - Corregido el caso del 17 de noviembre: $224.000 efectivo y $363.500 transferencia (total $587.500) coincidiendo al 100% en la Agenda Diaria, Estadísticas y Exportación Excel.

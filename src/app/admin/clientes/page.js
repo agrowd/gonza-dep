@@ -98,6 +98,7 @@ function ClientesPageContent() {
     enviarNotificaciones: true,
     bloqueado: false,
     recibioResena: false,
+    permitirReprogramacionCorta: false,
     notifWhatsapp: true,
     notifEmail: true,
     notifAltaTurno: true,
@@ -126,6 +127,7 @@ function ClientesPageContent() {
     enviarNotificaciones: true,
     bloqueado: false,
     recibioResena: false,
+    permitirReprogramacionCorta: false,
     notifWhatsapp: true,
     notifEmail: true,
     notifAltaTurno: true,
@@ -789,6 +791,7 @@ function ClientesPageContent() {
             enviarNotificaciones: data.enviarNotificaciones !== false,
             bloqueado: Boolean(data.bloqueado),
             recibioResena: Boolean(data.recibioResena),
+            permitirReprogramacionCorta: Boolean(data.permitirReprogramacionCorta),
             notifWhatsapp: data.notifWhatsapp !== false,
             notifEmail: data.notifEmail !== false,
             notifAltaTurno: data.notifAltaTurno !== false,
@@ -1157,6 +1160,7 @@ function ClientesPageContent() {
           enviarNotificaciones: data.enviarNotificaciones,
           bloqueado: data.bloqueado,
           recibioResena: data.recibioResena,
+          permitirReprogramacionCorta: data.permitirReprogramacionCorta,
           notifWhatsapp: data.notifWhatsapp,
           notifEmail: data.notifEmail,
           notifAltaTurno: data.notifAltaTurno,
@@ -1173,6 +1177,7 @@ function ClientesPageContent() {
           enviarNotificaciones: data.enviarNotificaciones,
           bloqueado: data.bloqueado,
           recibioResena: data.recibioResena,
+          permitirReprogramacionCorta: data.permitirReprogramacionCorta,
           notifWhatsapp: data.notifWhatsapp,
           notifEmail: data.notifEmail,
           notifAltaTurno: data.notifAltaTurno,
@@ -2414,6 +2419,20 @@ function ClientesPageContent() {
                       />
                       <label htmlFor="recibioResena" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '600', color: 'var(--text-primary)' }}>
                         ⭐ El cliente ya recibió / envió reseña de Google
+                      </label>
+                    </div>
+
+                    {/* Checkbox Permitir reprogramación corta en autogestión */}
+                    <div className={styles.checkboxRow} style={{ marginTop: '0.65rem' }}>
+                      <input
+                        type="checkbox"
+                        id="permitirReprogramacionCorta"
+                        checked={Boolean(editNotes.permitirReprogramacionCorta)}
+                        onChange={(e) => setEditNotes({ ...editNotes, permitirReprogramacionCorta: e.target.checked })}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#2563eb' }}
+                      />
+                      <label htmlFor="permitirReprogramacionCorta" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        🔄 Permitir reprogramar por autogestión dentro de las 72hs (Excepción de única vez)
                       </label>
                     </div>
                   </div>

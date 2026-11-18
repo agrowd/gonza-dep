@@ -95,8 +95,9 @@ export async function POST(request) {
 
     // 2. Enforce 72 business hours advance policy (fines de semana no cuentan)
     const diffBusinessHours = getBusinessHoursUntilTurno(turno.fecha, turno.horaInicio, now);
+    const permiteCorta = Boolean(turno.cliente?.permitirReprogramacionCorta);
 
-    if (diffBusinessHours < 72) {
+    if (diffBusinessHours < 72 && !permiteCorta) {
       return NextResponse.json({
         error: 'Faltan menos de 72 horas hábiles para tu turno (sin contar fines de semana). Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs hábiles de anticipación. Se deberá agendar un nuevo turno.'
       }, { status: 400 });
@@ -154,6 +155,18 @@ export async function POST(request) {
       },
       include: { cliente: true }
     });
+
+    // Auto-apagar el check de reprogramación corta excepcional de única vez (D-171)
+    if (turno.cliente?.permitirReprogramacionCorta) {
+      try {
+        await prisma.cliente.update({
+          where: { id: turno.cliente.id },
+          data: { permitirReprogramacionCorta: false }
+        });
+      } catch (errAutoOff) {
+        console.error('Error auto-apagando permitirReprogramacionCorta:', errAutoOff);
+      }
+    }
 
     const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
     const notificationsEnabled = clientNotificationsEnabled;

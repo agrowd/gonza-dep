@@ -5288,188 +5288,174 @@ export default function AgendaPage() {
 
                   <div style={{
                     gridColumn: '1 / -1',
-                    marginTop: '0.35rem',
-                    padding: '0.55rem 0',
-                    borderTop: '1px solid var(--border-color)',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '0.6rem',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}>
-                    <span style={{
-                      margin: 0,
-                      textAlign: 'left',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      color: 'var(--text-secondary)',
-                      whiteSpace: 'nowrap',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem'
-                    }}>
-                      📦 Box / Cabina:
-                    </span>
-                    {currentUserRole === 'ADMIN' ? (
-                      <select
-                        value={selectedTurno.boxId || selectedTurno.box?.id || ''}
-                        onChange={async (e) => {
-                          const newBoxId = e.target.value || null;
-                          try {
-                            const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              credentials: 'include',
-                              body: JSON.stringify({ boxId: newBoxId })
-                            });
-                            if (res.ok) {
-                              const updated = await res.json();
-                              setSelectedTurno(prev => ({
-                                ...prev,
-                                boxId: newBoxId,
-                                box: updated.box || boxes.find(b => b.id === newBoxId) || null
-                              }));
-                              const boxName = boxes.find(b => b.id === newBoxId)?.nombre || 'Box Principal';
-                              showToast(`Box asignado: ${boxName}`);
-                              fetchAppointments();
-                            } else {
-                              const err = await res.json();
-                              showToast(err.error || 'Error al cambiar box', 'error');
-                            }
-                          } catch (err) {
-                            console.error(err);
-                            showToast('Error de red al cambiar box', 'error');
-                          }
-                        }}
-                        style={{
-                          padding: '0.4rem 0.6rem',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-secondary)',
-                          color: 'var(--text-primary)',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          minWidth: '150px',
-                          flex: '1 1 auto',
-                          maxWidth: '100%'
-                        }}
-                      >
-                        {boxes.map(b => (
-                          <option key={b.id} value={b.id}>
-                            {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
-                        {selectedTurno.box?.nombre || 'Box Principal'}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{
-                    gridColumn: '1 / -1',
-                    marginTop: '0.1rem',
+                    marginTop: '0.25rem',
                     padding: '0.55rem 0',
                     borderTop: '1px solid var(--border-color)',
                     borderBottom: '1px solid var(--border-color)',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
                     gap: '0.6rem',
                     width: '100%',
                     boxSizing: 'border-box'
                   }}>
-                    <span style={{
-                      margin: 0,
-                      textAlign: 'left',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      color: 'var(--text-secondary)',
-                      whiteSpace: 'nowrap',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem'
-                    }}>
-                      👤 Operador Asignado:
-                    </span>
-                    {currentUserRole === 'ADMIN' ? (
-                      <select
-                        value={selectedTurno.operadorId || ''}
-                        onChange={async (e) => {
-                          const newOpId = e.target.value || null;
-                          const chosenOp = operadores.find(op => op.id === newOpId);
-                          try {
-                            const payload = { operadorId: newOpId };
-                            if (chosenOp?.boxPredeterminadoId) {
-                              payload.boxId = chosenOp.boxPredeterminadoId;
+                    {/* Box / Cabina */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <label style={{
+                        margin: 0,
+                        textAlign: 'left',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: 'var(--text-secondary)',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        📦 Box / Cabina:
+                      </label>
+                      {currentUserRole === 'ADMIN' ? (
+                        <select
+                          value={selectedTurno.boxId || selectedTurno.box?.id || ''}
+                          onChange={async (e) => {
+                            const newBoxId = e.target.value || null;
+                            try {
+                              const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ boxId: newBoxId })
+                              });
+                              if (res.ok) {
+                                const updated = await res.json();
+                                setSelectedTurno(prev => ({
+                                  ...prev,
+                                  boxId: newBoxId,
+                                  box: updated.box || boxes.find(b => b.id === newBoxId) || null
+                                }));
+                                const boxName = boxes.find(b => b.id === newBoxId)?.nombre || 'Box Principal';
+                                showToast(`Box asignado: ${boxName}`);
+                                fetchAppointments();
+                              } else {
+                                const err = await res.json();
+                                showToast(err.error || 'Error al cambiar box', 'error');
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              showToast('Error de red al cambiar box', 'error');
                             }
-                            const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              credentials: 'include',
-                              body: JSON.stringify(payload)
-                            });
-                            if (res.ok) {
-                              const updated = await res.json();
-                              setSelectedTurno(prev => ({
-                                ...prev,
-                                operadorId: newOpId,
-                                operador: updated.operador || operadores.find(op => op.id === newOpId) || null,
-                                ...(chosenOp?.boxPredeterminadoId ? { boxId: chosenOp.boxPredeterminadoId, box: boxes.find(b => b.id === chosenOp.boxPredeterminadoId) || prev.box } : {})
-                              }));
-                              const opName = operadores.find(op => op.id === newOpId)?.nombre || 'Gonzalo';
-                              showToast(`Operador asignado: ${opName}${chosenOp?.boxPredeterminadoId ? ' (Box actualizado)' : ''}`);
-                              fetchAppointments();
-                            } else {
-                              showToast('Error al asignar operador', 'error');
-                            }
-                          } catch (err) {
-                            console.error(err);
-                            showToast('Error de red al asignar operador', 'error');
-                          }
-                        }}
-                        style={{
-                          padding: '0.4rem 0.6rem',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-secondary)',
-                          color: 'var(--text-primary)',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          minWidth: '150px',
-                          flex: '1 1 auto',
-                          maxWidth: '100%'
-                        }}
-                      >
-                        <option value="">Gonzalo (Por defecto)</option>
-                        {operadores.filter(op => op.activo !== false || op.id === selectedTurno.operadorId).map(op => {
-                          const check = isOperatorAvailableForTurno(op, selectedTurno.fecha, selectedTurno.horaInicio, selectedTurno.horaFin, selectedTurno.zonas);
-                          const isCurrent = op.id === selectedTurno.operadorId;
-                          return (
-                            <option 
-                              key={op.id} 
-                              value={op.id}
-                              disabled={!check.available && !isCurrent}
-                              style={{ color: (!check.available && !isCurrent) ? '#94a3b8' : 'inherit' }}
-                            >
-                              {op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : (!check.available ? ` [${check.reason}]` : '')}
+                          }}
+                          style={{
+                            padding: '0.4rem 0.5rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          {boxes.map(b => (
+                            <option key={b.id} value={b.id}>
+                              {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
                             </option>
-                          );
-                        })}
-                      </select>
-                    ) : (
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)' }}>
-                        {selectedTurno.operador?.nombre || 'Gonzalo'}
-                      </span>
-                    )}
+                          ))}
+                        </select>
+                      ) : (
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                          {selectedTurno.box?.nombre || 'Box Principal'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Operador Asignado */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <label style={{
+                        margin: 0,
+                        textAlign: 'left',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: 'var(--text-secondary)',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        👤 Operador Asignado:
+                      </label>
+                      {currentUserRole === 'ADMIN' ? (
+                        <select
+                          value={selectedTurno.operadorId || ''}
+                          onChange={async (e) => {
+                            const newOpId = e.target.value || null;
+                            const chosenOp = operadores.find(op => op.id === newOpId);
+                            try {
+                              const payload = { operadorId: newOpId };
+                              if (chosenOp?.boxPredeterminadoId) {
+                                payload.boxId = chosenOp.boxPredeterminadoId;
+                              }
+                              const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify(payload)
+                              });
+                              if (res.ok) {
+                                const updated = await res.json();
+                                setSelectedTurno(prev => ({
+                                  ...prev,
+                                  operadorId: newOpId,
+                                  operador: updated.operador || operadores.find(op => op.id === newOpId) || null,
+                                  ...(chosenOp?.boxPredeterminadoId ? { boxId: chosenOp.boxPredeterminadoId, box: boxes.find(b => b.id === chosenOp.boxPredeterminadoId) || prev.box } : {})
+                                }));
+                                const opName = operadores.find(op => op.id === newOpId)?.nombre || 'Gonzalo';
+                                showToast(`Operador asignado: ${opName}${chosenOp?.boxPredeterminadoId ? ' (Box actualizado)' : ''}`);
+                                fetchAppointments();
+                              } else {
+                                showToast('Error al asignar operador', 'error');
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              showToast('Error de red al asignar operador', 'error');
+                            }
+                          }}
+                          style={{
+                            padding: '0.4rem 0.5rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value="">Gonzalo (Por defecto)</option>
+                          {operadores.filter(op => op.activo !== false || op.id === selectedTurno.operadorId).map(op => {
+                            const check = isOperatorAvailableForTurno(op, selectedTurno.fecha, selectedTurno.horaInicio, selectedTurno.horaFin, selectedTurno.zonas);
+                            const isCurrent = op.id === selectedTurno.operadorId;
+                            return (
+                              <option 
+                                key={op.id} 
+                                value={op.id}
+                                disabled={!check.available && !isCurrent}
+                                style={{ color: (!check.available && !isCurrent) ? '#94a3b8' : 'inherit' }}
+                              >
+                                {op.nombre} ({op.usuario}){op.activo === false ? ' [Bloqueado]' : (!check.available ? ` [${check.reason}]` : '')}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      ) : (
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)' }}>
+                          {selectedTurno.operador?.nombre || 'Gonzalo'}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {currentUserRole !== 'OPERADOR' && (
@@ -6411,6 +6397,39 @@ export default function AgendaPage() {
                             style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#eab308' }}
                           />
                           <span>⭐ Reseña de Google Solicitada</span>
+                        </label>
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(selectedTurno.cliente.permitirReprogramacionCorta)}
+                            onChange={async (e) => {
+                              const nextVal = e.target.checked;
+                              setSelectedTurno(prev => ({
+                                ...prev,
+                                cliente: { ...prev.cliente, permitirReprogramacionCorta: nextVal }
+                              }));
+                              setAppointments(prevList => prevList.map(t => {
+                                if (t.cliente?.id === selectedTurno.cliente?.id) {
+                                  return { ...t, cliente: { ...t.cliente, permitirReprogramacionCorta: nextVal } };
+                                }
+                                return t;
+                              }));
+                              try {
+                                await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ permitirReprogramacionCorta: nextVal })
+                                });
+                                showToast(nextVal ? 'Habilitada reprogramación < 72hs por autogestión (1 sola vez).' : 'Reprogramación < 72hs bloqueada.');
+                              } catch (err) {
+                                console.error('Error toggling permitirReprogramacionCorta in agenda modal:', err);
+                              }
+                            }}
+                            style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#2563eb' }}
+                          />
+                          <span>🔄 Reprogramar &lt; 72hs Autogestión</span>
                         </label>
                       </div>
                     </div>

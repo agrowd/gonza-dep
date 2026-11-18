@@ -2996,3 +2996,19 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 7. **Sincronización Automática Diacrítica de Precios en Turnos Futuros**:
    - `turnoPriceSync.js` implementa `normalizeZoneName` (resiliente a plurales, tildes y signos `+` por `y`), asegurando que citas futuras reflejen aumentos de catálogo y computen correctamente el `dineroAFavor`.
 
+
+## Sesión 18/11/2026 - Reprogramación Excepcional en Autogestión (< 72hs) con Auto-Apagado, Selectores Box y Operador Lado a Lado, y Desglose Exacto de Pago Dividido (AMBOS) en Agenda y Estadísticas (D-171)
+
+### Requerimientos y Casos Implementados
+1. **Checkbox para Permitir Reprogramación Excepcional en Autogestión (< 72hs)**:
+   - Se incorporó la columna `permitirReprogramacionCorta Boolean @default(false)` al modelo `Cliente` en `prisma/schema.prisma`.
+   - Se migró el esquema local (`prisma generate`) y se aplicó la migración SQL en PostgreSQL de producción (`agenda_db`) y staging (`agenda_db_staging`).
+   - En `/admin/clientes` (pestaña ABM Clientes, debajo de reseña de Google) se integró el checkbox `🔄 Permitir reprogramar por autogestión dentro de las 72hs (Excepción de única vez)`.
+   - En `/admin/agenda` (modal de detalle de turno), se agregó el toggle directo `🔄 Reprogramar < 72hs Autogestión` para habilitarlo/deshabilitarlo al instante sobre la cita activa.
+   - En Autogestión (`src/app/page.js` y `/api/clientes/consultar`): si el cliente tiene la bandera activa, se oculta el aviso rojo de pérdida de seña y se habilita el botón `🗓️ Reagendar Turno` para que modifique su cita normalmente.
+   - En `/api/reservas/reprogramar`: al completar con éxito la reprogramación, el backend auto-apaga la bandera (`permitirReprogramacionCorta: false`) para que vuelva al comportamiento estricto habitual.
+2. **Selectores de Box y Operador Lado a Lado en Detalle de Turno**:
+   - En `src/app/admin/agenda/page.js`, `📦 Box / Cabina` y `👤 Operador Asignado` se agruparon en una cuadrícula CSS de dos columnas (`display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;`) con sus etiquetas superiores. Esto compacta el modal verticalmente en smartphones y mantiene la ergonomía táctil intacta.
+3. **Desglose de Pago Dividido (`AMBOS`: Efectivo + Transferencia) en Agenda y Estadísticas**:
+   - Diagnóstico: En `senas-dia/route.js`, los turnos con método `AMBOS` sumaban íntegros `montoEfectivo` y `montoTransferencia` aunque su suma fuera igual a `valorTotal` (75.000) superando el saldo real cobrado hoy (45.000), inflando la transferencia en $30.000. Paralelamente, en `estadisticas/page.js`, los turnos con `AMBOS` caían al `else` atribuyendo el 100% a transferencia y $0 a efectivo.
+   - Solución: En `senas-dia/route.js` y `estadisticas/page.js`, se desglosan `efCobrado = Math.min(saldoCobrado, ef)` y `trCobrado = Math.max(0, saldoCobrado - efCobrado)`. En el caso del 17 de noviembre (Braian Martinez: $75.000 total, $30.000 seña previa, $45.000 saldo), el desglose refleja con precisión matemática: **$224.000 efectivo** y **$363.500 transferencia**, totalizando exactamente los **$587.500** de ingreso real tanto en la cabecera de la agenda diaria como en el módulo de estadísticas y exportación Excel.

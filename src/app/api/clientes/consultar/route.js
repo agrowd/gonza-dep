@@ -66,7 +66,8 @@ export async function GET(request) {
             nombreCompleto: existingPhoneClient.nombreCompleto,
             whatsapp: existingPhoneClient.whatsapp,
             email: existingPhoneClient.email,
-            bloqueado: existingPhoneClient.bloqueado
+            bloqueado: existingPhoneClient.bloqueado,
+            permitirReprogramacionCorta: Boolean(existingPhoneClient.permitirReprogramacionCorta)
           }
         });
       }
@@ -261,6 +262,18 @@ export async function GET(request) {
       }
     }
 
+    const enrichedActiveTurnos = (client.turnos || []).map(t => ({
+      ...t,
+      permitirReprogramacionCorta: Boolean(client.permitirReprogramacionCorta),
+      cliente: {
+        id: client.id,
+        nombreCompleto: client.nombreCompleto,
+        whatsapp: client.whatsapp,
+        email: client.email,
+        permitirReprogramacionCorta: Boolean(client.permitirReprogramacionCorta)
+      }
+    }));
+
     return NextResponse.json({
       exists: true,
       bloqueado: false,
@@ -269,11 +282,12 @@ export async function GET(request) {
         nombreCompleto: client.nombreCompleto,
         whatsapp: client.whatsapp,
         email: client.email,
-        bloqueado: false
+        bloqueado: false,
+        permitirReprogramacionCorta: Boolean(client.permitirReprogramacionCorta)
       },
       hasActiveTurno,
-      activeTurno: hasActiveTurno ? client.turnos[0] : null,
-      activeTurnos: client.turnos,
+      activeTurno: enrichedActiveTurnos.length > 0 ? enrichedActiveTurnos[0] : null,
+      activeTurnos: enrichedActiveTurnos,
       ultimoTurnoData
     });
 

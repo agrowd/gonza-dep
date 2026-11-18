@@ -257,7 +257,8 @@ export default function Home() {
 
     // Check 72 business hours rule (excluyendo fines de semana)
     const diffHours = getHoursUntilTurno(targetTurno);
-    if (diffHours < 72) {
+    const permiteCorta = Boolean(targetTurno.permitirReprogramacionCorta || targetTurno.cliente?.permitirReprogramacionCorta || clientData?.permitirReprogramacionCorta);
+    if (diffHours < 72 && !permiteCorta) {
       setShow72hsAlert(true);
       setAlert72hsMessage(
         'Faltan menos de 72 horas hábiles para tu turno (sin contar fines de semana). Por políticas de la empresa, no es posible conservar la seña al reagendar con menos de 72hs hábiles de anticipación. Se deberá agendar un nuevo turno.'
@@ -982,7 +983,8 @@ Duración: ${duracionMinutos} min`;
 
                     {activeTurnos.map((turno, idx) => {
                       const diffHours = getHoursUntilTurno(turno);
-                      const isWithin72hs = diffHours < 72;
+                      const permiteCorta = Boolean(turno.permitirReprogramacionCorta || turno.cliente?.permitirReprogramacionCorta || clientData?.permitirReprogramacionCorta);
+                      const isWithin72hs = diffHours < 72 && !permiteCorta;
                       let parsedZones = '';
                       try {
                         const p = JSON.parse(turno.zonas);

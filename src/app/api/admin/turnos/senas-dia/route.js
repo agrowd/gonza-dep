@@ -152,8 +152,10 @@ export async function GET(request) {
         const ef = Math.max(0, Number(t.montoEfectivo || 0));
         const tr = Math.max(0, Number(t.montoTransferencia || 0));
         if (ef + tr > 0) {
-          totalEfectivo += ef;
-          totalTransferencia += tr;
+          const efCobrado = Math.min(saldoCobrado, ef > 0 ? ef : Math.max(0, saldoCobrado - tr));
+          const trCobrado = Math.max(0, saldoCobrado - efCobrado);
+          totalEfectivo += efCobrado;
+          totalTransferencia += trCobrado;
         } else {
           const mitad = Math.round(saldoCobrado / 2);
           totalEfectivo += mitad;
@@ -174,8 +176,10 @@ export async function GET(request) {
         const ef = Math.max(0, Number(t.montoEfectivo || 0));
         const tr = Math.max(0, Number(t.montoTransferencia || 0));
         if (ef + tr > 0) {
-          totalEfectivo += ef;
-          totalTransferencia += tr;
+          const efSena = Math.min(seña, ef > 0 ? ef : Math.max(0, seña - tr));
+          const trSena = Math.max(0, seña - efSena);
+          totalEfectivo += efSena;
+          totalTransferencia += trSena;
         } else {
           totalTransferencia += seña;
         }
