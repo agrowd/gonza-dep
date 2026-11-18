@@ -2154,3 +2154,37 @@
   - Relay de WhatsApp en `ia-gonzadep` actualizado para despachar archivos multimedia con `MessageMedia`.
   - Autogestión web (`/`) actualizada con el módulo interactivo de cupón y precarga automática de zonas.
 - **Despliegue**: Compilación Turbopack validada (50/50 rutas OK) y despliegue completado con éxito con HTTP 200 OK.
+
+
+---
+
+## Sesión: 18 de Noviembre de 2026 - Multi-Agenda, Turnos Más Lejanos, Dinámica de Zonas Extra Otros, Consolidado Mensual de Bajas Reales y Sincronización Diacrítica (D-169 & D-170)
+
+### Requerimientos y Casos Reportados:
+1. **Multi-Agenda (Citas en Paralelo por Box y Operador)**:
+   - Reporte: *"Para la multi agenda, no me deja sacar 2 turnos en el mismo horario, si elijo que sea en un box y con un operador distinto, debería de dejarme poner turnos en el mismo horario si cumple esas condiciones"*.
+   - Diagnóstico: En `agenda_db` de producción solo existía `Box 1`. Además, la validación de solapamiento fallaba al no resolver defaults canónicos de operadores y boxes cuando alguno era nulo en BD.
+   - Solución: Se insertó `Box 2 - Cabina 2` en PostgreSQL de producción. Se refactorizó `hasOverlappingTurno` en `/api/admin/turnos`, `/api/admin/turnos/[id]` y en la agenda cliente para comparar `effectiveCurBoxId !== tEffectiveBoxId && effectiveCurOpId !== tEffectiveOpId`.
+2. **Consolidado Mensual (Fechas sin Desfase UTC-3 y Bajas Reales sin Turno Posterior)**:
+   - Reporte: *"En el PDF del consolidado Mensual, que elegí para Octubre, da mal los datos porque toma del 1 al 30, no toma el 31 de Octubre. Además los colores ahí que te marco, ponelo con la paleta de colores del PDF que te mandé, y arregla los valores porque aparecen mal. En las estadísticas de el consolidado Mensual, en los datos de cancelados, va a avisar, ausentes, etc, debería darme los números de los que no agendaron nuevo turno, son los que de verdad interesan"*.
+   - Diagnóstico: `toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })` sobre objetos UTC desplazaba las citas del 31 de octubre al 30 de octubre a las 21:00 hs, y las del 1 de octubre a septiembre.
+   - Solución: Helper `getFechaKey(f)` (corte estricto YYYY-MM-DD), capturando las 181 citas y $10.716.500 de octubre. Se adaptó el filtro de Bajas (`hasFutureAppointment`) para verificar si el cliente agendó una cita posterior, excluyendo del conteo de bajas a quienes reprogramaron. Se unificaron las 4 tarjetas KPI con la paleta oficial DPH (`#fcfaf7` crema, borde `#e6ded4`, acento `#7a1f1e` y textos `#2a2623`).
+3. **Retorno Inmediato a la Ficha del Turno al Editar**:
+   - Reporte: *"Al editar un turno, que vuelva a la ficha del turno, no a la agenda, así podemos ver los cambios"*.
+   - Solución: Al guardar en `handleSaveEditTurno` o presionar `✕` en el modal de edición, se conmuta a `setIsEditing(false)` manteniendo `isDetailsOpen: true` y sincronizando `selectedTurno` con los datos actualizados.
+4. **Omisión de Mención de Pérdida de Seña en Notificaciones**:
+   - Reporte: *"En los mensajes y mails de cancelación de turno cuando pierde la seña, no dar esa información, no avisa que pierde la seña"*.
+   - Solución: Se actualizó `wtsp_cancellation_template` en PostgreSQL de producción y staging eliminando el párrafo sobre retención/pérdida de seña. Se ajustaron las plantillas de email y fallbacks en código.
+5. **Zonas Extra "Otros" Dinámicas**:
+   - Selector desplegable de servicios en alta y edición con exclusividad de servicio y array dinámico de zonas extras con inputs `Zona Extra 1`, `Zona Extra 2`, botón `[ + Agregar otra zona ]`, eliminación individual y cálculo total.
+6. **Destino de Seña en Múltiples Turnos Futuros**:
+   - Al conservar seña o cobrar señas adicionales de clientes con múltiples turnos agendados, la seña se asigna al turno más lejano (`farthestTurno`), dejando intacta la cita más próxima.
+7. **Sincronización Automática Diacrítica de Precios en Turnos Futuros**:
+   - `turnoPriceSync.js` implementa `normalizeZoneName` (resiliente a plurales, tildes y signos `+` por `y`), asegurando que citas futuras reflejen aumentos de catálogo y computen correctamente el `dineroAFavor`.
+
+### Estado de Despliegue:
+- Compilación local probada y limpia (`npm run build`, 50/50 rutas OK).
+- Cambios empujados a `main` y `staging` en GitHub (`3f0eef7`).
+- Desplegado y verificado en el VPS Hostinger (`187.127.9.216`):
+  - Staging (`http://187.127.9.216:3008` / `http://187.127.9.216`): HTTP 200 OK.
+  - Producción (`https://agenda.depilacionparahombres.com` en puerto 3006): HTTP 200 OK.

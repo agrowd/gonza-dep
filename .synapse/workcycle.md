@@ -2971,3 +2971,28 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 - SQL migrations ejecutadas en PostgreSQL de `agenda_db` y `agenda_db_staging` en el VPS.
 - Relay `ia-gonzadep` actualizado y reiniciado en PM2 con soporte multimedia.
 - Despliegue automático con `scratch/deploy_full_safe.mjs` completado con código 0 y verificación HTTP 200 OK en Producción (`https://agenda.depilacionparahombres.com`) y Staging.
+
+## Sesión 18/11/2026 - Multi-Agenda, Turnos Más Lejanos, Dinámica de Zonas Extra Otros, Consolidado Mensual de Bajas Reales y Sincronización Diacrítica (D-169 & D-170)
+
+### Requerimientos y Casos Reportados
+1. **Multi-Agenda (Citas en Paralelo por Box y Operador)**:
+   - Reporte: *"Para la multi agenda, no me deja sacar 2 turnos en el mismo horario, si elijo que sea en un box y con un operador distinto, debería de dejarme poner turnos en el mismo horario si cumple esas condiciones"*.
+   - Diagnóstico: En `agenda_db` de producción solo existía `Box 1`. Además, la validación de solapamiento fallaba al no resolver defaults canónicos de operadores y boxes cuando alguno era nulo en BD.
+   - Solución: Se insertó `Box 2 - Cabina 2` en PostgreSQL de producción. Se refactorizó `hasOverlappingTurno` en `/api/admin/turnos`, `/api/admin/turnos/[id]` y en la agenda cliente para comparar `effectiveCurBoxId !== tEffectiveBoxId && effectiveCurOpId !== tEffectiveOpId`.
+2. **Consolidado Mensual (Fechas sin Desfase UTC-3 y Bajas Reales sin Turno Posterior)**:
+   - Reporte: *"En el PDF del consolidado Mensual, que elegí para Octubre, da mal los datos porque toma del 1 al 30, no toma el 31 de Octubre. Además los colores ahí que te marco, ponelo con la paleta de colores del PDF que te mandé, y arregla los valores porque aparecen mal. En las estadísticas de el consolidado Mensual, en los datos de cancelados, va a avisar, ausentes, etc, debería darme los números de los que no agendaron nuevo turno, son los que de verdad interesan"*.
+   - Diagnóstico: `toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })` sobre objetos UTC desplazaba las citas del 31 de octubre al 30 de octubre a las 21:00 hs, y las del 1 de octubre a septiembre.
+   - Solución: Helper `getFechaKey(f)` (corte estricto YYYY-MM-DD), capturando las 181 citas y $10.716.500 de octubre. Se adaptó el filtro de Bajas (`hasFutureAppointment`) para verificar si el cliente agendó una cita posterior, excluyendo del conteo de bajas a quienes reprogramaron. Se unificaron las 4 tarjetas KPI con la paleta oficial DPH (`#fcfaf7` crema, borde `#e6ded4`, acento `#7a1f1e` y textos `#2a2623`).
+3. **Retorno Inmediato a la Ficha del Turno al Editar**:
+   - Reporte: *"Al editar un turno, que vuelva a la ficha del turno, no a la agenda, así podemos ver los cambios"*.
+   - Solución: Al guardar en `handleSaveEditTurno` o presionar `✕` en el modal de edición, se conmuta a `setIsEditing(false)` manteniendo `isDetailsOpen: true` y sincronizando `selectedTurno` con los datos actualizados.
+4. **Omisión de Mención de Pérdida de Seña en Notificaciones**:
+   - Reporte: *"En los mensajes y mails de cancelación de turno cuando pierde la seña, no dar esa información, no avisa que pierde la seña"*.
+   - Solución: Se actualizó `wtsp_cancellation_template` en PostgreSQL de producción y staging eliminando el párrafo sobre retención/pérdida de seña. Se ajustaron las plantillas de email y fallbacks en código.
+5. **Zonas Extra "Otros" Dinámicas**:
+   - Selector desplegable de servicios en alta y edición con exclusividad de servicio y array dinámico de zonas extras con inputs `Zona Extra 1`, `Zona Extra 2`, botón `[ + Agregar otra zona ]`, eliminación individual y cálculo total.
+6. **Destino de Seña en Múltiples Turnos Futuros**:
+   - Al conservar seña o cobrar señas adicionales de clientes con múltiples turnos agendados, la seña se asigna al turno más lejano (`farthestTurno`), dejando intacta la cita más próxima.
+7. **Sincronización Automática Diacrítica de Precios en Turnos Futuros**:
+   - `turnoPriceSync.js` implementa `normalizeZoneName` (resiliente a plurales, tildes y signos `+` por `y`), asegurando que citas futuras reflejen aumentos de catálogo y computen correctamente el `dineroAFavor`.
+
