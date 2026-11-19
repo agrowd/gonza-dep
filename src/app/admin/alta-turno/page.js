@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './alta-turno.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
+import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
 
 const DAYS_OF_WEEK = [
   { id: 1, label: 'Lunes', short: 'Lun' },
@@ -876,11 +877,13 @@ function AltaTurnoContent() {
                 <div className={styles.formGroup} style={{ flex: 1 }}>
                   <label className={styles.label}>Valor Zonas Extras ($):</label>
                   <input
-                    type="number"
-                    placeholder="Ej. 15000"
-                    value={otrosPrecio || ''}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Ej. 15.000"
+                    value={otrosPrecio ? formatMilesInput(otrosPrecio) : ''}
                     onChange={(e) => {
-                      setOtrosPrecio(parseInt(e.target.value, 10) || 0);
+                      const clean = cleanMilesInput(e.target.value);
+                      setOtrosPrecio(clean ? parseInt(clean, 10) : 0);
                     }}
                     className={styles.textInput}
                   />

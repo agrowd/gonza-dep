@@ -3070,3 +3070,16 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - Propagado `metodoPago` completo en toda la cadena: `handleScheduleNextTurn` (`agenda/page.js`) → `/admin/alta-turno` → retorno a `/admin/agenda` (modal Nuevo Turno), y también en `/api/admin/turnos/ultimo-cliente` y autocompletado.
 4. **Eliminación de Columna `Seña cobrada` en Ganancia Neta**:
    - Removida exclusivamente para `gananciaNeta` tanto en la exportación Excel (`exportar-excel/route.js`, ajustado a 9 columnas `A:I`) como en la tabla en pantalla de `/admin/estadisticas/page.js`.
+
+
+
+## Sesión 19/11/2026 (Parte 4) - Separadores de Miles Automáticos en Todos los Inputs Numéricos y de Montos (D-176)
+
+### Requerimiento Implementado
+- **Separadores de miles con punto en vivo al cargar números/montos**:
+  - Creado `src/lib/formatNumber.js` con `formatMilesInput` y `cleanMilesInput`.
+  - Aplicado con `type="text" inputMode="numeric"` en:
+    - `/admin/gastos` (Monto `$ ARS` al crear y editar gasto).
+    - `/admin/agenda` (Total de Venta, Seña Recibida, Valor Zonas Extras `Otros`, Valor Descuento en Nuevo Turno y Editar Turno, Monto Efectivo, Monto Transferencia y Dinero a Favor en ficha del turno).
+    - `/admin/alta-turno` (Valor Zonas Extras `Otros`).
+    - `/admin/configuracion` (Precio Base y Seña 50% en edición inline y modal de Zonas, Valor de Descuento en Promociones, Valor de Descuento y Límite de Usos en Cupones, y Valor de Comisión en Usuarios/Operadores).

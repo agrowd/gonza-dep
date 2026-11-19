@@ -2236,3 +2236,21 @@
 - **Recibo (Web/PDF y Email)**: Corregido bug en `/api/admin/turnos/[id]/recibo`, `/admin/recibos/[id]` y `email.js` donde `Otros` con valor `$0` mostraba un promedio falso (`$20.333`). Ahora si `Otros` vale `$0` deja *Precio Unit.* y *Subtotal* vacíos sin mostrar valor.
 - **Método de Pago en Siguiente Turno**: Propagado `metodoPago` desde la ficha del turno → `/admin/alta-turno` → `/admin/agenda` (y en `/api/admin/turnos/ultimo-cliente`), conservando siempre Efectivo / Transferencia / Ambos.
 - **Ganancia Neta sin Columna Seña**: Quitada la columna `Seña cobrada` únicamente en la tabla y exportación Excel de **Ganancia Neta** (`exportar-excel/route.js` y `estadisticas/page.js`), manteniendo todas las demás métricas y resúmenes intactos.
+
+
+---
+### Consulta de estado — Horario laboral pedido por Luciano/Gonzalo (2026-11-19 11:46)
+- **Usuario**: Pregunta si ya está hecho lo que pide Gonzalo en la captura ("Necesito con urgencia que me arregles lo que te pidio luciano de poder cambiar nosotros el horario de laboral de la ageda, te lo mando con foto de lo que necesitamos").
+- **Respuesta**: Sí, el pedido de Luciano (`D-174`, commit `450f004`, live en producción) ya está implementado y desplegado: en **Configuración → Horarios** (`/admin/configuracion`) existen 3 franjas editables independientes (**Agenda Interna**, **Elegir Turno: Alta / Siguiente Turno** ya en `15:00`–`22:00` por defecto sin cambiar la agenda visual, y **Autogestión / Reserva Online**). Se advierte esperar la foto que menciona Gonzalo por si pide además horarios distintos por día de la semana, por operador o permisos para rol `RECEPCION`.
+
+
+---
+### Implementación D-176 — Separadores de miles con punto en todos los inputs de montos/números (2026-11-19 12:49)
+- **Pedido de Gonzalo (`media_1795102537984_87561449.png`)**: *"En todos los lugares donde se carga un número que tenga los separadores de miles... Recien cargue un gasto y no pone el punto en miles"*.
+- **Solución**:
+  - Creado `src/lib/formatNumber.js` (`formatMilesInput`, `cleanMilesInput`).
+  - Migrados los inputs de montos y valores a `type="text" inputMode="numeric"` con formateo en tiempo real (`35.000`, `150.000`) manteniendo el valor numérico limpio en estado en:
+    1. `src/app/admin/gastos/page.js` (Monto `$ ARS`).
+    2. `src/app/admin/agenda/page.js` (Total, Seña, Valor Zonas Extras `Otros`, Valor Descuento en Nuevo/Editar Turno; Efectivo, Transferencia y Dinero a Favor en detalle de turno).
+    3. `src/app/admin/alta-turno/page.js` (Valor Zonas Extras `Otros`).
+    4. `src/app/admin/configuracion/page.js` (Precio Base y Seña de Zonas, Descuento de Promociones y Cupones, Usos de Cupones, Comisión de Operadores).

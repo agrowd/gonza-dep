@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Fragment } from 'react';
 import styles from './configuracion.module.css';
+import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
 
 // SVG Icons
 const PlusIcon = () => (
@@ -2123,12 +2124,14 @@ export default function ConfiguracionPage() {
                                                 {isBase ? 'Precio Base ($) (Automático Web)' : 'Precio Base ($)'}
                                               </label>
                                               <input 
-                                                type="number" 
+                                                type="text"
+                                                inputMode="numeric"
                                                 className={styles.input} 
-                                                value={zoneForm.precioBase}
+                                                value={formatMilesInput(zoneForm.precioBase)}
                                                 onChange={(e) => {
-                                                  const p = Number(e.target.value);
-                                                  setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round(p * 0.5) });
+                                                  const clean = cleanMilesInput(e.target.value);
+                                                  const p = clean === '' ? '' : Number(clean);
+                                                  setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round((Number(p) || 0) * 0.5) });
                                                 }}
                                                 readOnly={isBase}
                                                 disabled={isBase}
@@ -2144,9 +2147,9 @@ export default function ConfiguracionPage() {
                                             <div className={styles.formGroup} style={{ margin: 0 }}>
                                               <label className={styles.label} style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Seña (50% Automático)</label>
                                               <input 
-                                                type="number" 
+                                                type="text" 
                                                 className={styles.input} 
-                                                value={Math.round(Number(zoneForm.precioBase || 0) * 0.5)}
+                                                value={formatMilesInput(Math.round(Number(zoneForm.precioBase || 0) * 0.5))}
                                                 readOnly
                                                 disabled
                                                 style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
@@ -3676,9 +3679,9 @@ export default function ConfiguracionPage() {
                       </label>
                       {isModalLaser ? (
                         <input 
-                          type="number" 
+                          type="text" 
                           className={styles.input} 
-                          value={zoneForm.precioBase}
+                          value={formatMilesInput(zoneForm.precioBase)}
                           readOnly
                           disabled
                           placeholder="Tomado automáticamente de la web"
@@ -3687,14 +3690,16 @@ export default function ConfiguracionPage() {
                         />
                       ) : (
                         <input 
-                          type="number" 
+                          type="text"
+                          inputMode="numeric"
                           className={styles.input} 
-                          value={zoneForm.precioBase}
+                          value={formatMilesInput(zoneForm.precioBase)}
                           onChange={(e) => {
-                            const p = Number(e.target.value);
-                            setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round(p * 0.5) });
+                            const clean = cleanMilesInput(e.target.value);
+                            const p = clean === '' ? '' : Number(clean);
+                            setZoneForm({ ...zoneForm, precioBase: p, señaBase: Math.round((Number(p) || 0) * 0.5) });
                           }}
-                          placeholder="Ej: 35000"
+                          placeholder="Ej: 35.000"
                           required
                         />
                       )}
@@ -3705,9 +3710,9 @@ export default function ConfiguracionPage() {
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Seña Requerida (ARS) (50% Automático)</label>
                   <input 
-                    type="number" 
+                    type="text" 
                     className={styles.input} 
-                    value={Math.round(Number(zoneForm.precioBase || 0) * 0.5)}
+                    value={formatMilesInput(Math.round(Number(zoneForm.precioBase || 0) * 0.5))}
                     readOnly
                     disabled
                     style={{ opacity: 0.75, cursor: 'not-allowed', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
@@ -3862,12 +3867,12 @@ export default function ConfiguracionPage() {
                       {promoForm.descuentoTipo === 'PORCENTAJE' ? 'Porcentaje (%)' : 'Monto Descuento ($ ARS)'}
                     </label>
                     <input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
                       className={styles.input} 
-                      value={promoForm.descuentoValor}
-                      onChange={(e) => setPromoForm({ ...promoForm, descuentoValor: e.target.value })}
-                      placeholder={promoForm.descuentoTipo === 'PORCENTAJE' ? '15' : '5000'}
-                      min="1"
+                      value={formatMilesInput(promoForm.descuentoValor)}
+                      onChange={(e) => setPromoForm({ ...promoForm, descuentoValor: cleanMilesInput(e.target.value) })}
+                      placeholder={promoForm.descuentoTipo === 'PORCENTAJE' ? '15' : '5.000'}
                       required
                     />
                   </div>
@@ -4002,12 +4007,12 @@ export default function ConfiguracionPage() {
                       {cuponForm.descuentoTipo === 'PORCENTAJE' ? 'Porcentaje (%)' : 'Monto Descuento ($ ARS)'}
                     </label>
                     <input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
                       className={styles.input} 
-                      value={cuponForm.descuentoValor}
-                      onChange={(e) => setCuponForm({ ...cuponForm, descuentoValor: e.target.value })}
-                      placeholder={cuponForm.descuentoTipo === 'PORCENTAJE' ? '20' : '6000'}
-                      min="1"
+                      value={formatMilesInput(cuponForm.descuentoValor)}
+                      onChange={(e) => setCuponForm({ ...cuponForm, descuentoValor: cleanMilesInput(e.target.value) })}
+                      placeholder={cuponForm.descuentoTipo === 'PORCENTAJE' ? '20' : '6.000'}
                       required
                     />
                   </div>
@@ -4046,12 +4051,12 @@ export default function ConfiguracionPage() {
                   <div className={styles.formGroup}>
                     <label className={styles.label}>Límite de Canjes / Usos</label>
                     <input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
                       className={styles.input} 
-                      value={cuponForm.usosPermitidos}
-                      onChange={(e) => setCuponForm({ ...cuponForm, usosPermitidos: e.target.value })}
+                      value={formatMilesInput(cuponForm.usosPermitidos)}
+                      onChange={(e) => setCuponForm({ ...cuponForm, usosPermitidos: cleanMilesInput(e.target.value) })}
                       placeholder="Ej: 10 (Dejar vacío o 0 si es ilimitado)"
-                      min="1"
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -4364,13 +4369,12 @@ export default function ConfiguracionPage() {
                       Valor Comisión {userForm.comisionTipo === 'PORCENTAJE' ? '(%)' : userForm.comisionTipo === 'POR_TURNO' ? '(ARS $/turno)' : '(ARS $/hora)'}
                     </label>
                     <input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
                       className={styles.input} 
-                      value={userForm.comisionValor}
-                      onChange={(e) => setUserForm({ ...userForm, comisionValor: e.target.value })}
-                      placeholder={userForm.comisionTipo === 'PORCENTAJE' ? 'Ej: 20' : userForm.comisionTipo === 'POR_TURNO' ? 'Ej: 5000' : 'Ej: 4000'}
-                      min="0"
-                      step="any"
+                      value={formatMilesInput(userForm.comisionValor)}
+                      onChange={(e) => setUserForm({ ...userForm, comisionValor: cleanMilesInput(e.target.value) })}
+                      placeholder={userForm.comisionTipo === 'PORCENTAJE' ? 'Ej: 20' : userForm.comisionTipo === 'POR_TURNO' ? 'Ej: 5.000' : 'Ej: 4.000'}
                     />
                   </div>
                 </div>

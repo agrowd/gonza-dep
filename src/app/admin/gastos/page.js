@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import styles from './gastos.module.css';
+import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -275,7 +276,7 @@ export default function GastosPage() {
     setEditingGasto(gasto);
     setGastoForm({
       concepto: gasto.concepto,
-      monto: String(gasto.monto),
+      monto: String(Math.round(Number(gasto.monto) || 0)),
       fecha: gasto.fecha,
       categoriaId: gasto.categoriaId,
       observaciones: gasto.observaciones || ''
@@ -948,12 +949,11 @@ export default function GastosPage() {
                 <div className={styles.formGroup}>
                   <label>Monto ($ ARS) *</label>
                   <input
-                    type="number"
-                    step="any"
-                    min="1"
-                    placeholder="Ej: 35000"
-                    value={gastoForm.monto}
-                    onChange={(e) => setGastoForm({ ...gastoForm, monto: e.target.value })}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Ej: 35.000"
+                    value={formatMilesInput(gastoForm.monto)}
+                    onChange={(e) => setGastoForm({ ...gastoForm, monto: cleanMilesInput(e.target.value) })}
                     className={styles.formInput}
                     required
                   />

@@ -6,6 +6,7 @@ import styles from './agenda.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import PhoneInput from '@/components/PhoneInput.js';
 import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
+import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
 
 // Timezone-safe YYYY-MM-DD formatter (avoids UTC offset shifts)
 const toYYYYMMDD = (dateInput) => {
@@ -4887,11 +4888,12 @@ export default function AgendaPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Valor Zonas Extras ($):</label>
                           <input
-                            type="number"
-                            placeholder="Ej. 15000"
-                            value={editTurno.otrosPrecio ?? ''}
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="Ej. 15.000"
+                            value={formatMilesInput(editTurno.otrosPrecio ?? '')}
                             onChange={(e) => {
-                              const val = e.target.value;
+                              const val = cleanMilesInput(e.target.value);
                               setEditTurno(prev => ({
                                 ...prev,
                                 otrosPrecio: val,
@@ -4988,10 +4990,11 @@ export default function AgendaPage() {
                       <div className={styles.inputGroup} style={{ flex: 1 }}>
                         <label className={styles.inputLabel}>Valor Total ($)</label>
                         <input
-                          type="number"
-                          value={editTurno.valorTotal ?? ''}
+                          type="text"
+                          inputMode="numeric"
+                          value={formatMilesInput(editTurno.valorTotal ?? '')}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = cleanMilesInput(e.target.value);
                             setEditTurno(prev => ({
                               ...prev,
                               valorTotal: val,
@@ -5004,10 +5007,11 @@ export default function AgendaPage() {
                       <div className={styles.inputGroup} style={{ flex: 1 }}>
                         <label className={styles.inputLabel}>Seña Recibida ($)</label>
                         <input
-                          type="number"
-                          value={editTurno.valorSeña ?? ''}
+                          type="text"
+                          inputMode="numeric"
+                          value={formatMilesInput(editTurno.valorSeña ?? '')}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = cleanMilesInput(e.target.value);
                             setEditTurno(prev => ({
                               ...prev,
                               valorSeña: val,
@@ -5024,10 +5028,11 @@ export default function AgendaPage() {
                       <div className={styles.inputGroup} style={{ flex: 1 }}>
                         <label className={styles.inputLabel}>Valor Total ($)</label>
                         <input
-                          type="number"
-                          value={editTurno.valorTotal ?? ''}
+                          type="text"
+                          inputMode="numeric"
+                          value={formatMilesInput(editTurno.valorTotal ?? '')}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = cleanMilesInput(e.target.value);
                             setEditTurno(prev => ({
                               ...prev,
                               valorTotal: val,
@@ -5041,10 +5046,11 @@ export default function AgendaPage() {
                       <div className={styles.inputGroup} style={{ flex: 1 }}>
                         <label className={styles.inputLabel}>Seña Recibida ($)</label>
                         <input
-                          type="number"
-                          value={editTurno.valorSeña ?? ''}
+                          type="text"
+                          inputMode="numeric"
+                          value={formatMilesInput(editTurno.valorSeña ?? '')}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = cleanMilesInput(e.target.value);
                             setEditTurno(prev => ({
                               ...prev,
                               valorSeña: val,
@@ -5125,10 +5131,11 @@ export default function AgendaPage() {
                   <div className={styles.inputGroup}>
                     <label className={styles.inputLabel}>Valor Descuento</label>
                     <input
-                      type="number"
-                      value={editTurno.descuentoValor}
-                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoValor: e.target.value }))}
-                      placeholder="Ej. 10 o 500"
+                      type="text"
+                      inputMode="numeric"
+                      value={formatMilesInput(editTurno.descuentoValor ?? '')}
+                      onChange={(e) => setEditTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoValor: cleanMilesInput(e.target.value) }))}
+                      placeholder="Ej. 10 o 5.000"
                       disabled={editTurno.descuentoTipo === 'NINGUNO'}
                     />
                   </div>
@@ -5630,10 +5637,12 @@ export default function AgendaPage() {
                                       💵 Efectivo
                                     </label>
                                     <input
-                                      type="number"
-                                      value={selectedTurno.montoEfectivo ?? ''}
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={formatMilesInput(selectedTurno.montoEfectivo ?? '')}
                                       onChange={(e) => {
-                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        const clean = cleanMilesInput(e.target.value);
+                                        const val = clean === '' ? null : Number(clean);
                                         setSelectedTurno(prev => ({ ...prev, montoEfectivo: val }));
                                       }}
                                       onBlur={async () => {
@@ -5660,10 +5669,12 @@ export default function AgendaPage() {
                                       🏛️ Transferencia
                                     </label>
                                     <input
-                                      type="number"
-                                      value={selectedTurno.montoTransferencia ?? ''}
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={formatMilesInput(selectedTurno.montoTransferencia ?? '')}
                                       onChange={(e) => {
-                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        const clean = cleanMilesInput(e.target.value);
+                                        const val = clean === '' ? null : Number(clean);
                                         setSelectedTurno(prev => ({ ...prev, montoTransferencia: val }));
                                       }}
                                       onBlur={async () => {
@@ -5724,9 +5735,11 @@ export default function AgendaPage() {
                             {/* Monto / Dinero a Favor del Cliente (D-151 / D-169 / D-170) */}
                             {(() => {
                               const clientSaldo = Number(selectedTurno.cliente?.saldoAFavor || 0);
-                              const currentVal = (Number(selectedTurno.dineroAFavor) > 0) 
-                                ? selectedTurno.dineroAFavor 
-                                : (clientSaldo > 0 ? clientSaldo : '');
+                              const currentVal = selectedTurno.dineroAFavor === ''
+                                ? ''
+                                : ((Number(selectedTurno.dineroAFavor) > 0) 
+                                  ? selectedTurno.dineroAFavor 
+                                  : (clientSaldo > 0 ? clientSaldo : ''));
                               return (
                                 <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.35rem', alignItems: 'center' }}>
                                   <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -5740,15 +5753,17 @@ export default function AgendaPage() {
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                     <span style={{ fontWeight: 700, color: '#b45309' }}>$</span>
                                     <input
-                                      type="number"
-                                      value={currentVal}
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={formatMilesInput(currentVal)}
                                       onChange={(e) => {
-                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        const clean = cleanMilesInput(e.target.value);
+                                        const val = clean === '' ? '' : Number(clean);
                                         setSelectedTurno(prev => ({ ...prev, dineroAFavor: val }));
                                       }}
                                       onBlur={async () => {
                                         try {
-                                          const valToSave = Number(selectedTurno.dineroAFavor ?? currentVal ?? 0);
+                                          const valToSave = Number(selectedTurno.dineroAFavor === '' ? 0 : (selectedTurno.dineroAFavor ?? currentVal ?? 0));
                                           await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
                                             method: 'PUT',
                                             headers: { 'Content-Type': 'application/json' },
@@ -7413,11 +7428,12 @@ export default function AgendaPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Valor Zonas Extras ($):</label>
                         <input
-                          type="number"
-                          placeholder="Ej. 15000"
-                          value={newTurno.otrosPrecio ?? ''}
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Ej. 15.000"
+                          value={formatMilesInput(newTurno.otrosPrecio ?? '')}
                           onChange={(e) => {
-                            const val = e.target.value;
+                            const val = cleanMilesInput(e.target.value);
                             setNewTurno(prev => ({
                               ...prev,
                               otrosPrecio: val,
@@ -7515,10 +7531,11 @@ export default function AgendaPage() {
                     <div className={styles.inputGroup} style={{ flex: 1 }}>
                       <label className={styles.inputLabel}>Total Turno Base ($)</label>
                       <input
-                        type="number"
-                        value={newTurno.valorTotal ?? ''}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatMilesInput(newTurno.valorTotal ?? '')}
                         onChange={(e) => {
-                          const val = e.target.value;
+                          const val = cleanMilesInput(e.target.value);
                           setNewTurno(prev => ({
                             ...prev,
                             valorTotal: val,
@@ -7531,10 +7548,11 @@ export default function AgendaPage() {
                     <div className={styles.inputGroup} style={{ flex: 1 }}>
                       <label className={styles.inputLabel}>Seña Recibida ($)</label>
                       <input
-                        type="number"
-                        value={newTurno.valorSeña ?? ''}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatMilesInput(newTurno.valorSeña ?? '')}
                         onChange={(e) => {
-                          const val = e.target.value;
+                          const val = cleanMilesInput(e.target.value);
                           setNewTurno(prev => ({
                             ...prev,
                             valorSeña: val,
@@ -7586,10 +7604,11 @@ export default function AgendaPage() {
                     <div className={styles.inputGroup} style={{ flex: 1 }}>
                       <label className={styles.inputLabel}>Total de Venta ($)</label>
                       <input
-                        type="number"
-                        value={newTurno.valorTotal ?? ''}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatMilesInput(newTurno.valorTotal ?? '')}
                         onChange={(e) => {
-                          const val = e.target.value;
+                          const val = cleanMilesInput(e.target.value);
                           setNewTurno(prev => ({
                             ...prev,
                             valorTotal: val,
@@ -7603,10 +7622,11 @@ export default function AgendaPage() {
                     <div className={styles.inputGroup} style={{ flex: 1 }}>
                       <label className={styles.inputLabel}>Seña Recibida ($)</label>
                       <input
-                        type="number"
-                        value={newTurno.valorSeña ?? ''}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatMilesInput(newTurno.valorSeña ?? '')}
                         onChange={(e) => {
-                          const val = e.target.value;
+                          const val = cleanMilesInput(e.target.value);
                           setNewTurno(prev => ({
                             ...prev,
                             valorSeña: val,
@@ -7723,10 +7743,11 @@ export default function AgendaPage() {
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>Valor Descuento</label>
                   <input
-                    type="number"
-                    value={newTurno.descuentoValor}
-                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoValor: e.target.value }))}
-                    placeholder="Ej. 10 o 500"
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMilesInput(newTurno.descuentoValor ?? '')}
+                    onChange={(e) => setNewTurno(prev => ({ ...prev, manualTotalOverride: undefined, manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña, descuentoValor: cleanMilesInput(e.target.value) }))}
+                    placeholder="Ej. 10 o 5.000"
                     disabled={newTurno.descuentoTipo === 'NINGUNO'}
                   />
                 </div>
