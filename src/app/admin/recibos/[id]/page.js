@@ -163,14 +163,17 @@ export default function ReciboPage({ params }) {
               </tr>
             </thead>
             <tbody>
-              {receipt.items.map((item, idx) => (
-                <tr key={idx}>
-                  <td style={{ textAlign: 'left' }}>{item.servicio}</td>
-                  <td style={{ textAlign: 'right' }}>${Math.round(Number(item.precioUnitario)).toLocaleString('es-AR')}</td>
-                  <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
-                  <td style={{ textAlign: 'right' }}>${Math.round(Number(item.subtotal)).toLocaleString('es-AR')}</td>
-                </tr>
-              ))}
+              {receipt.items.map((item, idx) => {
+                const showPrice = item.precioUnitario !== null && item.precioUnitario !== undefined;
+                return (
+                  <tr key={idx}>
+                    <td style={{ textAlign: 'left' }}>{item.servicio}</td>
+                    <td style={{ textAlign: 'right' }}>{showPrice ? `$${Math.round(Number(item.precioUnitario)).toLocaleString('es-AR')}` : ''}</td>
+                    <td style={{ textAlign: 'center' }}>{item.cantidad}</td>
+                    <td style={{ textAlign: 'right' }}>{showPrice ? `$${Math.round(Number(item.subtotal)).toLocaleString('es-AR')}` : ''}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

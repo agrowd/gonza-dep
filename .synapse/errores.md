@@ -758,3 +758,10 @@ Next.js 16.2.9 con Turbopack intenta descargar y procesar binarios tipográficos
 2. Creado `src/lib/emailNormalize.js` (`findClientByEmail` y `emailsMatch`) con búsqueda case-insensitive y equivalencia canónica sin puntos para Gmail/Googlemail, aplicado en `/api/clientes/consultar`, `/api/reservas/crear`, `/api/reservas/reprogramar` y `/api/reservas/cancelar`.
 3. Corregida declaración de `nextDateObj` en `/api/reservas/crear`.
 **Estado:** ✅ FIXED
+
+
+## ERR-72: Recibo Mostraba Importe Promedio Falso en Zonas `Otros` con Valor $0 (19/11/2026)
+**Síntoma:** En el Recibo Nº 00000618 (Ezequiel Garcia), la línea `Otros: Tira (Bonificado), Nuca (Bonificado)` con valor `$0` mostraba `$20.333` en *Precio Unit.* y *Subtotal*.
+**Root Cause:** En `src/app/api/admin/turnos/[id]/recibo/route.js` y `src/lib/email.js` (`sendReceiptEmail`), se evaluaba `z.precio || (turno.valorTotal / parsedZonas.length)`. Al ser `0` falsy en JavaScript, se disparaba el fallback promediando `$122.000 / 6 = $20.333,33`.
+**Solución:** Se valida explícitamente `z.precio !== undefined && z.precio !== null && z.precio !== ''`, y cuando un ítem es `Otros` con importe `<= 0` se devuelve `precioUnitario: null, subtotal: null` para que el recibo (PDF/web y email) deje las celdas vacías sin devolver ningún importe falso.
+**Estado:** ✅ FIXED

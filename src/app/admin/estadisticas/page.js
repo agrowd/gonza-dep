@@ -1970,7 +1970,9 @@ export default function EstadisticasPage() {
                           <th>Origen</th>
                           <th>Tipo de pago</th>
                           <th>{selectedMetric === 'gananciaNeta' ? 'Ingreso real' : 'Valor final'}</th>
-                          <th>{selectedMetric === 'gananciaNeta' ? 'Seña cobrada' : 'Seña aplicada'}</th>
+                          {selectedMetric !== 'gananciaNeta' && (
+                            <th>Seña aplicada</th>
+                          )}
                           <th>Estado de turno</th>
                           <th>Zonas</th>
                           <th>Operador</th>
@@ -1979,7 +1981,7 @@ export default function EstadisticasPage() {
                       <tbody>
                         {activeMetricData.filteredItems.length === 0 ? (
                           <tr>
-                            <td colSpan={10} style={{ textAlign: 'center', padding: '1.5rem' }}>
+                            <td colSpan={selectedMetric === 'gananciaNeta' ? 9 : 10} style={{ textAlign: 'center', padding: '1.5rem' }}>
                               Sin registros en el período seleccionado.
                             </td>
                           </tr>
@@ -1997,7 +1999,9 @@ export default function EstadisticasPage() {
                                 <td>{item.origenCategoria || 'Orgánico'}</td>
                                 <td>{item.metodoPagoLabel || 'Transferencia'}</td>
                                 <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(vFinal)}</td>
-                                <td style={{ textAlign: 'right' }}>{formatMoney(vSena)}</td>
+                                {!isGN && (
+                                  <td style={{ textAlign: 'right' }}>{formatMoney(vSena)}</td>
+                                )}
                                 <td style={{ textAlign: 'center', fontWeight: 600, color: '#7a1f1e' }}>{estadoTurno}</td>
                                 <td>{item.zonasTexto}</td>
                                 <td>{item.operadorNombre || 'Gonzalo'}</td>

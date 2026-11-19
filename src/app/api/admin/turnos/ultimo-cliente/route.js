@@ -104,6 +104,7 @@ export async function GET(request) {
       descuentoTipo: ultimoTurno.descuentoTipo,
       descuentoValor: ultimoTurno.descuentoValor,
       bonificacion: ultimoTurno.bonificacion,
+      metodoPago: ultimoTurno.metodoPago || 'TRANSFERENCIA',
       observaciones: ultimoTurno.observaciones,
       notasGonzalo: ultimoTurno.notasGonzalo
     });

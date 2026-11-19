@@ -514,13 +514,19 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
   const receiptNum = `000000${(turnDetails.id ? String(turnDetails.id).replace(/\D/g, '').slice(-3) : '') || '01'}`.slice(-8);
 
   const tableRows = parsedZones.map(z => {
-    const itemPrice = z.precio || (valorTotal / (parsedZones.length || 1));
+    const isOtros = z.id === 'otros' || String(z.nombre || '').toLowerCase().startsWith('otros');
+    const hasExplicitPrice = z.precio !== undefined && z.precio !== null && z.precio !== '';
+    const itemPrice = hasExplicitPrice
+      ? Number(z.precio)
+      : (isOtros ? 0 : (valorTotal / (parsedZones.length || 1)));
+    const hidePrice = isOtros && itemPrice <= 0;
+    const priceCell = hidePrice ? '' : `$${Math.round(Number(itemPrice)).toLocaleString('es-AR')}`;
     return `
       <tr style="border-bottom: 1px solid #e0e0e0;">
         <td style="padding: 10px 12px; font-size: 14px; color: #111111;">${z.nombre || 'Sesión de Depilación'}</td>
-        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right;">$${Number(itemPrice).toFixed(2)}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right;">${priceCell}</td>
         <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: center;">1</td>
-        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right; font-weight: bold;">$${Number(itemPrice).toFixed(2)}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right; font-weight: bold;">${priceCell}</td>
       </tr>
     `;
   }).join('');

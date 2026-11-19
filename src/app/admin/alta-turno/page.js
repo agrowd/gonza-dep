@@ -35,11 +35,13 @@ function AltaTurnoContent() {
   const descuentoValorParam = searchParams.get('descuentoValor') || '';
   const prevTurnoIdParam = searchParams.get('prevTurnoId');
   const señaParam = searchParams.get('seña') ?? searchParams.get('valorSeña');
+  const metodoPagoParam = searchParams.get('metodoPago') || '';
 
   // 0. Optional Client Selection (for 'nuevo' mode)
   const [allClients, setAllClients] = useState([]);
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedClientMetodoPago, setSelectedClientMetodoPago] = useState('');
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [clientAutoInfo, setClientAutoInfo] = useState(null);
 
@@ -230,6 +232,7 @@ function AltaTurnoContent() {
     // Find latest appointment
     const sortedTurnos = (client.turnos || []).slice().sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     const lastTurno = sortedTurnos.find(t => t.estado === 'REALIZADO' || t.estado === 'SEÑADO' || t.estado === 'REPROGRAMADO') || sortedTurnos[0];
+    setSelectedClientMetodoPago(lastTurno?.metodoPago || '');
 
     let zoneCount = 0;
     if (lastTurno && lastTurno.zonas) {
@@ -281,6 +284,7 @@ function AltaTurnoContent() {
 
   const handleClearClient = () => {
     setSelectedClient(null);
+    setSelectedClientMetodoPago('');
     setClientAutoInfo(null);
     setClientSearchQuery('');
   };
@@ -544,7 +548,8 @@ function AltaTurnoContent() {
         otrosPrecio: otrosPrecio.toString(),
         descuentoTipo: descuentoTipoParam,
         descuentoValor: descuentoValorParam,
-        seña: displaySeña.toString()
+        seña: displaySeña.toString(),
+        ...(metodoPagoParam ? { metodoPago: metodoPagoParam } : {})
       });
       window.location.href = `/admin/agenda?${params.toString()}`;
       return;
@@ -570,6 +575,7 @@ function AltaTurnoContent() {
         frecuencia: (selectedClient.frecuencia || 4).toString(),
         ...(selectedClient.descuentoTipo ? { descuentoTipo: selectedClient.descuentoTipo, descuentoValor: (selectedClient.descuentoValor || 0).toString() } : {})
       } : {}),
+      ...(selectedClientMetodoPago ? { metodoPago: selectedClientMetodoPago } : {}),
       ...(hasExplicitSeña ? { seña: displaySeña.toString() } : {})
     });
     window.location.href = `/admin/agenda?${params.toString()}`;

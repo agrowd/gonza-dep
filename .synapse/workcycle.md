@@ -3057,3 +3057,16 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - Eliminados todos los emojis (`⚡`, `💆‍♂️`, etc.) junto a los nombres de servicios en `/admin/agenda` (Crear y Editar Turno) y `/admin/configuracion`.
 4. **Ocultamiento de Servicios No Seleccionados al Modificar / Crear Turnos**:
    - En `editTurno` y `newTurno` de `/admin/agenda` y en `/admin/alta-turno`: al tener zonas seleccionadas de un servicio (ej. Depilación Láser), únicamente se muestra ese servicio y se ocultan por completo el resto de los servicios (ej. Masajes). Si se desmarcan todas las zonas, vuelven a mostrarse todos los servicios.
+
+
+## Sesión 19/11/2026 (Parte 3) - Desglose Otros en Valor Total, Fix Recibo Otros $0, Método de Pago en Siguiente Turno y Quitar Columna Seña en Ganancia Neta (D-175, ERR-72)
+
+### Requerimientos Implementados
+1. **Desglose `(Otros: $X)` al lado del Valor Total del Turno**:
+   - En `src/app/admin/agenda/page.js`, dentro del recuadro `VALOR TOTAL (A COBRAR)`, si el turno posee `Otros` se muestra al lado del monto principal el detalle `(Otros: $XX.XXX)`.
+2. **Recibos sin Valor Falso para `Otros` ($0 / Bonificado)**:
+   - Corregido el fallback `z.precio || (valorTotal / length)` en `/api/admin/turnos/[id]/recibo`, `/admin/recibos/[id]/page.js` y `sendReceiptEmail` (`src/lib/email.js`). Cuando `Otros` vale `0`, no se muestra ningún precio en *Precio Unit.* ni *Subtotal*.
+3. **Conservación del Método de Pago en Siguiente Turno**:
+   - Propagado `metodoPago` completo en toda la cadena: `handleScheduleNextTurn` (`agenda/page.js`) → `/admin/alta-turno` → retorno a `/admin/agenda` (modal Nuevo Turno), y también en `/api/admin/turnos/ultimo-cliente` y autocompletado.
+4. **Eliminación de Columna `Seña cobrada` en Ganancia Neta**:
+   - Removida exclusivamente para `gananciaNeta` tanto en la exportación Excel (`exportar-excel/route.js`, ajustado a 9 columnas `A:I`) como en la tabla en pantalla de `/admin/estadisticas/page.js`.

@@ -2228,3 +2228,11 @@
 - **Cancelación con Retención de Seña (Email + WhatsApp)**: Restaurado y garantizado en `email.js`, `api/admin/turnos/[id]/route.js` y `api/reservas/cancelar/route.js` el aviso explícito de que la seña abonada se pierde y no es reembolsable cuando se cancela reteniendo la seña (`Retener Seña` / < 72hs), incluso con plantillas personalizadas en BD.
 - **Sin Emojis en Servicios**: Eliminado el selector *Ícono Representativo* de `/admin/configuracion` y quitados todos los emojis junto a servicios en turnos y configuración.
 - **Ocultamiento de Servicios No Seleccionados**: Al modificar o crear un turno que ya tiene zonas cargadas de un servicio (ej. Láser), se ocultan por completo los otros servicios (ej. Masajes) en `/admin/agenda` y `/admin/alta-turno`.
+
+
+### Sesión 19/11/2026 (Parte 3) - Desglose Otros en Turno, Fix Recibo Otros $0, Conservación de Método de Pago en Siguiente Turno y Quitar Columna Seña de Ganancia Neta (D-175)
+
+- **Valor de `Otros` junto al Valor Total**: Agregado `(Otros: $XX.XXX)` a la derecha del monto total dentro de la tarjeta `VALOR TOTAL (A COBRAR)` en la ficha del turno (`/admin/agenda`).
+- **Recibo (Web/PDF y Email)**: Corregido bug en `/api/admin/turnos/[id]/recibo`, `/admin/recibos/[id]` y `email.js` donde `Otros` con valor `$0` mostraba un promedio falso (`$20.333`). Ahora si `Otros` vale `$0` deja *Precio Unit.* y *Subtotal* vacíos sin mostrar valor.
+- **Método de Pago en Siguiente Turno**: Propagado `metodoPago` desde la ficha del turno → `/admin/alta-turno` → `/admin/agenda` (y en `/api/admin/turnos/ultimo-cliente`), conservando siempre Efectivo / Transferencia / Ambos.
+- **Ganancia Neta sin Columna Seña**: Quitada la columna `Seña cobrada` únicamente en la tabla y exportación Excel de **Ganancia Neta** (`exportar-excel/route.js` y `estadisticas/page.js`), manteniendo todas las demás métricas y resúmenes intactos.

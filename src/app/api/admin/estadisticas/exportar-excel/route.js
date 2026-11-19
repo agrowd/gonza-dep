@@ -235,6 +235,8 @@ export async function POST(request) {
 
     const isModelA = summary.model === 'A';
     const isGananciaNeta = selectedMetric === 'gananciaNeta' || summary.title?.includes('GANANCIA NETA');
+    const totalCols = isGananciaNeta ? 9 : 10;
+    const lastColLetter = colLetter(totalCols);
 
     function getEstadoTurnoLabel(item) {
       if (!item) return '-';
@@ -300,11 +302,11 @@ export async function POST(request) {
       rows.push(`<row r="${rowNum}"${htAttr}>${cellsXml}</row>`);
     }
 
-    // 1. Row 1: Title Banner (Merged A1:J1)
+    // 1. Row 1: Title Banner (Merged A1:J1 or A1:I1 for Ganancia Neta)
     const titleCells = [{ col: 1, type: 's', value: summary.title || 'INFORME DE ESTADÍSTICAS', style: 1 }];
-    for (let c = 2; c <= 10; c++) titleCells.push({ col: c, type: 'empty', style: 1 });
+    for (let c = 2; c <= totalCols; c++) titleCells.push({ col: c, type: 'empty', style: 1 });
     pushRow(currentRow, 28, titleCells);
-    merges.push(`A${currentRow}:J${currentRow}`);
+    merges.push(`A${currentRow}:${lastColLetter}${currentRow}`);
     currentRow++;
 
     // 2. Row 2: Date Range ("Desde" | startDate | "Hasta" | endDate)
@@ -335,18 +337,30 @@ export async function POST(request) {
           'Notif. WhatsApp'
         ]
       : isModelA
-      ? [
-          'Fecha de turno',
-          'Hora',
-          'Cliente',
-          'Origen',
-          'Tipo de pago',
-          isGananciaNeta ? 'Ingreso real' : 'Valor final',
-          isGananciaNeta ? 'Seña cobrada' : 'Seña aplicada',
-          'Estado de turno',
-          'Zonas',
-          'Operador'
-        ]
+      ? (isGananciaNeta
+        ? [
+            'Fecha de turno',
+            'Hora',
+            'Cliente',
+            'Origen',
+            'Tipo de pago',
+            'Ingreso real',
+            'Estado de turno',
+            'Zonas',
+            'Operador'
+          ]
+        : [
+            'Fecha de turno',
+            'Hora',
+            'Cliente',
+            'Origen',
+            'Tipo de pago',
+            'Valor final',
+            'Seña aplicada',
+            'Estado de turno',
+            'Zonas',
+            'Operador'
+          ])
       : [
           'Fecha de turno',
           'Hora',
@@ -396,18 +410,32 @@ export async function POST(request) {
           : Number(item.valorSeña || 0);
         const estadoTurno = getEstadoTurnoLabel(item);
 
-        pushRow(currentRow, 19, [
-          { col: 1, type: 's', value: formatDateDisplay(item.fecha), style: sCenter },
-          { col: 2, type: 's', value: item.horaInicio || '-', style: sCenter },
-          { col: 3, type: 's', value: item.clienteNombre || '-', style: sText },
-          { col: 4, type: 's', value: item.origenCategoria || 'Orgánico', style: sText },
-          { col: 5, type: 's', value: item.metodoPagoLabel || 'Transferencia', style: sText },
-          { col: 6, type: 'n', value: vFinal, style: sCurr },
-          { col: 7, type: 'n', value: vSena, style: sCurr },
-          { col: 8, type: 's', value: estadoTurno, style: sCenter },
-          { col: 9, type: 's', value: item.zonasTexto || '-', style: sText },
-          { col: 10, type: 's', value: item.operadorNombre || 'Gonzalo', style: sText }
-        ]);
+        if (isGananciaNeta) {
+          pushRow(currentRow, 19, [
+            { col: 1, type: 's', value: formatDateDisplay(item.fecha), style: sCenter },
+            { col: 2, type: 's', value: item.horaInicio || '-', style: sCenter },
+            { col: 3, type: 's', value: item.clienteNombre || '-', style: sText },
+            { col: 4, type: 's', value: item.origenCategoria || 'Orgánico', style: sText },
+            { col: 5, type: 's', value: item.metodoPagoLabel || 'Transferencia', style: sText },
+            { col: 6, type: 'n', value: vFinal, style: sCurr },
+            { col: 7, type: 's', value: estadoTurno, style: sCenter },
+            { col: 8, type: 's', value: item.zonasTexto || '-', style: sText },
+            { col: 9, type: 's', value: item.operadorNombre || 'Gonzalo', style: sText }
+          ]);
+        } else {
+          pushRow(currentRow, 19, [
+            { col: 1, type: 's', value: formatDateDisplay(item.fecha), style: sCenter },
+            { col: 2, type: 's', value: item.horaInicio || '-', style: sCenter },
+            { col: 3, type: 's', value: item.clienteNombre || '-', style: sText },
+            { col: 4, type: 's', value: item.origenCategoria || 'Orgánico', style: sText },
+            { col: 5, type: 's', value: item.metodoPagoLabel || 'Transferencia', style: sText },
+            { col: 6, type: 'n', value: vFinal, style: sCurr },
+            { col: 7, type: 'n', value: vSena, style: sCurr },
+            { col: 8, type: 's', value: estadoTurno, style: sCenter },
+            { col: 9, type: 's', value: item.zonasTexto || '-', style: sText },
+            { col: 10, type: 's', value: item.operadorNombre || 'Gonzalo', style: sText }
+          ]);
+        }
       } else {
         const val = Number(item.valorTotal || 0);
         const senaT = Number(item.señaDelTurnoReporte ?? item.valorSeña ?? 0);
@@ -551,7 +579,9 @@ export async function POST(request) {
     }
 
     const lastRow = currentRow - 1;
-    const colWidths = [15, 11, 28, 19, 22, 16, 16, 24, 28, 16];
+    const colWidths = isGananciaNeta
+      ? [15, 11, 28, 19, 22, 16, 24, 28, 16]
+      : [15, 11, 28, 19, 22, 16, 16, 24, 28, 16];
     const colsXml = colWidths
       .map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`)
       .join('');
@@ -562,7 +592,7 @@ export async function POST(request) {
 
     const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <dimension ref="A1:J${lastRow}"/>
+  <dimension ref="A1:${lastColLetter}${lastRow}"/>
   <sheetViews>
     <sheetView tabSelected="1" workbookViewId="0"/>
   </sheetViews>

@@ -2549,7 +2549,8 @@ export default function AgendaPage() {
       otrosPrecio: (otrosPrecio || 0).toString(),
       descuentoTipo: prevDescuentoTipo,
       descuentoValor: prevDescuentoValor,
-      seña: prevSeña
+      seña: prevSeña,
+      metodoPago: turno.metodoPago || 'TRANSFERENCIA'
     });
 
     window.location.href = `/admin/alta-turno?${params.toString()}`;
@@ -5483,13 +5484,34 @@ export default function AgendaPage() {
                         const saldoPendiente = Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0));
                         const totalACobrarSesion = saldoPendiente + sumSelectedFutureSenas;
 
+                        let hasOtrosDetalle = false;
+                        let otrosMontoDetalle = 0;
+                        try {
+                          const parsedZ = typeof selectedTurno.zonas === 'string'
+                            ? JSON.parse(selectedTurno.zonas)
+                            : selectedTurno.zonas;
+                          if (Array.isArray(parsedZ)) {
+                            for (const z of parsedZ) {
+                              if (z && (z.id === 'otros' || String(z.nombre || '').toLowerCase().startsWith('otros'))) {
+                                hasOtrosDetalle = true;
+                                otrosMontoDetalle += Number(z.precio || 0);
+                              }
+                            }
+                          }
+                        } catch {}
+
                         return (
                           <>
                             {/* Swapped order per Gonzalo's request: VALOR TOTAL in big gold box on top */}
                             <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.14)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.4)', marginBottom: '0.25rem' }}>
                               <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.85rem' }}>VALOR TOTAL (A COBRAR)</span>
-                              <span className={styles.detailValue} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>
-                                ${Number(dynPrices.valorTotal).toLocaleString('es-ES')}
+                              <span className={styles.detailValue} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem', display: 'inline-flex', alignItems: 'baseline', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                <span>${Number(dynPrices.valorTotal).toLocaleString('es-ES')}</span>
+                                {hasOtrosDetalle && (
+                                  <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                    (Otros: ${Number(otrosMontoDetalle).toLocaleString('es-ES')})
+                                  </span>
+                                )}
                               </span>
                             </div>
 
@@ -7147,7 +7169,8 @@ export default function AgendaPage() {
                                 clienteId: client.id,
                                 fechaStr: targetDateStr,
                                 enviarNotificaciones: client.enviarNotificaciones !== false,
-                                ...(clientLastSeña !== undefined ? { valorSeña: clientLastSeña, manualSeñaOverride: clientLastSeña } : {})
+                                ...(clientLastSeña !== undefined ? { valorSeña: clientLastSeña, manualSeñaOverride: clientLastSeña } : {}),
+                                ...(lastTurno?.metodoPago ? { metodoPago: lastTurno.metodoPago } : {})
                               }));
 
                               // Fetch detailed last turno info
@@ -7166,8 +7189,11 @@ export default function AgendaPage() {
                                         hasOtros: hasOtros,
                                         otrosTexto: otrosZone ? (otrosZone.nombre?.replace(/^Otros:\s*/, '') || '') : prev.otrosTexto,
                                         otrosPrecio: otrosZone ? otrosZone.precio : prev.otrosPrecio,
+                                        ...(data.metodoPago ? { metodoPago: data.metodoPago } : {}),
                                         ...(Number(data.saldoAFavor || 0) > 0 ? { valorSeña: Number(data.saldoAFavor), manualSeñaOverride: Number(data.saldoAFavor) } : (data.señaEstado === 'CONSERVADA' ? { valorSeña: data.valorSeña, manualSeñaOverride: data.valorSeña } : {}))
                                       }));
+                                    } else if (data.metodoPago) {
+                                      setNewTurno(prev => ({ ...prev, metodoPago: data.metodoPago }));
                                     }
                                   } else {
                                     setLastClientTurnoInfo(null);

@@ -62,12 +62,21 @@ export async function GET(request, { params }) {
         whatsapp: turno.cliente.whatsapp,
         email: turno.cliente.email
       },
-      items: parsedZonas.map(z => ({
-        servicio: z.nombre,
-        precioUnitario: z.precio || (turno.valorTotal / (parsedZonas.length || 1)),
-        cantidad: 1,
-        subtotal: z.precio || (turno.valorTotal / (parsedZonas.length || 1))
-      })),
+      items: parsedZonas.map(z => {
+        const isOtros = z.id === 'otros' || String(z.nombre || '').toLowerCase().startsWith('otros');
+        const hasExplicitPrice = z.precio !== undefined && z.precio !== null && z.precio !== '';
+        const numericPrice = hasExplicitPrice
+          ? Number(z.precio)
+          : (isOtros ? 0 : (turno.valorTotal / (parsedZonas.length || 1)));
+        const hidePrice = isOtros && numericPrice <= 0;
+        return {
+          servicio: z.nombre,
+          precioUnitario: hidePrice ? null : numericPrice,
+          cantidad: 1,
+          subtotal: hidePrice ? null : numericPrice,
+          esOtros: isOtros
+        };
+      }),
       totales: {
         valorTotal: turno.valorTotal,
         valorSeña: turno.valorSeña,
