@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
-import fs from 'fs';
+import prisma from '@/lib/db.js';
+import { saveUploadFile } from '@/lib/uploads.js';
 import path from 'path';
 
 export const dynamic = 'force-dynamic';
@@ -37,24 +38,37 @@ export async function POST(request) {
       ext = '.jpg';
     }
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
     const cleanType = String(type).replace(/[^a-zA-Z0-9_-]/g, '');
     const filename = `new_client_${cleanType}_${Date.now()}${ext}`;
-    const filePath = path.join(uploadsDir, filename);
 
-    fs.writeFileSync(filePath, buffer);
+    const savedPath = saveUploadFile(filename, buffer);
 
-    const publicUrl = `/uploads/${filename}`;
-    console.log(`[Upload Image] Successfully saved ${publicUrl} (${buffer.length} bytes).`);
+    // Servir dinámicamente vía /api/uploads/[filename] para garantizar preview inmediato en producción Next.js
+    const publicUrl = `/api/uploads/${filename}`;
+
+    // Auto-persistir inmediatamente en Configuracion para evitar pérdida si el usuario no pulsa Guardar al final
+    let persistedKey = null;
+    if (cleanType === 'direccion') {
+      persistedKey = 'wtsp_new_client_img_direccion';
+    } else if (cleanType === 'indicaciones') {
+      persistedKey = 'wtsp_new_client_img_indicaciones';
+    }
+
+    if (persistedKey) {
+      await prisma.configuracion.upsert({
+        where: { key: persistedKey },
+        update: { value: publicUrl },
+        create: { key: persistedKey, value: publicUrl }
+      });
+    }
+
+    console.log(`[Upload Image] Successfully saved ${publicUrl} -> ${savedPath} (${buffer.length} bytes)${persistedKey ? ` [auto-saved ${persistedKey}]` : ''}.`);
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
-      filename
+      filename,
+      persistedKey
     });
   } catch (error) {
     console.error('Error in upload-image route:', error);

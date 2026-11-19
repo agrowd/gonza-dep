@@ -257,7 +257,7 @@ export default function Home() {
 
     // Check 72 business hours rule (excluyendo fines de semana)
     const diffHours = getHoursUntilTurno(targetTurno);
-    const permiteCorta = Boolean(targetTurno.permitirReprogramacionCorta || targetTurno.cliente?.permitirReprogramacionCorta || clientData?.permitirReprogramacionCorta);
+    const permiteCorta = Boolean(targetTurno.permitirReprogramacionCorta || targetTurno.cliente?.permitirReprogramacionCorta || existingClient?.permitirReprogramacionCorta);
     if (diffHours < 72 && !permiteCorta) {
       setShow72hsAlert(true);
       setAlert72hsMessage(
@@ -983,7 +983,7 @@ Duración: ${duracionMinutos} min`;
 
                     {activeTurnos.map((turno, idx) => {
                       const diffHours = getHoursUntilTurno(turno);
-                      const permiteCorta = Boolean(turno.permitirReprogramacionCorta || turno.cliente?.permitirReprogramacionCorta || clientData?.permitirReprogramacionCorta);
+                      const permiteCorta = Boolean(turno.permitirReprogramacionCorta || turno.cliente?.permitirReprogramacionCorta || existingClient?.permitirReprogramacionCorta);
                       const isWithin72hs = diffHours < 72 && !permiteCorta;
                       let parsedZones = '';
                       try {

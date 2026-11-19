@@ -732,3 +732,29 @@ Next.js 16.2.9 con Turbopack intenta descargar y procesar binarios tipográficos
 4. En `scratch/deploy_full_safe.mjs`, se añadió `-e .next` a `git clean` para proteger el caché de compilación en el VPS.
 **Commit:** `057ecdd`
 **Estado:** ✅ FIXED
+
+
+## ERR-70: Imágenes de Bienvenida Rotas en Configuración y No Enviadas a Clientes Nuevos (19/11/2026)
+**Síntoma:** En `/admin/configuracion` las miniaturas de *Imagen 1: Dirección* e *Imagen 2: Indicaciones Previas* mostraban ícono de imagen rota; al agendar el primer turno a un cliente nuevo (ej. Luis Vanier), solo salía el mensaje de texto y no llegaban las imágenes por WhatsApp.
+**Root Cause:**
+1. `scratch/deploy_full_safe.mjs` ejecutaba `git clean -fd -e .env -e .wwebjs_auth -e .wwebjs_cache -e .next -e backups` sin excluir `public/uploads`, eliminando las imágenes subidas el 17/11 en cada despliegue (`[WhatsApp Media] Image file not found on disk`).
+2. Next.js en producción (`next start`) no sirve archivos creados dinámicamente en `public/uploads/` después del `next build`, respondiendo `HTTP 404 Not Found` aunque el archivo existiera en disco.
+3. `upload-image` no auto-guardaba las claves `wtsp_new_client_img_*` en PostgreSQL, perdiéndose la referencia si no se pulsaba "Guardar Configuración" al pie de la página.
+**Solución:**
+1. Creado `src/lib/uploads.js` para persistir archivos en `/srv/gonzalo-uploads` (fuera del repositorio git, inmune a deploys) con espejo en `public/uploads`.
+2. Creada la ruta dinámica `src/app/api/uploads/[filename]/route.js` y rewrite `/uploads/:filename -> /api/uploads/:filename` en `next.config.mjs`.
+3. Auto-guardado inmediato en `Configuracion` al subir (`upload-image/route.js`) o quitar (`configuracion/page.js`) imágenes.
+4. Actualizado `sendWhatsAppMedia` (`src/lib/whatsapp.js`), protegido `public/uploads` en `deploy_full_safe.mjs`, fortalecido el relay `ia-gonzadep` (`/api/whatsapp/send`) con fallback `getNumberId`/`@lid`, y restauradas ambas imágenes oficiales en `/srv/gonzalo-uploads`.
+**Estado:** ✅ FIXED
+
+## ERR-71: Crash de Autogestión para Clientes con Turno Activo (`ReferenceError: clientData is not defined`) y Fallo de Case/Puntos en Emails (19/11/2026)
+**Síntoma:** Clientes con turno activo (ej. Gastón Lanata `gaston.javier.lanata@gmail.com`, Ramiro Ramos) no podían entrar a autogestión (la pantalla crasheaba / recargaba `GET /?`), llevando al equipo a sospechar de los puntos en el correo electrónico. Además, 18 clientes con mayúsculas en su email en PostgreSQL no eran encontrados por `/api/clientes/consultar`.
+**Root Cause:**
+1. En `src/app/page.js` (líneas 260 y 986, introducido en D-171), se referenció `clientData?.permitirReprogramacionCorta` cuando el estado real se llama `existingClient`. Al ser `false` los dos primeros términos del `||`, JavaScript evaluaba `clientData` y lanzaba `ReferenceError: clientData is not defined`, crasheando el render de React.
+2. En `/api/clientes/consultar`, la búsqueda en PostgreSQL usaba `{ email: { equals: email } }` sin `mode: 'insensitive'` ni normalización de puntos en cuentas Gmail.
+3. En `/api/reservas/crear` línea 294, se usaba `nextDate` fuera de scope (`ReferenceError: nextDate is not defined`).
+**Solución:**
+1. Reemplazado `clientData` por `existingClient` en `src/app/page.js` (líneas 260 y 986).
+2. Creado `src/lib/emailNormalize.js` (`findClientByEmail` y `emailsMatch`) con búsqueda case-insensitive y equivalencia canónica sin puntos para Gmail/Googlemail, aplicado en `/api/clientes/consultar`, `/api/reservas/crear`, `/api/reservas/reprogramar` y `/api/reservas/cancelar`.
+3. Corregida declaración de `nextDateObj` en `/api/reservas/crear`.
+**Estado:** ✅ FIXED

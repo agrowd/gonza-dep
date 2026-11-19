@@ -875,6 +875,14 @@ export default function ConfiguracionPage() {
     showToast(`Copiado al portapapeles: ${variable}`);
   };
 
+  const normalizeUploadSrc = (url) => {
+    if (!url) return '';
+    if (url.startsWith('/uploads/')) {
+      return url.replace('/uploads/', '/api/uploads/');
+    }
+    return url;
+  };
+
   const handleUploadWelcomeImage = async (e, type) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -896,13 +904,31 @@ export default function ConfiguracionPage() {
         } else {
           setConfigs(prev => ({ ...prev, wtsp_new_client_img_indicaciones: data.url }));
         }
-        showToast('Imagen cargada con éxito. Recuerda pulsar "Guardar Configuración".', 'success');
+        showToast('Imagen cargada y guardada con éxito.', 'success');
       } else {
         showToast(data.error || 'Error al subir la imagen', 'error');
       }
     } catch (err) {
       console.error('Error uploading welcome image:', err);
       showToast('Error al subir la imagen', 'error');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleRemoveWelcomeImage = async (type) => {
+    const key = type === 'direccion' ? 'wtsp_new_client_img_direccion' : 'wtsp_new_client_img_indicaciones';
+    setConfigs(prev => ({ ...prev, [key]: '' }));
+    try {
+      await fetch('/api/admin/configuracion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: '' })
+      });
+      showToast('Imagen quitada y guardada.', 'success');
+    } catch (err) {
+      console.error('Error removing welcome image:', err);
+      showToast('Error al quitar la imagen', 'error');
     }
   };
 
@@ -2367,7 +2393,8 @@ export default function ConfiguracionPage() {
                         }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img 
-                            src={configs.wtsp_new_client_img_direccion} 
+                            key={configs.wtsp_new_client_img_direccion}
+                            src={normalizeUploadSrc(configs.wtsp_new_client_img_direccion)} 
                             alt="Dirección" 
                             style={{ maxWidth: '100%', maxHeight: '140px', objectFit: 'contain' }} 
                           />
@@ -2386,7 +2413,7 @@ export default function ConfiguracionPage() {
                             type="button" 
                             className="btn btn-secondary" 
                             style={{ color: '#ff5252', padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}
-                            onClick={() => setConfigs(prev => ({ ...prev, wtsp_new_client_img_direccion: '' }))}
+                            onClick={() => handleRemoveWelcomeImage('direccion')}
                           >
                             🗑️ Quitar
                           </button>
@@ -2447,7 +2474,8 @@ export default function ConfiguracionPage() {
                         }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img 
-                            src={configs.wtsp_new_client_img_indicaciones} 
+                            key={configs.wtsp_new_client_img_indicaciones}
+                            src={normalizeUploadSrc(configs.wtsp_new_client_img_indicaciones)} 
                             alt="Indicaciones Previas" 
                             style={{ maxWidth: '100%', maxHeight: '140px', objectFit: 'contain' }} 
                           />
@@ -2466,7 +2494,7 @@ export default function ConfiguracionPage() {
                             type="button" 
                             className="btn btn-secondary" 
                             style={{ color: '#ff5252', padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}
-                            onClick={() => setConfigs(prev => ({ ...prev, wtsp_new_client_img_indicaciones: '' }))}
+                            onClick={() => handleRemoveWelcomeImage('indicaciones')}
                           >
                             🗑️ Quitar
                           </button>

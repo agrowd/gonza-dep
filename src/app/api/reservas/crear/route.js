@@ -3,6 +3,7 @@ import prisma from '@/lib/db.js';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { normalizeWhatsApp } from '@/lib/whatsapp.js';
 import { cleanupExpiredPendingPayments } from '@/lib/cleanup.js';
+import { emailsMatch, findClientByEmail } from '@/lib/emailNormalize.js';
 
 function timeToMinutes(timeStr) {
   if (!timeStr) return 0;
@@ -130,13 +131,7 @@ export async function POST(request) {
     const finalWhatsapp = normalizeWhatsApp(whatsapp);
 
     // 2. Client deferred creation/update: ONLY created upon reservation confirmation
-    let client = await prisma.cliente.findFirst({
-      where: {
-        email: {
-          equals: email.trim().toLowerCase()
-        }
-      }
-    });
+    let client = await findClientByEmail(prisma, email);
 
     if (!client && dni) {
       client = await prisma.cliente.findUnique({
@@ -149,7 +144,7 @@ export async function POST(request) {
       if (!client.dni && dni) updateData.dni = dni.trim();
       if (client.nombreCompleto !== nombreCompleto.trim()) updateData.nombreCompleto = nombreCompleto.trim();
       if (client.whatsapp !== finalWhatsapp) updateData.whatsapp = finalWhatsapp;
-      if (client.email.toLowerCase() !== email.trim().toLowerCase()) updateData.email = email.trim().toLowerCase();
+      if (!emailsMatch(client.email, email)) updateData.email = email.trim().toLowerCase();
       if (!client.fechaNacimiento && fechaNacimiento) {
         updateData.fechaNacimiento = new Date(fechaNacimiento);
       }
@@ -180,7 +175,7 @@ export async function POST(request) {
         }
       });
 
-      if (existingPhoneClient && existingPhoneClient.email.trim().toLowerCase() !== email.trim().toLowerCase()) {
+      if (existingPhoneClient && !emailsMatch(existingPhoneClient.email, email)) {
         return NextResponse.json({
           error: 'El número de teléfono ingresado ya se encuentra registrado con otro correo electrónico. Por favor, comunicate con nosotros por WhatsApp para gestionar tu turno.',
           phoneConflict: true
@@ -289,9 +284,11 @@ Quedo a la espera de los datos para realizar el pago de la seña y confirmar el 
     let finalOpNombre = 'Gonzalo';
 
     try {
+      const nextDateObj = new Date(targetDate);
+      nextDateObj.setDate(targetDate.getDate() + 1);
       const existingTurnoOnDay = await prisma.turno.findFirst({
         where: {
-          fecha: { gte: targetDate, lt: nextDate },
+          fecha: { gte: targetDate, lt: nextDateObj },
           estado: { notIn: ['CANCELADO', 'NO_ASISTIO'] },
           operadorId: { not: null }
         },

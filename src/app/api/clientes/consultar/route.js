@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { normalizeWhatsApp } from '@/lib/whatsapp.js';
+import { emailsMatch, findClientByEmail } from '@/lib/emailNormalize.js';
 
 function maskEmail(email) {
   if (!email || !email.includes('@')) return 'otro correo';
@@ -45,8 +46,7 @@ export async function GET(request) {
       });
 
       if (existingPhoneClient) {
-        const clientEmailLower = (existingPhoneClient.email || '').trim().toLowerCase();
-        const isConflict = currentEmail && clientEmailLower !== currentEmail;
+        const isConflict = currentEmail && !emailsMatch(existingPhoneClient.email, currentEmail);
 
         if (isConflict) {
           return NextResponse.json({
@@ -83,28 +83,20 @@ export async function GET(request) {
 
     let client = null;
     if (email) {
-      client = await prisma.cliente.findFirst({
-        where: {
-          OR: [
-            { email: { equals: email } },
-            { email: { contains: email } }
-          ]
-        },
-        include: {
-          turnos: {
-            where: {
-              estado: {
-                in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
-              },
-              fecha: {
-                gte: today
-              }
+      client = await findClientByEmail(prisma, email, {
+        turnos: {
+          where: {
+            estado: {
+              in: ['SEÑADO', 'PENDIENTE_PAGO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION']
             },
-            orderBy: [
-              { fecha: 'asc' },
-              { horaInicio: 'asc' }
-            ]
-          }
+            fecha: {
+              gte: today
+            }
+          },
+          orderBy: [
+            { fecha: 'asc' },
+            { horaInicio: 'asc' }
+          ]
         }
       });
     } else if (dni) {

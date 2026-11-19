@@ -2207,3 +2207,16 @@
 - En respuesta a la captura de WhatsApp de Gonzalo (`media_1795027530129_9a5c27c3.jpg`): *"Hola Fede, espacio libre lo habías puesto con fondo blanco para que no se confundiera con el resto de colores y ahora volvió a tener un color distinto"*.
 - Se configuró el fondo blanco puro neutro (`#ffffff !important`), borde discontinuo pizarra (`1.5px dashed #94a3b8`), borde lateral gris pizarra (`border-left: 6px solid #475569`) y sombra suave en `.neocitaFreeSlot` de `agenda.module.css` y `agenda/page.js`.
 - Los huecos disponibles para agendar destacan nítidamente como espacios vacíos en blanco, sin confundirse con el verde de SEÑADO, azul de REALIZADO ni naranja de REPROGRAMADO.
+
+
+### Sesión 19/11/2026 - Fix Imágenes de Bienvenida (Persistencia + Preview + WhatsApp), Crash Autogestión (`existingClient`) y Emails con Puntos/Mayúsculas (D-173)
+
+- **Imágenes de Bienvenida (`Dirección` e `Indicaciones Previas`)**:
+  - Se detectó que `git clean -fd` en despliegues eliminaba `public/uploads/` y que Next.js en producción devuelve 404 para archivos subidos tras el build.
+  - Se creó `src/lib/uploads.js` guardando persistentemente en `/srv/gonzalo-uploads`, la ruta dinámica `GET /api/uploads/[filename]` (+ rewrite en `next.config.mjs`), auto-guardado en DB al subir o quitar imágenes, actualización de `sendWhatsAppMedia`, protección de `public/uploads` en `deploy_full_safe.mjs` y refuerzo LID/`getNumberId` en `ia-gonzadep`.
+  - Restauradas ambas imágenes oficiales en producción y staging.
+- **Autogestión (`gaston.javier.lanata@gmail.com`) y Emails con Puntos/Mayúsculas**:
+  - Se descubrió el crash real en `src/app/page.js` (`ReferenceError: clientData is not defined` -> corregido a `existingClient`).
+  - Se implementó `src/lib/emailNormalize.js` (`findClientByEmail`, `emailsMatch`) tolerando mayúsculas, espacios y puntos en cuentas Gmail/Googlemail en todos los endpoints de autogestión.
+  - Corregido `ReferenceError: nextDate is not defined` en `/api/reservas/crear`.
+  - Generada la lista completa de los 47 clientes con puntos en su correo electrónico.

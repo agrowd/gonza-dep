@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
 import { sendWhatsAppMessage, parseWppTemplate } from '@/lib/whatsapp.js';
 import { sendCancellationEmail } from '@/lib/email.js';
+import { emailsMatch } from '@/lib/emailNormalize.js';
 
 // Helper to format date
 function formatDate(date) {
@@ -28,7 +29,7 @@ export async function POST(request) {
     }
 
     const matchesDni = dni && turno.cliente.dni === dni;
-    const matchesEmail = email && turno.cliente.email.toLowerCase().trim() === email.toLowerCase().trim();
+    const matchesEmail = email && emailsMatch(turno.cliente.email, email);
 
     if (!matchesDni && !matchesEmail) {
       return NextResponse.json({ error: 'Credenciales inválidas.' }, { status: 403 });

@@ -3029,3 +3029,16 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
   - Hover suave en `#f8fafc`.
 - En `src/app/admin/agenda/page.js`: inline style explícito `backgroundColor: '#ffffff'`.
 - Desplegado y verificado en Staging y Producción.
+
+
+## Sesión 19/11/2026 - Fix de Imágenes de Bienvenida (Persistencia + Preview + WhatsApp Media), Crash en Autogestión (`existingClient`) y Matching Tolerante de Correos con Puntos/Mayúsculas (D-173, ERR-70, ERR-71)
+
+### Requerimientos y Casos Reportados
+1. **Imágenes de Dirección e Indicaciones Previas Rotas y Sin Envío Automático a Clientes Nuevos (Luis Vanier)**:
+   - Diagnóstico: `git clean -fd` borraba `public/uploads/` en cada deploy; además Next.js `next start` devuelve 404 para archivos agregados dinámicamente a `public/` después del build; y el upload no auto-guardaba en BD.
+   - Solución: `src/lib/uploads.js` (`/srv/gonzalo-uploads` fuera del repo), ruta dinámica `/api/uploads/[filename]`, rewrite `/uploads/:filename -> /api/uploads/:filename`, auto-guardado en `upload-image` y al quitar en `/admin/configuracion`, resolución persistente en `sendWhatsAppMedia`, protección `-e public/uploads` en `deploy_full_safe.mjs`, y fallback LID/`getNumberId` en relay `ia-gonzadep`. Restauradas ambas imágenes oficiales (Dirección e Indicaciones Previas) en Producción y Staging.
+2. **Error al Entrar en Autogestión (`gaston.javier.lanata@gmail.com`) y Clientes con Puntos en el Email**:
+   - Diagnóstico: Los logs de Nginx y el código revelaron un crash crítico en `src/app/page.js` (`ReferenceError: clientData is not defined` en líneas 260 y 986, donde debía ser `existingClient`), afectando a todo cliente con turno activo sin excepción de 72hs. Adicionalmente, `/api/clientes/consultar` hacía búsquedas case-sensitive en PostgreSQL y no contemplaba equivalencia de puntos en Gmail.
+   - Solución: Corregido `clientData -> existingClient` en `src/app/page.js`. Creado `src/lib/emailNormalize.js` (`findClientByEmail` y `emailsMatch`) con soporte case-insensitive y equivalencia sin puntos en Gmail/Googlemail, aplicado en todos los endpoints de autogestión (`/api/clientes/consultar`, `/api/reservas/crear`, `/api/reservas/reprogramar`, `/api/reservas/cancelar`). Extraída la lista completa de 47 clientes con punto en el correo electrónico.
+3. **Fix Bonus en Solicitudes de Autogestión**:
+   - Corregido `ReferenceError: nextDate is not defined` al resolver el operador sugerido en `src/app/api/reservas/crear/route.js`.

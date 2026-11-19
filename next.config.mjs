@@ -8,7 +8,15 @@ const nextConfig = {
     '@aws-sdk/client-s3',
     'whatsapp-web.js',
     'unzipper'
-  ]
+  ],
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:filename',
+        destination: '/api/uploads/:filename'
+      }
+    ];
+  }
 };
 
 export default nextConfig;

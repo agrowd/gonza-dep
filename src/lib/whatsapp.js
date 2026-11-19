@@ -390,20 +390,26 @@ export async function sendWhatsAppMedia(phone, { relativeUrl, caption = '' }) {
   if (!relativeUrl || !phone) return null;
   const client = globalThis.whatsappClient;
 
-  // Resolve absolute path from public directory
-  const cleanUrl = relativeUrl.startsWith('/') ? relativeUrl.slice(1) : relativeUrl;
-  const absPath = path.resolve(process.cwd(), 'public', cleanUrl);
+  // Resolver archivo desde directorio persistente (/srv/gonzalo-uploads) o public/uploads
+  const { resolveUploadFilePath, getMimeTypeFromFilename } = await import('./uploads.js');
+  let absPath = resolveUploadFilePath(relativeUrl);
+  if (!absPath) {
+    const cleanUrl = relativeUrl.startsWith('/') ? relativeUrl.slice(1) : relativeUrl;
+    const fallbackPath = path.resolve(process.cwd(), 'public', cleanUrl);
+    if (fs.existsSync(fallbackPath)) {
+      absPath = fallbackPath;
+    }
+  }
 
-  if (!fs.existsSync(absPath)) {
-    console.warn(`[WhatsApp Media] Image file not found on disk: ${absPath}`);
+  if (!absPath || !fs.existsSync(absPath)) {
+    console.warn(`[WhatsApp Media] Image file not found on disk for url=${relativeUrl}`);
     return null;
   }
 
   try {
     const fileBuffer = fs.readFileSync(absPath);
     const base64Data = fileBuffer.toString('base64');
-    const ext = path.extname(absPath).toLowerCase().replace('.', '');
-    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const mimeType = getMimeTypeFromFilename(absPath);
     const filename = path.basename(absPath);
 
     // 1. Try local client first if connected
