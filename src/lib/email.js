@@ -418,12 +418,37 @@ export async function sendCancellationEmail(clientEmail, clientName, turnDetails
 
   const defaultSubject = 'Cancelación de turno - Gonzalo Depilación';
 
+  const señaMonto = Number(turnDetails?.valorSeña || 0);
+  const lossNoticeLine = señaMonto > 0
+    ? 'Tené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de {seña} se pierde y no es reembolsable.'
+    : '';
+  const preservedNoticeLine = señaMonto > 0
+    ? 'Tu seña abonada de {seña} queda registrada a tu favor para tu próxima sesión.'
+    : '';
+
   const defaultBody = withLossOfDeposit
-    ? "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web."
-    : "Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}\n\nAl haberse realizado con la anticipación correspondiente, tu seña queda registrada a tu favor. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.";
+    ? `Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}${lossNoticeLine ? `\n\n${lossNoticeLine}` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web:\nhttps://agenda.depilacionparahombres.com/`
+    : `Te informamos que tu turno para depilación láser ha sido cancelado:\n\n- Fecha: {fecha}\n- Horario: {horario}\n- Zonas: {zonas}${preservedNoticeLine ? `\n\n${preservedNoticeLine}` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web:\nhttps://agenda.depilacionparahombres.com/`;
 
   const rawSubject = subjectTemplate || defaultSubject;
-  const rawBody = bodyTemplate || defaultBody;
+  let rawBody = bodyTemplate || defaultBody;
+
+  // Garantizar que si hay una plantilla personalizada en BD, igualmente se incluya el aviso de retención/pérdida o conservación de seña (D-174)
+  if (bodyTemplate && señaMonto > 0) {
+    const injectBeforeCta = (baseText, noticeText) => {
+      const ctaMatch = baseText.match(/\n\s*(Si dese[aá]s|Para agendar|Pod[eé]s|https?:\/\/)/i);
+      if (ctaMatch && ctaMatch.index !== undefined) {
+        return `${baseText.slice(0, ctaMatch.index).trimEnd()}\n\n${noticeText}\n\n${baseText.slice(ctaMatch.index).trimStart()}`;
+      }
+      return `${baseText.trimEnd()}\n\n${noticeText}`;
+    };
+
+    if (withLossOfDeposit && !/seña|reten|pierd|reembols/i.test(rawBody)) {
+      rawBody = injectBeforeCta(rawBody, lossNoticeLine);
+    } else if (!withLossOfDeposit && !/seña|favor/i.test(rawBody)) {
+      rawBody = injectBeforeCta(rawBody, preservedNoticeLine);
+    }
+  }
 
   const subject = applyEmailTemplatePlaceholdersPlain(rawSubject, clientName, turnDetails);
   const bodyTextReplaced = applyEmailTemplatePlaceholders(rawBody, clientName, turnDetails);

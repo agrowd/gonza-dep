@@ -131,8 +131,24 @@ export async function POST(request) {
         const addressConfig = await prisma.configuracion.findUnique({
           where: { key: 'address' }
         });
+        const señaNumWpp = Number(updatedTurno.valorSeña || 0);
+        const señaFormattedWpp = señaNumWpp.toLocaleString('es-AR');
         const defaultCancelTpl = "¡Hola [Nombre]! Te informamos que tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
-        const wppTemplate = wppCancelConfig?.value || defaultCancelTpl;
+        let wppTemplate = wppCancelConfig?.value || defaultCancelTpl;
+        if (señaNumWpp > 0) {
+          const injectWppNotice = (baseText, notice) => {
+            const ctaMatch = baseText.match(/\n\s*(Para agendar|Si dese[aá]s|Pod[eé]s|https?:\/\/)/i);
+            if (ctaMatch && ctaMatch.index !== undefined) {
+              return `${baseText.slice(0, ctaMatch.index).trimEnd()}\n\n${notice}\n\n${baseText.slice(ctaMatch.index).trimStart()}`;
+            }
+            return `${baseText.trimEnd()}\n\n${notice}`;
+          };
+          if (withLossOfDeposit && !/seña|reten|pierd|reembols/i.test(wppTemplate)) {
+            wppTemplate = injectWppNotice(wppTemplate, `Tené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de $${señaFormattedWpp} se pierde y no es reembolsable.`);
+          } else if (!withLossOfDeposit && !/seña|favor/i.test(wppTemplate)) {
+            wppTemplate = injectWppNotice(wppTemplate, `Tu seña de $${señaFormattedWpp} queda registrada a tu favor para tu próxima sesión.`);
+          }
+        }
         const wppMsg = parseWppTemplate(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
 
         if (updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {

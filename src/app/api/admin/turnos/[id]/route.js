@@ -853,14 +853,15 @@ export async function PUT(request, { params }) {
           );
 
           // Log in database
+          const señaFormateada = Number(updatedTurno.valorSeña || 0).toLocaleString('es-AR');
           await prisma.notificacion.create({
             data: {
               clienteId: updatedTurno.clienteId,
               turnoId: updatedTurno.id,
               canal: 'EMAIL',
               mensaje: withLossOfDeposit
-                ? `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`
-                : `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.\n\nAl haberse realizado con la anticipación correspondiente, tu seña queda registrada a tu favor. Si deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`,
+                ? `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.${Number(updatedTurno.valorSeña) > 0 ? `\n\nTené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de $${señaFormateada} se pierde y no es reembolsable.` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`
+                : `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.${Number(updatedTurno.valorSeña) > 0 ? `\n\nTu seña abonada de $${señaFormateada} queda registrada a tu favor para tu próxima sesión.` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`,
               estado: 'ENVIADO'
             }
           });
@@ -892,10 +893,20 @@ export async function PUT(request, { params }) {
             where: { key: 'address' }
           });
 
+          const señaNumWpp = Number(updatedTurno.valorSeña || 0);
+          const señaFormattedWpp = señaNumWpp.toLocaleString('es-AR');
           const defaultCancelTpl = "¡Hola [Nombre]! Te informamos que tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
           let templateVal = wppCancelConfig?.value || defaultCancelTpl;
-          if (body.preserveDeposit && Number(updatedTurno.valorSeña) > 0) {
-            templateVal = "¡Hola [Nombre]! Te informamos que tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Tu seña de $[Seña] queda registrada A TU FAVOR para tu próxima sesión. Comunicate con nosotros cuando desees coordinar tu nueva cita. ¡Saludos!";
+          if (body.preserveDeposit && señaNumWpp > 0) {
+            templateVal = `¡Hola [Nombre]! Te informamos que tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Tu seña de $${señaFormattedWpp} queda registrada A TU FAVOR para tu próxima sesión. Comunicate con nosotros cuando desees coordinar tu nueva cita. ¡Saludos!`;
+          } else if (withLossOfDeposit && señaNumWpp > 0 && !/seña|reten|pierd|reembols/i.test(templateVal)) {
+            const lossParagraph = `Tené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de $${señaFormattedWpp} se pierde y no es reembolsable.`;
+            const ctaMatch = templateVal.match(/\n\s*(Para agendar|Si dese[aá]s|Pod[eé]s|https?:\/\/)/i);
+            if (ctaMatch && ctaMatch.index !== undefined) {
+              templateVal = `${templateVal.slice(0, ctaMatch.index).trimEnd()}\n\n${lossParagraph}\n\n${templateVal.slice(ctaMatch.index).trimStart()}`;
+            } else {
+              templateVal = `${templateVal.trimEnd()}\n\n${lossParagraph}`;
+            }
           }
           const wppMsg = parseWppTemplate(templateVal, updatedTurno.cliente, updatedTurno, addressConfig?.value);
           

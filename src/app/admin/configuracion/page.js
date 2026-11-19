@@ -67,7 +67,9 @@ export default function ConfiguracionPage() {
     address: '',
     work_start: '12:30',
     work_end: '22:00',
-    booking_work_start: '14:00',
+    alta_turno_work_start: '15:00',
+    alta_turno_work_end: '22:00',
+    booking_work_start: '15:00',
     booking_work_end: '22:00',
     email_confirmation_subject: '',
     email_confirmation_body: '',
@@ -525,7 +527,9 @@ export default function ConfiguracionPage() {
             address: data.address || '',
             work_start: data.work_start || '12:30',
             work_end: data.work_end || '22:00',
-            booking_work_start: data.booking_work_start || '14:00',
+            alta_turno_work_start: data.alta_turno_work_start || '15:00',
+            alta_turno_work_end: data.alta_turno_work_end || '22:00',
+            booking_work_start: data.booking_work_start || '15:00',
             booking_work_end: data.booking_work_end || '22:00',
             email_confirmation_subject: data.email_confirmation_subject || '',
             email_confirmation_body: data.email_confirmation_body || '',
@@ -1947,7 +1951,7 @@ export default function ConfiguracionPage() {
                   >
                     {servicios.map(s => (
                       <option key={s.id} value={s.id}>
-                        {s.icono || '⚡'} {s.nombre} ({s.zonas?.length || 0} {s.zonas?.length === 1 ? 'zona' : 'zonas'}) {s.habilitadoAutogestion === false ? '⛔ [Oculto en Autogestión]' : ''}
+                        {s.nombre} ({s.zonas?.length || 0} {s.zonas?.length === 1 ? 'zona' : 'zonas'}) {s.habilitadoAutogestion === false ? '⛔ [Oculto en Autogestión]' : ''}
                       </option>
                     ))}
                   </select>
@@ -1963,7 +1967,6 @@ export default function ConfiguracionPage() {
                   <div key={s.id} className={styles.serviceGroupCard}>
                     <div className={styles.serviceGroupHeader}>
                       <div className={styles.serviceGroupTitle}>
-                        <span className={styles.serviceGroupIcon}>{s.icono || '⚡'}</span>
                         <span>{s.nombre}</span>
                         <span className={styles.serviceGroupBadge}>
                           {sZonas.length} {sZonas.length === 1 ? 'zona' : 'zonas'}
@@ -2172,7 +2175,7 @@ export default function ConfiguracionPage() {
                                                 style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
                                               >
                                                 {servicios.map(srv => (
-                                                  <option key={srv.id} value={srv.id}>{srv.icono} {srv.nombre}</option>
+                                                  <option key={srv.id} value={srv.id}>{srv.nombre}</option>
                                                 ))}
                                               </select>
                                             </div>
@@ -2239,6 +2242,42 @@ export default function ConfiguracionPage() {
                   >
                     {hourSlots.map(slot => (
                       <option key={`end-${slot}`} value={slot}>{slot} hs</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.5rem 0' }} />
+
+              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.25rem' }}>
+                Elegir Turno (Alta de Turno / Siguiente Turno)
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                Define la franja horaria que se muestra al buscar horarios para un turno nuevo o siguiente turno, sin modificar la grilla visual de la agenda.
+              </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Hora Inicio Alta / Siguiente Turno</label>
+                  <select 
+                    className={styles.input} 
+                    value={configs.alta_turno_work_start}
+                    onChange={(e) => setConfigs({ ...configs, alta_turno_work_start: e.target.value })}
+                  >
+                    {hourSlots.map(slot => (
+                      <option key={`astart-${slot}`} value={slot}>{slot} hs</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Hora Fin Alta / Siguiente Turno</label>
+                  <select 
+                    className={styles.input} 
+                    value={configs.alta_turno_work_end}
+                    onChange={(e) => setConfigs({ ...configs, alta_turno_work_end: e.target.value })}
+                  >
+                    {hourSlots.map(slot => (
+                      <option key={`aend-${slot}`} value={slot}>{slot} hs</option>
                     ))}
                   </select>
                 </div>
@@ -3397,7 +3436,7 @@ export default function ConfiguracionPage() {
                           }
                           return assigned.map(s => (
                             <span key={s.id} style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: 'rgba(122, 31, 30, 0.08)', color: '#7a1f1e', fontWeight: 600 }}>
-                              {s.icono || '⚡'} {s.nombre}
+                              {s.nombre}
                             </span>
                           ));
                         })()}
@@ -3555,7 +3594,7 @@ export default function ConfiguracionPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>🏷️</span>
                         <strong>Servicio:</strong>
-                        <span>{b.servicio ? `${b.servicio.icono || '⚡'} ${b.servicio.nombre}` : 'Todos los servicios'}</span>
+                        <span>{b.servicio ? b.servicio.nombre : 'Todos los servicios'}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>👥</span>
@@ -3611,7 +3650,7 @@ export default function ConfiguracionPage() {
                     required
                   >
                     {servicios.map(s => (
-                      <option key={s.id} value={s.id}>{s.icono || '✨'} {s.nombre}</option>
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
                     ))}
                   </select>
                 </div>
@@ -3718,36 +3757,6 @@ export default function ConfiguracionPage() {
                     value={servicioForm.nombre}
                     onChange={(e) => setServicioForm({ ...servicioForm, nombre: e.target.value })}
                     required
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Ícono Representativo</label>
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                    {['⚡', '💆‍♂️', '✨', '🌿', '🧖‍♂️', '✂️', '🧴', '🧘‍♂️'].map(ic => (
-                      <button
-                        key={ic}
-                        type="button"
-                        onClick={() => setServicioForm({ ...servicioForm, icono: ic })}
-                        style={{
-                          fontSize: '1.25rem',
-                          padding: '0.4rem 0.6rem',
-                          borderRadius: '8px',
-                          border: servicioForm.icono === ic ? '2px solid #7a1f1e' : '1px solid #cbd5e1',
-                          background: servicioForm.icono === ic ? '#fee2e2' : '#ffffff',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {ic}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={servicioForm.icono}
-                    onChange={(e) => setServicioForm({ ...servicioForm, icono: e.target.value })}
-                    placeholder="O escribe un emoji o ícono"
                   />
                 </div>
 
@@ -4293,7 +4302,7 @@ export default function ConfiguracionPage() {
                             }}
                             style={{ accentColor: '#7a1f1e' }}
                           />
-                          <span>{s.icono || '⚡'} {s.nombre}</span>
+                          <span>{s.nombre}</span>
                         </label>
                       );
                     })}
@@ -4549,10 +4558,10 @@ export default function ConfiguracionPage() {
                     value={boxForm.servicioId}
                     onChange={(e) => setBoxForm({ ...boxForm, servicioId: e.target.value })}
                   >
-                    <option value="">✨ Todos los servicios permitidos</option>
+                    <option value="">Todos los servicios permitidos</option>
                     {servicios.map(s => (
                       <option key={s.id} value={s.id}>
-                        {s.icono || '⚡'} {s.nombre}
+                        {s.nombre}
                       </option>
                     ))}
                   </select>

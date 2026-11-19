@@ -56,8 +56,8 @@ function AltaTurnoContent() {
   const [customDuration, setCustomDuration] = useState(null);
   const [duracionFormula, setDuracionFormula] = useState('ZONA_MAX_MAS_10MIN');
 
-  // 2. Search Filters (default 14:00 - 22:00 according to operator shift)
-  const [horaDesde, setHoraDesde] = useState('14:00');
+  // 2. Search Filters (default loaded from alta_turno_work_start / alta_turno_work_end, fallback 15:00 - 22:00)
+  const [horaDesde, setHoraDesde] = useState('15:00');
   const [horaHasta, setHoraHasta] = useState('22:00');
   const [selectedDays, setSelectedDays] = useState([1, 2, 3, 4, 5]); // Default: Lun-Vie
   const [stepInterval, setStepInterval] = useState(30); // 30 min (predeterminado) o 10 min
@@ -182,6 +182,12 @@ function AltaTurnoContent() {
       .then(cfg => {
         if (cfg?.duracion_formula) {
           setDuracionFormula(cfg.duracion_formula);
+        }
+        if (cfg?.alta_turno_work_start) {
+          setHoraDesde(cfg.alta_turno_work_start);
+        }
+        if (cfg?.alta_turno_work_end) {
+          setHoraHasta(cfg.alta_turno_work_end);
         }
       })
       .catch(err => console.error('Error fetching config:', err));
@@ -731,27 +737,36 @@ function AltaTurnoContent() {
           </div>
 
           <div className={styles.zonesList}>
-            {zones.map(z => {
-              const active = selectedZoneIds.includes(z.id);
-              return (
-                <div
-                  key={z.id}
-                  className={`${styles.zoneItem} ${active ? styles.zoneItemActive : ''}`}
-                  onClick={() => toggleZone(z.id)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={active}
-                    readOnly
-                    className={styles.zoneCheckbox}
-                  />
-                  <div className={styles.zoneInfo}>
-                    <span className={styles.zoneName}>{z.nombre}</span>
-                    <span className={styles.zoneDuration}>{z.duracionMinutos} min</span>
+            {(() => {
+              const firstSelectedZone = selectedZoneIds.length > 0
+                ? zones.find(z => selectedZoneIds.includes(z.id))
+                : null;
+              const activeServiceId = firstSelectedZone ? (firstSelectedZone.servicioId || 'default') : null;
+              const visibleZones = activeServiceId
+                ? zones.filter(z => (z.servicioId || 'default') === activeServiceId)
+                : zones;
+              return visibleZones.map(z => {
+                const active = selectedZoneIds.includes(z.id);
+                return (
+                  <div
+                    key={z.id}
+                    className={`${styles.zoneItem} ${active ? styles.zoneItemActive : ''}`}
+                    onClick={() => toggleZone(z.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      readOnly
+                      className={styles.zoneCheckbox}
+                    />
+                    <div className={styles.zoneInfo}>
+                      <span className={styles.zoneName}>{z.nombre}</span>
+                      <span className={styles.zoneDuration}>{z.duracionMinutos} min</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
 
             {/* OTROS Checkbox */}
             <div

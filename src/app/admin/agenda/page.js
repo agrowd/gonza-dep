@@ -358,8 +358,10 @@ export default function AgendaPage() {
   const [allClients, setAllClients] = useState([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [config, setConfig] = useState({
-    work_start: '10:00',
-    work_end: '20:00'
+    work_start: '12:30',
+    work_end: '22:00',
+    alta_turno_work_start: '15:00',
+    alta_turno_work_end: '22:00'
   });
 
   // Modals state
@@ -1824,8 +1826,10 @@ export default function AgendaPage() {
       .then(data => {
         if (data && !data.error) {
           setConfig({
-            work_start: data.work_start || '10:00',
-            work_end: data.work_end || '20:00'
+            work_start: data.work_start || '12:30',
+            work_end: data.work_end || '22:00',
+            alta_turno_work_start: data.alta_turno_work_start || '15:00',
+            alta_turno_work_end: data.alta_turno_work_end || '22:00'
           });
         }
       })
@@ -3577,8 +3581,8 @@ export default function AgendaPage() {
                     email: '',
                     dni: '',
                     fechaStr: selectedDate ? toYYYYMMDD(selectedDate) : toYYYYMMDD(new Date()),
-                    horaInicio: config.work_start,
-                    horaFin: addMinutesToTime(config.work_start, 30),
+                    horaInicio: config.alta_turno_work_start || config.work_start,
+                    horaFin: addMinutesToTime(config.alta_turno_work_start || config.work_start, 30),
                     selectedZoneIds: [],
                     valorTotal: '',
                     valorSeña: '',
@@ -4130,7 +4134,7 @@ export default function AgendaPage() {
                               setIsNextScheduling(false);
                               setNewTurno({
                                 nombreCompleto: '', nombre: '', apellido: '', whatsapp: '', email: '', dni: '',
-                                fechaStr: dateStr, horaInicio: config.work_start, horaFin: addMinutesToTime(config.work_start, 30),
+                                fechaStr: dateStr, horaInicio: config.alta_turno_work_start || config.work_start, horaFin: addMinutesToTime(config.alta_turno_work_start || config.work_start, 30),
                                 selectedZoneIds: [], valorTotal: '', valorSeña: '', descuentoTipo: 'NINGUNO', descuentoValor: '',
                                 bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null, operadorId: '', metodoPago: 'TRANSFERENCIA'
                               });
@@ -4797,9 +4801,16 @@ export default function AgendaPage() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: editTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: editTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
-                      {groupedZonesByService.map(group => {
+                      {(() => {
+                        const activeEditServiceGroup = groupedZonesByService.find(g =>
+                          (editTurno.selectedZoneIds || []).some(id => g.zonas.some(gz => String(gz.id) === String(id)))
+                        );
+                        const visibleEditGroups = activeEditServiceGroup
+                          ? [activeEditServiceGroup]
+                          : groupedZonesByService;
+                        return visibleEditGroups.map(group => {
                         const selectedInGroup = (editTurno.selectedZoneIds || []).filter(id => group.zonas.some(gz => String(gz.id) === String(id))).length;
-                        const isExpanded = expandedServices[`edit-${group.id}`] !== undefined ? expandedServices[`edit-${group.id}`] : (selectedInGroup > 0 || groupedZonesByService.length === 1);
+                        const isExpanded = expandedServices[`edit-${group.id}`] !== undefined ? expandedServices[`edit-${group.id}`] : (selectedInGroup > 0 || visibleEditGroups.length === 1);
 
                         return (
                           <div 
@@ -4825,7 +4836,6 @@ export default function AgendaPage() {
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{ fontSize: '1.1rem' }}>{group.icono || '⚡'}</span>
                                 <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{group.nombre}</span>
                                 {selectedInGroup > 0 && (
                                   <span style={{ backgroundColor: '#7a1f1e', color: '#ffffff', fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '12px' }}>
@@ -4853,7 +4863,8 @@ export default function AgendaPage() {
                             )}
                           </div>
                         );
-                      })}
+                        });
+                      })()}
 
                       {/* OTROS Checkbox */}
                       <div 
@@ -7291,9 +7302,16 @@ export default function AgendaPage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: newTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: newTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
-                    {groupedZonesByService.map(group => {
+                    {(() => {
+                      const activeNewServiceGroup = groupedZonesByService.find(g =>
+                        (newTurno.selectedZoneIds || []).some(id => g.zonas.some(gz => String(gz.id) === String(id)))
+                      );
+                      const visibleNewGroups = activeNewServiceGroup
+                        ? [activeNewServiceGroup]
+                        : groupedZonesByService;
+                      return visibleNewGroups.map(group => {
                       const selectedInGroup = (newTurno.selectedZoneIds || []).filter(id => group.zonas.some(gz => String(gz.id) === String(id))).length;
-                      const isExpanded = expandedServices[`new-${group.id}`] !== undefined ? expandedServices[`new-${group.id}`] : (selectedInGroup > 0 || groupedZonesByService.length === 1);
+                      const isExpanded = expandedServices[`new-${group.id}`] !== undefined ? expandedServices[`new-${group.id}`] : (selectedInGroup > 0 || visibleNewGroups.length === 1);
 
                       return (
                         <div 
@@ -7319,7 +7337,6 @@ export default function AgendaPage() {
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '1.1rem' }}>{group.icono || '⚡'}</span>
                               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{group.nombre}</span>
                               {selectedInGroup > 0 && (
                                 <span style={{ backgroundColor: '#7a1f1e', color: '#ffffff', fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '12px' }}>
@@ -7347,7 +7364,8 @@ export default function AgendaPage() {
                           )}
                         </div>
                       );
-                    })}
+                      });
+                    })()}
 
                     {/* OTROS Checkbox */}
                     <div 

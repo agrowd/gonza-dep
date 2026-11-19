@@ -26,8 +26,8 @@ export async function GET(request) {
     const year = parseInt(searchParams.get('year') || currentYear, 10);
     const month = parseInt(searchParams.get('month') || currentMonth, 10); // 1-12
     const duracion = parseInt(searchParams.get('duracion') || 30, 10);
-    const horaDesde = searchParams.get('horaDesde') || '14:00';
-    const horaHasta = searchParams.get('horaHasta') || '22:00';
+    const horaDesdeParam = searchParams.get('horaDesde');
+    const horaHastaParam = searchParams.get('horaHasta');
     const intervalo = parseInt(searchParams.get('intervalo') || searchParams.get('step') || '30', 10);
     const diasSemanaParam = searchParams.get('diasSemana'); // e.g. "1,2,3,4,5"
     const excludeTurnoId = searchParams.get('excludeTurnoId') || searchParams.get('turnoId');
@@ -42,11 +42,17 @@ export async function GET(request) {
     const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
     const endDate = new Date(Date.UTC(year, month, 1, 0, 0, 0)); // First day of next month
 
-    // Fetch config for operating hours
+    // Fetch config for operating hours (Agenda visual + Alta/Siguiente Turno)
     const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
     const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
-    const globalWorkStart = startConfig?.value || '10:00';
-    const globalWorkEnd = endConfig?.value || '20:00';
+    const altaStartConfig = await prisma.configuracion.findUnique({ where: { key: 'alta_turno_work_start' } });
+    const altaEndConfig = await prisma.configuracion.findUnique({ where: { key: 'alta_turno_work_end' } });
+    const globalWorkStart = startConfig?.value || '12:30';
+    const globalWorkEnd = endConfig?.value || '22:00';
+    const defaultAltaStart = altaStartConfig?.value || '15:00';
+    const defaultAltaEnd = altaEndConfig?.value || '22:00';
+    const horaDesde = horaDesdeParam || defaultAltaStart;
+    const horaHasta = horaHastaParam || defaultAltaEnd;
 
     // Fetch all active appointments for the month (REPROGRAMADO appointments are active and occupy slots; exclude current turno if rescheduling)
     const whereClause = {

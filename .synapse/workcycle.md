@@ -3042,3 +3042,18 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - Solución: Corregido `clientData -> existingClient` en `src/app/page.js`. Creado `src/lib/emailNormalize.js` (`findClientByEmail` y `emailsMatch`) con soporte case-insensitive y equivalencia sin puntos en Gmail/Googlemail, aplicado en todos los endpoints de autogestión (`/api/clientes/consultar`, `/api/reservas/crear`, `/api/reservas/reprogramar`, `/api/reservas/cancelar`). Extraída la lista completa de 47 clientes con punto en el correo electrónico.
 3. **Fix Bonus en Solicitudes de Autogestión**:
    - Corregido `ReferenceError: nextDate is not defined` al resolver el operador sugerido en `src/app/api/reservas/crear/route.js`.
+
+
+## Sesión 19/11/2026 (Parte 2) - 3ra Franja Horaria (Alta/Siguiente Turno), Aviso de Pérdida de Seña en Cancelaciones, Eliminación de Emojis en Servicios y Ocultamiento de Otros Servicios al Editar/Crear Turnos (D-174)
+
+### Requerimientos Implementados
+1. **Horario Independiente para Elegir Turno (Alta de Turno / Siguiente Turno)**:
+   - Nuevas claves `alta_turno_work_start` (`15:00`) y `alta_turno_work_end` (`22:00`) en `/api/admin/configuracion` y nueva sección dedicada en `/admin/configuracion` -> pestaña Horarios, sin alterar el rango visual de la Agenda Interna (`12:30`–`22:00`) ni el de Autogestión (`booking_work_start`/`end`).
+   - Integrado en `/admin/alta-turno`, `/api/admin/alta-turno/disponibilidad` y hora inicial por defecto de `+ Nuevo Turno` en `/admin/agenda`.
+2. **Mensaje y Mail Completo al Cancelar Turno y Retener Seña**:
+   - En `src/lib/email.js` (`sendCancellationEmail`), `src/app/api/admin/turnos/[id]/route.js` y `src/app/api/reservas/cancelar/route.js`: cuando `withLossOfDeposit === true` y `valorSeña > 0`, tanto el WhatsApp como el Email siempre incluyen explícitamente el párrafo informando que la seña abonada de `$XX.XXX` se pierde y no es reembolsable (respetando la plantilla personalizada de BD e insertándolo antes del link de autogestión). Cuando `withLossOfDeposit === false` (`Conservar Seña`), se informa que la seña queda registrada a favor.
+3. **Eliminación de Emojis de Servicios en Turnos y Configuración**:
+   - Removido el bloque *Ícono Representativo* (grilla de emojis + input) del modal de servicio en `/admin/configuracion`.
+   - Eliminados todos los emojis (`⚡`, `💆‍♂️`, etc.) junto a los nombres de servicios en `/admin/agenda` (Crear y Editar Turno) y `/admin/configuracion`.
+4. **Ocultamiento de Servicios No Seleccionados al Modificar / Crear Turnos**:
+   - En `editTurno` y `newTurno` de `/admin/agenda` y en `/admin/alta-turno`: al tener zonas seleccionadas de un servicio (ej. Depilación Láser), únicamente se muestra ese servicio y se ocultan por completo el resto de los servicios (ej. Masajes). Si se desmarcan todas las zonas, vuelven a mostrarse todos los servicios.

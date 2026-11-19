@@ -2220,3 +2220,11 @@
   - Se implementó `src/lib/emailNormalize.js` (`findClientByEmail`, `emailsMatch`) tolerando mayúsculas, espacios y puntos en cuentas Gmail/Googlemail en todos los endpoints de autogestión.
   - Corregido `ReferenceError: nextDate is not defined` en `/api/reservas/crear`.
   - Generada la lista completa de los 47 clientes con puntos en su correo electrónico.
+
+
+### Sesión 19/11/2026 (Parte 2) - Horario Alta/Siguiente Turno, Aviso Pérdida de Seña en Cancelaciones, Sin Emojis en Servicios y Ocultamiento de Otros Servicios en Turnos (D-174)
+
+- **3ra Franja Horaria (`alta_turno_work_start` / `alta_turno_work_end` — 15:00 a 22:00)**: Agregada en `/admin/configuracion` (Horarios), conectada a `/admin/alta-turno`, `/api/admin/alta-turno/disponibilidad` y hora por defecto al agendar nuevo turno en `/admin/agenda`, manteniendo intacta la grilla visual de la agenda (`12:30`–`22:00`).
+- **Cancelación con Retención de Seña (Email + WhatsApp)**: Restaurado y garantizado en `email.js`, `api/admin/turnos/[id]/route.js` y `api/reservas/cancelar/route.js` el aviso explícito de que la seña abonada se pierde y no es reembolsable cuando se cancela reteniendo la seña (`Retener Seña` / < 72hs), incluso con plantillas personalizadas en BD.
+- **Sin Emojis en Servicios**: Eliminado el selector *Ícono Representativo* de `/admin/configuracion` y quitados todos los emojis junto a servicios en turnos y configuración.
+- **Ocultamiento de Servicios No Seleccionados**: Al modificar o crear un turno que ya tiene zonas cargadas de un servicio (ej. Láser), se ocultan por completo los otros servicios (ej. Masajes) en `/admin/agenda` y `/admin/alta-turno`.
