@@ -7,6 +7,7 @@ import { calculateTurnDetails } from '@/lib/calculations.js';
 import PhoneInput from '@/components/PhoneInput.js';
 import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
 import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
+import { DEFAULT_ZONAS_OTROS, parseZonasOtrosLista } from '@/lib/zonasOtros.js';
 
 // Timezone-safe YYYY-MM-DD formatter (avoids UTC offset shifts)
 const toYYYYMMDD = (dateInput) => {
@@ -364,6 +365,7 @@ export default function AgendaPage() {
     alta_turno_work_start: '15:00',
     alta_turno_work_end: '22:00'
   });
+  const [zonasOtrosList, setZonasOtrosList] = useState(DEFAULT_ZONAS_OTROS);
 
   // Modals state
   const [selectedTurno, setSelectedTurno] = useState(null);
@@ -1832,6 +1834,7 @@ export default function AgendaPage() {
             alta_turno_work_start: data.alta_turno_work_start || '15:00',
             alta_turno_work_end: data.alta_turno_work_end || '22:00'
           });
+          setZonasOtrosList(parseZonasOtrosLista(data.zonas_otros_lista));
         }
       })
       .catch(err => console.error('Error fetching config:', err));
@@ -2632,7 +2635,7 @@ export default function AgendaPage() {
           selectedZoneIds: editTurno.selectedZoneIds,
           operadorId: editTurno.operadorId !== undefined ? (editTurno.operadorId || null) : undefined,
           hasOtros: editTurno.hasOtros,
-          otrosTexto: editTurno.otrosTexto,
+          otrosTexto: (editTurno.otrosTexto || '').split(/,\s*/).map(s => s.trim()).filter(Boolean).join(', '),
           otrosPrecio: Number(editTurno.otrosPrecio || 0)
         })
       });
@@ -3098,6 +3101,7 @@ export default function AgendaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newTurno,
+          otrosTexto: (newTurno.otrosTexto || '').split(/,\s*/).map(s => s.trim()).filter(Boolean).join(', '),
           operadorId: newTurno.operadorId || null,
           whatsapp: fullPhone,
           valorTotal: Number(newTurno.valorTotal),
@@ -4880,13 +4884,19 @@ export default function AgendaPage() {
                   </div>
 
                   {editTurno.hasOtros && (
-                    <div style={{ gridColumn: '1 / -1', marginTop: '-0.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fed7aa', backgroundColor: '#fffaf5' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
+                    <div style={{ gridColumn: '1 / -1', marginTop: '-0.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.85rem 0.95rem', borderRadius: '10px', border: '1px solid #e6ded4', backgroundColor: '#fcfaf7' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                        <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#1e293b' }}>
                           Zonas Extra (Otros)
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Valor Zonas Extras ($):</label>
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                          Seleccioná una subzona cargada en configuración.
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>Valor Zonas Extras ($):</label>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -4901,35 +4911,50 @@ export default function AgendaPage() {
                                 manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
                               }));
                             }}
-                            style={{ width: '110px', padding: '0.25rem 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                            style={{ width: '160px', padding: '0.35rem 0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', fontSize: '0.88rem', fontWeight: 600 }}
                           />
                         </div>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          Este precio se ingresa manualmente y no está vinculado a las subzonas.
+                        </span>
                       </div>
 
-                      {/* Lista dinámica de zonas extras */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                      {/* Lista dinámica de zonas extras con selector desplegable */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.15rem' }}>
                         {(() => {
-                          const currentItems = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                          const currentItems = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
+                            ? editTurno.otrosTexto.split(/,\s*/)
+                            : [''];
                           return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', minWidth: '95px', flexShrink: 0 }}>
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', minWidth: '95px', flexShrink: 0 }}>
                                 Zona Extra {idx + 1}
                               </span>
-                              <input
-                                type="text"
-                                placeholder="Ej. Media Pierna, Nuca..."
+                              <select
                                 value={item}
                                 onChange={(e) => {
-                                  const list = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                                  const list = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
+                                    ? editTurno.otrosTexto.split(/,\s*/)
+                                    : [''];
                                   list[idx] = e.target.value;
                                   setEditTurno({ ...editTurno, otrosTexto: list.join(', ') });
                                 }}
-                                style={{ flex: 1, padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                              />
+                                style={{ flex: 1, padding: '0.42rem 0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer' }}
+                              >
+                                <option value="">Seleccionar subzona...</option>
+                                {Boolean(item && !zonasOtrosList.includes(item)) && (
+                                  <option value={item}>{item}</option>
+                                )}
+                                {zonasOtrosList.map((sz, sIdx) => (
+                                  <option key={`${sz}-${sIdx}`} value={sz}>{sz}</option>
+                                ))}
+                              </select>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const list = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                                  const list = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
+                                    ? editTurno.otrosTexto.split(/,\s*/)
+                                    : [''];
                                   list.splice(idx, 1);
                                   if (list.length === 0) {
                                     setEditTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
@@ -4937,7 +4962,20 @@ export default function AgendaPage() {
                                     setEditTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
                                   }
                                 }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem' }}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '16px',
+                                  border: '1px solid #fecaca',
+                                  backgroundColor: '#fff5f5',
+                                  color: '#dc2626',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  flexShrink: 0
+                                }}
                                 title="Eliminar esta zona extra"
                               >
                                 🗑️
@@ -4950,20 +4988,22 @@ export default function AgendaPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const list = (editTurno.otrosTexto ? editTurno.otrosTexto.split(/,\s*/) : ['']);
+                          const list = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
+                            ? editTurno.otrosTexto.split(/,\s*/)
+                            : [''];
                           list.push('');
                           setEditTurno({ ...editTurno, otrosTexto: list.join(', ') });
                         }}
                         style={{
                           width: '100%',
                           marginTop: '0.25rem',
-                          padding: '0.4rem',
-                          borderRadius: '6px',
-                          border: '1px solid #7a1f1e',
+                          padding: '0.45rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #7a1f1e',
                           backgroundColor: '#ffffff',
                           color: '#7a1f1e',
                           fontWeight: 700,
-                          fontSize: '0.82rem',
+                          fontSize: '0.84rem',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -7420,13 +7460,19 @@ export default function AgendaPage() {
                 </div>
 
                 {newTurno.hasOtros && (
-                  <div style={{ gridColumn: '1 / -1', marginTop: '-0.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fed7aa', backgroundColor: '#fffaf5' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
+                  <div style={{ gridColumn: '1 / -1', marginTop: '-0.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.85rem 0.95rem', borderRadius: '10px', border: '1px solid #e6ded4', backgroundColor: '#fcfaf7' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#1e293b' }}>
                         Zonas Extra (Otros)
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>Valor Zonas Extras ($):</label>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        Seleccioná una subzona cargada en configuración.
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>Valor Zonas Extras ($):</label>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -7441,35 +7487,50 @@ export default function AgendaPage() {
                               manualSeñaOverride: prev.manualSeñaOverride !== undefined ? prev.manualSeñaOverride : prev.valorSeña
                             }));
                           }}
-                          style={{ width: '110px', padding: '0.25rem 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                          style={{ width: '160px', padding: '0.35rem 0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', fontSize: '0.88rem', fontWeight: 600 }}
                         />
                       </div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        Este precio se ingresa manualmente y no está vinculado a las subzonas.
+                      </span>
                     </div>
 
-                    {/* Lista dinámica de zonas extras */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {/* Lista dinámica de zonas extras con selector desplegable */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.15rem' }}>
                       {(() => {
-                        const currentItems = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                        const currentItems = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
+                          ? newTurno.otrosTexto.split(/,\s*/)
+                          : [''];
                         return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', minWidth: '95px', flexShrink: 0 }}>
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', minWidth: '95px', flexShrink: 0 }}>
                               Zona Extra {idx + 1}
                             </span>
-                            <input
-                              type="text"
-                              placeholder="Ej. Media Pierna, Nuca..."
+                            <select
                               value={item}
                               onChange={(e) => {
-                                const list = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                                const list = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
+                                  ? newTurno.otrosTexto.split(/,\s*/)
+                                  : [''];
                                 list[idx] = e.target.value;
                                 setNewTurno({ ...newTurno, otrosTexto: list.join(', ') });
                               }}
-                              style={{ flex: 1, padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                            />
+                              style={{ flex: 1, padding: '0.42rem 0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              <option value="">Seleccionar subzona...</option>
+                              {Boolean(item && !zonasOtrosList.includes(item)) && (
+                                <option value={item}>{item}</option>
+                              )}
+                              {zonasOtrosList.map((sz, sIdx) => (
+                                <option key={`${sz}-${sIdx}`} value={sz}>{sz}</option>
+                              ))}
+                            </select>
                             <button
                               type="button"
                               onClick={() => {
-                                const list = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                                const list = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
+                                  ? newTurno.otrosTexto.split(/,\s*/)
+                                  : [''];
                                 list.splice(idx, 1);
                                 if (list.length === 0) {
                                   setNewTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
@@ -7477,7 +7538,20 @@ export default function AgendaPage() {
                                   setNewTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
                                 }
                               }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem' }}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '16px',
+                                border: '1px solid #fecaca',
+                                backgroundColor: '#fff5f5',
+                                color: '#dc2626',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                flexShrink: 0
+                              }}
                               title="Eliminar esta zona extra"
                             >
                               🗑️
@@ -7490,20 +7564,22 @@ export default function AgendaPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const list = (newTurno.otrosTexto ? newTurno.otrosTexto.split(/,\s*/) : ['']);
+                        const list = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
+                          ? newTurno.otrosTexto.split(/,\s*/)
+                          : [''];
                         list.push('');
                         setNewTurno({ ...newTurno, otrosTexto: list.join(', ') });
                       }}
                       style={{
                         width: '100%',
                         marginTop: '0.25rem',
-                        padding: '0.4rem',
-                        borderRadius: '6px',
-                        border: '1px solid #7a1f1e',
+                        padding: '0.45rem',
+                        borderRadius: '8px',
+                        border: '1.5px solid #7a1f1e',
                         backgroundColor: '#ffffff',
                         color: '#7a1f1e',
                         fontWeight: 700,
-                        fontSize: '0.82rem',
+                        fontSize: '0.84rem',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',

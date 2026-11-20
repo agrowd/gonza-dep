@@ -2254,3 +2254,12 @@
     2. `src/app/admin/agenda/page.js` (Total, Seña, Valor Zonas Extras `Otros`, Valor Descuento en Nuevo/Editar Turno; Efectivo, Transferencia y Dinero a Favor en detalle de turno).
     3. `src/app/admin/alta-turno/page.js` (Valor Zonas Extras `Otros`).
     4. `src/app/admin/configuracion/page.js` (Precio Base y Seña de Zonas, Descuento de Promociones y Cupones, Usos de Cupones, Comisión de Operadores).
+
+
+---
+### Implementación D-177 — Catálogo "Zonas Otros", Selector Desplegable con Preservación de Textos Previos, Limpieza en Servicios y Orden de Fechas en Estadísticas (2026-11-20 11:10)
+- **Pedidos (5 capturas)**:
+  1. `media_1795182149740_43e9347e.jpg`: Quitar botón superior `+ Agregar Zona`, badge `⭐ Servicio Principal`, doble tilde en `Habilitado en Autogestión` y cartel celeste `Fuente Única de Verdad` en Configuración → Servicios y Zonas.
+  2. `media_1795182170672_696f625b.jpg`: Agregar apartado `⚙️ Zonas Otros` debajo de las zonas de Depilación Láser (`Pies`, `Cuello`, `1/2 Brazo`, `1/2 Pierna`, `Cintura`, `Nuca`, `Ingle`, `Hombros`, `Laterales`) con ABM (`+ Agregar subzona`, editar, eliminar), oculto en Autogestión.
+  3. `media_1795182188915_7cdf23a0.jpg` y `media_1795182228677_38a9c889.jpg`: Selector desplegable en `Zonas Extra (Otros)` al agendar/editar turnos, preservando intactos los textos ya escritos en turnos anteriores y posteriores. Desplegar en la web de prueba (Staging `:3008`).
+  4. `media_1795182244888_a9dfb477.jpg`: En Estadísticas, ubicar el rango de fechas después de la selección de métrica y antes de los botones del informe.

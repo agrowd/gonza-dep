@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import styles from './configuracion.module.css';
 import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
+import { DEFAULT_ZONAS_OTROS, parseZonasOtrosLista } from '@/lib/zonasOtros.js';
 
 // SVG Icons
 const PlusIcon = () => (
@@ -101,11 +102,16 @@ export default function ConfiguracionPage() {
     recordatorio_horas: '48',
     mensaje_previo_dias: '7',
     duracion_formula: 'ZONA_MAX_MAS_TERCIO',
-    canales_adquisicion: JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"])
+    canales_adquisicion: JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"]),
+    zonas_otros_lista: JSON.stringify(DEFAULT_ZONAS_OTROS)
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
   const [newChannelInput, setNewChannelInput] = useState('');
+  const [isAddingSubzonaOtros, setIsAddingSubzonaOtros] = useState(false);
+  const [newSubzonaOtrosName, setNewSubzonaOtrosName] = useState('');
+  const [editingSubzonaOtrosIdx, setEditingSubzonaOtrosIdx] = useState(null);
+  const [editingSubzonaOtrosName, setEditingSubzonaOtrosName] = useState('');
 
   // Promociones State
   const [promociones, setPromociones] = useState([]);
@@ -561,12 +567,34 @@ export default function ConfiguracionPage() {
             recordatorio_horas: data.recordatorio_horas || '48',
             mensaje_previo_dias: data.mensaje_previo_dias || '7',
             duracion_formula: data.duracion_formula || 'ZONA_MAX_MAS_TERCIO',
-            canales_adquisicion: data.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"])
+            canales_adquisicion: data.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"]),
+            zonas_otros_lista: data.zonas_otros_lista || JSON.stringify(DEFAULT_ZONAS_OTROS)
           });
         }
       })
       .catch(err => console.error('Error fetching configs:', err))
       .finally(() => setLoadingConfigs(false));
+  };
+
+  const handleSaveZonasOtrosList = async (updatedList, toastMsg = 'Subzonas "Otros" actualizadas.') => {
+    const cleanList = updatedList.map(s => String(s).trim()).filter(Boolean);
+    const jsonStr = JSON.stringify(cleanList);
+    setConfigs(prev => ({ ...prev, zonas_otros_lista: jsonStr }));
+    try {
+      const res = await fetch('/api/admin/configuracion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zonas_otros_lista: jsonStr })
+      });
+      if (res.ok) {
+        showToast(toastMsg);
+      } else {
+        showToast('Error al guardar subzonas Otros.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving zonas_otros_lista:', err);
+      showToast('Error de red al guardar subzonas Otros.', 'error');
+    }
   };
 
   // 3. Fetch Promociones
@@ -1900,14 +1928,6 @@ export default function ConfiguracionPage() {
               >
                 <span>➕ Nuevo Servicio</span>
               </button>
-              <button 
-                type="button"
-                className="btn btn-primary" 
-                onClick={() => handleOpenNewZone()} 
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-              >
-                <PlusIcon /> Agregar Zona
-              </button>
             </div>
           </div>
 
@@ -1972,11 +1992,6 @@ export default function ConfiguracionPage() {
                         <span className={styles.serviceGroupBadge}>
                           {sZonas.length} {sZonas.length === 1 ? 'zona' : 'zonas'}
                         </span>
-                        {isBase && (
-                          <span style={{ fontSize: '0.72rem', backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
-                            ⭐ Servicio Principal
-                          </span>
-                        )}
                         <label 
                           title="Controla si este servicio y sus zonas aparecen disponibles para los clientes en la web de autogestión"
                           style={{
@@ -2000,7 +2015,7 @@ export default function ConfiguracionPage() {
                             onChange={() => handleToggleServicioAutogestion(s)}
                             style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#16a34a' }}
                           />
-                          <span>{s.habilitadoAutogestion !== false ? '✅ Habilitado en Autogestión' : '⛔ Oculto en Autogestión'}</span>
+                          <span>{s.habilitadoAutogestion !== false ? 'Habilitado en Autogestión' : '⛔ Oculto en Autogestión'}</span>
                         </label>
                       </div>
                       <div className={styles.serviceGroupActions}>
@@ -2042,25 +2057,6 @@ export default function ConfiguracionPage() {
                       </div>
                     ) : (
                       <>
-                        {isBase && (
-                          <div style={{
-                            margin: '0.25rem 1rem 0.85rem 1rem',
-                            padding: '0.65rem 0.95rem',
-                            backgroundColor: '#eff6ff',
-                            border: '1px solid #bfdbfe',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            fontSize: '0.82rem',
-                            color: '#1e40af'
-                          }}>
-                            <span style={{ fontSize: '1rem' }}>🌐</span>
-                            <span>
-                              <strong>Fuente Única de Verdad:</strong> Los precios y señas de Depilación Láser se sincronizan automáticamente cada 10 minutos desde <strong>depilacionparahombres.com/precios/</strong>. Al actualizar los precios en WordPress, se impactan automáticamente tanto en la Agenda como en la IA de WhatsApp.
-                            </span>
-                          </div>
-                        )}
                         <div className={styles.tableWrapper}>
                           <table className={styles.table}>
                             <thead>
@@ -2203,6 +2199,242 @@ export default function ConfiguracionPage() {
                       </div>
                     </>
                   )}
+
+                  {isBase && (() => {
+                    const zonasOtrosList = parseZonasOtrosLista(configs.zonas_otros_lista);
+                    return (
+                      <div
+                        id="zonasOtrosSection"
+                        style={{
+                          margin: '1.25rem 1rem 1rem 1rem',
+                          padding: '1.15rem 1.25rem',
+                          backgroundColor: '#fcfaf7',
+                          border: '1px solid #e6ded4',
+                          borderRadius: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.9rem' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '10px',
+                            backgroundColor: '#f9e8e8',
+                            color: '#7a1f1e',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <SettingsIcon />
+                          </div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b' }}>
+                            Zonas Otros
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          {zonasOtrosList.map((subzona, idx) => {
+                            const isEditingSub = editingSubzonaOtrosIdx === idx;
+                            return (
+                              <div
+                                key={`${subzona}-${idx}`}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '0.75rem',
+                                  padding: '0.6rem 0.25rem',
+                                  borderBottom: '1px solid #ebe5dd'
+                                }}
+                              >
+                                {isEditingSub ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                                    <input
+                                      type="text"
+                                      className={styles.input}
+                                      value={editingSubzonaOtrosName}
+                                      onChange={(e) => setEditingSubzonaOtrosName(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          const trimmed = editingSubzonaOtrosName.trim();
+                                          if (!trimmed) return;
+                                          const next = [...zonasOtrosList];
+                                          next[idx] = trimmed;
+                                          setEditingSubzonaOtrosIdx(null);
+                                          setEditingSubzonaOtrosName('');
+                                          handleSaveZonasOtrosList(next, 'Subzona modificada.');
+                                        }
+                                      }}
+                                      style={{ flex: 1, padding: '0.35rem 0.6rem', fontSize: '0.88rem' }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      type="button"
+                                      className="btn btn-primary"
+                                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', height: 'auto' }}
+                                      onClick={() => {
+                                        const trimmed = editingSubzonaOtrosName.trim();
+                                        if (!trimmed) return;
+                                        const next = [...zonasOtrosList];
+                                        next[idx] = trimmed;
+                                        setEditingSubzonaOtrosIdx(null);
+                                        setEditingSubzonaOtrosName('');
+                                        handleSaveZonasOtrosList(next, 'Subzona modificada.');
+                                      }}
+                                    >
+                                      Guardar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', height: 'auto' }}
+                                      onClick={() => {
+                                        setEditingSubzonaOtrosIdx(null);
+                                        setEditingSubzonaOtrosName('');
+                                      }}
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e293b' }}>
+                                      {subzona}
+                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingSubzonaOtrosIdx(idx);
+                                          setEditingSubzonaOtrosName(subzona);
+                                        }}
+                                        style={{
+                                          width: '32px',
+                                          height: '32px',
+                                          borderRadius: '16px',
+                                          border: '1px solid #d6d0c8',
+                                          backgroundColor: '#ffffff',
+                                          color: '#334155',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          cursor: 'pointer'
+                                        }}
+                                        title={`Editar ${subzona}`}
+                                      >
+                                        <EditIcon />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const next = zonasOtrosList.filter((_, i) => i !== idx);
+                                          handleSaveZonasOtrosList(next, `Subzona "${subzona}" eliminada.`);
+                                        }}
+                                        style={{
+                                          width: '32px',
+                                          height: '32px',
+                                          borderRadius: '16px',
+                                          border: '1px solid #fecaca',
+                                          backgroundColor: '#fff5f5',
+                                          color: '#dc2626',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          cursor: 'pointer'
+                                        }}
+                                        title={`Eliminar ${subzona}`}
+                                      >
+                                        <TrashIcon />
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {isAddingSubzonaOtros ? (
+                          <div id="addSubzonaOtrosRow" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
+                            <input
+                              type="text"
+                              className={styles.input}
+                              placeholder="Nombre de la subzona (ej: Tira, Manos...)"
+                              value={newSubzonaOtrosName}
+                              onChange={(e) => setNewSubzonaOtrosName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const trimmed = newSubzonaOtrosName.trim();
+                                  if (!trimmed) return;
+                                  const next = [...zonasOtrosList, trimmed];
+                                  setNewSubzonaOtrosName('');
+                                  setIsAddingSubzonaOtros(false);
+                                  handleSaveZonasOtrosList(next, `Subzona "${trimmed}" agregada.`);
+                                }
+                              }}
+                              style={{ flex: '1 1 200px', padding: '0.45rem 0.7rem', fontSize: '0.88rem' }}
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ padding: '0.45rem 0.9rem', fontSize: '0.84rem', height: 'auto' }}
+                              onClick={() => {
+                                const trimmed = newSubzonaOtrosName.trim();
+                                if (!trimmed) return;
+                                const next = [...zonasOtrosList, trimmed];
+                                setNewSubzonaOtrosName('');
+                                setIsAddingSubzonaOtros(false);
+                                handleSaveZonasOtrosList(next, `Subzona "${trimmed}" agregada.`);
+                              }}
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ padding: '0.45rem 0.8rem', fontSize: '0.84rem', height: 'auto' }}
+                              onClick={() => {
+                                setIsAddingSubzonaOtros(false);
+                                setNewSubzonaOtrosName('');
+                              }}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingSubzonaOtros(true);
+                              setNewSubzonaOtrosName('');
+                              setTimeout(() => {
+                                const el = document.getElementById('addSubzonaOtrosRow') || document.getElementById('zonasOtrosSection');
+                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                              }, 80);
+                            }}
+                            style={{
+                              width: '100%',
+                              marginTop: '0.9rem',
+                              padding: '0.55rem 1rem',
+                              borderRadius: '8px',
+                              border: '1.5px solid #7a1f1e',
+                              backgroundColor: '#ffffff',
+                              color: '#7a1f1e',
+                              fontWeight: 800,
+                              fontSize: '0.88rem',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            + Agregar subzona
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                   </div>
                 );
               })()}

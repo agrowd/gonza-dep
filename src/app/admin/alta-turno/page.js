@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './alta-turno.module.css';
 import { calculateTurnDetails } from '@/lib/calculations.js';
 import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
+import { DEFAULT_ZONAS_OTROS, parseZonasOtrosLista } from '@/lib/zonasOtros.js';
 
 const DAYS_OF_WEEK = [
   { id: 1, label: 'Lunes', short: 'Lun' },
@@ -54,6 +55,7 @@ function AltaTurnoContent() {
   const [otrosTexto, setOtrosTexto] = useState('');
   const [otrosList, setOtrosList] = useState([]);
   const [otrosPrecio, setOtrosPrecio] = useState(0);
+  const [zonasOtrosList, setZonasOtrosList] = useState(DEFAULT_ZONAS_OTROS);
 
   // Duration State: automatically calculated, but operator can edit it
   const [customDuration, setCustomDuration] = useState(null);
@@ -192,6 +194,9 @@ function AltaTurnoContent() {
         if (cfg?.alta_turno_work_end) {
           setHoraHasta(cfg.alta_turno_work_end);
         }
+        if (cfg?.zonas_otros_lista) {
+          setZonasOtrosList(parseZonasOtrosLista(cfg.zonas_otros_lista));
+        }
       })
       .catch(err => console.error('Error fetching config:', err));
   }, []);
@@ -253,7 +258,7 @@ function AltaTurnoContent() {
         const pzName = (pz.nombre || pz.name || '').toLowerCase().trim();
         if (pzName.includes('otro')) {
           detectedOtros = true;
-          detectedOtrosTexto = pz.nombre || '';
+          detectedOtrosTexto = (pz.nombre || '').replace(/^Otros:\s*/i, '');
           detectedOtrosPrecio = Number(pz.precio || 0);
           return;
         }
@@ -273,6 +278,8 @@ function AltaTurnoContent() {
       if (detectedOtros) {
         setHasOtros(true);
         setOtrosTexto(detectedOtrosTexto);
+        const list = detectedOtrosTexto ? detectedOtrosTexto.split(/,\s*/).map(s => s.trim()).filter(Boolean) : [];
+        setOtrosList(list.length > 0 ? list : ['']);
         setOtrosPrecio(detectedOtrosPrecio);
       }
       if (lastTurno.duracionMinutos || lastTurno.duracion) {
@@ -795,49 +802,95 @@ function AltaTurnoContent() {
             </div>
           </div>
 
-          {/* Fields for OTROS (D-169: Renglones dinámicos múltiples) */}
+          {/* Fields for OTROS (D-169 / D-177: Renglones dinámicos con selector desplegable) */}
           {hasOtros && (
-            <div className={styles.otrosBox} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#1e293b' }}>
-                Zonas Extra (Otros)
+            <div className={styles.otrosBox} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.85rem 0.95rem', borderRadius: '10px', border: '1px solid #e6ded4', backgroundColor: '#fcfaf7' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#1e293b' }}>
+                  Zonas Extra (Otros)
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  Seleccioná una subzona cargada en configuración.
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                {(otrosList && otrosList.length > 0 ? otrosList : [otrosTexto || '']).map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', minWidth: '95px', flexShrink: 0 }}>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <label className={styles.label} style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>Valor Zonas Extras ($):</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Ej. 15.000"
+                    value={otrosPrecio ? formatMilesInput(otrosPrecio) : ''}
+                    onChange={(e) => {
+                      const clean = cleanMilesInput(e.target.value);
+                      setOtrosPrecio(clean ? parseInt(clean, 10) : 0);
+                    }}
+                    className={styles.textInput}
+                    style={{ width: '160px', padding: '0.35rem 0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', fontSize: '0.88rem', fontWeight: 600 }}
+                  />
+                </div>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Este precio se ingresa manualmente y no está vinculado a las subzonas.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.15rem' }}>
+                {(otrosList && otrosList.length > 0 ? otrosList : (otrosTexto ? otrosTexto.split(/,\s*/) : [''])).map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', minWidth: '95px', flexShrink: 0 }}>
                       Zona Extra {idx + 1}
                     </span>
-                    <input
-                      type="text"
-                      placeholder="Ej. Media Pierna, Nuca..."
+                    <select
                       value={item}
                       onChange={(e) => {
-                        const currentList = otrosList && otrosList.length > 0 ? [...otrosList] : [otrosTexto || ''];
-                        currentList[idx] = e.target.value;
-                        const joined = currentList.map(s => s.trim()).filter(Boolean).join(', ');
-                        setOtrosList(currentList);
+                        const baseList = otrosList && otrosList.length > 0 ? [...otrosList] : (otrosTexto ? otrosTexto.split(/,\s*/) : ['']);
+                        baseList[idx] = e.target.value;
+                        const joined = baseList.map(s => s.trim()).filter(Boolean).join(', ');
+                        setOtrosList(baseList);
                         setOtrosTexto(joined);
                       }}
                       className={styles.textInput}
-                      style={{ flex: 1 }}
-                    />
+                      style={{ flex: 1, padding: '0.42rem 0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      <option value="">Seleccionar subzona...</option>
+                      {Boolean(item && !zonasOtrosList.includes(item)) && (
+                        <option value={item}>{item}</option>
+                      )}
+                      {zonasOtrosList.map((sz, sIdx) => (
+                        <option key={`${sz}-${sIdx}`} value={sz}>{sz}</option>
+                      ))}
+                    </select>
                     <button
                       type="button"
                       onClick={() => {
-                        const currentList = otrosList && otrosList.length > 0 ? [...otrosList] : [otrosTexto || ''];
-                        currentList.splice(idx, 1);
-                        const joined = currentList.map(s => s.trim()).filter(Boolean).join(', ');
-                        if (currentList.length === 0) {
+                        const baseList = otrosList && otrosList.length > 0 ? [...otrosList] : (otrosTexto ? otrosTexto.split(/,\s*/) : ['']);
+                        baseList.splice(idx, 1);
+                        const joined = baseList.map(s => s.trim()).filter(Boolean).join(', ');
+                        if (baseList.length === 0) {
                           setHasOtros(false);
                           setOtrosList([]);
                           setOtrosTexto('');
                           setOtrosPrecio(0);
                         } else {
-                          setOtrosList(currentList);
+                          setOtrosList(baseList);
                           setOtrosTexto(joined);
                         }
                       }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.2rem' }}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '16px',
+                        border: '1px solid #fecaca',
+                        backgroundColor: '#fff5f5',
+                        color: '#dc2626',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        flexShrink: 0
+                      }}
                       title="Eliminar esta zona extra"
                     >
                       🗑️
@@ -849,20 +902,20 @@ function AltaTurnoContent() {
               <button
                 type="button"
                 onClick={() => {
-                  const currentList = otrosList && otrosList.length > 0 ? [...otrosList] : [otrosTexto || ''];
+                  const currentList = otrosList && otrosList.length > 0 ? [...otrosList] : (otrosTexto ? otrosTexto.split(/,\s*/) : ['']);
                   currentList.push('');
                   setOtrosList(currentList);
                 }}
                 style={{
                   width: '100%',
-                  marginTop: '0.35rem',
+                  marginTop: '0.25rem',
                   padding: '0.45rem',
-                  borderRadius: '6px',
-                  border: '1px solid #7a1f1e',
+                  borderRadius: '8px',
+                  border: '1.5px solid #7a1f1e',
                   backgroundColor: '#ffffff',
                   color: '#7a1f1e',
                   fontWeight: 700,
-                  fontSize: '0.82rem',
+                  fontSize: '0.84rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -872,23 +925,6 @@ function AltaTurnoContent() {
               >
                 + Agregar otra zona
               </button>
-
-              <div className={styles.formRow} style={{ marginTop: '0.35rem', marginBottom: 0, gap: '12px' }}>
-                <div className={styles.formGroup} style={{ flex: 1 }}>
-                  <label className={styles.label}>Valor Zonas Extras ($):</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Ej. 15.000"
-                    value={otrosPrecio ? formatMilesInput(otrosPrecio) : ''}
-                    onChange={(e) => {
-                      const clean = cleanMilesInput(e.target.value);
-                      setOtrosPrecio(clean ? parseInt(clean, 10) : 0);
-                    }}
-                    className={styles.textInput}
-                  />
-                </div>
-              </div>
             </div>
           )}
 

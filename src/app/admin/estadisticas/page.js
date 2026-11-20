@@ -1478,59 +1478,120 @@ export default function EstadisticasPage() {
 
   return (
     <div className={styles.container}>
-      {/* HEADER + FILTRO DE FECHAS LIMPIO */}
+      {/* HEADER LIMPIO */}
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <h2>Centro de Estadísticas</h2>
           <p>Análisis de turnos, ingresos reales, seguimiento de clientes e informes exportables</p>
         </div>
+      </div>
 
-        <div className={styles.controls}>
-          {selectedMetric === 'consolidado_mensual' ? (
-            <div className={styles.dateInputsRow}>
-              <div className={styles.dateInputGroup} style={{ minWidth: '220px' }}>
-                <label>Mes del Informe</label>
-                <input
-                  type="month"
-                  className={styles.dateInput}
-                  value={selectedConsolidadoMonth}
-                  onChange={(e) => setSelectedConsolidadoMonth(e.target.value)}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className={styles.dateInputsRow}>
-              <div className={styles.dateInputGroup}>
-                <label>Desde</label>
-                <input
-                  type="date"
-                  className={styles.dateInput}
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
+      {/* SELECTOR DE MÉTRICA -> RANGO DE FECHAS -> BOTONES DE INFORME (D-177) */}
+      <div className={styles.metricSelectorCard} style={{ marginBottom: '1.25rem' }}>
+        <div className={styles.metricSelectorHeader}>
+          <label>🔎 Seleccionar Métrica a Analizar:</label>
+          <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
+            {currentMetricDef.description}
+          </span>
+        </div>
 
-              <div className={styles.dateInputGroup}>
-                <label>Hasta</label>
-                <input
-                  type="date"
-                  className={styles.dateInput}
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+        <div className={styles.metricSelectorRow} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.85rem' }}>
+          <select
+            className={styles.metricDropdown}
+            style={{ width: '100%' }}
+            value={selectedMetric}
+            onChange={(e) => handleMetricChange(e.target.value)}
+          >
+            {METRIC_DEFINITIONS.map(m => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+
+          {/* RANGO DE FECHA DESPUÉS DE SELECCIÓN DE MÉTRICA Y ANTES DEL INFORME */}
+          <div className={styles.controls} style={{ width: '100%', justifyContent: 'space-between' }}>
+            {selectedMetric === 'consolidado_mensual' ? (
+              <div className={styles.dateInputsRow} style={{ flex: 1 }}>
+                <div className={styles.dateInputGroup} style={{ minWidth: '220px', flex: 1 }}>
+                  <label>Mes del Informe</label>
+                  <input
+                    type="month"
+                    className={styles.dateInput}
+                    value={selectedConsolidadoMonth}
+                    onChange={(e) => setSelectedConsolidadoMonth(e.target.value)}
+                  />
+                </div>
               </div>
+            ) : (
+              <div className={styles.dateInputsRow} style={{ flex: 1 }}>
+                <div className={styles.dateInputGroup} style={{ flex: 1 }}>
+                  <label>Desde</label>
+                  <input
+                    type="date"
+                    className={styles.dateInput}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.dateInputGroup} style={{ flex: 1 }}>
+                  <label>Hasta</label>
+                  <input
+                    type="date"
+                    className={styles.dateInput}
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className={styles.btnRefresh}
+              onClick={fetchEstadisticas}
+              title="Recargar datos actualizados en vivo"
+              disabled={loading}
+            >
+              {loading ? '⏳ Actualizando...' : '🔄 Actualizar'}
+            </button>
+          </div>
+
+          {!loading && data && (
+            <div className={styles.actionButtonsGroup}>
+              {selectedMetric === 'consolidado_mensual' ? (
+                <button
+                  type="button"
+                  className={styles.btnExcel}
+                  style={{ backgroundColor: '#7a1f1e', color: '#ffffff', border: 'none' }}
+                  onClick={() => router.push(`/admin/estadisticas/informe-mensual?mes=${selectedConsolidadoMonth}`)}
+                >
+                  📄 Imprimir / Descargar Informe PDF (2 Páginas)
+                </button>
+              ) : (
+                <>
+                  {currentMetricDef.excelModel && (
+                    <button
+                      type="button"
+                      className={styles.btnExcel}
+                      onClick={() => setExcelModalOpen(true)}
+                    >
+                      📊 Ver / Descargar Informe Excel
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className={styles.btnExpandList}
+                    onClick={() => setExpandedListModalOpen(true)}
+                  >
+                    🔍 Ampliar Listado en Ventana
+                  </button>
+                </>
+              )}
             </div>
           )}
-
-          <button
-            type="button"
-            className={styles.btnRefresh}
-            onClick={fetchEstadisticas}
-            title="Recargar datos actualizados en vivo"
-            disabled={loading}
-          >
-            {loading ? '⏳ Actualizando...' : '🔄 Actualizar'}
-          </button>
         </div>
       </div>
 
@@ -1545,62 +1606,6 @@ export default function EstadisticasPage() {
         </div>
       ) : (
         <>
-          {/* SELECTOR DE MÉTRICA DIRECTAMENTE DEBAJO DE LAS FECHAS */}
-          <div className={styles.metricSelectorCard}>
-            <div className={styles.metricSelectorHeader}>
-              <label>🔎 Seleccionar Métrica a Analizar:</label>
-              <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
-                {currentMetricDef.description}
-              </span>
-            </div>
-
-            <div className={styles.metricSelectorRow}>
-              <select
-                className={styles.metricDropdown}
-                value={selectedMetric}
-                onChange={(e) => handleMetricChange(e.target.value)}
-              >
-                {METRIC_DEFINITIONS.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-
-              <div className={styles.actionButtonsGroup}>
-                {selectedMetric === 'consolidado_mensual' ? (
-                  <button
-                    type="button"
-                    className={styles.btnExcel}
-                    style={{ backgroundColor: '#7a1f1e', color: '#ffffff', border: 'none' }}
-                    onClick={() => router.push(`/admin/estadisticas/informe-mensual?mes=${selectedConsolidadoMonth}`)}
-                  >
-                    📄 Imprimir / Descargar Informe PDF (2 Páginas)
-                  </button>
-                ) : (
-                  <>
-                    {currentMetricDef.excelModel && (
-                      <button
-                        type="button"
-                        className={styles.btnExcel}
-                        onClick={() => setExcelModalOpen(true)}
-                      >
-                        📊 Ver / Descargar Informe Excel
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      className={styles.btnExpandList}
-                      onClick={() => setExpandedListModalOpen(true)}
-                    >
-                      🔍 Ampliar Listado en Ventana
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
 
 {selectedMetric === 'consolidado_mensual' ? renderConsolidadoMensualView() : (
             <>

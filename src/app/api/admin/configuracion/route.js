@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
+import { DEFAULT_ZONAS_OTROS } from '@/lib/zonasOtros.js';
 
 // GET: Fetch all configs
 export async function GET() {
@@ -62,7 +63,8 @@ export async function GET() {
       recordatorio_horas: configs.recordatorio_horas || "48",
       mensaje_previo_dias: configs.mensaje_previo_dias || "7",
       duracion_formula: configs.duracion_formula || "ZONA_MAX_MAS_TERCIO",
-      canales_adquisicion: configs.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"])
+      canales_adquisicion: configs.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"]),
+      zonas_otros_lista: configs.zonas_otros_lista || JSON.stringify(DEFAULT_ZONAS_OTROS)
     };
 
     return NextResponse.json(fullConfigs);

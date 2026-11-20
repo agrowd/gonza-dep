@@ -3083,3 +3083,19 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
     - `/admin/agenda` (Total de Venta, Seña Recibida, Valor Zonas Extras `Otros`, Valor Descuento en Nuevo Turno y Editar Turno, Monto Efectivo, Monto Transferencia y Dinero a Favor en ficha del turno).
     - `/admin/alta-turno` (Valor Zonas Extras `Otros`).
     - `/admin/configuracion` (Precio Base y Seña 50% en edición inline y modal de Zonas, Valor de Descuento en Promociones, Valor de Descuento y Límite de Usos en Cupones, y Valor de Comisión en Usuarios/Operadores).
+
+
+
+## Sesión 20/11/2026 - Catálogo "Zonas Otros" en Configuración, Selector Desplegable en Zonas Extra (Otros) con Preservación de Textos Previos, Limpieza Visual en Servicios y Reubicación de Fechas en Estadísticas (D-177)
+
+### Requerimientos Implementados
+1. **Limpieza en `/admin/configuracion` -> Servicios y Zonas**:
+   - Eliminados el botón superior `+ Agregar Zona`, el badge `⭐ Servicio Principal`, el tilde duplicado en `Habilitado en Autogestión` y el cartel azul `🌐 Fuente Única de Verdad`.
+2. **Apartado `⚙️ Zonas Otros` en Depilación Láser**:
+   - Creado `src/lib/zonasOtros.js` (`DEFAULT_ZONAS_OTROS`: `Pies`, `Cuello`, `1/2 Brazo`, `1/2 Pierna`, `Cintura`, `Nuca`, `Ingle`, `Hombros`, `Laterales`) y clave `zonas_otros_lista` en `/api/admin/configuracion`.
+   - En `/admin/configuracion` (al pie de las zonas de Depilación Láser), agregada la tarjeta `⚙️ Zonas Otros` con ABM completo (`+ Agregar subzona`, edición `✏️` y eliminación `🗑️`), 100% invisible en Autogestión.
+3. **Selector Desplegable en `Zonas Extra (Otros)` con Preservación de Textos Históricos**:
+   - En `/admin/agenda` (Nuevo Turno y Editar Turno) y `/admin/alta-turno`, cada `Zona Extra N` usa un `<select>` con las subzonas configuradas.
+   - Si un turno ya tiene texto escrito en `Otros` que no coincide con la lista configurada, se mantiene como `<option value={item}>{item}</option>` seleccionado en su casilla para no perder ni sobrescribir ningún dato existente.
+4. **Rango de Fecha en `/admin/estadisticas`**:
+   - Reubicado el bloque de fechas (`Desde` / `Hasta` + `🔄 Actualizar`) después del selector de métrica y antes de los botones `📊 Ver / Descargar Informe Excel` y `🔍 Ampliar Listado en Ventana`.
