@@ -3129,3 +3129,29 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - Actualizadas las reglas inyectadas de `.sessionBadge` y `.pdfCaptureA4 .sessionBadge` para mantener el mismo diseño outlined institucional en descargas PDF directas.
 3. **Verificación**:
    - `npm run build` ejecutado localmente con éxito (50/50 páginas estáticas, 0 errores).
+
+---
+
+## Sesión 20/11/2026 (Parte 3) - Fix de Bloqueo/Freeze de UI en iPhone y Selector Completo de 7 Días en Horarios Laborales (D-179)
+
+### Requerimientos de Gonzalo
+1. **Audio de Gonzalo (Freeze en iPhone)**:
+   - *"Cuando yo estoy en la ficha de una persona y quiero entrar a editar la ficha o quiero editar para entrar para ver los turnos que tiene y regreso, el sistema queda bloqueado, o sea no puedo hacer nada, tengo que cerrarlo y volver a entrar... pasa solamente con el iPhone... a Luciano no le sucede"*.
+2. **Foto de Gonzalo (`media_1795207277838_a5012889.jpg`)**:
+   - En *Configuración → Horarios Laborales*: *"El horario laborales me tiene que poder permitir habilitar o deshabilitar cualquiera de los siete días de la semana. No se ven los días, solamente hay un rango horario"*.
+
+### Implementación Realizada
+1. **Solución Definitiva al Bloqueo en iPhone / WebKit (`src/lib/scrollLock.js`)**:
+   - Se analizó a fondo el comportamiento de iOS Safari: WebKit congela los touch events y el compositor de scroll cuando `document.body.style.position = 'fixed'` sufre mutaciones rápidas o cuando una página se restaura desde el BFCache de Safari (swipe back o navegación hacia atrás).
+   - Se creó `safeLockBodyScroll()` y `safeUnlockBodyScroll()` en `src/lib/scrollLock.js`, forzando el reflow (`void document.body.offsetHeight`) para restablecer el touch hit-testing en WebKit.
+   - En `src/app/admin/agenda/page.js`: se refactorizó el efecto de bloqueo con `isScrollLockedRef` para activarlo solo una vez y no ciclar destructivamente al pasar a modo edición (`isEditing`) o cerrar sub-modales.
+   - Se añadió un listener de `pageshow` y desmontaje para desbloquear incondicionalmente el body si la página es restaurada desde BFCache.
+   - Antes de navegar a `/admin/clientes` o `/admin/alta-turno`, se invoca `safeUnlockBodyScroll()`.
+   - En `src/app/admin/clientes/page.js`: se añadió `safeUnlockBodyScroll()` antes de navegar a la agenda (`handleGoToTurnoInAgenda` y `handleCloseProfile`).
+   - Se eliminó el parámetro `turnoIdParam` al cerrar la ficha hacia la agenda, evitando bucles donde la agenda volvía a forzar la apertura del modal del turno cerrado.
+2. **Selector de 7 Días de la Semana en Horarios Laborales (`work_days`)**:
+   - En `src/app/api/admin/configuracion/route.js`: se agregó `work_days` a la configuración global con valor por defecto `"1,2,3,4,5,6"`.
+   - En `src/app/admin/configuracion/page.js` (`activeTab === 'hours'`): se añadió el bloque **🗓️ Días Laborales de Atención (Semana)** con los 7 días de la semana (`Lunes`, `Martes`, `Miércoles`, `Jueves`, `Viernes`, `Sábado`, `Domingo`) en botones interactivos con indicador de selección (`✓` / `○`) y atajos rápidos (*Lun a Sáb*, *Toda la semana*, *Lun a Vie*).
+   - En `src/app/admin/agenda/page.js`: la grilla semanal y mensual ahora leen dinámicamente `config.work_days`, generando exactamente las columnas de los días habilitados y ajustando `gridTemplateColumns: 80px repeat(${weekDates.length}, 1fr)`, permitiendo habilitar Domingo o deshabilitar cualquier día sin romper la grilla.
+3. **Verificación**:
+   - `npm run build` ejecutado localmente con éxito (50/50 páginas estáticas, 0 errores).

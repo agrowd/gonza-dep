@@ -29,6 +29,7 @@ export async function GET() {
       address: configs.address || "Paraná 597, piso 8, depto 48",
       work_start: configs.work_start || "12:30",
       work_end: configs.work_end || "22:00",
+      work_days: configs.work_days || "1,2,3,4,5,6",
       alta_turno_work_start: configs.alta_turno_work_start || "15:00",
       alta_turno_work_end: configs.alta_turno_work_end || "22:00",
       booking_work_start: configs.booking_work_start || "15:00",

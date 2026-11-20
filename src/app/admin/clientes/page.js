@@ -6,6 +6,7 @@ import styles from './clientes.module.css';
 import agendaStyles from '../agenda/agenda.module.css';
 import PhoneInput from '@/components/PhoneInput.js';
 import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
+import { safeUnlockBodyScroll } from '@/lib/scrollLock.js';
 
 // Timezone-safe date helpers
 const formatLocalDate = (dateInput) => {
@@ -467,6 +468,7 @@ function ClientesPageContent() {
   // Bidirectional navigation: Open appointment in Agenda
   const handleGoToTurnoInAgenda = (turno) => {
     if (!turno) return;
+    safeUnlockBodyScroll();
     const dateStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : new Date(turno.fecha).toISOString().split('T')[0];
     router.push(`/admin/agenda?date=${dateStr}&view=day&turnoId=${turno.id}&fromClient=${selectedClient?.id || ''}`);
   };
@@ -840,12 +842,12 @@ function ClientesPageContent() {
 
   // Handle modal close
   const handleCloseProfile = () => {
+    safeUnlockBodyScroll();
     setIsProfileOpen(false);
     if (fromPage === 'agenda' || currentUserRole === 'OPERADOR') {
       const params = [];
       if (dateParam) params.push(`date=${dateParam}`);
       if (viewParam) params.push(`view=${viewParam}`);
-      if (turnoIdParam) params.push(`turnoId=${turnoIdParam}`);
       params.push('fromAgendaReturn=true');
       const queryStr = params.length > 0 ? `?${params.join('&')}` : '';
       router.push(`/admin/agenda${queryStr}`);
@@ -853,6 +855,18 @@ function ClientesPageContent() {
       router.push('/admin/clientes');
     }
   };
+
+  // Safe WebKit BFCache and unmount cleanup to prevent iOS freeze
+  useEffect(() => {
+    const handlePageShow = () => {
+      safeUnlockBodyScroll();
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      safeUnlockBodyScroll();
+    };
+  }, []);
 
   // Handle client status toggle (ACTIVO <-> FINALIZADO)
   const handleToggleEstado = async (newEstado) => {

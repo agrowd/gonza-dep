@@ -8,6 +8,7 @@ import PhoneInput from '@/components/PhoneInput.js';
 import { formatDisplayPhone, parsePhoneCountryAndNumber, buildFullPhone } from '@/lib/countryCodes.js';
 import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
 import { DEFAULT_ZONAS_OTROS, parseZonasOtrosLista } from '@/lib/zonasOtros.js';
+import { safeUnlockBodyScroll, safeLockBodyScroll } from '@/lib/scrollLock.js';
 
 // Timezone-safe YYYY-MM-DD formatter (avoids UTC offset shifts)
 const toYYYYMMDD = (dateInput) => {
@@ -97,8 +98,8 @@ function getStartOfWeek(date) {
   return start;
 }
 
-// Helper: Generate Mon-Sat dates for month calendar (excl. Sunday)
-function getMonthGridDates(selectedDate) {
+// Helper: Generate dates for month calendar based on allowed working days
+function getMonthGridDates(selectedDate, allowedDayNums = [1, 2, 3, 4, 5, 6]) {
   if (!selectedDate) return [];
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
@@ -112,12 +113,15 @@ function getMonthGridDates(selectedDate) {
   const dates = [];
   const temp = new Date(start);
   
-  // 6 weeks * 6 days/week = 36 days.
-  for (let i = 0; i < 36; i++) {
-    if (temp.getDay() === 0) {
-      temp.setDate(temp.getDate() + 1); // skip Sunday
+  const activeDays = (Array.isArray(allowedDayNums) && allowedDayNums.length > 0) ? allowedDayNums : [1, 2, 3, 4, 5, 6];
+  const totalDays = 6 * activeDays.length;
+
+  while (dates.length < totalDays) {
+    const jsDay = temp.getDay(); // 0 = Dom, 1 = Lun ... 6 = Sab
+    const mappedDay = jsDay === 0 ? 7 : jsDay;
+    if (activeDays.includes(mappedDay)) {
+      dates.push(new Date(temp));
     }
-    dates.push(new Date(temp));
     temp.setDate(temp.getDate() + 1);
   }
   return dates;
@@ -362,6 +366,7 @@ export default function AgendaPage() {
   const [config, setConfig] = useState({
     work_start: '12:30',
     work_end: '22:00',
+    work_days: '1,2,3,4,5,6',
     alta_turno_work_start: '15:00',
     alta_turno_work_end: '22:00'
   });
@@ -1831,6 +1836,7 @@ export default function AgendaPage() {
           setConfig({
             work_start: data.work_start || '12:30',
             work_end: data.work_end || '22:00',
+            work_days: data.work_days || '1,2,3,4,5,6',
             alta_turno_work_start: data.alta_turno_work_start || '15:00',
             alta_turno_work_end: data.alta_turno_work_end || '22:00'
           });
@@ -1908,17 +1914,26 @@ export default function AgendaPage() {
     }
   }, [isNewOpen]);
 
-  // 2. Generate the 6 dates of the week (Mon to Sat) when currentWeekStart changes
+  // 2. Generate the dates of the week based on configured work_days when currentWeekStart changes
   useEffect(() => {
     if (!currentWeekStart) return;
+    const allowedDays = (config.work_days || '1,2,3,4,5,6')
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n) && n >= 1 && n <= 7);
+
+    const effectiveDays = allowedDays.length > 0 ? allowedDays : [1, 2, 3, 4, 5, 6];
+    effectiveDays.sort((a, b) => a - b);
+
     const dates = [];
-    for (let i = 0; i < 6; i++) {
+    for (const dayNum of effectiveDays) {
+      const offset = dayNum - 1; // 0 for Lun, 1 for Mar, ..., 6 for Dom
       const d = new Date(currentWeekStart);
-      d.setDate(currentWeekStart.getDate() + i);
+      d.setDate(currentWeekStart.getDate() + offset);
       dates.push(d);
     }
     setWeekDates(dates);
-  }, [currentWeekStart]);
+  }, [currentWeekStart, config.work_days]);
 
   // 3. Fetch appointments robustly (calculates date boundaries directly to avoid initial render race conditions)
   const fetchAppointments = useCallback((silent = false) => {
@@ -2028,8 +2043,10 @@ export default function AgendaPage() {
     return () => clearInterval(syncInterval);
   }, [isDetailsOpen, isEditing, isNewOpen, isBlockModalOpen, cancelModalTurno, resendEmailModalTurno, resendWppModalTurno, fetchAppointments]);
 
-  // Congelamiento estricto del scroll de página en iPhone/WebKit al abrir cualquier modal
-  // Evita el bug de desfase de hit-testing de 50px de Safari al colapsar la barra de navegación
+  // Congelamiento seguro del scroll en iPhone/WebKit al abrir cualquier modal
+  // Previene el congelamiento de touch events y evita el ciclo destructivo de position:fixed entre sub-modales
+  const isScrollLockedRef = useRef(false);
+
   useEffect(() => {
     const isAnyModalOpen = Boolean(
       isDetailsOpen ||
@@ -2043,25 +2060,31 @@ export default function AgendaPage() {
     if (typeof window === 'undefined') return;
 
     if (isAnyModalOpen) {
-      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-
-      return () => {
-        const top = document.body.style.top;
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.overflow = '';
-        if (top) {
-          const restoreY = Math.abs(parseInt(top, 10)) || 0;
-          window.scrollTo(0, restoreY);
-        }
-      };
+      if (!isScrollLockedRef.current) {
+        safeLockBodyScroll();
+        isScrollLockedRef.current = true;
+      }
+    } else {
+      if (isScrollLockedRef.current) {
+        safeUnlockBodyScroll();
+        isScrollLockedRef.current = false;
+      }
     }
   }, [isDetailsOpen, isEditing, isNewOpen, isBlockModalOpen, cancelModalTurno, resendEmailModalTurno, resendWppModalTurno]);
+
+  // Limpieza incondicional ante restauración por BFCache de Safari (pageshow) y al desmontar componente
+  useEffect(() => {
+    const handlePageShow = () => {
+      safeUnlockBodyScroll();
+      isScrollLockedRef.current = false;
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      safeUnlockBodyScroll();
+      isScrollLockedRef.current = false;
+    };
+  }, []);
 
   // 4. Fetch zones and promotions for the appointment modals
   useEffect(() => {
@@ -2557,6 +2580,7 @@ export default function AgendaPage() {
       metodoPago: turno.metodoPago || 'TRANSFERENCIA'
     });
 
+    safeUnlockBodyScroll();
     window.location.href = `/admin/alta-turno?${params.toString()}`;
   };
 
@@ -2603,6 +2627,7 @@ export default function AgendaPage() {
       otrosPrecio: (otrosPrecio || 0).toString()
     });
 
+    safeUnlockBodyScroll();
     window.location.href = `/admin/alta-turno?${params.toString()}`;
   };
 
@@ -3218,6 +3243,7 @@ export default function AgendaPage() {
     if (selectedTurno && ((selectedTurno.clienteId && tempClientObservaciones !== (selectedTurno.cliente?.observaciones || '')) || (tempClientNotasGonzalo || '').trim() !== (selectedTurno.notasGonzalo || '').trim())) {
       handleSaveClientObservaciones(true).catch(e => console.error('Error auto-saving client obs:', e));
     }
+    safeUnlockBodyScroll();
     setIsDetailsOpen(false);
     setIsEditing(false);
     setSelectedTurno(null);
@@ -3225,9 +3251,12 @@ export default function AgendaPage() {
     setTempClientObservaciones('');
     setTempTurnoObservaciones('');
     if (fromStats) {
+      setFromStats(false);
       router.push('/admin/estadisticas');
     } else if (fromClientId) {
-      router.push(`/admin/clientes?id=${fromClientId}`);
+      const targetClientId = fromClientId;
+      setFromClientId(null);
+      router.push(`/admin/clientes?id=${targetClientId}`);
     }
   };
 
@@ -3663,21 +3692,27 @@ export default function AgendaPage() {
         className={`${styles.calendarContainer} ${viewMode === 'day' ? styles.calendarContainerDayView : ''}`} 
         style={viewMode === 'month' ? { height: 'auto', minHeight: 'auto', overflowX: 'visible' } : {}}
       >
-        {viewMode === 'month' ? (
-          <>
-            {/* Month Header */}
-            <div className={styles.monthGridHeader}>
-              <div className={styles.monthHeaderCell}>Lun</div>
-              <div className={styles.monthHeaderCell}>Mar</div>
-              <div className={styles.monthHeaderCell}>Mié</div>
-              <div className={styles.monthHeaderCell}>Jue</div>
-              <div className={styles.monthHeaderCell}>Vie</div>
-              <div className={styles.monthHeaderCell}>Sáb</div>
-            </div>
-            
-            {/* Month Body Grid */}
-            <div className={styles.monthGrid}>
-              {getMonthGridDates(selectedDate).map((date, idx) => {
+        {viewMode === 'month' ? (() => {
+          const activeMonthDayNums = (config.work_days || '1,2,3,4,5,6')
+            .split(',')
+            .map(s => parseInt(s.trim(), 10))
+            .filter(n => !isNaN(n) && n >= 1 && n <= 7);
+          const effectiveMonthDays = activeMonthDayNums.length > 0 ? activeMonthDayNums : [1, 2, 3, 4, 5, 6];
+          effectiveMonthDays.sort((a, b) => a - b);
+          const dayLabelsMap = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom' };
+
+          return (
+            <>
+              {/* Month Header */}
+              <div className={styles.monthGridHeader} style={{ gridTemplateColumns: `repeat(${effectiveMonthDays.length}, 1fr)` }}>
+                {effectiveMonthDays.map(num => (
+                  <div key={num} className={styles.monthHeaderCell}>{dayLabelsMap[num]}</div>
+                ))}
+              </div>
+              
+              {/* Month Body Grid */}
+              <div className={styles.monthGrid} style={{ gridTemplateColumns: `repeat(${effectiveMonthDays.length}, 1fr)` }}>
+                {getMonthGridDates(selectedDate, effectiveMonthDays).map((date, idx) => {
                 const dateStr = toYYYYMMDD(date);
                 const isToday = new Date().toDateString() === date.toDateString();
                 const isOutsideMonth = date.getMonth() !== selectedDate.getMonth();
@@ -3797,7 +3832,7 @@ export default function AgendaPage() {
               })}
             </div>
           </>
-        ) : viewMode === 'day' ? (
+        ); })() : viewMode === 'day' ? (
           /* VISTA DIARIA ESTILO NEOCITA */
           <div className={styles.neocitaDayContainer}>
             {(() => {
@@ -4441,7 +4476,13 @@ export default function AgendaPage() {
           /* VISTA SEMANAL */
           <>
             {/* Days Header */}
-            <div className={styles.gridHeader} style={{ minWidth: '800px' }}>
+            <div
+              className={styles.gridHeader}
+              style={{
+                minWidth: `${Math.max(800, 80 + weekDates.length * 120)}px`,
+                gridTemplateColumns: `80px repeat(${weekDates.length || 6}, 1fr)`
+              }}
+            >
               <div className={`${styles.headerCell} ${styles.timeColHeader}`}>Hora</div>
               {weekDates.map((date, index) => {
                 const isToday = new Date().toDateString() === date.toDateString();
@@ -4456,7 +4497,14 @@ export default function AgendaPage() {
             </div>
 
             {/* Scrollable Timeline body */}
-            <div ref={gridBodyRef} className={styles.gridBody} style={{ minWidth: '800px' }}>
+            <div
+              ref={gridBodyRef}
+              className={styles.gridBody}
+              style={{
+                minWidth: `${Math.max(800, 80 + weekDates.length * 120)}px`,
+                gridTemplateColumns: `80px repeat(${weekDates.length || 6}, 1fr)`
+              }}
+            >
               {/* Time Column */}
               <div className={styles.timeColumn}>
                 {timeLabels.map((time, idx) => (
@@ -6751,6 +6799,7 @@ export default function AgendaPage() {
                             await handleSaveClientObservaciones(true);
                           }
                           captureAgendaScroll(selectedTurno.id);
+                          safeUnlockBodyScroll();
                           const dateStr = selectedDate ? toYYYYMMDD(selectedDate) : '';
                           window.location.href = `/admin/clientes?id=${selectedTurno.clienteId}&from=agenda&date=${dateStr}&view=${viewMode}&turnoId=${selectedTurno.id}`;
                         }}

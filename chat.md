@@ -2283,3 +2283,22 @@
     - Reemplazado el fondo sólido `#5c1817` por un contenedor con fondo transparente/blanco, borde fino `1.5px solid #7a1f1e`, número en color `#7a1f1e` y esquinas suavemente redondeadas (`4px`).
     - Aplicado en vista web, exportación A4 PDF y reglas `@media print`.
     - Compilación local validada con 50/50 páginas estáticas sin errores.
+
+---
+
+### Implementación D-179 — Fix de Bloqueo/Freeze de UI en iPhone y Selector Completo de 7 Días en Horarios Laborales (2026-11-20 18:25)
+- **Audio de Gonzalo (Freeze en iPhone)**:
+  - *"Cuando yo estoy en la ficha de una persona y quiero entrar a editar la ficha o quiero editar para entrar para ver los turnos que tiene y regreso, el sistema queda bloqueado, o sea no puedo hacer nada, tengo que cerrarlo y volver a entrar... pasa solamente con el iPhone... a Luciano no le sucede"*.
+- **Foto de Gonzalo (`media_1795207277838_a5012889.jpg`)**:
+  - *"El horario laborales me tiene que poder permitir habilitar o deshabilitar cualquiera de los siete días de la semana. No se ven los días, solamente hay un rango horario"*.
+- **Solución Realizada**:
+  1. **Fix Bloqueo en iPhone (`src/lib/scrollLock.js`, `/admin/agenda`, `/admin/clientes`)**:
+     - Creado `src/lib/scrollLock.js` con `safeLockBodyScroll()` y `safeUnlockBodyScroll()` (con forzado de reflow en WebKit).
+     - En `agenda/page.js`: refactorizado el scroll lock con `isScrollLockedRef` para evitar toggles rápidos al entrar/salir de edición (`isEditing`). Añadidos listeners de `pageshow` para recuperar el estado si Safari restaura la vista desde BFCache. Desbloqueo de scroll antes de navegar con `window.location.href`.
+     - En `clientes/page.js`: agregado `safeUnlockBodyScroll()` antes de navegar a agenda (`handleGoToTurnoInAgenda` y `handleCloseProfile`). Eliminado el parámetro cíclico `turnoId` al cerrar la ficha para no volver a disparar el modal en la agenda.
+  2. **Selector 7 Días en Horarios Laborales (`work_days`)**:
+     - En `/api/admin/configuracion`: agregado `work_days` con fallback `"1,2,3,4,5,6"`.
+     - En `/admin/configuracion` (pestaña Horarios): agregado el bloque **🗓️ Días Laborales de Atención (Semana)** con los 7 días seleccionables interactivamente y atajos rápidos (*Lun a Sáb*, *Toda la semana*, *Lun a Vie*).
+     - En `/admin/agenda`: grilla semanal y mensual ahora leen `config.work_days` para generar dinámicamente las columnas (`grid-template-columns: 80px repeat(${weekDates.length}, 1fr)`).
+  3. **Compilación**:
+     - `npm run build` verificado exitosamente (50/50 páginas estáticas, 0 errores).

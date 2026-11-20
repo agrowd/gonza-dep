@@ -19,6 +19,16 @@ const SettingsIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
 );
 
+const DAYS_OF_WEEK = [
+  { id: '1', label: 'Lunes', short: 'Lun' },
+  { id: '2', label: 'Martes', short: 'Mar' },
+  { id: '3', label: 'Miércoles', short: 'Mié' },
+  { id: '4', label: 'Jueves', short: 'Jue' },
+  { id: '5', label: 'Viernes', short: 'Vie' },
+  { id: '6', label: 'Sábado', short: 'Sáb' },
+  { id: '7', label: 'Domingo', short: 'Dom' }
+];
+
 export default function ConfiguracionPage() {
   const [activeTab, setActiveTab] = useState('zones'); // 'zones', 'hours', 'templates'
   const usersSectionRef = useRef(null);
@@ -69,6 +79,7 @@ export default function ConfiguracionPage() {
     address: '',
     work_start: '12:30',
     work_end: '22:00',
+    work_days: '1,2,3,4,5,6',
     alta_turno_work_start: '15:00',
     alta_turno_work_end: '22:00',
     booking_work_start: '15:00',
@@ -534,6 +545,7 @@ export default function ConfiguracionPage() {
             address: data.address || '',
             work_start: data.work_start || '12:30',
             work_end: data.work_end || '22:00',
+            work_days: data.work_days || '1,2,3,4,5,6',
             alta_turno_work_start: data.alta_turno_work_start || '15:00',
             alta_turno_work_end: data.alta_turno_work_end || '22:00',
             booking_work_start: data.booking_work_start || '15:00',
@@ -2451,6 +2463,84 @@ export default function ConfiguracionPage() {
             <div style={{ color: 'var(--color-gold)' }}>Cargando configuraciones...</div>
           ) : (
             <form onSubmit={handleSaveConfigs} className={styles.form}>
+              {/* DÍAS LABORALES DE ATENCIÓN (7 DÍAS DE LA SEMANA) */}
+              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.35rem' }}>
+                🗓️ Días Laborales de Atención (Semana)
+              </div>
+              <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '0.85rem', lineHeight: '1.4' }}>
+                Habilitá o deshabilitá cualquiera de los 7 días de la semana. Los días activos definen las columnas de la agenda semanal y la atención del centro.
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.65rem' }}>
+                {DAYS_OF_WEEK.map(d => {
+                  const selectedDays = (configs.work_days || '1,2,3,4,5,6').split(',').map(s => s.trim()).filter(Boolean);
+                  const isSelected = selectedDays.includes(d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => {
+                        let updated;
+                        if (isSelected) {
+                          if (selectedDays.length <= 1) {
+                            showToast('Debe haber al menos 1 día laboral habilitado', 'error');
+                            return;
+                          }
+                          updated = selectedDays.filter(x => x !== d.id);
+                        } else {
+                          updated = [...selectedDays, d.id].sort((a, b) => Number(a) - Number(b));
+                        }
+                        setConfigs(prev => ({ ...prev, work_days: updated.join(',') }));
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        padding: '0.55rem 0.95rem',
+                        borderRadius: '8px',
+                        border: isSelected ? '1.5px solid #7a1f1e' : '1px solid #cbd5e1',
+                        backgroundColor: isSelected ? '#7a1f1e' : '#f8fafc',
+                        color: isSelected ? '#ffffff' : '#334155',
+                        fontWeight: 700,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? '0 2px 4px rgba(122, 31, 30, 0.25)' : 'none'
+                      }}
+                    >
+                      <span style={{ fontSize: '0.9rem' }}>{isSelected ? '✓' : '○'}</span>
+                      <span>{d.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setConfigs(prev => ({ ...prev, work_days: '1,2,3,4,5,6' }))}
+                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
+                >
+                  Lun a Sáb (Estándar)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfigs(prev => ({ ...prev, work_days: '1,2,3,4,5,6,7' }))}
+                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
+                >
+                  Toda la semana (7 días)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfigs(prev => ({ ...prev, work_days: '1,2,3,4,5' }))}
+                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
+                >
+                  Lun a Vie (5 días)
+                </button>
+              </div>
+
+              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.5rem 0' }} />
+
               <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.75rem' }}>
                 Agenda Interna (Gonzalo / Admin)
               </div>
