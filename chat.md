@@ -2263,3 +2263,12 @@
   2. `media_1795182170672_696f625b.jpg`: Agregar apartado `⚙️ Zonas Otros` debajo de las zonas de Depilación Láser (`Pies`, `Cuello`, `1/2 Brazo`, `1/2 Pierna`, `Cintura`, `Nuca`, `Ingle`, `Hombros`, `Laterales`) con ABM (`+ Agregar subzona`, editar, eliminar), oculto en Autogestión.
   3. `media_1795182188915_7cdf23a0.jpg` y `media_1795182228677_38a9c889.jpg`: Selector desplegable en `Zonas Extra (Otros)` al agendar/editar turnos, preservando intactos los textos ya escritos en turnos anteriores y posteriores. Desplegar en la web de prueba (Staging `:3008`).
   4. `media_1795182244888_a9dfb477.jpg`: En Estadísticas, ubicar el rango de fechas después de la selección de métrica y antes de los botones del informe.
+
+### Despliegue Directo a Producción (2026-11-20 11:51)
+- **Usuario**: "Subilo directo a produccion"
+- **Acción**:
+  - Backup automático previo de `agenda_db` (`agenda_db_pre_deploy_20261120_144853.sql`, 7.3 MB).
+  - Actualización de `/srv/gonzalo-dep` al commit `aeee7cc` en rama `main`.
+  - Sincronización Prisma Client PostgreSQL y compilación de Next.js (50/50 páginas).
+  - Reinicio seguro de PM2 `gonzalo-agenda` (PID 493506, puerto 3006).
+  - Verificación HTTPS 200 OK en `https://agenda.depilacionparahombres.com`.

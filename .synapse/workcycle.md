@@ -3099,3 +3099,9 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - Si un turno ya tiene texto escrito en `Otros` que no coincide con la lista configurada, se mantiene como `<option value={item}>{item}</option>` seleccionado en su casilla para no perder ni sobrescribir ningún dato existente.
 4. **Rango de Fecha en `/admin/estadisticas`**:
    - Reubicado el bloque de fechas (`Desde` / `Hasta` + `🔄 Actualizar`) después del selector de métrica y antes de los botones `📊 Ver / Descargar Informe Excel` y `🔍 Ampliar Listado en Ventana`.
+
+### Despliegue en Producción
+- **Commit**: `aeee7cc`
+- **Backup**: `agenda_db_pre_deploy_20261120_144853.sql` generado exitosamente (7.3 MB).
+- **Entorno**: Producción Hostinger VPS (`187.127.9.216`, `/srv/gonzalo-dep`, PM2 `gonzalo-agenda`, puerto 3006).
+- **Resultado**: Compilación 50/50 páginas estáticas limpia en 14.2s, PM2 reiniciado y verificado con HTTP 200 OK en `https://agenda.depilacionparahombres.com`.
