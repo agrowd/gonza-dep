@@ -152,13 +152,16 @@ export async function exportOrPrintElement({
           }
 
           .sessionBadge, [data-a4-sheet="true"] .sessionBadge, .pdfCaptureA4 .sessionBadge {
-            background-color: #5c1817 !important;
-            color: #ffffff !important;
+            background-color: transparent !important;
+            background: transparent !important;
+            color: #7a1f1e !important;
+            border: 1.5px solid #7a1f1e !important;
             font-size: 0.82rem !important;
-            font-weight: 800 !important;
+            font-weight: 700 !important;
             min-width: 26px !important;
             height: 26px !important;
-            border-radius: 6px !important;
+            border-radius: 4px !important;
+            box-shadow: none !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;

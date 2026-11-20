@@ -2272,3 +2272,14 @@
   - Sincronización Prisma Client PostgreSQL y compilación de Next.js (50/50 páginas).
   - Reinicio seguro de PM2 `gonzalo-agenda` (PID 493506, puerto 3006).
   - Verificación HTTPS 200 OK en `https://agenda.depilacionparahombres.com`.
+
+---
+
+### Implementación D-178 — Número de Sesión Invertido y Sutil en Planilla de Turnos (2026-11-20 13:40)
+- **Capturas de Gonzalo (`media_1795192207865_72245042.jpg` y `media_1795192217708_c32bfdce.jpg`)**:
+  - *"En el listado de Turnos podéis cambiar el el formato del número de la sesión, por algo más sutil como lo que te pasó ahora - Algo asi, invertido"*.
+- **Solución**:
+  - En `src/app/admin/agenda/imprimir/imprimir.module.css` y `src/lib/pdfExport.js`:
+    - Reemplazado el fondo sólido `#5c1817` por un contenedor con fondo transparente/blanco, borde fino `1.5px solid #7a1f1e`, número en color `#7a1f1e` y esquinas suavemente redondeadas (`4px`).
+    - Aplicado en vista web, exportación A4 PDF y reglas `@media print`.
+    - Compilación local validada con 50/50 páginas estáticas sin errores.

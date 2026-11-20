@@ -3105,3 +3105,27 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 - **Backup**: `agenda_db_pre_deploy_20261120_144853.sql` generado exitosamente (7.3 MB).
 - **Entorno**: Producción Hostinger VPS (`187.127.9.216`, `/srv/gonzalo-dep`, PM2 `gonzalo-agenda`, puerto 3006).
 - **Resultado**: Compilación 50/50 páginas estáticas limpia en 14.2s, PM2 reiniciado y verificado con HTTP 200 OK en `https://agenda.depilacionparahombres.com`.
+
+---
+
+## Sesión 20/11/2026 (Parte 2) - Formato Invertido y Sutil del Número de Sesión en la Planilla de Turnos (D-178)
+
+### Solicitud de Gonzalo
+- Gonzalo envió dos fotos (`media_1795192207865_72245042.jpg` y `media_1795192217708_c32bfdce.jpg`):
+  - Foto 1: Muestra la planilla impresa en papel con los badges de número de sesión en fondo gris oscuro sólido (`[ 1 ]`, `[ 2 ]`, etc.). Texto: *"En el listado de Turnos podéis cambiar el el formato del número de la sesión, por algo más sutil como lo que te pasó ahora"*.
+  - Foto 2: Muestra el boceto dibujado con los recuadros en formato invertido/outlined (borde fino, fondo blanco/transparente, número oscuro centrado). Texto: *"Algo asi, invertido"*.
+
+### Implementación Realizada
+1. **Estilos de Planilla e Impresión (`src/app/admin/agenda/imprimir/imprimir.module.css`)**:
+   - Se rediseñó `.sessionBadge`:
+     - Fondo: `transparent` (en lugar de `#5c1817`).
+     - Borde: `1.5px solid #7a1f1e`.
+     - Texto: `color: #7a1f1e; font-weight: 700;`.
+     - Bordes: `border-radius: 4px;` (esquinas sutilmente redondeadas).
+     - Dimensiones: `min-width: 28px; height: 28px; padding: 0 4px;`.
+     - Sombra: `box-shadow: none;`.
+   - Se replicó en `:global(.pdfCaptureA4) .sessionBadge`, en `@media screen and (max-width: 650px)` y en `@media print`.
+2. **Generador PDF (`src/lib/pdfExport.js`)**:
+   - Actualizadas las reglas inyectadas de `.sessionBadge` y `.pdfCaptureA4 .sessionBadge` para mantener el mismo diseño outlined institucional en descargas PDF directas.
+3. **Verificación**:
+   - `npm run build` ejecutado localmente con éxito (50/50 páginas estáticas, 0 errores).
