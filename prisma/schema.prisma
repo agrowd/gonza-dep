@@ -27,10 +27,12 @@ model Usuario {
   vacacionesFin    DateTime?
   comisionTipo     String?   @default("POR_TURNO") // "POR_TURNO", "POR_DIA", "PORCENTAJE"
   comisionValor    Float?    @default(0)
+  comisionTurnoPct Float?    @default(0)
   activo           Boolean   @default(true)
   boxPredeterminadoId String?
   boxPredeterminado   Box?     @relation("OperadorBoxPredeterminado", fields: [boxPredeterminadoId], references: [id], onDelete: SetNull)
-  turnos           Turno[]
+  turnos           Turno[]   @relation("TurnoOperador")
+  turnosComisionados Turno[] @relation("TurnoComisionUsuario")
   createdAt        DateTime  @default(now())
 }
 
@@ -72,7 +74,11 @@ model Turno {
   clienteId        String
   cliente          Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   operadorId       String?
-  operador         Usuario? @relation(fields: [operadorId], references: [id], onDelete: SetNull)
+  operador         Usuario? @relation("TurnoOperador", fields: [operadorId], references: [id], onDelete: SetNull)
+  comisionUsuarioId String?
+  comisionUsuario   Usuario? @relation("TurnoComisionUsuario", fields: [comisionUsuarioId], references: [id], onDelete: SetNull)
+  comisionPorcentaje Float?  @default(0)
+  comisionMonto      Float?  @default(0)
   fecha            DateTime
   horaInicio       String   // "10:10"
   horaFin          String   // "10:40"

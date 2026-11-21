@@ -2329,3 +2329,27 @@
      - Backup `agenda_db_pre_deploy_20261121_220659.sql` (7.4 MB).
      - Commit `65db709` desplegado exitosamente tanto en Producción (`https://agenda.depilacionparahombres.com`, PM2 `gonzalo-agenda`, puerto 3006) como en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
      - Respuestas HTTP 200 OK validadas en vivo.
+
+### Mensaje Usuario (21/11/2026 - Turno Comisionable y Verificación de Solicitudes de Gonzalo)
+- **Mensaje**: El usuario envía 8 capturas/mensajes de Gonzalo Siri y capturas de Turno Comisionable:
+  1. Horarios Laborales: franja horaria para elegir turno (Alta/Siguiente Turno) de 15 a 22 sin cambiar la agenda visual (`media_1795304618764_92ae2fae.png`).
+  2. Que al lado del valor del turno aparezca cuánto es de Otros: `$80.000 (Otros: $15.000)` (`media_1795304631244_4ff8db23.png`).
+  3. Mensaje urgente de Gonzalo pidiendo cambiar horarios (`media_1795304642279_ebf4f5a3.png`).
+  4. Separador de miles en gastos y números (`media_1795304652932_fe55fb12.png`).
+  5. Limpieza de elementos en Servicios y Zonas (`media_1795304664875_691eef39.jpg`).
+  6. Formato sutil de número de sesión en impresión (`media_1795304675704_1a364be2.jpg`).
+  7. Habilitar o deshabilitar cualquiera de los 7 días de la semana (`media_1795304686411_25e839e5.jpg`).
+  8. Freeze en iPhone y retorno al turno (`media_1795304698539_23f66c05.png`).
+  9. Configuración de Usuario con "Turno comisionable" (`media_1795300013030_c8bdb4a1.png`).
+  10. Asignación de Turno comisionable y % en la ficha del turno (`media_1795300031122_383f7149.jpg`).
+- **Respuesta y Estado de Cada Punto**:
+  - Puntos 1, 3, 7: Desplegados en **D-180** (3 secciones de horarios con 7 días independientes).
+  - Punto 4: Desplegado en **D-176** (`formatMilesInput` en gastos y valores).
+  - Punto 5: Depurado en **D-169** y **D-170** (botón duplicado, badge y cartel eliminados).
+  - Punto 6: Desplegado en **D-178** (formato sutil de sesión en listado impreso).
+  - Punto 8: Desplegado en **D-180** (fix definitivo de scrollLock y touch en iPhone).
+  - Puntos 2, 9, 10: Implementados en **D-181**:
+    1. `comisionTurnoPct` en `Usuario` y ABM en `/admin/configuracion`.
+    2. `comisionUsuarioId`, `comisionPorcentaje`, `comisionMonto` en `Turno` y controles en `/admin/agenda`.
+    3. Detalle `(Otros: $X)` robustecido con `extractZoneSelection`.
+    4. Compilación local `npm run build` completada con 0 errores (50/50 páginas).

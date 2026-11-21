@@ -194,6 +194,14 @@ export async function GET(request) {
             comisionValor: true
           }
         },
+        comisionUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            comisionTurnoPct: true
+          }
+        },
         cliente: {
           include: {
             turnos: {
@@ -251,6 +259,8 @@ export async function POST(request) {
       clienteId,
       operadorId,
       boxId,
+      comisionUsuarioId,
+      comisionPorcentaje,
       nombreCompleto,
       whatsapp,
       email,
@@ -505,11 +515,18 @@ export async function POST(request) {
       finalDineroAFavor = Number(clientRecord.saldoAFavor);
     }
 
+    const comisionUser = comisionUsuarioId ? String(comisionUsuarioId) : null;
+    const comisionPct = comisionUser && comisionPorcentaje !== undefined && comisionPorcentaje !== null ? Number(comisionPorcentaje) : 0;
+    const calcComisionMonto = comisionUser && comisionPct > 0 ? Math.round((finalValorTotal * comisionPct) / 100) : 0;
+
     // Create appointment
     const newTurno = await prisma.turno.create({
       data: {
         clienteId: finalClienteId,
         operadorId: finalOperadorId,
+        comisionUsuarioId: comisionUser,
+        comisionPorcentaje: comisionUser ? comisionPct : 0,
+        comisionMonto: calcComisionMonto,
         boxId: finalBoxId,
         fecha: targetDate,
         horaInicio,
@@ -547,6 +564,14 @@ export async function POST(request) {
             nombre: true,
             usuario: true,
             rol: true
+          }
+        },
+        comisionUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            comisionTurnoPct: true
           }
         }
       }

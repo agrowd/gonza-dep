@@ -181,6 +181,7 @@ export default function ConfiguracionPage() {
     vacacionesFin: '',
     comisionTipo: 'POR_HORA',
     comisionValor: '',
+    comisionTurnoPct: 0,
     boxPredeterminadoId: ''
   });
 
@@ -1377,6 +1378,7 @@ export default function ConfiguracionPage() {
       vacacionesFin: '',
       comisionTipo: 'POR_HORA',
       comisionValor: '',
+      comisionTurnoPct: 0,
       boxPredeterminadoId: ''
     });
     setIsUserModalOpen(true);
@@ -1408,6 +1410,7 @@ export default function ConfiguracionPage() {
       vacacionesFin: u.vacacionesFin ? u.vacacionesFin.slice(0, 10) : '',
       comisionTipo: u.comisionTipo === 'POR_DIA' ? 'POR_HORA' : (u.comisionTipo || 'POR_HORA'),
       comisionValor: u.comisionValor !== undefined && u.comisionValor !== null ? u.comisionValor : '',
+      comisionTurnoPct: u.comisionTurnoPct !== undefined && u.comisionTurnoPct !== null ? u.comisionTurnoPct : 0,
       boxPredeterminadoId: u.boxPredeterminadoId || ''
     });
     setIsUserModalOpen(true);
@@ -3724,6 +3727,12 @@ export default function ConfiguracionPage() {
                     ) : (
                       <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 400 }}>Sin comisión</span>
                     )}
+                    {u.comisionTurnoPct > 0 && (
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <span>🎯 Turno comisionable:</span>
+                        <span>{u.comisionTurnoPct}%</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className={styles.userCardDetails}>
@@ -4726,7 +4735,30 @@ export default function ConfiguracionPage() {
                   </div>
                 </div>
 
-
+                {/* Turno comisionable (Captador / Promotor) */}
+                <div className={styles.formGroup} style={{ backgroundColor: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <label className={styles.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: 0, fontWeight: 700, color: '#1e293b' }}>
+                    <span>🎯 Turno comisionable (% comisión por defecto)</span>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 500 }}>Captador / Promotor</span>
+                  </label>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0.5rem 0', lineHeight: 1.4 }}>
+                    Porcentaje de comisión que recibirá este usuario cuando se le asigne la comisión de un turno (por ej. por captación de clientes o recomendación). Al seleccionar a este usuario en un turno, se precargará este porcentaje de forma automática.
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', maxWidth: '200px' }}>
+                    <input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      className={styles.input}
+                      value={userForm.comisionTurnoPct ?? 0}
+                      onChange={(e) => setUserForm({ ...userForm, comisionTurnoPct: e.target.value === '' ? '' : Math.max(0, Math.min(100, Number(e.target.value))) })}
+                      placeholder="Ej: 10"
+                      style={{ fontWeight: 700 }}
+                    />
+                    <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--color-gold)' }}>%</span>
+                  </div>
+                </div>
 
                 {/* Estado del Usuario / Operador */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: userForm.activo !== false ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)', borderRadius: '8px', border: userForm.activo !== false ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)' }}>

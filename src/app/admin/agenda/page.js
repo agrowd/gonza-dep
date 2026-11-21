@@ -458,7 +458,9 @@ export default function AgendaPage() {
     observaciones: '',
     hasOtros: false,
     otrosTexto: '',
-    otrosPrecio: ''
+    otrosPrecio: '',
+    comisionUsuarioId: '',
+    comisionPorcentaje: 0
   });
 
 
@@ -490,6 +492,8 @@ export default function AgendaPage() {
     hasOtros: false,
     otrosTexto: '',
     otrosPrecio: '',
+    comisionUsuarioId: '',
+    comisionPorcentaje: 0,
     prevTurnoId: null,
     enviarNotificaciones: true,
     metodoPago: 'TRANSFERENCIA'
@@ -510,6 +514,10 @@ export default function AgendaPage() {
   const [expandedTurnoObs, setExpandedTurnoObs] = useState(false);
   const [sendingReceipt, setSendingReceipt] = useState({});
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
+  const [tempComisionUsuarioId, setTempComisionUsuarioId] = useState('');
+  const [tempComisionPorcentaje, setTempComisionPorcentaje] = useState(0);
+  const [savingComision, setSavingComision] = useState(false);
+  const [usuariosList, setUsuariosList] = useState([]);
   // Siguientes Turnos Agendados & Resumen de Zonas (D-162)
   const [isFutureSenasOpen, setIsFutureSenasOpen] = useState(true);
   const [selectedFutureSenas, setSelectedFutureSenas] = useState({});
@@ -566,6 +574,7 @@ export default function AgendaPage() {
       .then(res => res.json())
       .then(data => {
         if (data?.usuarios) {
+          setUsuariosList(data.usuarios.filter(u => u.activo !== false));
           const ops = data.usuarios.filter(u => u.rol === 'OPERADOR' || u.rol === 'ADMIN');
           setOperadores(ops);
           const defaultAdmin = ops.find(u => u.nombre?.toLowerCase().includes('gonzalo') || u.usuario?.toLowerCase() === 'gonzalo')
@@ -1123,6 +1132,12 @@ export default function AgendaPage() {
   useEffect(() => {
     if (selectedTurno) {
       setTempTurnoObservaciones(selectedTurno.observaciones || '');
+      setTempComisionUsuarioId(selectedTurno.comisionUsuarioId || '');
+      setTempComisionPorcentaje(
+        selectedTurno.comisionPorcentaje !== undefined && selectedTurno.comisionPorcentaje !== null
+          ? selectedTurno.comisionPorcentaje
+          : (selectedTurno.comisionUsuario?.comisionTurnoPct || 0)
+      );
       if (selectedTurno.cliente) {
         setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
         setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
@@ -1225,6 +1240,8 @@ export default function AgendaPage() {
       setSelectedFutureSenas(initialChecked);
     } else {
       setTempTurnoObservaciones('');
+      setTempComisionUsuarioId('');
+      setTempComisionPorcentaje(0);
       setTempClientObservaciones('');
       setTempClientFrecuencia(4);
       setTempClientNotasGonzalo('');
@@ -1526,6 +1543,45 @@ export default function AgendaPage() {
     } catch (e) {
       console.error('Error saving turno observaciones:', e);
       if (!silent) showToast('Error de conexión al guardar comentarios.', 'error');
+    }
+  };
+
+  const handleSaveComisionTurno = async () => {
+    if (!selectedTurno) return;
+    setSavingComision(true);
+    try {
+      const res = await fetch(`/api/admin/turnos/${selectedTurno.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          comisionUsuarioId: tempComisionUsuarioId || null,
+          comisionPorcentaje: Number(tempComisionPorcentaje || 0)
+        })
+      });
+      if (res.ok) {
+        const updated = await res.json().catch(() => null);
+        showToast('Comisión del turno guardada correctamente.');
+        if (updated) {
+          setSelectedTurno(prev => prev ? { ...prev, ...updated } : null);
+        } else {
+          setSelectedTurno(prev => prev ? {
+            ...prev,
+            comisionUsuarioId: tempComisionUsuarioId || null,
+            comisionPorcentaje: Number(tempComisionPorcentaje || 0),
+            comisionUsuario: usuariosList.find(u => String(u.id) === String(tempComisionUsuarioId)) || null
+          } : null);
+        }
+        fetchAppointments();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || 'Error al guardar la comisión.', 'error');
+      }
+    } catch (e) {
+      console.error('Error saving comision turno:', e);
+      showToast('Error de conexión al guardar comisión.', 'error');
+    } finally {
+      setSavingComision(false);
     }
   };
   // Generate hourly labels for time column dynamically
@@ -2659,6 +2715,8 @@ export default function AgendaPage() {
           frecuencia: editTurno.frecuencia,
           selectedZoneIds: editTurno.selectedZoneIds,
           operadorId: editTurno.operadorId !== undefined ? (editTurno.operadorId || null) : undefined,
+          comisionUsuarioId: editTurno.comisionUsuarioId || null,
+          comisionPorcentaje: Number(editTurno.comisionPorcentaje || 0),
           hasOtros: editTurno.hasOtros,
           otrosTexto: (editTurno.otrosTexto || '').split(/,\s*/).map(s => s.trim()).filter(Boolean).join(', '),
           otrosPrecio: Number(editTurno.otrosPrecio || 0)
@@ -5306,6 +5364,61 @@ export default function AgendaPage() {
                       rows="2"
                     />
                   </div>
+
+                  {/* Turno comisionable (Captador / Promotor) */}
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.08)', padding: '0.75rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.35)', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                      <label className={styles.inputLabel} style={{ color: '#1e293b', fontWeight: 700, margin: 0 }}>
+                        🎯 Turno comisionable (Promotor / Captador)
+                      </label>
+                      {editTurno.comisionUsuarioId && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>
+                          Comisión estimada: ${Math.round((Number(editTurno.valorTotal || 0) * Number(editTurno.comisionPorcentaje || 0)) / 100).toLocaleString('es-ES')}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '0.65rem', alignItems: 'center' }}>
+                      <select
+                        value={editTurno.comisionUsuarioId || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const picked = usuariosList.find(u => String(u.id) === String(val));
+                          setEditTurno(prev => ({
+                            ...prev,
+                            comisionUsuarioId: val,
+                            comisionPorcentaje: val && picked ? (picked.comisionTurnoPct || 0) : (val ? prev.comisionPorcentaje : 0)
+                          }));
+                        }}
+                        className={styles.input}
+                        style={{ fontWeight: 600 }}
+                      >
+                        <option value="">-- Sin comisión --</option>
+                        {usuariosList.map(u => (
+                          <option key={`edit-comision-u-${u.id}`} value={u.id}>
+                            {u.nombre} ({u.comisionTurnoPct || 0}%)
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          disabled={!editTurno.comisionUsuarioId}
+                          value={editTurno.comisionPorcentaje ?? 0}
+                          onChange={(e) => {
+                            const pct = e.target.value === '' ? '' : Math.max(0, Math.min(100, Number(e.target.value)));
+                            setEditTurno(prev => ({ ...prev, comisionPorcentaje: pct }));
+                          }}
+                          placeholder="0"
+                          className={styles.input}
+                          style={{ paddingRight: '1.6rem', textAlign: 'right', fontWeight: 700, backgroundColor: editTurno.comisionUsuarioId ? '#ffffff' : '#f1f5f9' }}
+                        />
+                        <span style={{ position: 'absolute', right: '0.55rem', fontWeight: 800, color: 'var(--color-gold)', pointerEvents: 'none' }}>%</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {editTurnoWarning && (
@@ -5579,21 +5692,9 @@ export default function AgendaPage() {
                         const saldoPendiente = Math.max(0, Number(dynPrices.valorTotal || 0) - Number(selectedTurno.valorSeña || 0));
                         const totalACobrarSesion = saldoPendiente + sumSelectedFutureSenas;
 
-                        let hasOtrosDetalle = false;
-                        let otrosMontoDetalle = 0;
-                        try {
-                          const parsedZ = typeof selectedTurno.zonas === 'string'
-                            ? JSON.parse(selectedTurno.zonas)
-                            : selectedTurno.zonas;
-                          if (Array.isArray(parsedZ)) {
-                            for (const z of parsedZ) {
-                              if (z && (z.id === 'otros' || String(z.nombre || '').toLowerCase().startsWith('otros'))) {
-                                hasOtrosDetalle = true;
-                                otrosMontoDetalle += Number(z.precio || 0);
-                              }
-                            }
-                          }
-                        } catch {}
+                        const zoneExtraction = extractZoneSelection(selectedTurno.zonas, zones);
+                        const hasOtrosDetalle = zoneExtraction.hasOtros;
+                        const otrosMontoDetalle = Number(zoneExtraction.otrosPrecio || 0);
 
                         return (
                           <>
@@ -6785,6 +6886,103 @@ export default function AgendaPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Turno comisionable (Captador / Promotor) */}
+                  <div style={{
+                    marginTop: '0.85rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(212, 165, 77, 0.08)',
+                    border: '1px solid rgba(212, 165, 77, 0.35)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        🎯 Turno comisionable
+                      </span>
+                      {tempComisionUsuarioId && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>
+                          Comisión estimada: ${Math.round((Number(selectedTurno.valorTotal || 0) * Number(tempComisionPorcentaje || 0)) / 100).toLocaleString('es-ES')}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '0.65rem', alignItems: 'center' }}>
+                      <div>
+                        <select
+                          value={tempComisionUsuarioId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setTempComisionUsuarioId(val);
+                            if (val) {
+                              const picked = usuariosList.find(u => String(u.id) === String(val));
+                              setTempComisionPorcentaje(picked ? (picked.comisionTurnoPct || 0) : 0);
+                            } else {
+                              setTempComisionPorcentaje(0);
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '0.45rem 0.6rem',
+                            borderRadius: '7px',
+                            border: '1.5px solid #cbd5e1',
+                            fontSize: '0.86rem',
+                            fontWeight: 600,
+                            backgroundColor: '#ffffff',
+                            color: '#1e293b'
+                          }}
+                        >
+                          <option value="">-- Sin comisión --</option>
+                          {usuariosList.map(u => (
+                            <option key={`comision-u-${u.id}`} value={u.id}>
+                              {u.nombre} ({u.comisionTurnoPct || 0}%)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          disabled={!tempComisionUsuarioId}
+                          value={tempComisionPorcentaje}
+                          onChange={(e) => setTempComisionPorcentaje(e.target.value === '' ? '' : Math.max(0, Math.min(100, Number(e.target.value))))}
+                          placeholder="0"
+                          style={{
+                            width: '100%',
+                            padding: '0.45rem 1.6rem 0.45rem 0.6rem',
+                            borderRadius: '7px',
+                            border: '1.5px solid #cbd5e1',
+                            fontSize: '0.86rem',
+                            fontWeight: 700,
+                            textAlign: 'right',
+                            backgroundColor: tempComisionUsuarioId ? '#ffffff' : '#f1f5f9',
+                            color: '#1e293b'
+                          }}
+                        />
+                        <span style={{ position: 'absolute', right: '0.55rem', fontWeight: 800, color: 'var(--color-gold)', pointerEvents: 'none' }}>%</span>
+                      </div>
+                    </div>
+
+                    {(tempComisionUsuarioId !== (selectedTurno.comisionUsuarioId || '') || Number(tempComisionPorcentaje || 0) !== Number(selectedTurno.comisionPorcentaje || 0)) && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
+                        <button
+                          type="button"
+                          disabled={savingComision}
+                          onClick={handleSaveComisionTurno}
+                          className="btn btn-primary"
+                          style={{ fontSize: '0.78rem', padding: '0.35rem 0.85rem', backgroundColor: '#d4a54d', color: '#000', fontWeight: 700, border: 'none', borderRadius: '6px' }}
+                        >
+                          {savingComision ? 'Guardando...' : '💾 Guardar Comisión'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions Panel */}
@@ -6876,7 +7074,9 @@ export default function AgendaPage() {
                             operadorId: selectedTurno.operadorId || '',
                             hasOtros: Boolean(hasOtros),
                             otrosTexto: otrosTexto || '',
-                            otrosPrecio: otrosPrecio || ''
+                            otrosPrecio: otrosPrecio || '',
+                            comisionUsuarioId: selectedTurno.comisionUsuarioId || '',
+                            comisionPorcentaje: selectedTurno.comisionPorcentaje !== undefined && selectedTurno.comisionPorcentaje !== null ? selectedTurno.comisionPorcentaje : 0
                           });
                           setIsEditing(true);
                         }}
@@ -8023,6 +8223,61 @@ export default function AgendaPage() {
                     placeholder="Ej. Campaña Facebook Ads, Tolerancia extra, etc."
                     rows="2"
                   />
+                </div>
+
+                {/* Turno comisionable (Captador / Promotor) */}
+                <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.08)', padding: '0.75rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.35)', marginTop: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                    <label className={styles.inputLabel} style={{ color: '#1e293b', fontWeight: 700, margin: 0 }}>
+                      🎯 Turno comisionable (Promotor / Captador)
+                    </label>
+                    {newTurno.comisionUsuarioId && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>
+                        Comisión estimada: ${Math.round((Number(newTurno.valorTotal || 0) * Number(newTurno.comisionPorcentaje || 0)) / 100).toLocaleString('es-ES')}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '0.65rem', alignItems: 'center' }}>
+                    <select
+                      value={newTurno.comisionUsuarioId || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const picked = usuariosList.find(u => String(u.id) === String(val));
+                        setNewTurno(prev => ({
+                          ...prev,
+                          comisionUsuarioId: val,
+                          comisionPorcentaje: val && picked ? (picked.comisionTurnoPct || 0) : (val ? prev.comisionPorcentaje : 0)
+                        }));
+                      }}
+                      className={styles.input}
+                      style={{ fontWeight: 600 }}
+                    >
+                      <option value="">-- Sin comisión --</option>
+                      {usuariosList.map(u => (
+                        <option key={`new-comision-u-${u.id}`} value={u.id}>
+                          {u.nombre} ({u.comisionTurnoPct || 0}%)
+                        </option>
+                      ))}
+                    </select>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        disabled={!newTurno.comisionUsuarioId}
+                        value={newTurno.comisionPorcentaje ?? 0}
+                        onChange={(e) => {
+                          const pct = e.target.value === '' ? '' : Math.max(0, Math.min(100, Number(e.target.value)));
+                          setNewTurno(prev => ({ ...prev, comisionPorcentaje: pct }));
+                        }}
+                        placeholder="0"
+                        className={styles.input}
+                        style={{ paddingRight: '1.6rem', textAlign: 'right', fontWeight: 700, backgroundColor: newTurno.comisionUsuarioId ? '#ffffff' : '#f1f5f9' }}
+                      />
+                      <span style={{ position: 'absolute', right: '0.55rem', fontWeight: 800, color: 'var(--color-gold)', pointerEvents: 'none' }}>%</span>
+                    </div>
+                  </div>
                 </div>
 
                 {newTurno.estado !== 'BLOQUEADO' && (

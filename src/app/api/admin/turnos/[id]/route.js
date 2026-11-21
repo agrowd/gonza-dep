@@ -123,6 +123,14 @@ export async function GET(request, { params }) {
             rol: true
           }
         },
+        comisionUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            comisionTurnoPct: true
+          }
+        },
         cliente: {
           include: {
             turnos: {
@@ -198,6 +206,8 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const {
       operadorId,
+      comisionUsuarioId,
+      comisionPorcentaje,
       fechaStr,
       horaInicio,
       horaFin,
@@ -657,6 +667,25 @@ export async function PUT(request, { params }) {
     if (operadorId !== undefined) {
       updateData.operadorId = operadorId ? String(operadorId) : null;
     }
+    if (comisionUsuarioId !== undefined) {
+      updateData.comisionUsuarioId = comisionUsuarioId ? String(comisionUsuarioId) : null;
+    }
+    if (comisionPorcentaje !== undefined) {
+      updateData.comisionPorcentaje = comisionPorcentaje !== '' && comisionPorcentaje !== null ? Number(comisionPorcentaje) : 0;
+    }
+    // Calculate or recalculate comisionMonto
+    const effectiveComisionUser = updateData.comisionUsuarioId !== undefined ? updateData.comisionUsuarioId : oldTurn.comisionUsuarioId;
+    const effectiveComisionPct = updateData.comisionPorcentaje !== undefined ? updateData.comisionPorcentaje : Number(oldTurn.comisionPorcentaje || 0);
+    const effectiveValorTotal = updateData.valorTotal !== undefined ? Number(updateData.valorTotal || 0) : Number(oldTurn.valorTotal || 0);
+
+    if (effectiveComisionUser && effectiveComisionPct > 0) {
+      updateData.comisionMonto = Math.round((effectiveValorTotal * effectiveComisionPct) / 100);
+    } else {
+      updateData.comisionMonto = 0;
+      if (!effectiveComisionUser) {
+        updateData.comisionPorcentaje = 0;
+      }
+    }
     if (body.boxId !== undefined) {
       updateData.boxId = body.boxId ? String(body.boxId) : null;
     }
@@ -685,6 +714,14 @@ export async function PUT(request, { params }) {
             rol: true,
             comisionTipo: true,
             comisionValor: true
+          }
+        },
+        comisionUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            usuario: true,
+            comisionTurnoPct: true
           }
         }
       }

@@ -3173,6 +3173,40 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 
 ---
 
+## Sesión 21/11/2026 (Parte 2) - Turno Comisionable (Captador / Promotor) y Robustecimiento de Detalle de Zonas Otros (D-181)
+
+### Requerimientos Analizados
+1. **Turno Comisionable en Usuarios (`media_1795300013030_c8bdb4a1.png`)**:
+   - Gonzalo: *"al crear o modificar usuarios, crear un espacio que sea 'Turno comisionable' con el valor de un porcentaje por defecto. Esto es distinto al porcentaje de operador, ya que nos servirá para, si tenemos a alguien ayudándonos a conseguir clientes, un porcentaje del turno será para esa persona, pero no será necesariamente el operador del turno"*.
+2. **Turno Comisionable en Agenda (`media_1795300031122_383f7149.jpg`)**:
+   - Gonzalo: *"abajo de los comentarios del turno, agregar un selector 'Turno comisionable' (que va a estar de forma predeterminada vacía '-- Sin comisión --' para todos los turnos) para elegir a quién se le va a dar la comisión del turno, y al lado el cambio del porcentaje de comisión (arranca con el valor configurado en el usuario y se puede editar manualmente)"*.
+3. **Detalle de Zonas Otros en Valor Total (`media_1795304631244_4ff8db23.png`)**:
+   - Gonzalo: *"Que al lado del valor del turno me aparezca cuánto es de Otros ($80.000 (Otros: $15.000))"*.
+   - Se unificó la lectura con `extractZoneSelection(selectedTurno.zonas, zones)` para garantizar compatibilidad con cadenas de texto plano y objetos JSON.
+
+### Implementación Realizada
+1. **Modelo de Base de Datos (`prisma/schema.prisma`)**:
+   - `Usuario`: se añadió `comisionTurnoPct Float? @default(0)` y la relación bidireccional `turnosComisionados Turno[] @relation("TurnoComisionUsuario")`. La relación existente de operador se nombró `@relation("TurnoOperador")`.
+   - `Turno`: se añadieron `comisionUsuarioId String?`, `comisionUsuario Usuario? @relation("TurnoComisionUsuario", fields: [comisionUsuarioId], references: [id], onDelete: SetNull)`, `comisionPorcentaje Float? @default(0)` y `comisionMonto Float? @default(0)`.
+   - `npx prisma generate` y `npx prisma db push` ejecutados exitosamente.
+2. **Backend API (`/api/admin/usuarios` y `/api/admin/usuarios/[id]`)**:
+   - Se añadió soporte en GET, POST y PUT para recibir, validar y persistir `comisionTurnoPct`.
+3. **Backend API (`/api/admin/turnos` y `/api/admin/turnos/[id]`)**:
+   - Se añadió soporte en GET para incluir `comisionUsuario: { select: { id: true, nombre: true, usuario: true, comisionTurnoPct: true } }`.
+   - Se añadió soporte en POST y PUT para recibir `comisionUsuarioId` y `comisionPorcentaje`, calculando automáticamente `comisionMonto = Math.round((Number(valorTotal) * Number(comisionPorcentaje)) / 100)`.
+4. **Módulo de Usuarios (`/admin/configuracion`)**:
+   - En el modal de Crear/Editar Usuario: se incorporó el bloque estilizado "🎯 Turno comisionable (% comisión por defecto)" con sufijo `%`, validación numérica y texto explicativo.
+   - En las tarjetas del listado de usuarios: se agregó el badge distintivo `🎯 Turno comisionable: X%` cuando tiene porcentaje configurado.
+5. **Módulo de Agenda (`/admin/agenda`)**:
+   - En la ficha de detalles del turno (debajo de Comentarios Exclusivos): selector desplegable con `-- Sin comisión --` y todos los usuarios activos con su `%` predeterminado, input editable de `% Comisión` con cálculo dinámico en tiempo real (`Comisión estimada: $X ARS`), y botón para guardar individualmente.
+   - En modo edición rápida: mismos controles integrados con `editTurno`.
+   - En modal de nuevo turno: mismos controles integrados con `newTurno`.
+   - En valor total: se integró `extractZoneSelection` para desplegar `(Otros: $X)` de forma 100% infalible en todos los formatos.
+6. **Verificación de Compilación**:
+   - `npm run build` ejecutado localmente con éxito (50/50 páginas estáticas, 0 errores).
+
+---
+
 ## Sesión 20/11/2026 (Parte 3) - Fix de Bloqueo/Freeze de UI en iPhone y Selector Completo de 7 Días en Horarios Laborales (D-179)
 
 ### Requerimientos de Gonzalo
@@ -3237,3 +3271,37 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 - **Backup**: `agenda_db_pre_deploy_20261121_220659.sql` generado exitosamente (7.4 MB).
 - **Entorno Producción**: Hostinger VPS (`187.127.9.216`, `/srv/gonzalo-dep`, PM2 `gonzalo-agenda`, puerto 3006, HTTPS 200 OK).
 - **Entorno Staging**: Hostinger VPS (`/srv/gonzalo-dep-staging`, PM2 `gonzalo-agenda-staging`, puerto 3008, HTTP 200 OK).
+
+---
+
+## Sesión 21/11/2026 (Parte 2) - Turno Comisionable (Captador / Promotor) y Robustecimiento de Detalle de Zonas Otros (D-181)
+
+### Requerimientos Analizados
+1. **Turno Comisionable en Usuarios (`media_1795300013030_c8bdb4a1.png`)**:
+   - Gonzalo: *"al crear o modificar usuarios, crear un espacio que sea 'Turno comisionable' con el valor de un porcentaje por defecto. Esto es distinto al porcentaje de operador, ya que nos servirá para, si tenemos a alguien ayudándonos a conseguir clientes, un porcentaje del turno será para esa persona, pero no será necesariamente el operador del turno"*.
+2. **Turno Comisionable en Agenda (`media_1795300031122_383f7149.jpg`)**:
+   - Gonzalo: *"abajo de los comentarios del turno, agregar un selector 'Turno comisionable' (que va a estar de forma predeterminada vacía '-- Sin comisión --' para todos los turnos) para elegir a quién se le va a dar la comisión del turno, y al lado el cambio del porcentaje de comisión (arranca con el valor configurado en el usuario y se puede editar manualmente)"*.
+3. **Detalle de Zonas Otros en Valor Total (`media_1795304631244_4ff8db23.png`)**:
+   - Gonzalo: *"Que al lado del valor del turno me aparezca cuánto es de Otros ($80.000 (Otros: $15.000))"*.
+   - Se unificó la lectura con `extractZoneSelection(selectedTurno.zonas, zones)` para garantizar compatibilidad con cadenas de texto plano y objetos JSON.
+
+### Implementación Realizada
+1. **Modelo de Base de Datos (`prisma/schema.prisma`)**:
+   - `Usuario`: se añadió `comisionTurnoPct Float? @default(0)` y la relación bidireccional `turnosComisionados Turno[] @relation("TurnoComisionUsuario")`. La relación existente de operador se nombró `@relation("TurnoOperador")`.
+   - `Turno`: se añadieron `comisionUsuarioId String?`, `comisionUsuario Usuario? @relation("TurnoComisionUsuario", fields: [comisionUsuarioId], references: [id], onDelete: SetNull)`, `comisionPorcentaje Float? @default(0)` y `comisionMonto Float? @default(0)`.
+   - `npx prisma generate` y `npx prisma db push` ejecutados exitosamente.
+2. **Backend API (`/api/admin/usuarios` y `/api/admin/usuarios/[id]`)**:
+   - Se añadió soporte en GET, POST y PUT para recibir, validar y persistir `comisionTurnoPct`.
+3. **Backend API (`/api/admin/turnos` y `/api/admin/turnos/[id]`)**:
+   - Se añadió soporte en GET para incluir `comisionUsuario: { select: { id: true, nombre: true, usuario: true, comisionTurnoPct: true } }`.
+   - Se añadió soporte en POST y PUT para recibir `comisionUsuarioId` y `comisionPorcentaje`, calculando automáticamente `comisionMonto = Math.round((Number(valorTotal) * Number(comisionPorcentaje)) / 100)`.
+4. **Módulo de Usuarios (`/admin/configuracion`)**:
+   - En el modal de Crear/Editar Usuario: se incorporó el bloque estilizado "🎯 Turno comisionable (% comisión por defecto)" con sufijo `%`, validación numérica y texto explicativo.
+   - En las tarjetas del listado de usuarios: se agregó el badge distintivo `🎯 Turno comisionable: X%` cuando tiene porcentaje configurado.
+5. **Módulo de Agenda (`/admin/agenda`)**:
+   - En la ficha de detalles del turno (debajo de Comentarios Exclusivos): selector desplegable con `-- Sin comisión --` y todos los usuarios activos con su `%` predeterminado, input editable de `% Comisión` con cálculo dinámico en tiempo real (`Comisión estimada: $X ARS`), y botón para guardar individualmente.
+   - En modo edición rápida: mismos controles integrados con `editTurno`.
+   - En modal de nuevo turno: mismos controles integrados con `newTurno`.
+   - En valor total: se integró `extractZoneSelection` para desplegar `(Otros: $X)` de forma 100% infalible en todos los formatos.
+6. **Verificación de Compilación**:
+   - `npm run build` ejecutado localmente con éxito (50/50 páginas estáticas, 0 errores).

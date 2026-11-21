@@ -48,6 +48,7 @@ export async function GET(request) {
         vacacionesFin: true,
         comisionTipo: true,
         comisionValor: true,
+        comisionTurnoPct: true,
         boxPredeterminadoId: true,
         boxPredeterminado: { select: { id: true, nombre: true } },
         ...(isAdmin ? { email: true, telefono: true, createdAt: true } : {})
@@ -93,6 +94,7 @@ export async function POST(request) {
       vacacionesFin,
       comisionTipo,
       comisionValor,
+      comisionTurnoPct,
       boxPredeterminadoId
     } = body;
 
@@ -162,6 +164,7 @@ export async function POST(request) {
         vacacionesFin: true,
         comisionTipo: true,
         comisionValor: true,
+        comisionTurnoPct: true,
         boxPredeterminadoId: true,
         boxPredeterminado: { select: { id: true, nombre: true } },
         createdAt: true

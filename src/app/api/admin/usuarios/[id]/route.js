@@ -41,6 +41,7 @@ export async function PUT(request, context) {
       vacacionesFin,
       comisionTipo,
       comisionValor,
+      comisionTurnoPct,
       boxPredeterminadoId
     } = body;
 
@@ -80,6 +81,9 @@ export async function PUT(request, context) {
     }
     if (comisionValor !== undefined) {
       updateData.comisionValor = comisionValor !== '' && comisionValor !== null ? Number(comisionValor) : 0;
+    }
+    if (comisionTurnoPct !== undefined) {
+      updateData.comisionTurnoPct = comisionTurnoPct !== '' && comisionTurnoPct !== null ? Number(comisionTurnoPct) : 0;
     }
     if (boxPredeterminadoId !== undefined) {
       updateData.boxPredeterminadoId = boxPredeterminadoId ? String(boxPredeterminadoId) : null;
@@ -121,6 +125,7 @@ export async function PUT(request, context) {
         vacacionesFin: true,
         comisionTipo: true,
         comisionValor: true,
+        comisionTurnoPct: true,
         boxPredeterminadoId: true,
         boxPredeterminado: { select: { id: true, nombre: true } },
         createdAt: true
