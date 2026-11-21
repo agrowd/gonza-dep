@@ -3132,6 +3132,47 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 
 ---
 
+## Sesión 21/11/2026 - Recibo por Email Responsivo, Fix Freeze Touch iPhone y Retorno al Turno, Filtro Estricto de Autogestión y 3 Secciones de Horarios Laborales (D-180)
+
+### Requerimientos Analizados
+1. **Recibo por Mail en Móvil (`media_1795296632742_4064d1c6.png`)**:
+   - El texto y tabla (`Subtotal`, valores) desbordaban hacia la derecha del borde del recibo en clientes de correo para smartphones.
+2. **Freeze Touch en iPhone y Retorno al Turno (`media_1795296612004_4a75ceb4.png`)**:
+   - Gonzalo: *"Todavia sigue pasando lo mismo, no me toma el dedo, además cuando entro a la ficha del cliente desde un turno, y cierro la ficha, vuelve a la agenda, antes volvía al turno y eso estaba andando bien"*.
+3. **Filtro de Servicios Deshabilitados en Autogestión (`media_1795296737474_da8fcb2c.jpg`)**:
+   - Gonzalo: *"Queria probar que no mostrara las opciones de masajes o faciales porque estan marcadas para qie no se muestre por autogestión Y lo muestra igual"*.
+4. **Selectores Independientes de 7 Días para las 3 Secciones de Horarios (`media_1795296677918_ee8508ca.jpg` y capturas de Horarios)**:
+   - Gonzalo: *"La opcion de seleccionar el dia de semana tiene que ser variable para las 3 opciones de regitro. Yo quiero habilitar el sabado para agenda interna pero no para las otras 2"*.
+
+### Implementación Realizada
+1. **Plantilla de Recibo Comercial por Email (`src/lib/email.js`)**:
+   - Se sustituyó `display: flex` por una estructura `table` 100% compatible con todos los clientes de correo móvil.
+   - Se configuró `.items-table` con `table-layout: fixed !important; width: 100% !important; border-collapse: collapse; box-sizing: border-box;`.
+   - Columnas proporcionales fijas: Servicio (38%, `word-break: break-word`), Precio Unit. (25%, `white-space: nowrap`), Cantidad (13%), Subtotal (24%, `white-space: nowrap`).
+   - Reglas `@media only screen and (max-width: 480px)` ajustando padding a 10px 8px y tipografía compacta para impedir cualquier desborde horizontal.
+2. **Eliminación Definitiva del Freeze Touch en WebKit y Retorno al Turno (`src/lib/scrollLock.js`, `agenda.module.css`, `/admin/clientes`)**:
+   - En `src/app/admin/clientes/page.js`: se restauró `if (turnoIdParam) params.push('turnoId=' + encodeURIComponent(turnoIdParam));` en `handleCloseProfile`, garantizando que al cerrar la ficha vuelva directamente al modal del turno.
+   - En `src/lib/scrollLock.js`: se eliminó `document.body.style.position = 'fixed'` y `top = -scrollY`, que era la causa raíz de que WebKit desfasara y desvinculara el hit-testing táctil en iOS Safari. Ahora utiliza `overflow: hidden` y `touchAction: 'none'` en html/body.
+   - En `src/app/admin/agenda/agenda.module.css`: se aplicó `touch-action: none !important; pointer-events: auto !important;` en `.modalOverlay` móvil y `touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important; pointer-events: auto !important; overscroll-behavior: contain !important;` en `.modalContent`.
+3. **Filtro Estricto de Autogestión (`src/app/page.js`, `/api/zonas`)**:
+   - `src/app/page.js` ahora invoca `/api/zonas?autogestion=true` y filtra en cliente `!z.servicio || (z.servicio.activo !== false && z.servicio.habilitadoAutogestion !== false)`.
+   - `src/app/api/zonas/route.js` impone el filtro de autogestión cuando `autogestion=true` está presente, incluso si la petición incluye cookies de sesión administrativa.
+4. **Selectores Independientes de 7 Días en 3 Secciones (`/admin/configuracion`)**:
+   - Sección 1: **Agenda Interna**: `work_days` (default `"1,2,3,4,5,6"`) + `work_start` / `work_end`.
+   - Sección 2: **Elegir Turno (Alta / Siguiente Turno)**: `alta_turno_work_days` (default `"1,2,3,4,5"`) + `alta_turno_work_start` / `alta_turno_work_end`.
+   - Sección 3: **Autogestión / Reserva Online**: `booking_work_days` (default `"1,2,3,4,5"`) + `booking_work_start` / `booking_work_end`.
+   - `/api/disponibilidad` valida contra `booking_work_days`.
+   - `/api/admin/alta-turno/disponibilidad` valida contra `alta_turno_work_days`.
+   - `/admin/alta-turno` inicializa `selectedDays` desde `alta_turno_work_days`.
+
+### Despliegue en Producción y Staging
+- **Commit**: `65db709`
+- **Backup**: `agenda_db_pre_deploy_20261121_220659.sql` generado exitosamente (7.4 MB).
+- **Entorno Producción**: Hostinger VPS (`187.127.9.216`, `/srv/gonzalo-dep`, PM2 `gonzalo-agenda`, puerto 3006, HTTPS 200 OK).
+- **Entorno Staging**: Hostinger VPS (`/srv/gonzalo-dep-staging`, PM2 `gonzalo-agenda-staging`, puerto 3008, HTTP 200 OK).
+
+---
+
 ## Sesión 20/11/2026 (Parte 3) - Fix de Bloqueo/Freeze de UI en iPhone y Selector Completo de 7 Días en Horarios Laborales (D-179)
 
 ### Requerimientos de Gonzalo
@@ -3155,3 +3196,44 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - En `src/app/admin/agenda/page.js`: la grilla semanal y mensual ahora leen dinámicamente `config.work_days`, generando exactamente las columnas de los días habilitados y ajustando `gridTemplateColumns: 80px repeat(${weekDates.length}, 1fr)`, permitiendo habilitar Domingo o deshabilitar cualquier día sin romper la grilla.
 3. **Verificación**:
    - `npm run build` ejecutado localmente con éxito (50/50 páginas estáticas, 0 errores).
+
+---
+
+## Sesión 21/11/2026 - Recibo por Email Responsivo, Fix Freeze Touch iPhone y Retorno al Turno, Filtro Estricto de Autogestión y 3 Secciones de Horarios Laborales (D-180)
+
+### Requerimientos Analizados
+1. **Recibo por Mail en Móvil (`media_1795296632742_4064d1c6.png`)**:
+   - El texto y tabla (`Subtotal`, valores) desbordaban hacia la derecha del borde del recibo en clientes de correo para smartphones.
+2. **Freeze Touch en iPhone y Retorno al Turno (`media_1795296612004_4a75ceb4.png`)**:
+   - Gonzalo: *"Todavia sigue pasando lo mismo, no me toma el dedo, además cuando entro a la ficha del cliente desde un turno, y cierro la ficha, vuelve a la agenda, antes volvía al turno y eso estaba andando bien"*.
+3. **Filtro de Servicios Deshabilitados en Autogestión (`media_1795296737474_da8fcb2c.jpg`)**:
+   - Gonzalo: *"Queria probar que no mostrara las opciones de masajes o faciales porque estan marcadas para qie no se muestre por autogestión Y lo muestra igual"*.
+4. **Selectores Independientes de 7 Días para las 3 Secciones de Horarios (`media_1795296677918_ee8508ca.jpg` y capturas de Horarios)**:
+   - Gonzalo: *"La opcion de seleccionar el dia de semana tiene que ser variable para las 3 opciones de regitro. Yo quiero habilitar el sabado para agenda interna pero no para las otras 2"*.
+
+### Implementación Realizada
+1. **Plantilla de Recibo Comercial por Email (`src/lib/email.js`)**:
+   - Se sustituyó `display: flex` por una estructura `table` 100% compatible con todos los clientes de correo móvil.
+   - Se configuró `.items-table` con `table-layout: fixed !important; width: 100% !important; border-collapse: collapse; box-sizing: border-box;`.
+   - Columnas proporcionales fijas: Servicio (38%, `word-break: break-word`), Precio Unit. (25%, `white-space: nowrap`), Cantidad (13%), Subtotal (24%, `white-space: nowrap`).
+   - Reglas `@media only screen and (max-width: 480px)` ajustando padding a 10px 8px y tipografía compacta para impedir cualquier desborde horizontal.
+2. **Eliminación Definitiva del Freeze Touch en WebKit y Retorno al Turno (`src/lib/scrollLock.js`, `agenda.module.css`, `/admin/clientes`)**:
+   - En `src/app/admin/clientes/page.js`: se restauró `if (turnoIdParam) params.push('turnoId=' + encodeURIComponent(turnoIdParam));` en `handleCloseProfile`, garantizando que al cerrar la ficha vuelva directamente al modal del turno.
+   - En `src/lib/scrollLock.js`: se eliminó `document.body.style.position = 'fixed'` y `top = -scrollY`, que era la causa raíz de que WebKit desfasara y desvinculara el hit-testing táctil en iOS Safari. Ahora utiliza `overflow: hidden` y `touchAction: 'none'` en html/body.
+   - En `src/app/admin/agenda/agenda.module.css`: se aplicó `touch-action: none !important; pointer-events: auto !important;` en `.modalOverlay` móvil y `touch-action: pan-y !important; -webkit-overflow-scrolling: touch !important; pointer-events: auto !important; overscroll-behavior: contain !important;` en `.modalContent`.
+3. **Filtro Estricto de Autogestión (`src/app/page.js`, `/api/zonas`)**:
+   - `src/app/page.js` ahora invoca `/api/zonas?autogestion=true` y filtra en cliente `!z.servicio || (z.servicio.activo !== false && z.servicio.habilitadoAutogestion !== false)`.
+   - `src/app/api/zonas/route.js` impone el filtro de autogestión cuando `autogestion=true` está presente, incluso si la petición incluye cookies de sesión administrativa.
+4. **Selectores Independientes de 7 Días en 3 Secciones (`/admin/configuracion`)**:
+   - Sección 1: **Agenda Interna**: `work_days` (default `"1,2,3,4,5,6"`) + `work_start` / `work_end`.
+   - Sección 2: **Elegir Turno (Alta / Siguiente Turno)**: `alta_turno_work_days` (default `"1,2,3,4,5"`) + `alta_turno_work_start` / `alta_turno_work_end`.
+   - Sección 3: **Autogestión / Reserva Online**: `booking_work_days` (default `"1,2,3,4,5"`) + `booking_work_start` / `booking_work_end`.
+   - `/api/disponibilidad` valida contra `booking_work_days`.
+   - `/api/admin/alta-turno/disponibilidad` valida contra `alta_turno_work_days`.
+   - `/admin/alta-turno` inicializa `selectedDays` desde `alta_turno_work_days`.
+
+### Despliegue en Producción y Staging
+- **Commit**: `65db709`
+- **Backup**: `agenda_db_pre_deploy_20261121_220659.sql` generado exitosamente (7.4 MB).
+- **Entorno Producción**: Hostinger VPS (`187.127.9.216`, `/srv/gonzalo-dep`, PM2 `gonzalo-agenda`, puerto 3006, HTTPS 200 OK).
+- **Entorno Staging**: Hostinger VPS (`/srv/gonzalo-dep-staging`, PM2 `gonzalo-agenda-staging`, puerto 3008, HTTP 200 OK).

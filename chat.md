@@ -2302,3 +2302,30 @@
      - En `/admin/agenda`: grilla semanal y mensual ahora leen `config.work_days` para generar dinámicamente las columnas (`grid-template-columns: 80px repeat(${weekDates.length}, 1fr)`).
   3. **Compilación**:
      - `npm run build` verificado exitosamente (50/50 páginas estáticas, 0 errores).
+
+---
+
+### Implementación D-180 — Recibo por Email Responsivo, Eliminación Definitiva del Freeze Touch en iPhone y Retorno al Turno, Filtro Estricto de Autogestión y 3 Secciones de Horarios Laborales (2026-11-21 19:10)
+- **Requerimientos**:
+  1. Recibo por mail en smartphones desbordaba texto y tabla fuera del recuadro negro (`media_1795296632742_4064d1c6.png`).
+  2. Al cerrar la ficha de cliente desde un turno, Gonzalo pide que vuelva al turno (como antes) y reporta que el iPhone se le congelaba ("no me toma el dedo") (`media_1795296612004_4a75ceb4.png`).
+  3. En autogestión aparecían Masajes y Faciales a pesar de estar deshabilitados (`media_1795296737474_da8fcb2c.jpg`).
+  4. La selección de días laborales debe ser independiente para las 3 secciones (Agenda Interna, Alta/Siguiente Turno, y Autogestión) (`media_1795296677918_ee8508ca.jpg`).
+- **Solución Realizada**:
+  1. **Recibo por Email (`src/lib/email.js`)**: Plantilla reescrita con tablas puras (`table-layout: fixed !important; width: 100% !important;`), anchos de columnas en porcentajes fijos, padding compacto y `@media only screen and (max-width: 480px)` para evitar cualquier desborde horizontal.
+  2. **Freeze Touch en iPhone & Retorno al Turno (`src/lib/scrollLock.js`, `agenda.module.css`, `/admin/clientes`)**:
+     - Se restauró `turnoIdParam` en `handleCloseProfile` para regresar directamente al turno seleccionado.
+     - Se eliminó `document.body.style.position = 'fixed'` y `top = -scrollY` en `safeLockBodyScroll`, utilizando `overflow: hidden` en html/body para evitar que WebKit desplace el hit-testing táctil.
+     - En CSS móvil: `.modalOverlay` con `touch-action: none; pointer-events: auto;` y `.modalContent` con `touch-action: pan-y; -webkit-overflow-scrolling: touch; pointer-events: auto; overscroll-behavior: contain;`.
+  3. **Filtro Estricto de Autogestión (`src/app/page.js`, `/api/zonas`)**:
+     - `/api/zonas?autogestion=true` ahora impone el filtro `habilitadoAutogestion: true` incluso con cookies de administrador.
+     - En `src/app/page.js` se filtran activamente zonas con `habilitadoAutogestion === false` o `activo === false`.
+  4. **Selectores Independientes de 7 Días en 3 Secciones (`/admin/configuracion`)**:
+     - 1. Agenda Interna: `work_days` + `work_start` / `work_end`.
+     - 2. Elegir Turno (Alta/Siguiente Turno): `alta_turno_work_days` + `alta_turno_work_start` / `alta_turno_work_end`.
+     - 3. Autogestión: `booking_work_days` + `booking_work_start` / `booking_work_end`.
+     - En `/api/disponibilidad` y `/api/admin/alta-turno/disponibilidad` se validan los días correspondientes.
+  5. **Despliegue y Verificación**:
+     - Backup `agenda_db_pre_deploy_20261121_220659.sql` (7.4 MB).
+     - Commit `65db709` desplegado exitosamente tanto en Producción (`https://agenda.depilacionparahombres.com`, PM2 `gonzalo-agenda`, puerto 3006) como en Staging (`http://187.127.9.216:3008`, PM2 `gonzalo-agenda-staging`).
+     - Respuestas HTTP 200 OK validadas en vivo.
