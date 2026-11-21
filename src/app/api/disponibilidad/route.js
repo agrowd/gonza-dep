@@ -41,21 +41,27 @@ export async function GET(request) {
     // Fetch operating hours configuration
     const bookingStartConfig = await prisma.configuracion.findUnique({ where: { key: 'booking_work_start' } });
     const bookingEndConfig = await prisma.configuracion.findUnique({ where: { key: 'booking_work_end' } });
+    const bookingDaysConfig = await prisma.configuracion.findUnique({ where: { key: 'booking_work_days' } });
     const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
     const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
 
     const workStartStr = bookingStartConfig?.value || startConfig?.value || '14:00';
     const workEndStr = bookingEndConfig?.value || endConfig?.value || '22:00';
+    const bookingDaysList = (bookingDaysConfig?.value || '1,2,3,4,5')
+      .split(',')
+      .map(d => parseInt(d.trim(), 10))
+      .filter(d => !isNaN(d));
 
     const WORK_START = timeToMinutes(workStartStr);
     const WORK_END = timeToMinutes(workEndStr);
 
     // Helper: calculate slots for a specific day
     const calculateDaySlots = (dayDateStr, dayBusy, hasExistingTurnos) => {
-      // 0. Weekend check: Online bookings are never allowed on Saturdays (6) or Sundays (0)
+      // 0. Work days check according to booking_work_days (1=Lun ... 6=Sab, 7=Dom)
       const dayOfWeek = new Date(dayDateStr + 'T12:00:00Z').getUTCDay();
-      if (dayOfWeek === 0 || dayOfWeek === 6) {
-        return { disponible: false, lleno: false, motivo: 'FIN_DE_SEMANA', slots: [] };
+      const systemDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+      if (!bookingDaysList.includes(systemDay)) {
+        return { disponible: false, lleno: false, motivo: 'NO_LABORAL', slots: [] };
       }
 
       // 1. If day has full day block
@@ -252,15 +258,16 @@ export async function GET(request) {
       const dayOfWeek = dateObj.getUTCDay(); // 0 = Sun, 1 = Mon ...
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-      // Domingo cerrado
-      if (dayOfWeek === 0) {
+      // Verificación de días no laborales según booking_work_days (1=Lun ... 6=Sab, 7=Dom)
+      const systemDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+      if (!bookingDaysList.includes(systemDay)) {
         daysResult[dateStr] = {
           date: dateStr,
           day,
           dayOfWeek,
           disponible: false,
           lleno: false,
-          motivo: 'DOMINGO',
+          motivo: 'NO_LABORAL',
           slots: []
         };
         continue;

@@ -1176,8 +1176,9 @@
     align-items: flex-start !important;
     justify-content: center !important;
     box-sizing: border-box !important;
-    overflow: hidden !important; /* CRITICAL: Overlay DOES NOT SCROLL, eliminating the double scroll trap */
-    touch-action: auto !important;
+    overflow: hidden !important;
+    touch-action: none !important;
+    pointer-events: auto !important;
     -webkit-tap-highlight-color: transparent !important;
     z-index: 2000 !important;
   }
@@ -1191,8 +1192,10 @@
     max-height: calc(100dvh - 0.9rem) !important;
     height: auto !important;
     overflow-y: auto !important; /* The ONLY element that scrolls */
+    -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
-    touch-action: auto !important;
+    touch-action: pan-y !important;
+    pointer-events: auto !important;
     position: relative !important;
     animation: none !important;
     transform: none !important;

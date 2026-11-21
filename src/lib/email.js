@@ -523,10 +523,10 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
     const priceCell = hidePrice ? '' : `$${Math.round(Number(itemPrice)).toLocaleString('es-AR')}`;
     return `
       <tr style="border-bottom: 1px solid #e0e0e0;">
-        <td style="padding: 10px 12px; font-size: 14px; color: #111111;">${z.nombre || 'Sesión de Depilación'}</td>
-        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right;">${priceCell}</td>
-        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: center;">1</td>
-        <td style="padding: 10px 12px; font-size: 14px; color: #111111; text-align: right; font-weight: bold;">${priceCell}</td>
+        <td style="width: 38%; padding: 8px 6px; font-size: 12px; color: #111111; word-break: break-word; vertical-align: middle;">${z.nombre || 'Sesión de Depilación'}</td>
+        <td style="width: 25%; padding: 8px 4px; font-size: 12px; color: #111111; text-align: right; white-space: nowrap; vertical-align: middle;">${priceCell}</td>
+        <td style="width: 13%; padding: 8px 2px; font-size: 12px; color: #111111; text-align: center; vertical-align: middle;">1</td>
+        <td style="width: 24%; padding: 8px 4px; font-size: 12px; color: #111111; text-align: right; font-weight: bold; white-space: nowrap; vertical-align: middle;">${priceCell}</td>
       </tr>
     `;
   }).join('');
@@ -536,58 +536,67 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
     <html lang="es">
     <head>
       <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
       <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
       <title>Recibo Comercial - Gonzalo Depilación</title>
       <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; color: #111111; margin: 0; padding: 20px; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; color: #111111; margin: 0; padding: 12px 6px; -webkit-text-size-adjust: 100%; }
         a, a:link, a:visited { color: #111111 !important; text-decoration: none !important; }
         x-apple-data-detectors, x-apple-data-detectors a { color: #111111 !important; text-decoration: none !important; }
-        .receipt-container { max-width: 620px; margin: 0 auto; background-color: #ffffff; border: 2px solid #333333; padding: 20px; box-sizing: border-box; }
-        .header-box { border: 1px solid #777777; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .header-left { width: 42%; font-size: 12px; line-height: 1.4; }
-        .header-left h2 { font-size: 16px; margin: 0 0 4px 0; color: #000000; }
-        .header-center { width: 16%; text-align: center; border-left: 1px solid #cccccc; border-right: 1px solid #cccccc; padding: 0 5px; }
-        .letter-x { font-size: 24px; font-weight: 900; margin: 0; line-height: 1; }
-        .header-center span { font-size: 8px; display: block; color: #555555; margin-top: 2px; }
-        .header-right { width: 38%; text-align: right; font-size: 12px; line-height: 1.4; }
-        .header-right h3 { font-size: 16px; margin: 0 0 2px 0; letter-spacing: 1px; }
-        .client-box { border: 1px solid #cccccc; padding: 10px 12px; font-size: 13px; margin-bottom: 15px; background-color: #fafafa; }
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #cccccc; }
-        .items-table th { background-color: #eeeeee; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #cccccc; }
-        .total-box { text-align: right; font-size: 16px; font-weight: bold; padding: 10px 0; border-top: 2px solid #333333; margin-top: 15px; }
-        .footer-legend { text-align: center; font-size: 11px; color: #666666; margin-top: 20px; border-top: 1px solid #eeeeee; padding-top: 10px; }
+        .receipt-container { width: 100%; max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 2px solid #333333; padding: 16px 14px; box-sizing: border-box; overflow: hidden; }
+        .header-table { width: 100%; border-collapse: collapse; border: 1px solid #777777; margin-bottom: 12px; }
+        .client-box { border: 1px solid #cccccc; padding: 8px 10px; font-size: 12px; margin-bottom: 12px; background-color: #fafafa; word-break: break-word; }
+        .items-table { width: 100% !important; max-width: 100% !important; table-layout: fixed !important; border-collapse: collapse; margin-bottom: 15px; border: 1px solid #cccccc; box-sizing: border-box; }
+        .total-box { text-align: right; font-size: 15px; font-weight: bold; padding: 10px 0; border-top: 2px solid #333333; margin-top: 12px; }
+        .footer-legend { text-align: center; font-size: 10px; color: #666666; margin-top: 15px; border-top: 1px solid #eeeeee; padding-top: 8px; }
+        @media only screen and (max-width: 480px) {
+          body { padding: 4px 2px !important; }
+          .receipt-container { padding: 10px 8px !important; border-width: 1.5px !important; }
+          .header-left-title { font-size: 12px !important; }
+          .header-left-sub { font-size: 9.5px !important; }
+          .header-x-letter { font-size: 18px !important; }
+          .header-x-sub { font-size: 7px !important; }
+          .header-right-title { font-size: 12px !important; }
+          .header-right-sub { font-size: 9.5px !important; }
+          .client-box { padding: 6px 8px !important; font-size: 11px !important; }
+          .items-table th { padding: 6px 3px !important; font-size: 10.5px !important; }
+          .items-table td { padding: 6px 3px !important; font-size: 10.5px !important; }
+          .total-box { font-size: 13.5px !important; }
+          .total-box span:last-child { font-size: 15px !important; }
+        }
       </style>
     </head>
     <body>
       <div class="receipt-container">
-        <div class="header-box">
-          <div class="header-left">
-            <h2>Gonzalo Depilacion Laser</h2>
-            <div>Domicilio comercial : Parana 597 piso 8 depto 48 - CABA</div>
-          </div>
-          <div class="header-center">
-            <div class="letter-x">X</div>
-            <span>Documento no válido como factura</span>
-          </div>
-          <div class="header-right">
-            <h3>RECIBO</h3>
-            <div><strong>Nº ${receiptNum}</strong></div>
-            <div>Fecha emisión : ${receiptDate}</div>
-          </div>
-        </div>
+        <table class="header-table" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="width: 45%; padding: 8px 6px; vertical-align: middle;">
+              <h2 class="header-left-title" style="font-size: 14px; margin: 0 0 2px 0; color: #000000; line-height: 1.2;">Gonzalo Depilacion Laser</h2>
+              <div class="header-left-sub" style="font-size: 10.5px; color: #333333; line-height: 1.3;">Domicilio comercial: Parana 597 piso 8 depto 48 - CABA</div>
+            </td>
+            <td style="width: 15%; text-align: center; border-left: 1px solid #cccccc; border-right: 1px solid #cccccc; padding: 4px 2px; vertical-align: middle;">
+              <div class="header-x-letter" style="font-size: 20px; font-weight: 900; margin: 0; line-height: 1;">X</div>
+              <span class="header-x-sub" style="font-size: 7.5px; display: block; color: #555555; margin-top: 2px; line-height: 1.1;">Doc. no válido como factura</span>
+            </td>
+            <td style="width: 40%; text-align: right; padding: 8px 6px; vertical-align: middle;">
+              <h3 class="header-right-title" style="font-size: 14px; margin: 0 0 2px 0; letter-spacing: 0.5px;">RECIBO</h3>
+              <div class="header-right-sub" style="font-size: 10.5px; color: #333333; line-height: 1.3;"><strong>Nº ${receiptNum}</strong></div>
+              <div class="header-right-sub" style="font-size: 10.5px; color: #333333; line-height: 1.3;">Fecha emisión: ${receiptDate}</div>
+            </td>
+          </tr>
+        </table>
 
         <div class="client-box">
           <strong>Nombre / Razón social:</strong> ${clientName}
         </div>
 
-        <table class="items-table">
+        <table class="items-table" cellpadding="0" cellspacing="0">
           <thead>
             <tr>
-              <th style="text-align: left;">Servicio</th>
-              <th style="text-align: right;">Precio Unit.</th>
-              <th style="text-align: center;">Cantidad</th>
-              <th style="text-align: right;">Subtotal</th>
+              <th style="width: 38%; text-align: left; background-color: #eeeeee; padding: 7px 6px; font-size: 11.5px; border-bottom: 1px solid #cccccc; word-break: break-word;">Servicio</th>
+              <th style="width: 25%; text-align: right; background-color: #eeeeee; padding: 7px 4px; font-size: 11.5px; border-bottom: 1px solid #cccccc; white-space: nowrap;">Precio Unit.</th>
+              <th style="width: 13%; text-align: center; background-color: #eeeeee; padding: 7px 2px; font-size: 11.5px; border-bottom: 1px solid #cccccc;">Cant.</th>
+              <th style="width: 24%; text-align: right; background-color: #eeeeee; padding: 7px 4px; font-size: 11.5px; border-bottom: 1px solid #cccccc; white-space: nowrap;">Subtotal</th>
             </tr>
           </thead>
           <tbody>
@@ -597,12 +606,12 @@ export async function sendReceiptEmail(clientEmail, clientName, turnDetails) {
 
         <div class="total-box">
           <span>Total: </span>
-          <span style="font-size: 18px; color: #000000;">$${Number(valorTotal).toLocaleString('es-AR')}</span>
+          <span style="font-size: 16px; color: #000000; font-weight: 800;">$${Number(valorTotal).toLocaleString('es-AR')}</span>
         </div>
 
         <div class="footer-legend">
           <div>Documento no válido como factura</div>
-          <div style="margin-top: 4px;">Página 1 de 1</div>
+          <div style="margin-top: 3px;">Página 1 de 1</div>
         </div>
       </div>
     </body>

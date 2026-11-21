@@ -846,8 +846,9 @@ function ClientesPageContent() {
     setIsProfileOpen(false);
     if (fromPage === 'agenda' || currentUserRole === 'OPERADOR') {
       const params = [];
-      if (dateParam) params.push(`date=${dateParam}`);
-      if (viewParam) params.push(`view=${viewParam}`);
+      if (dateParam) params.push(`date=${encodeURIComponent(dateParam)}`);
+      if (viewParam) params.push(`view=${encodeURIComponent(viewParam)}`);
+      if (turnoIdParam) params.push(`turnoId=${encodeURIComponent(turnoIdParam)}`);
       params.push('fromAgendaReturn=true');
       const queryStr = params.length > 0 ? `?${params.join('&')}` : '';
       router.push(`/admin/agenda${queryStr}`);

@@ -32,21 +32,29 @@ export async function GET(request) {
     const diasSemanaParam = searchParams.get('diasSemana'); // e.g. "1,2,3,4,5"
     const excludeTurnoId = searchParams.get('excludeTurnoId') || searchParams.get('turnoId');
 
+    // Fetch config for operating hours and work days (Agenda visual + Alta/Siguiente Turno)
+    const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
+    const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
+    const altaStartConfig = await prisma.configuracion.findUnique({ where: { key: 'alta_turno_work_start' } });
+    const altaEndConfig = await prisma.configuracion.findUnique({ where: { key: 'alta_turno_work_end' } });
+    const altaDaysConfig = await prisma.configuracion.findUnique({ where: { key: 'alta_turno_work_days' } });
+
     // Parse allowed days of week (0 = Sunday, 1 = Monday, ... 6 = Saturday)
-    let allowedDays = [1, 2, 3, 4, 5, 6]; // default Lun-Sab
+    const configuredAltaDays = (altaDaysConfig?.value || '1,2,3,4,5')
+      .split(',')
+      .map(d => parseInt(d.trim(), 10))
+      .filter(d => !isNaN(d))
+      .map(d => d === 7 ? 0 : d);
+
+    let allowedDays = configuredAltaDays.length > 0 ? configuredAltaDays : [1, 2, 3, 4, 5];
     if (diasSemanaParam) {
-      allowedDays = diasSemanaParam.split(',').map(d => parseInt(d.trim(), 10)).filter(d => !isNaN(d));
+      allowedDays = diasSemanaParam.split(',').map(d => parseInt(d.trim(), 10)).filter(d => !isNaN(d)).map(d => d === 7 ? 0 : d);
     }
 
     // Month boundary dates
     const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
     const endDate = new Date(Date.UTC(year, month, 1, 0, 0, 0)); // First day of next month
 
-    // Fetch config for operating hours (Agenda visual + Alta/Siguiente Turno)
-    const startConfig = await prisma.configuracion.findUnique({ where: { key: 'work_start' } });
-    const endConfig = await prisma.configuracion.findUnique({ where: { key: 'work_end' } });
-    const altaStartConfig = await prisma.configuracion.findUnique({ where: { key: 'alta_turno_work_start' } });
-    const altaEndConfig = await prisma.configuracion.findUnique({ where: { key: 'alta_turno_work_end' } });
     const globalWorkStart = startConfig?.value || '12:30';
     const globalWorkEnd = endConfig?.value || '22:00';
     const defaultAltaStart = altaStartConfig?.value || '15:00';

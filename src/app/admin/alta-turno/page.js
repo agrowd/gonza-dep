@@ -194,6 +194,16 @@ function AltaTurnoContent() {
         if (cfg?.alta_turno_work_end) {
           setHoraHasta(cfg.alta_turno_work_end);
         }
+        if (cfg?.alta_turno_work_days) {
+          const days = cfg.alta_turno_work_days
+            .split(',')
+            .map(d => parseInt(d.trim(), 10))
+            .filter(d => !isNaN(d))
+            .map(d => d === 7 ? 0 : d);
+          if (days.length > 0) {
+            setSelectedDays(days);
+          }
+        }
         if (cfg?.zonas_otros_lista) {
           setZonasOtrosList(parseZonasOtrosLista(cfg.zonas_otros_lista));
         }

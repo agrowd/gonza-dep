@@ -99,11 +99,13 @@ export default function Home() {
 
   // 1. Fetch Zones catalog on mount
   useEffect(() => {
-    fetch('/api/zonas')
+    fetch('/api/zonas?autogestion=true')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          setZones(data);
+          // Strictly filter only zones belonging to active, autogestion-enabled services
+          const filtered = data.filter(z => !z.servicio || (z.servicio.activo !== false && z.servicio.habilitadoAutogestion !== false));
+          setZones(filtered);
         }
       })
       .catch(err => console.error('Error fetching zones:', err));

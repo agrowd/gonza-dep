@@ -82,8 +82,10 @@ export default function ConfiguracionPage() {
     work_days: '1,2,3,4,5,6',
     alta_turno_work_start: '15:00',
     alta_turno_work_end: '22:00',
+    alta_turno_work_days: '1,2,3,4,5',
     booking_work_start: '15:00',
     booking_work_end: '22:00',
+    booking_work_days: '1,2,3,4,5',
     email_confirmation_subject: '',
     email_confirmation_body: '',
     email_cancellation_subject: '',
@@ -548,8 +550,10 @@ export default function ConfiguracionPage() {
             work_days: data.work_days || '1,2,3,4,5,6',
             alta_turno_work_start: data.alta_turno_work_start || '15:00',
             alta_turno_work_end: data.alta_turno_work_end || '22:00',
+            alta_turno_work_days: data.alta_turno_work_days || '1,2,3,4,5',
             booking_work_start: data.booking_work_start || '15:00',
             booking_work_end: data.booking_work_end || '22:00',
+            booking_work_days: data.booking_work_days || '1,2,3,4,5',
             email_confirmation_subject: data.email_confirmation_subject || '',
             email_confirmation_body: data.email_confirmation_body || '',
             email_cancellation_subject: data.email_cancellation_subject || '',
@@ -926,6 +930,87 @@ export default function ConfiguracionPage() {
       return url.replace('/uploads/', '/api/uploads/');
     }
     return url;
+  };
+
+  const renderDaysOfWeekSelector = (configKey, title, description) => {
+    const selectedDays = (configs[configKey] || '1,2,3,4,5').split(',').map(s => s.trim()).filter(Boolean);
+    return (
+      <div style={{ marginBottom: '1.25rem', backgroundColor: 'rgba(255, 255, 255, 0.03)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+          {title}
+        </div>
+        {description && (
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.65rem', lineHeight: '1.4' }}>
+            {description}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.65rem' }}>
+          {DAYS_OF_WEEK.map(d => {
+            const isSelected = selectedDays.includes(d.id);
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => {
+                  let updated;
+                  if (isSelected) {
+                    if (selectedDays.length <= 1) {
+                      showToast('Debe haber al menos 1 día habilitado', 'error');
+                      return;
+                    }
+                    updated = selectedDays.filter(x => x !== d.id);
+                  } else {
+                    updated = [...selectedDays, d.id].sort((a, b) => Number(a) - Number(b));
+                  }
+                  setConfigs(prev => ({ ...prev, [configKey]: updated.join(',') }));
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: '6px',
+                  border: isSelected ? '1.5px solid #7a1f1e' : '1px solid #cbd5e1',
+                  backgroundColor: isSelected ? '#7a1f1e' : '#f8fafc',
+                  color: isSelected ? '#ffffff' : '#334155',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isSelected ? '0 2px 4px rgba(122, 31, 30, 0.25)' : 'none'
+                }}
+              >
+                <span style={{ fontSize: '0.85rem' }}>{isSelected ? '✓' : '○'}</span>
+                <span>{d.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setConfigs(prev => ({ ...prev, [configKey]: '1,2,3,4,5,6' }))}
+            style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
+          >
+            Lun a Sáb (Estándar)
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfigs(prev => ({ ...prev, [configKey]: '1,2,3,4,5,6,7' }))}
+            style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
+          >
+            Toda la semana (7 días)
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfigs(prev => ({ ...prev, [configKey]: '1,2,3,4,5' }))}
+            style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
+          >
+            Lun a Vie (5 días)
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const handleUploadWelcomeImage = async (e, type) => {
@@ -2463,87 +2548,16 @@ export default function ConfiguracionPage() {
             <div style={{ color: 'var(--color-gold)' }}>Cargando configuraciones...</div>
           ) : (
             <form onSubmit={handleSaveConfigs} className={styles.form}>
-              {/* DÍAS LABORALES DE ATENCIÓN (7 DÍAS DE LA SEMANA) */}
-              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.35rem' }}>
-                🗓️ Días Laborales de Atención (Semana)
+              {/* SECCIÓN 1: AGENDA INTERNA */}
+              <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: 'var(--color-gold)', marginBottom: '0.25rem' }}>
+                1. Agenda Interna (Gonzalo / Admin)
               </div>
               <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '0.85rem', lineHeight: '1.4' }}>
-                Habilitá o deshabilitá cualquiera de los 7 días de la semana. Los días activos definen las columnas de la agenda semanal y la atención del centro.
+                Define la vista de la agenda general del centro, los días visibles en las columnas y el horario visual de atención.
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.65rem' }}>
-                {DAYS_OF_WEEK.map(d => {
-                  const selectedDays = (configs.work_days || '1,2,3,4,5,6').split(',').map(s => s.trim()).filter(Boolean);
-                  const isSelected = selectedDays.includes(d.id);
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => {
-                        let updated;
-                        if (isSelected) {
-                          if (selectedDays.length <= 1) {
-                            showToast('Debe haber al menos 1 día laboral habilitado', 'error');
-                            return;
-                          }
-                          updated = selectedDays.filter(x => x !== d.id);
-                        } else {
-                          updated = [...selectedDays, d.id].sort((a, b) => Number(a) - Number(b));
-                        }
-                        setConfigs(prev => ({ ...prev, work_days: updated.join(',') }));
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                        padding: '0.55rem 0.95rem',
-                        borderRadius: '8px',
-                        border: isSelected ? '1.5px solid #7a1f1e' : '1px solid #cbd5e1',
-                        backgroundColor: isSelected ? '#7a1f1e' : '#f8fafc',
-                        color: isSelected ? '#ffffff' : '#334155',
-                        fontWeight: 700,
-                        fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? '0 2px 4px rgba(122, 31, 30, 0.25)' : 'none'
-                      }}
-                    >
-                      <span style={{ fontSize: '0.9rem' }}>{isSelected ? '✓' : '○'}</span>
-                      <span>{d.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {renderDaysOfWeekSelector('work_days', '🗓️ Días Laborales Visibles en la Agenda Interna', 'Habilitá o deshabilitá los días visibles en las columnas de la agenda semanal e interna.')}
 
-              <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setConfigs(prev => ({ ...prev, work_days: '1,2,3,4,5,6' }))}
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
-                >
-                  Lun a Sáb (Estándar)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfigs(prev => ({ ...prev, work_days: '1,2,3,4,5,6,7' }))}
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
-                >
-                  Toda la semana (7 días)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfigs(prev => ({ ...prev, work_days: '1,2,3,4,5' }))}
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '4px', border: '1px solid #94a3b8', background: 'transparent', color: '#64748b', cursor: 'pointer' }}
-                >
-                  Lun a Vie (5 días)
-                </button>
-              </div>
-
-              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.5rem 0' }} />
-
-              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.75rem' }}>
-                Agenda Interna (Gonzalo / Admin)
-              </div>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Hora Inicio Agenda Interna</label>
@@ -2572,14 +2586,18 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
-              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.5rem 0' }} />
+              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.75rem 0' }} />
 
-              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.25rem' }}>
-                Elegir Turno (Alta de Turno / Siguiente Turno)
+              {/* SECCIÓN 2: ELEGIR TURNO (ALTA / SIGUIENTE TURNO) */}
+              <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: 'var(--color-gold)', marginBottom: '0.25rem' }}>
+                2. Elegir Turno (Alta de Turno / Siguiente Turno)
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                Define la franja horaria que se muestra al buscar horarios para un turno nuevo o siguiente turno, sin modificar la grilla visual de la agenda.
+              <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '0.85rem', lineHeight: '1.4' }}>
+                Define los días y la franja horaria que se muestran al buscar horarios para agendar un turno nuevo o siguiente turno interno, sin modificar la grilla visual de la agenda.
               </div>
+
+              {renderDaysOfWeekSelector('alta_turno_work_days', '🗓️ Días Habilitados para Alta / Siguiente Turno', 'Días en los que el sistema busca y ofrece turnos disponibles al agendar.')}
+
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Hora Inicio Alta / Siguiente Turno</label>
@@ -2608,11 +2626,18 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
-              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.5rem 0' }} />
+              <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '1.75rem 0' }} />
 
-              <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-gold)', marginBottom: '0.75rem' }}>
-                Autogestión / Reserva Online de Clientes
+              {/* SECCIÓN 3: AUTOGESTIÓN / RESERVA ONLINE */}
+              <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: 'var(--color-gold)', marginBottom: '0.25rem' }}>
+                3. Autogestión / Reserva Online de Clientes
               </div>
+              <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '0.85rem', lineHeight: '1.4' }}>
+                Define los días de la semana y los horarios que los clientes pueden ver y reservar online desde la página web pública.
+              </div>
+
+              {renderDaysOfWeekSelector('booking_work_days', '🗓️ Días Habilitados para Reserva Web (Autogestión de Clientes)', 'Días permitidos para que los clientes reserven turnos online desde la página web pública.')}
+
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Hora Inicio Reserva Online</label>
