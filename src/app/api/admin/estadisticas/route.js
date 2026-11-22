@@ -187,7 +187,11 @@ function formatTurnoItem(t, extra = {}) {
     oportunidadNoConcretada,
     subtipoGanancia: extra.subtipoGanancia || null,
     notasGonzalo: t.notasGonzalo || t.cliente?.notasGonzalo || '',
-    observaciones: t.observaciones || ''
+    observaciones: t.observaciones || '',
+    comisionUsuarioId: t.comisionUsuarioId || null,
+    comisionUsuarioNombre: t.comisionUsuario?.nombre || null,
+    comisionPorcentaje: Number(t.comisionPorcentaje || 0),
+    comisionMonto: Number(t.comisionMonto || 0)
   };
 }
 
@@ -288,29 +292,29 @@ export async function GET(request) {
     ] = await Promise.all([
       prisma.turno.findMany({
         where: { fecha: { gte: startFechaPeriodo, lte: endFechaPeriodo } },
-        include: { cliente: true, operador: true },
+        include: { cliente: true, operador: true, comisionUsuario: true },
         orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }]
       }),
       prisma.turno.findMany({
         where: { createdAt: { gte: startCreatedPeriodo, lte: endCreatedPeriodo } },
-        include: { cliente: true, operador: true },
+        include: { cliente: true, operador: true, comisionUsuario: true },
         orderBy: [{ createdAt: 'asc' }]
       }),
       prisma.turno.findMany({
         where: { fecha: { gte: startFechaToday, lte: endFechaToday } },
-        include: { cliente: true, operador: true }
+        include: { cliente: true, operador: true, comisionUsuario: true }
       }),
       prisma.turno.findMany({
         where: { createdAt: { gte: startCreatedToday, lte: endCreatedToday } },
-        include: { cliente: true, operador: true }
+        include: { cliente: true, operador: true, comisionUsuario: true }
       }),
       prisma.turno.findMany({
         where: { fecha: { gte: startFechaSemana, lte: endFechaSemana } },
-        include: { cliente: true, operador: true }
+        include: { cliente: true, operador: true, comisionUsuario: true }
       }),
       prisma.turno.findMany({
         where: { createdAt: { gte: startCreatedSemana, lte: endCreatedSemana } },
-        include: { cliente: true, operador: true }
+        include: { cliente: true, operador: true, comisionUsuario: true }
       }),
       prisma.cliente.findMany({
         include: {
@@ -887,6 +891,34 @@ export async function GET(request) {
       items: itemsOperador
     };
 
+    // 11B. Comisiones de Captadores / Promotores en el Período (D-182)
+    const turnosComisionadosPeriodo = turnosPeriodo.filter(t => t.estado !== 'CANCELADO' && Number(t.comisionMonto || 0) > 0);
+    const itemsComisiones = turnosComisionadosPeriodo.map(t => formatTurnoItem(t));
+    const totalComisiones = itemsComisiones.reduce((sum, item) => sum + (item.comisionMonto || 0), 0);
+
+    const comisionesPorUsuarioMap = {};
+    itemsComisiones.forEach(item => {
+      const uName = item.comisionUsuarioNombre || 'Sin asignar';
+      if (!comisionesPorUsuarioMap[uName]) {
+        comisionesPorUsuarioMap[uName] = {
+          nombre: uName,
+          totalComision: 0,
+          turnosCount: 0,
+          items: []
+        };
+      }
+      comisionesPorUsuarioMap[uName].totalComision += item.comisionMonto;
+      comisionesPorUsuarioMap[uName].turnosCount++;
+      comisionesPorUsuarioMap[uName].items.push(item);
+    });
+    const comisionesPorUsuario = Object.values(comisionesPorUsuarioMap).sort((a, b) => b.totalComision - a.totalComision);
+    const comisionesData = {
+      total: totalComisiones,
+      count: itemsComisiones.length,
+      items: itemsComisiones,
+      porUsuario: comisionesPorUsuario
+    };
+
     // ==========================================
     // 12. CUMPLEAÑOS DE CLIENTES EN EL PERÍODO
     // ==========================================
@@ -1104,6 +1136,7 @@ export async function GET(request) {
           catalog: zonasCatalog.map(z => z.nombre)
         },
         operador: operadorData,
+        comisiones: comisionesData,
         cumpleanos: {
           count: itemsCumpleanos.length,
           items: itemsCumpleanos

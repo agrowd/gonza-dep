@@ -22,5 +22,4 @@ export function safeLockBodyScroll() {
   if (typeof document === 'undefined') return;
   document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
-  document.body.style.touchAction = 'none';
 }

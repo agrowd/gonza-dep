@@ -124,6 +124,15 @@ const METRIC_DEFINITIONS = [
     hasAvg: false,
     excelModel: 'C',
     description: 'Clientes registrados que cumplen años dentro del rango de fechas seleccionado (según día y mes de nacimiento).'
+  },
+  {
+    id: 'comisiones',
+    label: '🎯 Comisiones a Pagar (Captadores / Promotores)',
+    valueLabel: 'Total Comisiones a Pagar',
+    isDanger: false,
+    hasAvg: true,
+    excelModel: null,
+    description: 'Comisiones devengadas por turnos agendados con promotores o captadores comisionables en el período.'
   }
 ];
 
@@ -422,7 +431,9 @@ export default function EstadisticasPage() {
     // Recalcular monto según la naturaleza de la métrica
     let totalMoney = 0;
     filteredItems.forEach(item => {
-      if (selectedMetric === 'cancelados' || selectedMetric === 'ausentes') {
+      if (selectedMetric === 'comisiones') {
+        totalMoney += Number(item.comisionMonto || 0);
+      } else if (selectedMetric === 'cancelados' || selectedMetric === 'ausentes') {
         totalMoney += Number(item.oportunidadNoConcretada ?? item.valorTotal ?? 0);
       } else if (selectedMetric === 'gananciaNeta') {
         totalMoney += Number(item.ingresoCobradoPeriodo ?? item.valorTotal ?? 0);
@@ -664,6 +675,19 @@ export default function EstadisticasPage() {
                   <th className={styles.th}>Canal / Estado</th>
                 </tr>
               </thead>
+            ) : selectedMetric === 'comisiones' ? (
+              <thead>
+                <tr>
+                  <th className={styles.th}>Acciones</th>
+                  <th className={styles.th}>Fecha y Hora</th>
+                  <th className={styles.th}>Cliente</th>
+                  <th className={styles.th}>Zonas</th>
+                  <th className={styles.th}>Promotor / Captador</th>
+                  <th className={styles.th}>% Comisión</th>
+                  <th className={styles.th} style={{ textAlign: 'right' }}>Comisión a Pagar</th>
+                  <th className={styles.th} style={{ textAlign: 'right' }}>Valor Turno</th>
+                </tr>
+              </thead>
             ) : (
               <thead>
                 <tr>
@@ -789,6 +813,64 @@ export default function EstadisticasPage() {
                         <div style={{ fontSize: '0.76rem', color: item.estado === 'ACTIVO' ? '#15803d' : '#64748b', fontWeight: 700 }}>
                           {item.estado === 'ACTIVO' ? '🟢 Activo' : '🔒 Inactivo'}
                         </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                if (selectedMetric === 'comisiones') {
+                  return (
+                    <tr key={item.id} className={styles.tr}>
+                      <td className={styles.td}>
+                        <div className={styles.actionsCell}>
+                          <button
+                            type="button"
+                            className={styles.btnActionX}
+                            title="Excluir del cálculo"
+                            onClick={() => toggleExcludeId(item.id)}
+                          >
+                            ✕
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.btnActionFicha}
+                            title="Ver ficha del cliente"
+                            onClick={() => handleOpenFicha(item.clienteId)}
+                          >
+                            <UserIcon /> Ficha
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.btnActionTurno}
+                            title="Ver en Agenda"
+                            onClick={() => handleGoToTurno(item)}
+                          >
+                            <CalendarIcon />
+                          </button>
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{formatLocalDate(item.fecha)}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.horaInicio} - {item.horaFin} hs</div>
+                      </td>
+                      <td className={styles.td}>
+                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{item.clienteNombre}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.clienteWhatsapp || '—'}</div>
+                      </td>
+                      <td className={styles.td} style={{ fontSize: '0.85rem' }}>{item.zonasTexto || '—'}</td>
+                      <td className={styles.td}>
+                        <span style={{ fontWeight: 700, color: '#7c3aed', backgroundColor: '#f5f3ff', padding: '0.2rem 0.55rem', borderRadius: '6px', border: '1px solid #ddd6fe', display: 'inline-block' }}>
+                          🎯 {item.comisionUsuarioNombre || 'Sin asignar'}
+                        </span>
+                      </td>
+                      <td className={styles.td} style={{ textAlign: 'center', fontWeight: 700, color: '#7c3aed', fontSize: '0.95rem' }}>
+                        {item.comisionPorcentaje}%
+                      </td>
+                      <td className={styles.td} style={{ fontWeight: 800, color: '#7c3aed', fontSize: '1.05rem', textAlign: 'right' }}>
+                        ${(item.comisionMonto || 0).toLocaleString('es-AR')}
+                      </td>
+                      <td className={styles.td} style={{ fontWeight: 600, color: '#64748b', textAlign: 'right' }}>
+                        ${(item.valorTotal || 0).toLocaleString('es-AR')}
                       </td>
                     </tr>
                   );
@@ -1025,13 +1107,16 @@ export default function EstadisticasPage() {
               );
             }
 
+            const isComision = selectedMetric === 'comisiones';
             const isGN = selectedMetric === 'gananciaNeta';
             const moneyVal = formatMoney(
-              selectedMetric === 'cancelados' || selectedMetric === 'ausentes'
-                ? item.oportunidadNoConcretada
-                : isGN
-                  ? (item.ingresoCobradoPeriodo ?? item.valorTotal)
-                  : item.valorTotal
+              isComision
+                ? (item.comisionMonto || 0)
+                : (selectedMetric === 'cancelados' || selectedMetric === 'ausentes')
+                  ? item.oportunidadNoConcretada
+                  : isGN
+                    ? (item.ingresoCobradoPeriodo ?? item.valorTotal)
+                    : item.valorTotal
             );
 
             // Formatear fecha y hora como "01/10/26 · 13:50"
@@ -1064,7 +1149,9 @@ export default function EstadisticasPage() {
                     {dateTimeDisplay}
                   </div>
                   <div className={styles.mobileCardSenaVal}>
-                    {isGN ? (
+                    {isComision ? (
+                      `🎯 ${item.comisionUsuarioNombre || 'Sin promotor'} (${item.comisionPorcentaje}%) · Valor turno: ${formatMoney(item.valorTotal)}`
+                    ) : isGN ? (
                       item.subtipoGanancia?.includes('sin siguiente')
                         ? `Saldo cobrado: ${formatMoney(item.saldoCobradoPeriodo ?? item.ingresoCobradoPeriodo)}`
                         : item.subtipoGanancia?.includes('nuevo')

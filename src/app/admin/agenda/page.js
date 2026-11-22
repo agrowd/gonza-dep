@@ -65,6 +65,22 @@ const formatLocalDate = (dateInput) => {
   return d.toLocaleDateString('es-ES', { dateStyle: 'long' });
 };
 
+// Valida si una promoción está vigente para la fecha del turno (D-182)
+const isPromoValidForDate = (promo, dateStr) => {
+  if (!promo || !promo.activo) return false;
+  if (!dateStr) return true;
+  const cleanDate = typeof dateStr === 'string' ? dateStr.split('T')[0].trim() : toYYYYMMDD(dateStr);
+  if (promo.fechaInicio) {
+    const start = typeof promo.fechaInicio === 'string' ? promo.fechaInicio.split('T')[0] : toYYYYMMDD(promo.fechaInicio);
+    if (cleanDate < start) return false;
+  }
+  if (promo.fechaFin) {
+    const end = typeof promo.fechaFin === 'string' ? promo.fechaFin.split('T')[0] : toYYYYMMDD(promo.fechaFin);
+    if (cleanDate > end) return false;
+  }
+  return true;
+};
+
 const stripPhonePrefix = (phone) => {
   if (!phone) return '';
   let cleaned = phone.replace(/\D/g, '');
@@ -916,7 +932,16 @@ export default function AgendaPage() {
           const raw = JSON.parse(trimmed);
           parsedZones = Array.isArray(raw) ? raw : [raw];
         } else {
-          parsedZones = trimmed.split(',').map(s => ({ nombre: s.trim() }));
+          const otrosIdx = trimmed.search(/Otros:\s*/i);
+          if (otrosIdx !== -1) {
+            const beforeOtros = trimmed.slice(0, otrosIdx).replace(/,\s*$/, '');
+            const afterOtros = trimmed.slice(otrosIdx).replace(/^Otros:\s*/i, '');
+            const normalZones = beforeOtros ? beforeOtros.split(',').map(s => ({ nombre: s.trim() })) : [];
+            normalZones.push({ id: 'otros', isOtros: true, nombre: `Otros: ${afterOtros}` });
+            parsedZones = normalZones;
+          } else {
+            parsedZones = trimmed.split(',').map(s => ({ nombre: s.trim() }));
+          }
         }
       } else if (Array.isArray(zonasInput)) {
         parsedZones = zonasInput;
@@ -1012,7 +1037,16 @@ export default function AgendaPage() {
           const raw = JSON.parse(trimmed);
           parsedZones = Array.isArray(raw) ? raw : [raw];
         } else {
-          parsedZones = trimmed.split(',').map(s => ({ nombre: s.trim() }));
+          const otrosIdx = trimmed.search(/Otros:\s*/i);
+          if (otrosIdx !== -1) {
+            const beforeOtros = trimmed.slice(0, otrosIdx).replace(/,\s*$/, '');
+            const afterOtros = trimmed.slice(otrosIdx).replace(/^Otros:\s*/i, '');
+            const normalZones = beforeOtros ? beforeOtros.split(',').map(s => ({ nombre: s.trim() })) : [];
+            normalZones.push({ id: 'otros', isOtros: true, nombre: `Otros: ${afterOtros}` });
+            parsedZones = normalZones;
+          } else {
+            parsedZones = trimmed.split(',').map(s => ({ nombre: s.trim() }));
+          }
         }
       } else if (Array.isArray(turno.zonas)) {
         parsedZones = turno.zonas;
@@ -3089,11 +3123,13 @@ export default function AgendaPage() {
         .then(data => {
           if (data && data.found) {
             setLastClientTurnoInfo(data);
-            if (Number(data.saldoAFavor || 0) > 0) {
+            if (Number(data.saldoAFavor || 0) > 0 || data.señaEstado === 'CONSERVADA') {
+              const val = Number(data.saldoAFavor || data.valorSeña || 0);
               setNewTurno(prev => ({
                 ...prev,
-                valorSeña: Number(data.saldoAFavor),
-                manualSeñaOverride: Number(data.saldoAFavor)
+                valorSeña: val,
+                manualSeñaOverride: val,
+                señaEstado: 'SALDO_A_FAVOR'
               }));
             }
           } else {
@@ -3188,7 +3224,8 @@ export default function AgendaPage() {
           operadorId: newTurno.operadorId || null,
           whatsapp: fullPhone,
           valorTotal: Number(newTurno.valorTotal),
-          valorSeña: Number(newTurno.valorSeña)
+          valorSeña: Number(newTurno.valorSeña),
+          ...(newTurno.señaEstado ? { señaEstado: newTurno.señaEstado } : (Number(lastClientTurnoInfo?.saldoAFavor || 0) > 0 || lastClientTurnoInfo?.señaEstado === 'CONSERVADA' ? { señaEstado: 'SALDO_A_FAVOR' } : {}))
         })
       });
       if (res.ok) {
@@ -4016,6 +4053,11 @@ export default function AgendaPage() {
               const payableOperators = opPayouts.filter(p => p.rol === 'OPERADOR' || p.comisionValor > 0);
               const totalPagarOperadores = payableOperators.reduce((sum, p) => sum + p.montoPagar, 0);
 
+              // Suma de comisiones de captadores/promotores del día (D-182)
+              const totalComisionesDia = dayApps
+                .filter(t => t.estado !== 'CANCELADO' && Number(t.comisionMonto || 0) > 0)
+                .reduce((sum, t) => sum + Number(t.comisionMonto || 0), 0);
+
               return (
                 <>
                   <div className={styles.neocitaDayHeaderCard}>
@@ -4047,21 +4089,21 @@ export default function AgendaPage() {
                               <span className={styles.dayCardStatValGreen}>${ingresoNeto.toLocaleString('es-AR')}</span>
                               {(totalEfectivoDia > 0 || totalTransferenciaDia > 0) ? (
                                 <span style={{
-                                  fontSize: '0.65rem',
+                                  fontSize: '0.82rem',
                                   color: '#15803d',
-                                  fontWeight: 600,
+                                  fontWeight: 700,
                                   whiteSpace: 'nowrap',
-                                  marginTop: '1px'
+                                  marginTop: '2px'
                                 }}>
                                   (${totalEfectivoDia.toLocaleString('es-AR')} efectivo + ${totalTransferenciaDia.toLocaleString('es-AR')} transferencia)
                                 </span>
                               ) : totalSenasCobradasHoy > 0 && (
                                 <span style={{
-                                  fontSize: '0.65rem',
+                                  fontSize: '0.82rem',
                                   color: '#15803d',
-                                  fontWeight: 600,
+                                  fontWeight: 700,
                                   whiteSpace: 'nowrap',
-                                  marginTop: '1px'
+                                  marginTop: '2px'
                                 }}>
                                   {totalSaldosRealizados > 0
                                     ? `(${totalSaldosRealizados.toLocaleString('es-AR')} saldos + ${totalSenasCobradasHoy.toLocaleString('es-AR')} señas)`
@@ -4073,6 +4115,12 @@ export default function AgendaPage() {
                               <div className={styles.dayCardStatItem} style={{ marginTop: '0.2rem' }}>
                                 <span className={styles.dayCardStatLabel} style={{ color: '#2563eb' }}>A Pagar Operadores</span>
                                 <span style={{ fontWeight: 800, color: '#2563eb', fontSize: '1rem' }}>-${totalPagarOperadores.toLocaleString('es-AR')}</span>
+                              </div>
+                            )}
+                            {totalComisionesDia > 0 && (
+                              <div className={styles.dayCardStatItem} style={{ marginTop: '0.2rem' }}>
+                                <span className={styles.dayCardStatLabel} style={{ color: '#7c3aed' }}>🎯 Comisiones a Pagar</span>
+                                <span style={{ fontWeight: 800, color: '#7c3aed', fontSize: '1rem' }}>${totalComisionesDia.toLocaleString('es-AR')}</span>
                               </div>
                             )}
                           </div>
@@ -5214,6 +5262,7 @@ export default function AgendaPage() {
                   {(() => {
                     const selectedNames = zones.filter(z => (editTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
                     const matchingList = activePromos.filter(p => {
+                      if (!isPromoValidForDate(p, editTurno.fechaStr)) return false;
                       if (p.tipo === 'POR_CANTIDAD') {
                         const minQty = Number(p.cantidadZonas) || 2;
                         return selectedNames.length >= minQty;
@@ -5694,7 +5743,19 @@ export default function AgendaPage() {
 
                         const zoneExtraction = extractZoneSelection(selectedTurno.zonas, zones);
                         const hasOtrosDetalle = zoneExtraction.hasOtros;
-                        const otrosMontoDetalle = Number(zoneExtraction.otrosPrecio || 0);
+                        let otrosMontoDetalle = Number(zoneExtraction.otrosPrecio || 0);
+
+                        if (hasOtrosDetalle && otrosMontoDetalle === 0 && selectedTurno) {
+                          const matchedCatalogZones = (zones || []).filter(z => zoneExtraction.preselectedZoneIds.includes(z.id));
+                          if (matchedCatalogZones.length > 0) {
+                            const calcs = calculateTurnDetails(matchedCatalogZones, false);
+                            const catalogBase = Number(calcs.valorTotal || 0);
+                            const currentTotal = Number(selectedTurno.valorTotal || dynPrices.valorTotal || 0);
+                            if (currentTotal > catalogBase) {
+                              otrosMontoDetalle = currentTotal - catalogBase;
+                            }
+                          }
+                        }
 
                         return (
                           <>
@@ -5703,7 +5764,7 @@ export default function AgendaPage() {
                               <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.85rem' }}>VALOR TOTAL (A COBRAR)</span>
                               <span className={styles.detailValue} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem', display: 'inline-flex', alignItems: 'baseline', gap: '0.45rem', flexWrap: 'wrap' }}>
                                 <span>${Number(dynPrices.valorTotal).toLocaleString('es-ES')}</span>
-                                {hasOtrosDetalle && (
+                                {hasOtrosDetalle && otrosMontoDetalle > 0 && (
                                   <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                     (Otros: ${Number(otrosMontoDetalle).toLocaleString('es-ES')})
                                   </span>
@@ -5981,8 +6042,8 @@ export default function AgendaPage() {
                               );
                             })()}
 
-                            {/* Accordion: Siguientes Turnos Agendados (D-162) - Solo si tiene múltiples turnos futuros */}
-                            {clientFutureTurnos.length > 1 && (
+                            {/* Accordion: Siguientes Turnos Agendados (D-162 / D-182) */}
+                            {clientFutureTurnos.length > 0 && (
                               <div style={{
                                 gridColumn: '1 / -1',
                                 marginTop: '0.65rem',
@@ -6011,7 +6072,7 @@ export default function AgendaPage() {
                                   }}
                                 >
                                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                    📅 Siguientes turnos agendados ({clientFutureTurnos.length})
+                                    📅 Siguiente{clientFutureTurnos.length > 1 ? 's turnos agendados' : ' turno agendado'} ({clientFutureTurnos.length})
                                   </span>
                                   <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
                                     {isFutureSenasOpen ? '▲ Ocultar' : '▼ Ver'}
@@ -7494,7 +7555,7 @@ export default function AgendaPage() {
                                         otrosTexto: otrosZone ? (otrosZone.nombre?.replace(/^Otros:\s*/, '') || '') : prev.otrosTexto,
                                         otrosPrecio: otrosZone ? otrosZone.precio : prev.otrosPrecio,
                                         ...(data.metodoPago ? { metodoPago: data.metodoPago } : {}),
-                                        ...(Number(data.saldoAFavor || 0) > 0 ? { valorSeña: Number(data.saldoAFavor), manualSeñaOverride: Number(data.saldoAFavor) } : (data.señaEstado === 'CONSERVADA' ? { valorSeña: data.valorSeña, manualSeñaOverride: data.valorSeña } : {}))
+                                        ...(Number(data.saldoAFavor || 0) > 0 ? { valorSeña: Number(data.saldoAFavor), manualSeñaOverride: Number(data.saldoAFavor), señaEstado: 'SALDO_A_FAVOR' } : (data.señaEstado === 'CONSERVADA' ? { valorSeña: data.valorSeña, manualSeñaOverride: data.valorSeña, señaEstado: 'SALDO_A_FAVOR' } : {}))
                                       }));
                                     } else if (data.metodoPago) {
                                       setNewTurno(prev => ({ ...prev, metodoPago: data.metodoPago }));
@@ -8004,6 +8065,7 @@ export default function AgendaPage() {
                 {(() => {
                   const selectedNames = zones.filter(z => (newTurno.selectedZoneIds || []).some(id => String(id) === String(z.id))).map(z => z.nombre);
                   const matchingList = activePromos.filter(p => {
+                    if (!isPromoValidForDate(p, newTurno.fechaStr)) return false;
                     if (p.tipo === 'POR_CANTIDAD') {
                       const minQty = Number(p.cantidadZonas) || 2;
                       return selectedNames.length >= minQty;

@@ -3207,6 +3207,31 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 
 ---
 
+## Sesión 21/11/2026 (Parte 3) - Correcciones Críticas de Agenda, Multiturno, Promociones, Comisiones y WebKit (D-182)
+
+### Requerimientos Analizados
+1. **Multiturno - Turnos futuros agendados en la ficha del turno (`media_1795301143092_5b733c47.png`, `media_1795301161316_6474e07a.png`)**:
+   - Para clientes con 1 turno hoy y 1 futuro (ej. Esteban Medina), el acordeón no se mostraba porque requería `> 1` turnos futuros. Corregido a `> 0`.
+2. **Vigencia Temporal de Promociones (`media_1795301161316_6474e07a.png`)**:
+   - Una promoción vigente hasta enero se ofrecía en febrero. Se añadió `isPromoValidForDate(promo, dateStr)` validando fechas contra la cita.
+3. **Comisiones a Pagar en Agenda Diaria y Nueva Métrica en Estadísticas (`media_1795301272482_4706c39b.png`)**:
+   - En la cabecera diaria de la agenda se sumaron las comisiones a pagar del día (`totalComisionesDia`).
+   - En `/admin/estadisticas` se sumó la métrica dedicada `🎯 Comisiones a Pagar (Captadores / Promotores)` con desglose por promotor y tabla por turno.
+4. **Desglose de Efectivo + Transferencia Legible (`media_1795301228171_35a23465.jpg`)**:
+   - El texto del desglose se aumentó de `0.65rem` a `0.82rem` (`fontWeight: 700`).
+5. **Exclusión de Señas Guardadas / Saldo a Favor en Caja Diaria (`media_1795301245163_e712b9da.jpg`)**:
+   - En `newTurno`, cuando se usa saldo a favor o seña conservada, se etiqueta con `señaEstado: 'SALDO_A_FAVOR'`. En `/api/admin/turnos/senas-dia` se excluyen de caja fresca.
+6. **Turnos Reprogramados en Rojo en Historial de Cliente (`media_1795301209349_4ec7d618.png`)**:
+   - Se analizan las etiquetas de reprogramación en `observaciones` y se renderizan tarjetas virtuales con borde rojo punteado, fondo rosado tenue y badge `🔄 REPROGRAMADO`.
+7. **Eliminación Definitiva de Touch Freeze en iOS WebKit / Safari (`media_1795301161316_6474e07a.png`, audio)**:
+   - Se removió `document.body.style.touchAction = 'none'` en `src/lib/scrollLock.js` y `touch-action: none !important` en `.modalOverlay` móvil de `agenda.module.css`.
+   - Al cerrar la ficha de cliente o navegar a un turno se utiliza `window.location.href = /admin/agenda?turnoId=...` para reabrir el turno limpiamente y reiniciar el estado táctil de WebKit.
+8. **Autogestión por Disciplina (`media_1795301272482_4706c39b.png`)**:
+   - En `/api/zonas`, se ejecuta `ensureDefaultService()` y se exige `servicio: { activo: true, habilitadoAutogestion: true }` sin fallback nulo.
+   - En `src/app/page.js`, las zonas se agrupan en tarjetas separadas por servicio/disciplina con título e icono.
+
+---
+
 ## Sesión 20/11/2026 (Parte 3) - Fix de Bloqueo/Freeze de UI en iPhone y Selector Completo de 7 Días en Horarios Laborales (D-179)
 
 ### Requerimientos de Gonzalo
@@ -3305,3 +3330,44 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - En valor total: se integró `extractZoneSelection` para desplegar `(Otros: $X)` de forma 100% infalible en todos los formatos.
 6. **Verificación de Compilación**:
    - `npm run build` ejecutado localmente con éxito (50/50 páginas estáticas, 0 errores).
+
+---
+
+## Sesión 21/11/2026 (Parte 3) - Correcciones Críticas de Agenda, Multiturno, Promociones, Comisiones y WebKit (D-182)
+
+### Requerimientos Analizados
+1. **Multiturno - Turnos futuros agendados en la ficha del turno (`media_1795301143092_5b733c47.png`, `media_1795301161316_6474e07a.png`)**:
+   - Para clientes con 1 turno hoy y 1 futuro (ej. Esteban Medina), el acordeón no se mostraba porque requería `> 1` turnos futuros. Corregido a `> 0`.
+2. **Vigencia Temporal de Promociones (`media_1795301161316_6474e07a.png`)**:
+   - Una promoción vigente hasta enero se ofrecía en febrero. Se añadió `isPromoValidForDate(promo, dateStr)` validando fechas contra la cita.
+3. **Comisiones a Pagar en Agenda Diaria y Nueva Métrica en Estadísticas (`media_1795301272482_4706c39b.png`)**:
+   - En la cabecera diaria de la agenda se sumaron las comisiones a pagar del día (`totalComisionesDia`).
+   - En `/admin/estadisticas` se sumó la métrica dedicada `🎯 Comisiones a Pagar (Captadores / Promotores)` con desglose por promotor y tabla por turno.
+4. **Desglose de Efectivo + Transferencia Legible (`media_1795301228171_35a23465.jpg`)**:
+   - El texto del desglose se aumentó de `0.65rem` a `0.82rem` (`fontWeight: 700`).
+5. **Exclusión de Señas Guardadas / Saldo a Favor en Caja Diaria (`media_1795301245163_e712b9da.jpg`)**:
+   - En `newTurno`, cuando se usa saldo a favor o seña conservada, se etiqueta con `señaEstado: 'SALDO_A_FAVOR'`. En `/api/admin/turnos/senas-dia` se excluyen de caja fresca.
+6. **Turnos Reprogramados en Rojo en Historial de Cliente (`media_1795301209349_4ec7d618.png`)**:
+   - Se analizan las etiquetas de reprogramación en `observaciones` y se renderizan tarjetas virtuales con borde rojo punteado, fondo rosado tenue y badge `🔄 REPROGRAMADO`.
+7. **Eliminación Definitiva de Touch Freeze en iOS WebKit / Safari (`media_1795301161316_6474e07a.png`, audio)**:
+   - Se removió `document.body.style.touchAction = 'none'` en `src/lib/scrollLock.js` y `touch-action: none !important` en `.modalOverlay` móvil de `agenda.module.css`.
+   - Al cerrar la ficha de cliente o navegar a un turno se utiliza `window.location.href = /admin/agenda?turnoId=...` para reabrir el turno limpiamente y reiniciar el estado táctil de WebKit.
+8. **Autogestión por Disciplina (`media_1795301272482_4706c39b.png`)**:
+   - En `/api/zonas`, se ejecuta `ensureDefaultService()` y se exige `servicio: { activo: true, habilitadoAutogestion: true }` sin fallback nulo.
+   - En `src/app/page.js`, las zonas se agrupan en tarjetas separadas por servicio/disciplina con título e icono.
+
+
+---
+
+## Sesión 21/11/2026 (Parte 4) - Fallback Detalle Otros, Insignia Sutil de Sesión y Despliegue Consolidado a Producción (D-183)
+
+### Requerimientos Atendidos y Verificados
+1. **Detalle Automático de `(Otros: $X)` en Ficha del Turno**:
+   - En `extractZoneSelection` y `getUpdatedTurnoPrices`, se mejoró el parser de zonas para que cadenas con comas en "Otros" (ej: `"Espalda, Genitales, Otros: Tira, Nuca"`) separen limpiamente las zonas de catálogo de las subzonas de otros.
+   - Si `otrosPrecio` no está fijado en el objeto JSON, se calcula la diferencia `valorTotal - baseCatalog` de forma automática, garantizando que turnos como el de Pablo Ganzinelli muestren `$80.000 (Otros: $15.000)`.
+2. **Formato Sutil del Número de Sesión en Hoja de Impresión**:
+   - En `src/app/admin/agenda/imprimir/imprimir.module.css`, se actualizó `.sessionBadge` tanto en pantalla como en `@media print` y `.pdfCaptureA4` a un estilo neutral, suave y elegante (`#f1f5f9` / `#cbd5e1` / `#475569`).
+3. **Validación de Compilación**:
+   - `npm run build` ejecutado localmente con Turbopack: 50/50 páginas estáticas y dinámicas compiladas en 22.2s con 0 errores.
+4. **Despliegue a Producción**:
+   - Sincronización a `main` y `staging`, y ejecución de `deploy_prod_direct.mjs`.

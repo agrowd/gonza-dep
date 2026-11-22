@@ -470,7 +470,7 @@ function ClientesPageContent() {
     if (!turno) return;
     safeUnlockBodyScroll();
     const dateStr = typeof turno.fecha === 'string' ? turno.fecha.split('T')[0] : new Date(turno.fecha).toISOString().split('T')[0];
-    router.push(`/admin/agenda?date=${dateStr}&view=day&turnoId=${turno.id}&fromClient=${selectedClient?.id || ''}`);
+    window.location.href = `/admin/agenda?date=${dateStr}&view=day&turnoId=${turno.id}&fromClient=${selectedClient?.id || ''}`;
   };
 
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -851,7 +851,7 @@ function ClientesPageContent() {
       if (turnoIdParam) params.push(`turnoId=${encodeURIComponent(turnoIdParam)}`);
       params.push('fromAgendaReturn=true');
       const queryStr = params.length > 0 ? `?${params.join('&')}` : '';
-      router.push(`/admin/agenda${queryStr}`);
+      window.location.href = `/admin/agenda${queryStr}`;
     } else {
       router.push('/admin/clientes');
     }
@@ -1691,7 +1691,88 @@ function ClientesPageContent() {
                             }
                           }
 
-                          return selectedClient.turnos.map((t, idx) => {
+                          // Expand turnos list with virtual entries for rescheduled original slots in red (D-182)
+                          const historyItems = [];
+                          selectedClient.turnos.forEach((t) => {
+                            const rescheduleRegex = /\[Turno reprogramado de (\d{1,2}\/\d{1,2}(?:\/\d{2,4})?) a las (\d{1,2}:\d{2})\s*hs([^\]]*)\]/gi;
+                            let match;
+                            while ((match = rescheduleRegex.exec(t.observaciones || '')) !== null) {
+                              historyItems.push({
+                                isVirtualRescheduled: true,
+                                virtualId: `virtual-${t.id}-${match[1]}-${match[2]}`,
+                                originalDateStr: match[1],
+                                originalTimeStr: match[2],
+                                authorText: match[3] ? match[3].replace(/^ - /, '').trim() : '',
+                                parentTurno: t
+                              });
+                            }
+                            historyItems.push({
+                              isVirtualRescheduled: false,
+                              ...t
+                            });
+                          });
+
+                          return historyItems.map((item, idx) => {
+                            if (item.isVirtualRescheduled) {
+                              const t = item.parentTurno;
+                              let zonas = '';
+                              try {
+                                zonas = JSON.parse(t.zonas).map(z => z.nombre).join(', ');
+                              } catch (e) {
+                                zonas = t.zonas;
+                              }
+                              return (
+                                <div
+                                  key={item.virtualId}
+                                  className={styles.paperItem}
+                                  onClick={() => handleGoToTurnoInAgenda(t)}
+                                  style={{
+                                    cursor: 'pointer',
+                                    border: '1.5px dashed #f87171',
+                                    backgroundColor: '#fef2f2',
+                                    borderRadius: '8px',
+                                    padding: '0.85rem 1rem',
+                                    marginBottom: '0.85rem',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  title="Haz clic para ver este turno en la Agenda"
+                                >
+                                  <div className={styles.paperItemHeader} style={{ flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#dc2626', textDecoration: 'line-through' }}>
+                                        📅 {item.originalDateStr} - {item.originalTimeStr} hs
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                      <span
+                                        style={{
+                                          fontSize: '0.72rem',
+                                          fontWeight: 800,
+                                          padding: '0.2rem 0.6rem',
+                                          borderRadius: '9999px',
+                                          backgroundColor: '#fee2e2',
+                                          color: '#b91c1c',
+                                          border: '1px solid #fecaca',
+                                          letterSpacing: '0.03em'
+                                        }}
+                                      >
+                                        🔄 REPROGRAMADO
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem', color: '#991b1b', fontWeight: 600, marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <span>⚠️ Horario original reprogramado al</span>
+                                    <strong>{formatLocalDate(t.fecha)} a las {t.horaInicio} hs</strong>
+                                    {item.authorText && <span style={{ color: '#7f1d1d' }}>({item.authorText})</span>}
+                                  </div>
+                                  <div className={styles.paperZonas} style={{ color: '#4b5563', fontSize: '0.82rem' }}>
+                                    Zonas: {zonas}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            const t = item;
                             const isCanceled = t.estado === 'CANCELADO';
                             let zonas = '';
                             try {

@@ -103,13 +103,33 @@ export default function Home() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          // Strictly filter only zones belonging to active, autogestion-enabled services
-          const filtered = data.filter(z => !z.servicio || (z.servicio.activo !== false && z.servicio.habilitadoAutogestion !== false));
+          // Strictly filter only zones belonging to active, autogestion-enabled services (D-182)
+          const filtered = data.filter(z => z.servicio && z.servicio.activo !== false && z.servicio.habilitadoAutogestion !== false);
           setZones(filtered);
         }
       })
       .catch(err => console.error('Error fetching zones:', err));
   }, []);
+
+  // Agrupamiento de zonas por servicio / disciplina para visualización organizada (D-182)
+  const serviceGroups = useMemo(() => {
+    const map = new Map();
+    zones.forEach(z => {
+      const sId = z.servicio?.id || 'default';
+      const sName = z.servicio?.nombre || 'Depilación Láser';
+      const sIcon = z.servicio?.icono || '⚡';
+      if (!map.has(sId)) {
+        map.set(sId, {
+          id: sId,
+          nombre: sName,
+          icono: sIcon,
+          zonas: []
+        });
+      }
+      map.get(sId).zonas.push(z);
+    });
+    return Array.from(map.values());
+  }, [zones]);
 
   // 2. Compute calculated duration, total price, and seña
   const activeZoneObjs = useMemo(() => {
@@ -1559,44 +1579,73 @@ Duración: ${duracionMinutos} min`;
                   )}
                 </div>
 
-                {/* Zones Catalog Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px', marginBottom: '24px' }}>
-                  {zones.map(z => {
-                    const isSelected = selectedZoneIds.includes(z.id);
-                    return (
-                      <div
-                        key={z.id}
-                        onClick={() => toggleZone(z.id)}
-                        style={{
-                          background: isSelected ? '#fef2f2' : '#ffffff',
-                          border: isSelected ? '2px solid #7a1f1e' : '1.5px solid var(--border-color)',
-                          borderRadius: '12px',
-                          padding: '16px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          transition: 'all 0.15s ease',
-                          boxShadow: isSelected ? '0 4px 12px rgba(122, 31, 30, 0.12)' : 'none'
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {}}
-                          style={{ width: '18px', height: '18px', accentColor: '#7a1f1e', cursor: 'pointer' }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: '800', fontSize: '1rem', color: isSelected ? '#7a1f1e' : 'var(--text-primary)' }}>
-                            {z.nombre}
-                          </div>
-                          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            {z.duracionMinutos} min • ${Number(z.precioBase).toLocaleString('es-AR')}
-                          </div>
-                        </div>
+                {/* Zones Catalog by Service / Discipline (D-182) */}
+                <div style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                  {serviceGroups.map(grp => (
+                    <div key={grp.id} style={{
+                      backgroundColor: '#fbf9f6',
+                      border: '1.5px solid #ebd9c8',
+                      borderRadius: '16px',
+                      padding: '18px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                    }}>
+                      <div style={{
+                        fontSize: '1.08rem',
+                        fontWeight: '800',
+                        color: '#7a1f1e',
+                        marginBottom: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        borderBottom: '1px solid #ebd9c8',
+                        paddingBottom: '10px'
+                      }}>
+                        <span style={{ fontSize: '1.2rem' }}>{grp.icono}</span>
+                        <span>{grp.nombre}</span>
+                        <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginLeft: 'auto' }}>
+                          {grp.zonas.length} {grp.zonas.length === 1 ? 'zona' : 'zonas'}
+                        </span>
                       </div>
-                    );
-                  })}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+                        {grp.zonas.map(z => {
+                          const isSelected = selectedZoneIds.includes(z.id);
+                          return (
+                            <div
+                              key={z.id}
+                              onClick={() => toggleZone(z.id)}
+                              style={{
+                                background: isSelected ? '#fef2f2' : '#ffffff',
+                                border: isSelected ? '2px solid #7a1f1e' : '1.5px solid var(--border-color)',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                transition: 'all 0.15s ease',
+                                boxShadow: isSelected ? '0 4px 12px rgba(122, 31, 30, 0.12)' : '0 1px 3px rgba(0,0,0,0.02)'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                style={{ width: '18px', height: '18px', accentColor: '#7a1f1e', cursor: 'pointer' }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: '800', fontSize: '1rem', color: isSelected ? '#7a1f1e' : 'var(--text-primary)' }}>
+                                  {z.nombre}
+                                </div>
+                                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  {z.duracionMinutos} min • ${Number(z.precioBase).toLocaleString('es-AR')}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Summary Box */}

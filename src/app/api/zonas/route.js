@@ -22,15 +22,10 @@ export async function GET(request) {
     const isAutogestion = searchParams.get('autogestion') === 'true' || !isAdmin;
 
     const where = isAutogestion ? {
-      OR: [
-        {
-          servicio: {
-            activo: true,
-            habilitadoAutogestion: true
-          }
-        },
-        { servicioId: null }
-      ]
+      servicio: {
+        activo: true,
+        habilitadoAutogestion: true
+      }
     } : {};
 
     const zonas = await prisma.zona.findMany({

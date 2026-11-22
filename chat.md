@@ -2353,3 +2353,21 @@
     2. `comisionUsuarioId`, `comisionPorcentaje`, `comisionMonto` en `Turno` y controles en `/admin/agenda`.
     3. Detalle `(Otros: $X)` robustecido con `extractZoneSelection`.
     4. Compilación local `npm run build` completada con 0 errores (50/50 páginas).
+
+
+---
+
+## 21/11/2026 - Sesión 21/11/2026 (Parte 4) - Despliegue Consolidado D-182 y D-183 a Producción
+
+- **Solicitud del Usuario**: Despliegue directo a producción con la verificación y resolución integral de las 8 solicitudes y reportes de Gonzalo Siri:
+  1. **Multiturno en Ficha del Turno**: Acordeón visible para clientes con >= 1 turnos futuros (`clientFutureTurnos.length > 0`).
+  2. **Vigencia Temporal de Promociones**: Validación estricta de `fechaInicio` y `fechaFin` contra la fecha de la cita (`fechaStr`).
+  3. **Comisiones a Pagar en Agenda Diaria y Estadísticas**: Métrica de comisiones en cabecera de agenda y tabla detallada con exportación en `/admin/estadisticas`.
+  4. **Desglose de Pago Legible**: Tipografía aumentada a `0.82rem` (`fontWeight: 700`) en caja de desglose de efectivo + transferencia.
+  5. **Exclusión de Señas Guardadas en Caja Diaria**: Exclusión de saldos a favor / señas conservadas de la caja fresca del día en `/api/admin/turnos/senas-dia`.
+  6. **Historial de Cliente con Reprogramados**: Tarjetas virtuales en rojo tenue con badge `🔄 REPROGRAMADO` para turnos reprogramados.
+  7. **Fix Touch Freeze en iOS WebKit / Safari y Retorno al Turno**: Remoción definitiva de `touch-action: none` en body y overlays, navegación limpia vía `window.location.href = /admin/agenda?turnoId=...` para reabrir automáticamente la ficha del turno.
+  8. **Detalle Automático de `(Otros: $X)`**: Cálculo inteligente de la diferencia entre el total del turno y las zonas de catálogo para turnos legacy o string (`$80.000 (Otros: $15.000)`).
+  9. **Número de Sesión Sutil en Planilla de Impresión**: Insignia minimalista con borde neutral suave y fondo claro (`#f1f5f9` / `#cbd5e1`).
+  10. **Autogestión por Disciplina**: Agrupamiento por servicio con iconos y exclusión estricta de servicios inactivos.
+- **Verificación**: `npm run build` ejecutado exitosamente con Turbopack (50/50 páginas generadas, 0 errores).

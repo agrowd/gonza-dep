@@ -1177,7 +1177,7 @@
     justify-content: center !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
-    touch-action: none !important;
+    touch-action: auto !important;
     pointer-events: auto !important;
     -webkit-tap-highlight-color: transparent !important;
     z-index: 2000 !important;
