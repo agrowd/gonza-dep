@@ -3371,3 +3371,29 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - `npm run build` ejecutado localmente con Turbopack: 50/50 páginas estáticas y dinámicas compiladas en 22.2s con 0 errores.
 4. **Despliegue a Producción**:
    - Sincronización a `main` y `staging`, y ejecución de `deploy_prod_direct.mjs`.
+
+---
+
+## Sesión 24/11/2026 - Separadores de Miles Deterministas, Excepción de Seña Persistente, Check Bonificado en Otros, Cupones por Servicio y Módulos Independientes de Usuarios y Bloqueos (D-184)
+
+### Requerimientos Atendidos y Verificados
+1. **Separadores de Miles Deterministas en Todos los Inputs y Monedas**:
+   - En `src/lib/formatNumber.js` y `src/app/admin/gastos/page.js`, se reemplazó la dependencia de `toLocaleString('es-AR')` por la expresión regular determinista `replace(/\B(?=(\d{3})+(?!\d))/g, '.')`, asegurando que en cualquier dispositivo (incluyendo iPhone Safari con locale en inglés) los montos y gastos se muestren siempre con punto cada tres dígitos.
+2. **Excepción de Seña Aplicada Persistente**:
+   - Campo `excepcionSena Boolean @default(false)` en `model Cliente` de Prisma, conmutador directo en modal de turno (`/admin/agenda`) y casilla en la ficha de cliente (`/admin/clientes`), persistiendo en todos los turnos del cliente.
+3. **Check 'Bonificado' en cada Zona Extra (Otros)**:
+   - Checkbox interactivo en `newTurno` y `editTurno` para cada subzona agregada, formateando y parseando `(Bonificado)` para control visual del operador y recepción.
+4. **Selector de Servicios con Opción Vacía por Defecto y Filtro Estricto de Autogestión**:
+   - En `src/app/admin/configuracion/page.js`, se añadió `<option value="">-- Seleccionar un servicio para gestionar --</option>` con mensaje guía placeholder cuando no hay selección. Servicios con `habilitadoAutogestion: false` (Faciales, Masajes) quedan 100% excluidos de la web de reservas.
+5. **Agrupación de Zonas por Servicio al Crear Cupón y Legibilidad de Código**:
+   - Zonas categorizadas por servicio con conteo individual en el modal de cupones. Clase `.cuponCode` estilizada con `#7a1f1e` sobre `#f1f5f9` para contraste y legibilidad óptima.
+6. **Módulos Independientes "Usuarios" y "Bloqueos y Feriados" en Barra Lateral**:
+   - Creación de `src/app/admin/usuarios/page.js` y `src/app/admin/bloqueos/page.js`.
+   - Enlaces dedicados en `src/app/admin/SidebarNav.js`.
+   - Redirección automática de rutas legacy `?tab=users` y `?tab=bloqueos` en configuración.
+7. **Resolución Definitiva de Touch Freeze y Retorno a Turno en iPhone**:
+   - En `src/lib/scrollLock.js`, se eliminó el bloqueo de `documentElement` para prevenir que WebKit desconecte el gestor táctil.
+   - En `src/app/admin/clientes/page.js` y `src/app/admin/agenda/page.js`, se implementó recarga automática si `pageshow` detecta restauración por BFCache (`event.persisted`) y se preservó `turnoId` al cerrar la ficha para reabrir el turno limpiamente.
+8. **Validación y Despliegue**:
+   - Compilación exitosa `npm run build` con 52/52 rutas generadas sin errores.
+

@@ -2371,3 +2371,18 @@
   9. **Número de Sesión Sutil en Planilla de Impresión**: Insignia minimalista con borde neutral suave y fondo claro (`#f1f5f9` / `#cbd5e1`).
   10. **Autogestión por Disciplina**: Agrupamiento por servicio con iconos y exclusión estricta de servicios inactivos.
 - **Verificación**: `npm run build` ejecutado exitosamente con Turbopack (50/50 páginas generadas, 0 errores).
+
+---
+
+## 24/11/2026 - Sesión 24/11/2026 - Separadores de Miles Deterministas, Excepción de Seña Persistente, Check Bonificado en Otros, Cupones por Servicio y Módulos Independientes de Usuarios y Bloqueos (D-184)
+
+- **Solicitud del Usuario**: Resolución de los 10 puntos de las capturas y audios de Gonzalo Siri:
+  1. **Separadores de miles en números cargados y gastos**: Formateo determinista regex en `formatCurrency` y `formatMoney` (`replace(/\B(?=(\d{3})+(?!\d))/g, '.')`) y en todos los inputs de dinero.
+  2. **Excepción de seña aplicada**: Checkbox en modal de turno y ficha del cliente persistente para todos los turnos del cliente (`model Cliente.excepcionSena`).
+  3. **Check Bonificado en subzonas de Otros**: Checkbox por cada zona extra agregada en `newTurno` y `editTurno` para reflejar `(Bonificado)`.
+  4. **Selector de Servicios con placeholder**: Opción `-- Seleccionar un servicio para gestionar --` y mensaje guía; exclusión estricta de servicios no habilitados en autogestión.
+  5. **Agrupación de zonas por servicio en Cupones**: Zonas organizadas por servicio en el modal de cupones y fix de contraste en código de cupón.
+  6. **Módulos independientes en barra lateral**: Páginas dedicadas `/admin/usuarios` y `/admin/bloqueos` con enlaces directos en `SidebarNav.js`.
+  7. **Fix de touch freeze y retorno a turno en iPhone**: Prevención de bloqueo en WebKit (`safeLockBodyScroll` limitado a body), recarga en `pageshow` persistido y reapertura garantizada del turno vía query params.
+- **Verificación**: `npm run build` ejecutado exitosamente (52/52 páginas generadas, 0 errores). Despliegue directo a producción.
+

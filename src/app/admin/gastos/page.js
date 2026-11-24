@@ -16,7 +16,7 @@ const PRESET_COLORS = [
 
 function formatCurrency(amount) {
   const num = Math.round(Number(amount) || 0);
-  return '$' + num.toLocaleString('es-AR');
+  return '$' + String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 function getMonthRange() {

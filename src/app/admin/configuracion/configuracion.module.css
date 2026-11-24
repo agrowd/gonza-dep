@@ -348,12 +348,12 @@
   padding: 0.25rem 0.65rem;
   border-radius: 6px;
   font-family: monospace;
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  border: 1px dashed var(--color-gold);
+  background-color: #f1f5f9;
+  color: #7a1f1e;
+  border: 1.5px dashed #7a1f1e;
 }
 
 .statusActive {

@@ -20,6 +20,7 @@ export function safeUnlockBodyScroll() {
 
 export function safeLockBodyScroll() {
   if (typeof document === 'undefined') return;
-  document.documentElement.style.overflow = 'hidden';
+  // ONLY lock body overflow on mobile WebKit to avoid locking documentElement hit-testing layer
   document.body.style.overflow = 'hidden';
 }
+

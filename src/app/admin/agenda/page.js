@@ -1726,6 +1726,10 @@ export default function AgendaPage() {
       const boxIdParam = searchParams.get('boxId');
       const solicitudIdParam = searchParams.get('solicitudId');
       const valorTotalParam = searchParams.get('valorTotal');
+      const cuponCodigoParam = searchParams.get('cuponCodigo') || searchParams.get('cupon');
+      const manualTotalParam = searchParams.get('manualTotalOverride') || (solicitudIdParam && valorTotalParam ? valorTotalParam : null);
+      const manualSeñaParam = searchParams.get('manualSeñaOverride') || (solicitudIdParam && señaParam ? señaParam : null);
+      const observacionesParam = searchParams.get('observaciones');
       const initialSeña = (señaParam !== null && señaParam !== undefined && señaParam !== '')
         ? Number(señaParam)
         : undefined;
@@ -1774,11 +1778,13 @@ export default function AgendaPage() {
           whatsappCustomCode: customCode || prev.whatsappCustomCode,
           email: emailParam || prev.email,
           dni: dniParam || prev.dni,
+          observaciones: observacionesParam || prev.observaciones,
           estado: 'SEÑADO',
           descuentoTipo: descuentoTipoParam || prev.descuentoTipo || 'NINGUNO',
           descuentoValor: descuentoValorParam !== null && descuentoValorParam !== undefined && descuentoValorParam !== '' ? descuentoValorParam : prev.descuentoValor,
           valorSeña: initialSeña !== undefined ? initialSeña : prev.valorSeña,
-          manualSeñaOverride: initialSeña !== undefined ? initialSeña : prev.manualSeñaOverride,
+          manualSeñaOverride: manualSeñaParam !== null && manualSeñaParam !== undefined ? Number(manualSeñaParam) : (initialSeña !== undefined ? initialSeña : prev.manualSeñaOverride),
+          manualTotalOverride: manualTotalParam !== null && manualTotalParam !== undefined ? Number(manualTotalParam) : undefined,
           prevTurnoId: prevTurnoIdParam || null,
           operadorId: operadorIdParam || prev.operadorId,
           boxId: boxIdParam || prev.boxId,
@@ -1787,6 +1793,25 @@ export default function AgendaPage() {
           metodoPago: searchParams.get('metodoPago') || prev.metodoPago || 'TRANSFERENCIA'
         }));
         setIsNewOpen(true);
+
+        if (cuponCodigoParam) {
+          setCuponInput(cuponCodigoParam);
+          fetch(`/api/cupones/validar?codigo=${encodeURIComponent(cuponCodigoParam)}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.valido && data.cupon) {
+                setAppliedCupon(data.cupon);
+                setNewTurno(curr => ({
+                  ...curr,
+                  descuentoTipo: data.cupon.descuentoTipo || 'PORCENTAJE',
+                  descuentoValor: data.cupon.descuentoValor,
+                  manualTotalOverride: manualTotalParam ? Number(manualTotalParam) : curr.manualTotalOverride,
+                  manualSeñaOverride: manualSeñaParam ? Number(manualSeñaParam) : curr.manualSeñaOverride
+                }));
+              }
+            })
+            .catch(() => {});
+        }
       }
 
       if (reprogramarTurnoId) {
@@ -1891,6 +1916,9 @@ export default function AgendaPage() {
                 setSelectedDate(pDate);
                 setCurrentWeekStart(getStartOfWeek(pDate));
               }
+              try {
+                window.history.replaceState({}, '', window.location.pathname);
+              } catch (e) {}
             } else {
               console.error('Error fetching turno from URL param:', turno);
             }
@@ -1906,8 +1934,8 @@ export default function AgendaPage() {
         initialView = 'day';
       }
 
-      // Limpiar query params de la URL una vez consumidos para que futuras recargas o navegaciones abran siempre en HOY
-      if (dateParam || viewParam || turnoIdParam || fromClientParam) {
+      // Limpiar query params de la URL una vez consumidos (si no hay turno pendiente de carga)
+      if (!turnoIdParam && (dateParam || viewParam || fromClientParam)) {
         try {
           window.history.replaceState({}, '', window.location.pathname);
         } catch (e) {}
@@ -2164,9 +2192,12 @@ export default function AgendaPage() {
 
   // Limpieza incondicional ante restauración por BFCache de Safari (pageshow) y al desmontar componente
   useEffect(() => {
-    const handlePageShow = () => {
+    const handlePageShow = (e) => {
       safeUnlockBodyScroll();
       isScrollLockedRef.current = false;
+      if (e?.persisted) {
+        window.location.reload();
+      }
     };
     window.addEventListener('pageshow', handlePageShow);
     return () => {
@@ -4962,9 +4993,12 @@ export default function AgendaPage() {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: editTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: editTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
                       {(() => {
-                        const activeEditServiceGroup = groupedZonesByService.find(g =>
-                          (editTurno.selectedZoneIds || []).some(id => g.zonas.some(gz => String(gz.id) === String(id)))
-                        );
+                        const depilacionGroup = groupedZonesByService.find(g => g.nombre?.toLowerCase().includes('depilaci')) || groupedZonesByService[0];
+                        const activeEditServiceGroup = (editTurno.hasOtros && depilacionGroup)
+                          ? depilacionGroup
+                          : groupedZonesByService.find(g =>
+                              (editTurno.selectedZoneIds || []).some(id => g.zonas.some(gz => String(gz.id) === String(id)))
+                            );
                         const visibleEditGroups = activeEditServiceGroup
                           ? [activeEditServiceGroup]
                           : groupedZonesByService;
@@ -5079,63 +5113,101 @@ export default function AgendaPage() {
                           const currentItems = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
                             ? editTurno.otrosTexto.split(/,\s*/)
                             : [''];
-                          return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', minWidth: '95px', flexShrink: 0 }}>
-                                Zona Extra {idx + 1}
-                              </span>
-                              <select
-                                value={item}
-                                onChange={(e) => {
-                                  const list = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
-                                    ? editTurno.otrosTexto.split(/,\s*/)
-                                    : [''];
-                                  list[idx] = e.target.value;
-                                  setEditTurno({ ...editTurno, otrosTexto: list.join(', ') });
-                                }}
-                                style={{ flex: 1, padding: '0.42rem 0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer' }}
-                              >
-                                <option value="">Seleccionar subzona...</option>
-                                {Boolean(item && !zonasOtrosList.includes(item)) && (
-                                  <option value={item}>{item}</option>
-                                )}
-                                {zonasOtrosList.map((sz, sIdx) => (
-                                  <option key={`${sz}-${sIdx}`} value={sz}>{sz}</option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const list = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
-                                    ? editTurno.otrosTexto.split(/,\s*/)
-                                    : [''];
-                                  list.splice(idx, 1);
-                                  if (list.length === 0) {
-                                    setEditTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
-                                  } else {
-                                    setEditTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
-                                  }
-                                }}
-                                style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: '16px',
-                                  border: '1px solid #fecaca',
-                                  backgroundColor: '#fff5f5',
-                                  color: '#dc2626',
-                                  display: 'flex',
+                          return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => {
+                            const isBonificado = item.toLowerCase().includes('(bonificado)');
+                            const cleanItemName = item.replace(/\s*\(bonificado\)/i, '').trim();
+                            return (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', minWidth: '90px', flexShrink: 0 }}>
+                                  Zona Extra {idx + 1}
+                                </span>
+                                <label style={{
+                                  display: 'inline-flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  color: isBonificado ? '#15803d' : '#64748b',
+                                  backgroundColor: isBonificado ? '#dcfce7' : '#f1f5f9',
+                                  border: `1.5px solid ${isBonificado ? '#86efac' : '#cbd5e1'}`,
+                                  padding: '0.28rem 0.5rem',
+                                  borderRadius: '6px',
                                   cursor: 'pointer',
-                                  fontSize: '0.9rem',
+                                  userSelect: 'none',
                                   flexShrink: 0
                                 }}
-                                title="Eliminar esta zona extra"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          ));
+                                title="Si está marcado como Bonificado, no se cobra y se indica en el turno y mensajes"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isBonificado}
+                                    onChange={(e) => {
+                                      const isChecked = e.target.checked;
+                                      const updatedItem = isChecked
+                                        ? (cleanItemName ? `${cleanItemName} (Bonificado)` : '')
+                                        : cleanItemName;
+                                      const list = [...currentItems];
+                                      list[idx] = updatedItem;
+                                      setEditTurno({ ...editTurno, otrosTexto: list.join(', ') });
+                                    }}
+                                    style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#16a34a' }}
+                                  />
+                                  <span>{isBonificado ? '🎁 Bonificado' : 'Bonificado'}</span>
+                                </label>
+                                <select
+                                  value={cleanItemName}
+                                  onChange={(e) => {
+                                    const chosen = e.target.value;
+                                    const list = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
+                                      ? editTurno.otrosTexto.split(/,\s*/)
+                                      : [''];
+                                    list[idx] = chosen ? (isBonificado ? `${chosen} (Bonificado)` : chosen) : '';
+                                    setEditTurno({ ...editTurno, otrosTexto: list.join(', ') });
+                                  }}
+                                  style={{ flex: '1 1 140px', minWidth: '120px', padding: '0.42rem 0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                  <option value="">Seleccionar subzona...</option>
+                                  {Boolean(cleanItemName && !zonasOtrosList.includes(cleanItemName)) && (
+                                    <option value={cleanItemName}>{cleanItemName}</option>
+                                  )}
+                                  {zonasOtrosList.map((sz, sIdx) => (
+                                    <option key={`${sz}-${sIdx}`} value={sz}>{sz}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const list = (editTurno.otrosTexto !== '' && editTurno.otrosTexto !== undefined && editTurno.otrosTexto !== null)
+                                      ? editTurno.otrosTexto.split(/,\s*/)
+                                      : [''];
+                                    list.splice(idx, 1);
+                                    if (list.length === 0) {
+                                      setEditTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
+                                    } else {
+                                      setEditTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
+                                    }
+                                  }}
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '16px',
+                                    border: '1px solid #fecaca',
+                                    backgroundColor: '#fff5f5',
+                                    color: '#dc2626',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    flexShrink: 0
+                                  }}
+                                  title="Eliminar esta zona extra"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            );
+                          });
                         })()}
                       </div>
 
@@ -6079,14 +6151,14 @@ export default function AgendaPage() {
                                   </span>
                                 </button>
                                 {isFutureSenasOpen && (
-                                  <div style={{ padding: '0.5rem 0.6rem' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                  <div style={{ padding: '0.5rem 0.6rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', boxSizing: 'border-box' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', minWidth: '320px' }}>
                                       <thead>
                                         <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
-                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700 }}>FECHA</th>
-                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700 }}>ZONAS</th>
-                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700, textAlign: 'right' }}>SEÑA</th>
-                                          <th style={{ padding: '0.3rem 0.4rem', fontWeight: 700, textAlign: 'center', width: '55px' }}>COBRAR</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, width: '90px' }}>FECHA</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, minWidth: '130px' }}>ZONAS</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, textAlign: 'right', width: '75px' }}>SEÑA</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, textAlign: 'center', width: '45px' }}>COBRAR</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -6096,21 +6168,21 @@ export default function AgendaPage() {
                                           const ftDateFormatted = ft.fecha ? new Date(ft.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '—';
                                           return (
                                             <tr key={ft.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: isChecked ? '#f0fdf4' : 'transparent' }}>
-                                              <td style={{ padding: '0.4rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap' }}>
-                                                {ftDateFormatted}
+                                              <td style={{ padding: '0.4rem', fontWeight: 600, color: '#1e293b', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                                                <div>{ftDateFormatted}</div>
                                                 {isFarthest && (
-                                                  <span style={{ marginLeft: '6px', fontSize: '0.68rem', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, display: 'inline-block' }}>
+                                                  <span style={{ fontSize: '0.64rem', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '1px 5px', borderRadius: '4px', fontWeight: 700, display: 'inline-block', marginTop: '2px' }}>
                                                     Más lejano
                                                   </span>
                                                 )}
                                               </td>
-                                              <td style={{ padding: '0.4rem', color: '#475569' }}>
+                                              <td style={{ padding: '0.4rem', color: '#475569', minWidth: '130px', wordBreak: 'normal', whiteSpace: 'normal', verticalAlign: 'top', lineHeight: '1.3' }}>
                                                 {formatTurnoZonasList(ft.zonas)}
                                               </td>
-                                              <td style={{ padding: '0.4rem', textAlign: 'right', fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap' }}>
+                                              <td style={{ padding: '0.4rem', textAlign: 'right', fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
                                                 ${Number(ft.valorSeña || 0).toLocaleString('es-ES')}
                                               </td>
-                                              <td style={{ padding: '0.4rem', textAlign: 'center' }}>
+                                              <td style={{ padding: '0.4rem', textAlign: 'center', verticalAlign: 'top' }}>
                                                 <input
                                                   type="checkbox"
                                                   checked={isChecked}
@@ -6731,6 +6803,39 @@ export default function AgendaPage() {
                             style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#2563eb' }}
                           />
                           <span>🔄 Reprogramar &lt; 72hs Autogestión</span>
+                        </label>
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(selectedTurno.cliente?.excepcionSena)}
+                            onChange={async (e) => {
+                              const nextVal = e.target.checked;
+                              setSelectedTurno(prev => ({
+                                ...prev,
+                                cliente: { ...prev.cliente, excepcionSena: nextVal }
+                              }));
+                              setAppointments(prevList => prevList.map(t => {
+                                if (t.cliente?.id === selectedTurno.cliente?.id) {
+                                  return { ...t, cliente: { ...t.cliente, excepcionSena: nextVal } };
+                                }
+                                return t;
+                              }));
+                              try {
+                                await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ excepcionSena: nextVal })
+                                });
+                                showToast(nextVal ? 'Marcado: Excepción de seña aplicada activada para este cliente.' : 'Marcado: Excepción de seña desactivada.');
+                              } catch (err) {
+                                console.error('Error toggling excepcionSena in agenda modal:', err);
+                              }
+                            }}
+                            style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#16a34a' }}
+                          />
+                          <span>🛡️ Excepción de seña aplicada</span>
                         </label>
                       </div>
                     </div>
@@ -7694,9 +7799,12 @@ export default function AgendaPage() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: newTurno.estado === 'BLOQUEADO' ? 0.5 : 1, pointerEvents: newTurno.estado === 'BLOQUEADO' ? 'none' : 'auto' }}>
                     {(() => {
-                      const activeNewServiceGroup = groupedZonesByService.find(g =>
-                        (newTurno.selectedZoneIds || []).some(id => g.zonas.some(gz => String(gz.id) === String(id)))
-                      );
+                      const depilacionGroup = groupedZonesByService.find(g => g.nombre?.toLowerCase().includes('depilaci')) || groupedZonesByService[0];
+                      const activeNewServiceGroup = (newTurno.hasOtros && depilacionGroup)
+                        ? depilacionGroup
+                        : groupedZonesByService.find(g =>
+                            (newTurno.selectedZoneIds || []).some(id => g.zonas.some(gz => String(gz.id) === String(id)))
+                          );
                       const visibleNewGroups = activeNewServiceGroup
                         ? [activeNewServiceGroup]
                         : groupedZonesByService;
@@ -7811,63 +7919,101 @@ export default function AgendaPage() {
                         const currentItems = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
                           ? newTurno.otrosTexto.split(/,\s*/)
                           : [''];
-                        return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', minWidth: '95px', flexShrink: 0 }}>
-                              Zona Extra {idx + 1}
-                            </span>
-                            <select
-                              value={item}
-                              onChange={(e) => {
-                                const list = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
-                                  ? newTurno.otrosTexto.split(/,\s*/)
-                                  : [''];
-                                list[idx] = e.target.value;
-                                setNewTurno({ ...newTurno, otrosTexto: list.join(', ') });
-                              }}
-                              style={{ flex: 1, padding: '0.42rem 0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              <option value="">Seleccionar subzona...</option>
-                              {Boolean(item && !zonasOtrosList.includes(item)) && (
-                                <option value={item}>{item}</option>
-                              )}
-                              {zonasOtrosList.map((sz, sIdx) => (
-                                <option key={`${sz}-${sIdx}`} value={sz}>{sz}</option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const list = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
-                                  ? newTurno.otrosTexto.split(/,\s*/)
-                                  : [''];
-                                list.splice(idx, 1);
-                                if (list.length === 0) {
-                                  setNewTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
-                                } else {
-                                  setNewTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
-                                }
-                              }}
-                              style={{
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '16px',
-                                border: '1px solid #fecaca',
-                                backgroundColor: '#fff5f5',
-                                color: '#dc2626',
-                                display: 'flex',
+                        return (currentItems.length > 0 ? currentItems : ['']).map((item, idx) => {
+                          const isBonificado = item.toLowerCase().includes('(bonificado)');
+                          const cleanItemName = item.replace(/\s*\(bonificado\)/i, '').trim();
+                          return (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', minWidth: '90px', flexShrink: 0 }}>
+                                Zona Extra {idx + 1}
+                              </span>
+                              <label style={{
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
+                                gap: '0.3rem',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                color: isBonificado ? '#15803d' : '#64748b',
+                                backgroundColor: isBonificado ? '#dcfce7' : '#f1f5f9',
+                                border: `1.5px solid ${isBonificado ? '#86efac' : '#cbd5e1'}`,
+                                padding: '0.28rem 0.5rem',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
-                                fontSize: '0.9rem',
+                                userSelect: 'none',
                                 flexShrink: 0
                               }}
-                              title="Eliminar esta zona extra"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        ));
+                              title="Si está marcado como Bonificado, no se cobra y se indica en el turno y mensajes"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isBonificado}
+                                  onChange={(e) => {
+                                    const isChecked = e.target.checked;
+                                    const updatedItem = isChecked
+                                      ? (cleanItemName ? `${cleanItemName} (Bonificado)` : '')
+                                      : cleanItemName;
+                                    const list = [...currentItems];
+                                    list[idx] = updatedItem;
+                                    setNewTurno({ ...newTurno, otrosTexto: list.join(', ') });
+                                  }}
+                                  style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#16a34a' }}
+                                />
+                                <span>{isBonificado ? '🎁 Bonificado' : 'Bonificado'}</span>
+                              </label>
+                              <select
+                                value={cleanItemName}
+                                onChange={(e) => {
+                                  const chosen = e.target.value;
+                                  const list = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
+                                    ? newTurno.otrosTexto.split(/,\s*/)
+                                    : [''];
+                                  list[idx] = chosen ? (isBonificado ? `${chosen} (Bonificado)` : chosen) : '';
+                                  setNewTurno({ ...newTurno, otrosTexto: list.join(', ') });
+                                }}
+                                style={{ flex: '1 1 140px', minWidth: '120px', padding: '0.42rem 0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '0.86rem', fontWeight: 600, cursor: 'pointer' }}
+                              >
+                                <option value="">Seleccionar subzona...</option>
+                                {Boolean(cleanItemName && !zonasOtrosList.includes(cleanItemName)) && (
+                                  <option value={cleanItemName}>{cleanItemName}</option>
+                                )}
+                                {zonasOtrosList.map((sz, sIdx) => (
+                                  <option key={`${sz}-${sIdx}`} value={sz}>{sz}</option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const list = (newTurno.otrosTexto !== '' && newTurno.otrosTexto !== undefined && newTurno.otrosTexto !== null)
+                                    ? newTurno.otrosTexto.split(/,\s*/)
+                                    : [''];
+                                  list.splice(idx, 1);
+                                  if (list.length === 0) {
+                                    setNewTurno(prev => ({ ...prev, hasOtros: false, otrosTexto: '', otrosPrecio: 0 }));
+                                  } else {
+                                    setNewTurno(prev => ({ ...prev, otrosTexto: list.join(', ') }));
+                                  }
+                                }}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '16px',
+                                  border: '1px solid #fecaca',
+                                  backgroundColor: '#fff5f5',
+                                  color: '#dc2626',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  flexShrink: 0
+                                }}
+                                title="Eliminar esta zona extra"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          );
+                        });
                       })()}
                     </div>
 

@@ -56,6 +56,7 @@ model Cliente {
   bloqueado            Boolean        @default(false)
   recibioResena        Boolean        @default(false)
   permitirReprogramacionCorta Boolean @default(false)
+  excepcionSena        Boolean        @default(false)
   notifWhatsapp        Boolean        @default(true)
   notifEmail           Boolean        @default(true)
   notifAltaTurno       Boolean        @default(true)

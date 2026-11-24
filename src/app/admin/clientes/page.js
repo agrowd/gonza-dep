@@ -100,6 +100,7 @@ function ClientesPageContent() {
     bloqueado: false,
     recibioResena: false,
     permitirReprogramacionCorta: false,
+    excepcionSena: false,
     notifWhatsapp: true,
     notifEmail: true,
     notifAltaTurno: true,
@@ -129,6 +130,7 @@ function ClientesPageContent() {
     bloqueado: false,
     recibioResena: false,
     permitirReprogramacionCorta: false,
+    excepcionSena: false,
     notifWhatsapp: true,
     notifEmail: true,
     notifAltaTurno: true,
@@ -794,6 +796,7 @@ function ClientesPageContent() {
             bloqueado: Boolean(data.bloqueado),
             recibioResena: Boolean(data.recibioResena),
             permitirReprogramacionCorta: Boolean(data.permitirReprogramacionCorta),
+            excepcionSena: Boolean(data.excepcionSena),
             notifWhatsapp: data.notifWhatsapp !== false,
             notifEmail: data.notifEmail !== false,
             notifAltaTurno: data.notifAltaTurno !== false,
@@ -851,7 +854,7 @@ function ClientesPageContent() {
       if (turnoIdParam) params.push(`turnoId=${encodeURIComponent(turnoIdParam)}`);
       params.push('fromAgendaReturn=true');
       const queryStr = params.length > 0 ? `?${params.join('&')}` : '';
-      window.location.href = `/admin/agenda${queryStr}`;
+      router.push(`/admin/agenda${queryStr}`);
     } else {
       router.push('/admin/clientes');
     }
@@ -859,8 +862,11 @@ function ClientesPageContent() {
 
   // Safe WebKit BFCache and unmount cleanup to prevent iOS freeze
   useEffect(() => {
-    const handlePageShow = () => {
+    const handlePageShow = (e) => {
       safeUnlockBodyScroll();
+      if (e.persisted) {
+        window.location.reload();
+      }
     };
     window.addEventListener('pageshow', handlePageShow);
     return () => {
@@ -1176,6 +1182,7 @@ function ClientesPageContent() {
           bloqueado: data.bloqueado,
           recibioResena: data.recibioResena,
           permitirReprogramacionCorta: data.permitirReprogramacionCorta,
+          excepcionSena: data.excepcionSena,
           notifWhatsapp: data.notifWhatsapp,
           notifEmail: data.notifEmail,
           notifAltaTurno: data.notifAltaTurno,
@@ -1193,6 +1200,7 @@ function ClientesPageContent() {
           bloqueado: data.bloqueado,
           recibioResena: data.recibioResena,
           permitirReprogramacionCorta: data.permitirReprogramacionCorta,
+          excepcionSena: data.excepcionSena !== undefined ? Boolean(data.excepcionSena) : prev.excepcionSena,
           notifWhatsapp: data.notifWhatsapp,
           notifEmail: data.notifEmail,
           notifAltaTurno: data.notifAltaTurno,
@@ -2529,6 +2537,20 @@ function ClientesPageContent() {
                       />
                       <label htmlFor="permitirReprogramacionCorta" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '600', color: 'var(--text-primary)' }}>
                         🔄 Permitir reprogramar por autogestión dentro de las 72hs (Excepción de única vez)
+                      </label>
+                    </div>
+
+                    {/* Checkbox Excepción de seña aplicada */}
+                    <div className={styles.checkboxRow} style={{ marginTop: '0.65rem' }}>
+                      <input
+                        type="checkbox"
+                        id="excepcionSena"
+                        checked={Boolean(editNotes.excepcionSena)}
+                        onChange={(e) => setEditNotes({ ...editNotes, excepcionSena: e.target.checked })}
+                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#16a34a' }}
+                      />
+                      <label htmlFor="excepcionSena" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        🛡️ Excepción de seña aplicada
                       </label>
                     </div>
                   </div>

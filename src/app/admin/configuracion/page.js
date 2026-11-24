@@ -52,7 +52,7 @@ export default function ConfiguracionPage() {
 
   // Servicios State (Fase 2 Multidisciplinaria)
   const [servicios, setServicios] = useState([]);
-  const [selectedServicioTabId, setSelectedServicioTabId] = useState(null);
+  const [selectedServicioTabId, setSelectedServicioTabId] = useState('');
   const [loadingServicios, setLoadingServicios] = useState(true);
   const [isServicioModalOpen, setIsServicioModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState(null);
@@ -651,15 +651,25 @@ export default function ConfiguracionPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const tabParam = sp.get('tab');
+      if (tabParam === 'users') {
+        router.replace('/admin/usuarios');
+        return;
+      }
+      if (tabParam === 'bloqueos') {
+        router.replace('/admin/bloqueos');
+        return;
+      }
+    }
     fetchServicios();
     fetchZones();
     fetchConfigs();
     fetchPromociones();
     fetchCupones();
-    fetchUsers();
-    fetchFeriados();
     fetchBoxes();
-  }, []);
+  }, [router]);
 
   // 3. Save configurations in bulk
   const handleSaveConfigs = async (e) => {
@@ -1985,27 +1995,28 @@ export default function ConfiguracionPage() {
           value={activeTab}
           onChange={(e) => {
             const tab = e.target.value;
-            setActiveTab(tab);
             if (tab === 'users') {
-              fetchUsers();
-              setTimeout(() => {
-                const el = document.getElementById('userCardsGridSection') || usersSectionRef.current;
-                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 120);
+              router.push('/admin/usuarios');
+              return;
             }
+            if (tab === 'bloqueos') {
+              router.push('/admin/bloqueos');
+              return;
+            }
+            setActiveTab(tab);
             if (tab === 'promos') { fetchPromociones(); fetchCupones(); }
-            if (tab === 'parametros' || tab === 'bloqueos') { fetchFeriados(selectedFeriadosYear); }
+            if (tab === 'parametros') { fetchFeriados(selectedFeriadosYear); }
             if (tab === 'boxes') fetchBoxes();
           }}
         >
           <option value="zones">Servicios (Zonas de Depilación)</option>
           <option value="hours">Horarios Laborales</option>
           <option value="templates">Mensajes y Plantillas</option>
-          <option value="users">Usuarios y Operadores</option>
           <option value="parametros">Parámetros Operativos (Seña, Notificaciones, Canales)</option>
-          <option value="bloqueos">Bloqueos de Agenda y Feriados Anuales</option>
           <option value="promos">Promociones y Cupones</option>
           <option value="boxes">Boxes y Cabinas (Agendas Paralelas)</option>
+          <option value="users">➡️ Ir a Usuarios y Operadores</option>
+          <option value="bloqueos">➡️ Ir a Bloqueos de Agenda y Feriados</option>
         </select>
       </div>
 
@@ -2055,7 +2066,7 @@ export default function ConfiguracionPage() {
                   </label>
                   <select
                     id="servicioSelectFilter"
-                    value={selectedServicioTabId || (servicios[0]?.id || '')}
+                    value={selectedServicioTabId || ''}
                     onChange={(e) => setSelectedServicioTabId(e.target.value)}
                     style={{
                       flex: 1,
@@ -2070,6 +2081,7 @@ export default function ConfiguracionPage() {
                       cursor: 'pointer'
                     }}
                   >
+                    <option value="">-- Seleccionar un servicio para gestionar --</option>
                     {servicios.map(s => (
                       <option key={s.id} value={s.id}>
                         {s.nombre} ({s.zonas?.length || 0} {s.zonas?.length === 1 ? 'zona' : 'zonas'}) {s.habilitadoAutogestion === false ? '⛔ [Oculto en Autogestión]' : ''}
@@ -2079,8 +2091,14 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
-              {(() => {
-                const s = servicios.find(x => x.id === (selectedServicioTabId || servicios[0]?.id)) || servicios[0];
+              {!selectedServicioTabId ? (
+                <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', backgroundColor: '#f8fafc', borderRadius: '14px', border: '1.5px dashed #cbd5e1', color: '#64748b' }}>
+                  <div style={{ fontSize: '2.4rem', marginBottom: '0.6rem' }}>👆</div>
+                  <div style={{ fontSize: '1.08rem', fontWeight: 800, color: '#1e293b' }}>Seleccioná un servicio para gestionar</div>
+                  <div style={{ fontSize: '0.88rem', marginTop: '0.35rem', color: '#64748b' }}>Elegí un servicio en el menú desplegable superior para administrar sus zonas, precios, duración y configuración.</div>
+                </div>
+              ) : (() => {
+                const s = servicios.find(x => x.id === selectedServicioTabId);
                 if (!s) return null;
                 const isBase = s.nombre.toLowerCase().includes('depilaci');
                 const sZonas = s.zonas || [];
@@ -4381,22 +4399,54 @@ export default function ConfiguracionPage() {
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>
                     Si seleccionas zonas, cuando el cliente ingrese este cupón en la web de autogestión se cargarán automáticamente y pasará directo a elegir horario.
                   </p>
-                  <div className={styles.zoneSelectorGrid}>
-                    {zones.map(z => {
-                      const isSelected = (cuponForm.zonas || []).includes(z.nombre);
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {(servicios && servicios.length > 0 ? servicios : [{ id: 'base', nombre: 'Depilación Láser', icono: '⚡', zonas: zones }]).map(s => {
+                      const sZonas = s.zonas || zones.filter(z => z.servicioId === s.id);
+                      if (!sZonas || sZonas.length === 0) return null;
+                      const selectedCount = sZonas.filter(z => (cuponForm.zonas || []).includes(z.nombre)).length;
                       return (
-                        <div 
-                          key={z.id}
-                          className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
-                          onClick={() => toggleCuponZone(z.nombre)}
-                        >
-                          <input 
-                            type="checkbox" 
-                            checked={isSelected}
-                            onChange={() => {}} 
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span>{z.nombre}</span>
+                        <div key={s.id} style={{
+                          border: '1.5px solid #e2e8f0',
+                          borderRadius: '10px',
+                          overflow: 'hidden',
+                          backgroundColor: '#f8fafc'
+                        }}>
+                          <div style={{
+                            padding: '0.45rem 0.75rem',
+                            backgroundColor: '#f1f5f9',
+                            borderBottom: '1px solid #e2e8f0',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '0.84rem',
+                            fontWeight: 700,
+                            color: '#1e293b'
+                          }}>
+                            <span>{s.icono || '⚡'} {s.nombre}</span>
+                            <span style={{ fontSize: '0.74rem', color: selectedCount > 0 ? '#166534' : '#64748b', fontWeight: 600 }}>
+                              {selectedCount} de {sZonas.length} seleccionadas
+                            </span>
+                          </div>
+                          <div className={styles.zoneSelectorGrid} style={{ padding: '0.65rem' }}>
+                            {sZonas.map(z => {
+                              const isSelected = (cuponForm.zonas || []).includes(z.nombre);
+                              return (
+                                <div 
+                                  key={z.id}
+                                  className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
+                                  onClick={() => toggleCuponZone(z.nombre)}
+                                >
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isSelected}
+                                    onChange={() => {}} 
+                                    style={{ cursor: 'pointer' }}
+                                  />
+                                  <span>{z.nombre}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })}

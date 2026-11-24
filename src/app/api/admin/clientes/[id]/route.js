@@ -72,6 +72,7 @@ export async function PUT(request, { params }) {
       bloqueado,
       recibioResena,
       permitirReprogramacionCorta,
+      excepcionSena,
       notifWhatsapp,
       notifEmail,
       notifAltaTurno,
@@ -157,6 +158,7 @@ export async function PUT(request, { params }) {
     if (bloqueado !== undefined) updateData.bloqueado = Boolean(bloqueado);
     if (recibioResena !== undefined) updateData.recibioResena = Boolean(recibioResena);
     if (permitirReprogramacionCorta !== undefined) updateData.permitirReprogramacionCorta = Boolean(permitirReprogramacionCorta);
+    if (excepcionSena !== undefined) updateData.excepcionSena = Boolean(excepcionSena);
     if (notifWhatsapp !== undefined) updateData.notifWhatsapp = Boolean(notifWhatsapp);
     if (notifEmail !== undefined) updateData.notifEmail = Boolean(notifEmail);
     if (notifAltaTurno !== undefined) updateData.notifAltaTurno = Boolean(notifAltaTurno);

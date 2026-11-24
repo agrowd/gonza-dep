@@ -92,11 +92,21 @@ const DollarIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
 );
 
+const LockIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+);
+
+const UserCheckIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+);
+
   const allNavItems = [
     { name: 'Alta de Turno', path: '/admin/alta-turno', icon: <FlashIcon />, roles: ['ADMIN', 'RECEPCION'] },
     { name: 'Agenda de Turnos', path: '/admin/agenda', icon: <CalendarIcon />, roles: ['ADMIN', 'OPERADOR', 'RECEPCION'] },
     { name: 'Turnos Autogestión', path: '/admin/turnos-autogestion', icon: <InboxIcon />, roles: ['ADMIN', 'RECEPCION'], hasBadge: true },
     { name: 'Clientes', path: '/admin/clientes', icon: <UsersIcon />, roles: ['ADMIN', 'RECEPCION'] },
+    { name: 'Bloqueos y Feriados', path: '/admin/bloqueos', icon: <LockIcon />, roles: ['ADMIN', 'RECEPCION'] },
+    { name: 'Usuarios', path: '/admin/usuarios', icon: <UserCheckIcon />, roles: ['ADMIN'] },
     { name: 'Estadísticas', path: '/admin/estadisticas', icon: <ChartIcon />, roles: ['ADMIN'] },
     { name: 'Gastos', path: '/admin/gastos', icon: <DollarIcon />, roles: ['ADMIN'] },
     { name: 'Notificaciones', path: '/admin/notificaciones', icon: <BellIcon />, roles: ['ADMIN', 'RECEPCION'] },

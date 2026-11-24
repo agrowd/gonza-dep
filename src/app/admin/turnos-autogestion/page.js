@@ -89,6 +89,9 @@ export default function TurnosAutogestionPage() {
       return;
     }
 
+    const cuponMatch = sol.observaciones?.match(/\[Cupón:\s*([^\]]+)\]/i);
+    const cuponCodigo = cuponMatch ? cuponMatch[1].trim() : '';
+
     const params = new URLSearchParams({
       newTurno: 'true',
       date: sol.fechaStr,
@@ -101,10 +104,19 @@ export default function TurnosAutogestionPage() {
       email: sol.email || '',
       dni: sol.dni || '',
       valorTotal: String(sol.valorTotal || 0),
+      manualTotalOverride: String(sol.valorTotal || 0),
       seña: String(sol.valorSeña || 0),
+      manualSeñaOverride: String(sol.valorSeña || 0),
       solicitudId: sol.id
     });
 
+    if (cuponCodigo) {
+      params.set('cuponCodigo', cuponCodigo);
+      params.set('descuentoTipo', 'PORCENTAJE');
+    }
+    if (sol.observaciones) {
+      params.set('observaciones', sol.observaciones);
+    }
     if (sol.clienteId) {
       params.set('clienteId', sol.clienteId);
     }

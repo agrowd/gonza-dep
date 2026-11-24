@@ -25,3 +25,11 @@ export function cleanMilesInput(val) {
   if (!digits) return '';
   return digits.replace(/^0+(?=\d)/, '');
 }
+
+/**
+ * Formatea un valor numérico como moneda con punto en miles (ej: 35000 -> "$ 35.000")
+ */
+export function formatMoney(amount) {
+  const num = Math.round(Number(amount) || 0);
+  return '$ ' + String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
