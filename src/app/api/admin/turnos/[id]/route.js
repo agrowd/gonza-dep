@@ -654,6 +654,29 @@ export async function PUT(request, { params }) {
     const finalSeña = valorSeña !== undefined ? Number(valorSeña) : oldTurn.valorSeña;
     updateData.saldoPendiente = Math.max(0, finalTotal - finalSeña);
 
+    // Auto-cálculo de saldo a favor cuando la seña supera el valor total del turno (Regla Agustín Di Nubila)
+    const señaExcedente = Math.max(0, finalSeña - finalTotal);
+    if (señaExcedente > 0 && (body.dineroAFavor === undefined || Number(body.dineroAFavor) === 0)) {
+      updateData.dineroAFavor = señaExcedente;
+      if (oldTurn.clienteId) {
+        try {
+          const currentClient = await prisma.cliente.findUnique({
+            where: { id: oldTurn.clienteId },
+            select: { saldoAFavor: true }
+          });
+          const currentSaldo = Number(currentClient?.saldoAFavor || 0);
+          const newSaldo = Math.max(currentSaldo, señaExcedente);
+          await prisma.cliente.update({
+            where: { id: oldTurn.clienteId },
+            data: { saldoAFavor: newSaldo }
+          });
+          console.log(`[Turno ${id}] Seña excedente de $${señaExcedente} asignada automáticamente a saldoAFavor del cliente ${oldTurn.clienteId}`);
+        } catch (sErr) {
+          console.error('Error auto-updating client saldoAFavor on excess deposit:', sErr);
+        }
+      }
+    }
+
     // Recalculate duration if hours are updated
     if (horaInicio || horaFin) {
       const start = horaInicio || oldTurn.horaInicio;

@@ -155,7 +155,14 @@ export async function PUT(request, { params }) {
       if (sesionesPrevias !== undefined && !isNaN(Number(sesionesPrevias))) updateData.sesionesPrevias = Number(sesionesPrevias);
     }
     if (enviarNotificaciones !== undefined) updateData.enviarNotificaciones = Boolean(enviarNotificaciones);
-    if (bloqueado !== undefined) updateData.bloqueado = Boolean(bloqueado);
+    if (bloqueado !== undefined) {
+      updateData.bloqueado = Boolean(bloqueado);
+      if (Boolean(bloqueado)) {
+        updateData.estado = 'BLOQUEADO';
+      } else if (updateData.estado === undefined || updateData.estado === 'BLOQUEADO') {
+        updateData.estado = 'ACTIVO';
+      }
+    }
     if (recibioResena !== undefined) updateData.recibioResena = Boolean(recibioResena);
     if (permitirReprogramacionCorta !== undefined) updateData.permitirReprogramacionCorta = Boolean(permitirReprogramacionCorta);
     if (excepcionSena !== undefined) updateData.excepcionSena = Boolean(excepcionSena);

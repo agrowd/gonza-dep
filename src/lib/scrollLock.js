@@ -20,7 +20,15 @@ export function safeUnlockBodyScroll() {
 
 export function safeLockBodyScroll() {
   if (typeof document === 'undefined') return;
-  // ONLY lock body overflow on mobile WebKit to avoid locking documentElement hit-testing layer
-  document.body.style.overflow = 'hidden';
+  // On iOS Safari / WebKit, setting overflow = 'hidden' on body while fixed overlays exist
+  // causes WebKit's UIProcess hit-testing compositor to deadlock and drop touchstart/click events.
+  // We detect iOS/WebKit and skip body overflow lock because .modalOverlay already covers 100% of the screen.
+  const isIOS = typeof navigator !== 'undefined' && (
+    /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+  if (!isIOS) {
+    document.body.style.overflow = 'hidden';
+  }
 }
 

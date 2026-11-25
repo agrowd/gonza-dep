@@ -142,9 +142,14 @@ export async function GET(request) {
     const totalSaldosRealizados = turnosRealizadosDia
       .reduce((acc, t) => acc + Math.max(0, Number(t.valorTotal || 0) - Number(t.valorSeña || 0)), 0);
 
-    // Suma de dineros a favor cobrados en sesiones realizadas hoy (D-157)
+    // Suma de dineros a favor cobrados en sesiones realizadas hoy (D-157, D-186)
+    // Si el turno tiene dinero a favor producto de una seña anterior excedente (valorSeña > valorTotal),
+    // dicho remanente NO es dinero fresco que ingresó a caja hoy (Regla Agustín Di Nubila: "no se va a contar para el neto de hoy porque no pagó nada").
     const totalDineroAFavor = turnosRealizadosDia
-      .reduce((sum, t) => sum + Math.max(0, Number(t.dineroAFavor || 0)), 0);
+      .reduce((sum, t) => {
+        const senaExcedente = Math.max(0, Number(t.valorSeña || 0) - Number(t.valorTotal || 0));
+        return sum + Math.max(0, Number(t.dineroAFavor || 0) - senaExcedente);
+      }, 0);
 
     // Desglose de dinero efectivo vs transferencia que ingresó a caja en la jornada
     let totalEfectivo = 0;
@@ -152,7 +157,11 @@ export async function GET(request) {
 
     // 1) Saldos y dinero a favor de turnos realizados
     turnosRealizadosDia.forEach(t => {
-      const saldoCobrado = Math.max(0, Number(t.valorTotal || 0) - Number(t.valorSeña || 0)) + Math.max(0, Number(t.dineroAFavor || 0));
+      const vTotal = Number(t.valorTotal || 0);
+      const vSena = Number(t.valorSeña || 0);
+      const senaExcedente = Math.max(0, vSena - vTotal);
+      const dineroAFavorFresco = Math.max(0, Number(t.dineroAFavor || 0) - senaExcedente);
+      const saldoCobrado = Math.max(0, vTotal - vSena) + dineroAFavorFresco;
       const metodo = String(t.metodoPago || '').toUpperCase();
       if (metodo === 'AMBOS') {
         const ef = Math.max(0, Number(t.montoEfectivo || 0));

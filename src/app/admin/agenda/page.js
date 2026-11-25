@@ -591,7 +591,7 @@ export default function AgendaPage() {
       .then(data => {
         if (data?.usuarios) {
           setUsuariosList(data.usuarios.filter(u => u.activo !== false));
-          const ops = data.usuarios.filter(u => u.rol === 'OPERADOR' || u.rol === 'ADMIN');
+          const ops = data.usuarios.filter(u => (u.rol === 'OPERADOR' || u.rol === 'ADMIN') && u.activo !== false);
           setOperadores(ops);
           const defaultAdmin = ops.find(u => u.nombre?.toLowerCase().includes('gonzalo') || u.usuario?.toLowerCase() === 'gonzalo')
             || ops.find(u => u.rol === 'ADMIN');
@@ -2435,6 +2435,14 @@ export default function AgendaPage() {
           updateBody.valorTotal = dynPrices.valorTotal;
           updateBody.bonificacion = dynPrices.bonificacion;
         }
+        // Auto-asignar remanente de seña excedente como dinero a favor para el siguiente turno (Regla Agustín Di Nubila)
+        const vTot = Number(dynPrices?.valorTotal ?? selectedTurno.valorTotal ?? 0);
+        const vSen = Number(selectedTurno.valorSeña || 0);
+        if (vSen > vTot) {
+          const excedente = vSen - vTot;
+          const currDinero = Number(selectedTurno.dineroAFavor || 0);
+          updateBody.dineroAFavor = currDinero > 0 ? currDinero : excedente;
+        }
       }
 
       const res = await fetch(`/api/admin/turnos/${turnoId}`, {
@@ -3382,7 +3390,7 @@ export default function AgendaPage() {
     } else if (fromClientId) {
       const targetClientId = fromClientId;
       setFromClientId(null);
-      router.push(`/admin/clientes?id=${targetClientId}`);
+      window.location.href = `/admin/clientes?id=${targetClientId}`;
     }
   };
 
@@ -3686,7 +3694,7 @@ export default function AgendaPage() {
               <span>Todos</span>
             </button>
 
-            {operadores.map(op => {
+            {operadores.filter(op => op.activo !== false).map(op => {
               const isSelected = selectedOperadorId === op.id;
               return (
                 <button
@@ -3996,10 +4004,14 @@ export default function AgendaPage() {
                     return sum + saldo;
                   }, 0);
 
-              // 2) Dinero a favor cobrado en turnos realizados hoy (D-157)
+              // 2) Dinero a favor cobrado en turnos realizados hoy (D-157, D-186)
+              // Excluye remanente de seña excedente anterior porque no es dinero fresco cobrado hoy (Regla Agustín Di Nubila)
               const totalDineroAFavorHoy = !isFilteredView && daySenas?.totalDineroAFavor !== undefined
                 ? Number(daySenas.totalDineroAFavor)
-                : turnosRealizados.reduce((sum, a) => sum + Math.max(0, Number(a.dineroAFavor || 0)), 0);
+                : turnosRealizados.reduce((sum, a) => {
+                    const senaExcedente = Math.max(0, Number(a.valorSeña || 0) - Number(a.valorTotal || 0));
+                    return sum + Math.max(0, Number(a.dineroAFavor || 0) - senaExcedente);
+                  }, 0);
 
               // 3) Señas cobradas en este día (turnos agendados en esta fecha en timezone UTC-3)
               const totalSenasCobradasHoy = Number(daySenas?.totalSenas || 0);
@@ -6054,22 +6066,28 @@ export default function AgendaPage() {
                               </div>
                             )}
 
-                            {/* Monto / Dinero a Favor del Cliente (D-151 / D-169 / D-170) */}
+                            {/* Monto / Dinero a Favor del Cliente (D-151 / D-169 / D-170 / D-186) */}
                             {(() => {
                               const clientSaldo = Number(selectedTurno.cliente?.saldoAFavor || 0);
+                              const effValorTotal = Number(dynPrices?.valorTotal ?? selectedTurno.valorTotal ?? 0);
+                              const effValorSena = Number(selectedTurno.valorSeña || 0);
+                              const señaExcedente = Math.max(0, effValorSena - effValorTotal);
+                              const autoDineroAFavor = señaExcedente > 0 ? señaExcedente : (clientSaldo > 0 ? clientSaldo : '');
                               const currentVal = selectedTurno.dineroAFavor === ''
                                 ? ''
                                 : ((Number(selectedTurno.dineroAFavor) > 0) 
                                   ? selectedTurno.dineroAFavor 
-                                  : (clientSaldo > 0 ? clientSaldo : ''));
+                                  : autoDineroAFavor);
                               return (
                                 <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', marginTop: '0.35rem', alignItems: 'center' }}>
                                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span className={styles.detailLabel} style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                       🎁 DINERO A FAVOR
                                     </span>
-                                    <span style={{ fontSize: '0.68rem', color: clientSaldo > 0 ? '#166534' : '#64748b', fontWeight: clientSaldo > 0 ? 600 : 400 }}>
-                                      {clientSaldo > 0 ? `Saldo disponible del cliente: $${clientSaldo.toLocaleString('es-ES')}` : 'Se aplicará en el próximo turno'}
+                                    <span style={{ fontSize: '0.68rem', color: señaExcedente > 0 ? '#15803d' : (clientSaldo > 0 ? '#166534' : '#64748b'), fontWeight: (señaExcedente > 0 || clientSaldo > 0) ? 700 : 400 }}>
+                                      {señaExcedente > 0 
+                                        ? `🎁 Seña excedente del turno anterior: $${señaExcedente.toLocaleString('es-ES')} (Pasa a la próxima sesión)` 
+                                        : (clientSaldo > 0 ? `Saldo disponible del cliente: $${clientSaldo.toLocaleString('es-ES')}` : 'Se aplicará en el próximo turno')}
                                     </span>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

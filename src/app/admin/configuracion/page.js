@@ -116,7 +116,8 @@ export default function ConfiguracionPage() {
     mensaje_previo_dias: '7',
     duracion_formula: 'ZONA_MAX_MAS_TERCIO',
     canales_adquisicion: JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"]),
-    zonas_otros_lista: JSON.stringify(DEFAULT_ZONAS_OTROS)
+    zonas_otros_lista: JSON.stringify(DEFAULT_ZONAS_OTROS),
+    ia_blocked_numbers: ''
   });
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [savingConfigs, setSavingConfigs] = useState(false);
@@ -148,6 +149,7 @@ export default function ConfiguracionPage() {
   const [loadingCupones, setLoadingCupones] = useState(false);
   const [isCuponModalOpen, setIsCuponModalOpen] = useState(false);
   const [editingCupon, setEditingCupon] = useState(null);
+  const [cuponSelectedServicioId, setCuponSelectedServicioId] = useState('');
   const [cuponForm, setCuponForm] = useState({
     codigo: '',
     zonas: [],
@@ -600,7 +602,8 @@ export default function ConfiguracionPage() {
             mensaje_previo_dias: data.mensaje_previo_dias || '7',
             duracion_formula: data.duracion_formula || 'ZONA_MAX_MAS_TERCIO',
             canales_adquisicion: data.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"]),
-            zonas_otros_lista: data.zonas_otros_lista || JSON.stringify(DEFAULT_ZONAS_OTROS)
+            zonas_otros_lista: data.zonas_otros_lista || JSON.stringify(DEFAULT_ZONAS_OTROS),
+            ia_blocked_numbers: data.ia_blocked_numbers || ''
           });
         }
       })
@@ -1251,6 +1254,10 @@ export default function ConfiguracionPage() {
   // --- CUPONES HANDLERS ---
   const handleOpenNewCupon = () => {
     setEditingCupon(null);
+    const defaultServiceId = (servicios && servicios.length > 0)
+      ? (servicios.find(s => s.nombre?.toLowerCase().includes('depilaci'))?.id || servicios[0].id)
+      : '';
+    setCuponSelectedServicioId(defaultServiceId);
     setCuponForm({
       codigo: '',
       zonas: [],
@@ -1274,6 +1281,19 @@ export default function ConfiguracionPage() {
     } catch {
       parsedZonas = [];
     }
+
+    let detectedServicioId = '';
+    if (parsedZonas.length > 0 && Array.isArray(zones)) {
+      const matchZ = zones.find(z => parsedZonas.includes(z.nombre));
+      if (matchZ) {
+        detectedServicioId = matchZ.servicioId || matchZ.servicio?.id || '';
+      }
+    }
+    if (!detectedServicioId && servicios && servicios.length > 0) {
+      detectedServicioId = servicios.find(s => s.nombre?.toLowerCase().includes('depilaci'))?.id || servicios[0].id;
+    }
+    setCuponSelectedServicioId(detectedServicioId);
+
     setCuponForm({
       codigo: cupon.codigo || '',
       zonas: parsedZonas,
@@ -3053,6 +3073,40 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
+              {/* Bloqueo de Contactos para la IA de WhatsApp */}
+              <div style={{
+                marginTop: '2rem',
+                marginBottom: '2rem',
+                padding: '1.25rem',
+                borderRadius: '12px',
+                border: '1.5px solid #f87171',
+                backgroundColor: 'rgba(239, 68, 68, 0.04)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.2rem' }}>🚫</span>
+                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#dc2626' }}>
+                    Bloqueo de Contactos para la IA de WhatsApp
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '0.85rem', lineHeight: '1.45' }}>
+                  Ingresá los números de teléfono (separados por coma, espacio o renglón) a los cuales la IA de WhatsApp <strong>NO debe responder jamás</strong>.
+                  La IA guardará silencio absoluto ante cualquier mensaje de estos contactos. (También podés bloquear clientes directamente desde su Ficha).
+                </p>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label} style={{ color: '#b91c1c', fontWeight: 700 }}>
+                    Números de Teléfono Bloqueados (Ej: 5491122334455, 1122334455):
+                  </label>
+                  <textarea
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={configs.ia_blocked_numbers}
+                    onChange={(e) => setConfigs({ ...configs, ia_blocked_numbers: e.target.value })}
+                    placeholder="5491133445566, 5491177889900..."
+                    rows="3"
+                    style={{ borderColor: '#fca5a5', fontFamily: 'monospace', fontSize: '0.9rem' }}
+                  />
+                </div>
+              </div>
+
               <hr style={{ border: '0', borderTop: '1px dashed var(--border-color)', margin: '2rem 0' }} />
 
               <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-gold)', marginBottom: '1.5rem' }}>Plantillas de Correo Electrónico</div>
@@ -3655,7 +3709,22 @@ export default function ConfiguracionPage() {
                       return (
                         <tr key={cupon.id} className={styles.tr}>
                           <td className={styles.td} data-label="Código">
-                            <span className={styles.cuponCode}>{cupon.codigo}</span>
+                            <span 
+                              className={styles.cuponCode}
+                              style={{ 
+                                color: '#7a1f1e', 
+                                backgroundColor: '#f1f5f9', 
+                                border: '1.5px dashed #7a1f1e', 
+                                fontWeight: 800, 
+                                fontSize: '0.92rem', 
+                                padding: '0.25rem 0.65rem', 
+                                borderRadius: '6px', 
+                                display: 'inline-block',
+                                letterSpacing: '0.08em'
+                              }}
+                            >
+                              {cupon.codigo}
+                            </span>
                           </td>
                           <td className={styles.td} data-label="Beneficio">
                             <span className={styles.promoBadge}>
@@ -4422,64 +4491,112 @@ export default function ConfiguracionPage() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>
-                    Zonas Asociadas Precargadas (Opcional - {(cuponForm.zonas || []).length} seleccionadas)
-                  </label>
+                  <label className={styles.label}>Servicio Asociado al Cupón</label>
+                  <select 
+                    className={styles.input}
+                    value={cuponSelectedServicioId}
+                    onChange={(e) => {
+                      const nextServicioId = e.target.value;
+                      setCuponSelectedServicioId(nextServicioId);
+                      // Exclusividad de servicio (como en turnos): desmarcar zonas de otros servicios
+                      if (cuponForm.zonas && cuponForm.zonas.length > 0) {
+                        const allowedZoneNames = (zones || [])
+                          .filter(z => (z.servicioId === nextServicioId || z.servicio?.id === nextServicioId))
+                          .map(z => z.nombre);
+                        setCuponForm(prev => ({
+                          ...prev,
+                          zonas: (prev.zonas || []).filter(zName => allowedZoneNames.includes(zName))
+                        }));
+                      }
+                    }}
+                  >
+                    <option value="">-- Seleccionar un servicio para elegir sus zonas --</option>
+                    {(servicios && servicios.length > 0 ? servicios : [{ id: 'base', nombre: 'Depilación Láser' }]).map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <label className={styles.label} style={{ margin: 0 }}>
+                      Zonas Asociadas Precargadas (Opcional)
+                    </label>
+                    <span style={{ fontSize: '0.8rem', color: (cuponForm.zonas || []).length > 0 ? '#166534' : '#64748b', fontWeight: 600 }}>
+                      {(cuponForm.zonas || []).length} seleccionadas
+                    </span>
+                  </div>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>
                     Si seleccionas zonas, cuando el cliente ingrese este cupón en la web de autogestión se cargarán automáticamente y pasará directo a elegir horario.
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    {(servicios && servicios.length > 0 ? servicios : [{ id: 'base', nombre: 'Depilación Láser', icono: '⚡', zonas: zones }]).map(s => {
-                      const sZonas = s.zonas || zones.filter(z => z.servicioId === s.id);
-                      if (!sZonas || sZonas.length === 0) return null;
-                      const selectedCount = sZonas.filter(z => (cuponForm.zonas || []).includes(z.nombre)).length;
+                  {(() => {
+                    if (!cuponSelectedServicioId) {
                       return (
-                        <div key={s.id} style={{
-                          border: '1.5px solid #e2e8f0',
-                          borderRadius: '10px',
-                          overflow: 'hidden',
-                          backgroundColor: '#f8fafc'
-                        }}>
-                          <div style={{
-                            padding: '0.45rem 0.75rem',
-                            backgroundColor: '#f1f5f9',
-                            borderBottom: '1px solid #e2e8f0',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            color: '#1e293b'
-                          }}>
-                            <span>{s.icono || '⚡'} {s.nombre}</span>
-                            <span style={{ fontSize: '0.74rem', color: selectedCount > 0 ? '#166534' : '#64748b', fontWeight: 600 }}>
-                              {selectedCount} de {sZonas.length} seleccionadas
-                            </span>
-                          </div>
-                          <div className={styles.zoneSelectorGrid} style={{ padding: '0.65rem' }}>
-                            {sZonas.map(z => {
-                              const isSelected = (cuponForm.zonas || []).includes(z.nombre);
-                              return (
-                                <div 
-                                  key={z.id}
-                                  className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
-                                  onClick={() => toggleCuponZone(z.nombre)}
-                                >
-                                  <input 
-                                    type="checkbox" 
-                                    checked={isSelected}
-                                    onChange={() => {}} 
-                                    style={{ cursor: 'pointer' }}
-                                  />
-                                  <span>{z.nombre}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
+                        <div style={{ padding: '0.85rem', textAlign: 'center', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '0.85rem' }}>
+                          ℹ️ Selecciona un servicio arriba para ver y asociar sus zonas específicas.
                         </div>
                       );
-                    })}
-                  </div>
+                    }
+
+                    const selectedServicio = (servicios || []).find(s => s.id === cuponSelectedServicioId);
+                    const currentServiceZones = (selectedServicio?.zonas && selectedServicio.zonas.length > 0)
+                      ? selectedServicio.zonas
+                      : (zones || []).filter(z => z.servicioId === cuponSelectedServicioId || z.servicio?.id === cuponSelectedServicioId || (!z.servicioId && cuponSelectedServicioId === 'base'));
+
+                    if (currentServiceZones.length === 0) {
+                      return (
+                        <div style={{ padding: '0.85rem', textAlign: 'center', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '0.85rem' }}>
+                          No hay zonas cargadas para este servicio.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{
+                        border: '1.5px solid #e2e8f0',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        backgroundColor: '#f8fafc'
+                      }}>
+                        <div style={{
+                          padding: '0.45rem 0.75rem',
+                          backgroundColor: '#f1f5f9',
+                          borderBottom: '1px solid #e2e8f0',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.84rem',
+                          fontWeight: 700,
+                          color: '#1e293b'
+                        }}>
+                          <span>{selectedServicio?.nombre || 'Zonas del Servicio'}</span>
+                          <span style={{ fontSize: '0.74rem', color: (cuponForm.zonas || []).length > 0 ? '#166534' : '#64748b', fontWeight: 600 }}>
+                            {(cuponForm.zonas || []).length} de {currentServiceZones.length} seleccionadas
+                          </span>
+                        </div>
+                        <div className={styles.zoneSelectorGrid} style={{ padding: '0.65rem' }}>
+                          {currentServiceZones.map(z => {
+                            const isSelected = (cuponForm.zonas || []).includes(z.nombre);
+                            return (
+                              <div 
+                                key={z.id}
+                                className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
+                                onClick={() => toggleCuponZone(z.nombre)}
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  checked={isSelected}
+                                  onChange={() => {}} 
+                                  style={{ cursor: 'pointer' }}
+                                />
+                                <span>{z.nombre}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className={styles.formRow}>

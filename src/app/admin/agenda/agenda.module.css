@@ -1194,7 +1194,7 @@
     overflow-y: auto !important; /* The ONLY element that scrolls */
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
-    touch-action: pan-y !important;
+    touch-action: manipulation !important;
     pointer-events: auto !important;
     position: relative !important;
     animation: none !important;

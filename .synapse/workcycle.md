@@ -3416,3 +3416,37 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 4. **Verificación y Compilación**:
    - `npm run build` ejecutado exitosamente con Turbopack: 52/52 rutas compiladas con 0 errores.
 
+---
+
+## Sesión 25/11/2026 - Gestión de Seña Excedente (Agustín Di Nubila), Silenciamiento y Bloqueo de Contactos en IA, Fix Definitivo Touch Freeze y Retorno a Turno en iPhone, Selector de Servicios en Cupones y Filtro de Operadores Inactivos (D-186)
+
+### Diagnóstico e Implementación
+1. **Seña Excedente que Supera el Valor Total de Sesión (Caso Agustín Di Nubila)**:
+   - *Reporte*: Cuando un cliente pagó una seña anterior (ej. $38.500) mayor al valor del turno de hoy (ej. $25.000), el excedente ($13.500) debe pasar automáticamente como saldo a favor / nueva seña para el siguiente turno, pero NO debe computarse como dinero ingresado hoy en el neto de caja (`senas-dia`).
+   - *Solución*:
+     - En `src/app/admin/agenda/page.js` (`handleUpdateStatus`) y `src/app/api/admin/turnos/[id]/route.js`: al marcar como `REALIZADO`, se calcula automáticamente `excedente = valorSeña - valorTotal`, guardándolo en `Turno.dineroAFavor` y acreditándolo a `Cliente.saldoAFavor`.
+     - En `src/app/api/admin/turnos/senas-dia/route.js`: se calcula `senaExcedente = Math.max(0, valorSeña - valorTotal)` y se descuenta de los cobros en local y del neto de hoy, garantizando que el dinero ingresado hoy sea exactamente $0.
+     - En la cabecera de la agenda (`totalDineroAFavorHoy`), se descuenta `senaExcedente` para no inflar la caja.
+     - Para la próxima cita que agende el cliente, ese monto figura como seña con `señaEstado = 'SALDO_A_FAVOR'`, ya excluida de la caja futura.
+2. **Silenciamiento y Bloqueo de Contactos para la IA de WhatsApp**:
+   - *Reporte*: "Y faltó lo del Bloqueo de contactos en IA para que la IA no responda a ciertos clientes".
+   - *Solución*:
+     - En `src/app/api/admin/configuracion/route.js`: se expuso y persistió `ia_blocked_numbers` en `fullConfigs`.
+     - En `src/app/admin/configuracion/page.js`: se añadió la tarjeta dedicada `🚫 Bloqueo de Contactos para la IA de WhatsApp` con textarea para números telefónicos.
+     - En `src/app/admin/clientes/page.js` y `src/app/api/admin/clientes/[id]/route.js`: el botón de bloqueo conmuta y sincroniza tanto `bloqueado: true` como `estado: 'BLOQUEADO'`.
+     - En `/srv/ia-gonzadep/src/lib/whatsapp.js`: la IA verifica `matchedCliente?.bloqueado === true`, `matchedCliente?.estado === 'BLOQUEADO'` y si el teléfono figura en `ia_blocked_numbers`. Al detectar un contacto bloqueado, **guarda silencio absoluto** (no llama a `sendWhatsAppMessage`, registra el mensaje con `fueRespondido: false` y ejecuta `return;` inmediato).
+3. **Fix Touch Freeze y Retorno a Turno en iPhone (iOS Safari / WebKit)**:
+   - *Reporte*: "Todavia sigue pasando lo mismo, no me toma el dedo, además cuando entro a la ficha del cliente desde un turno, y cierro la ficha, vuelve a la agenda, antes volvía al turno y eso estaba andando bien".
+   - *Causa*: `handleCloseProfile` en `clientes/page.js` había sido cambiado a `router.push('/admin/agenda' + queryStr)`. En Next.js soft navigation, el componente de agenda no re-ejecuta `useEffect(..., [])`, ignorando el `turnoIdParam` y dejando el modal cerrado. Además, en iOS WebKit, `safeLockBodyScroll` aplicaba `document.body.style.overflow = 'hidden'`, lo cual desincroniza la capa de hit-testing de eventos táctiles ("no me toma el dedo").
+   - *Solución*:
+     - En `src/app/admin/clientes/page.js`: se restituyó `window.location.href = /admin/agenda?date=...&view=...&turnoId=...`, asegurando navegación completa limpia que reabre el turno de forma 100% confiable. En `src/app/admin/agenda/page.js`, al cerrar con `fromClientId` se navega con `window.location.href = /admin/clientes?id=...`.
+     - En `src/lib/scrollLock.js`: se detecta iOS Safari y se omite `document.body.style.overflow = 'hidden'`, evitando que WebKit desconecte los eventos táctiles.
+     - En `agenda.module.css` y `clientes.module.css`: se reemplazó `touch-action: pan-y !important` por `touch-action: manipulation !important` en `.modalContent` y `.modalBody` en media queries móviles.
+4. **Selector de Servicios en Cupones y Visibilidad del Código Alfanumérico**:
+   - En `src/app/admin/configuracion/page.js`: se agregó selector de servicio en el modal de cupón, aislando las zonas disponibles a las del servicio elegido.
+   - En `src/app/admin/configuracion/configuracion.module.css`: `.cuponCode` estilizado con `#7a1f1e` y fondo tenue `#f1f5f9` con borde discontinuo para máxima visibilidad.
+5. **Filtro de Operadores Inactivos en Agenda**:
+   - En `src/app/admin/agenda/page.js`: se filtraron los operadores inactivos (`op.activo !== false`), impidiendo que aparezcan en las píldoras de filtrado horizontal de la cabecera.
+6. **Compilación y Verificación**:
+   - `npm run build` ejecutado exitosamente con 52/52 rutas generadas sin errores con Turbopack.
+

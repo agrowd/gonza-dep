@@ -677,20 +677,24 @@ function ClientesPageContent() {
 
   const handleToggleBloqueado = async () => {
     if (!selectedClient) return;
-    const nextVal = !selectedClient.bloqueado;
+    const isCurrentlyBlocked = Boolean(selectedClient.bloqueado || selectedClient.estado === 'BLOQUEADO');
+    const nextVal = !isCurrentlyBlocked;
     try {
       const res = await fetch(`/api/admin/clientes/${selectedClient.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ bloqueado: nextVal })
+        body: JSON.stringify({ 
+          bloqueado: nextVal,
+          estado: nextVal ? 'BLOQUEADO' : 'ACTIVO'
+        })
       });
       const data = await res.json();
       if (res.ok) {
-        setSelectedClient(prev => ({ ...prev, bloqueado: nextVal }));
-        setEditNotes(prev => ({ ...prev, bloqueado: nextVal }));
-        setClients(prev => prev.map(c => c.id === selectedClient.id ? { ...c, bloqueado: nextVal } : c));
-        showToast(nextVal ? '🚫 Cliente bloqueado. No podrá reservar turnos por autogestión.' : '🟢 Cliente desbloqueado correctamente.');
+        setSelectedClient(prev => ({ ...prev, bloqueado: nextVal, estado: nextVal ? 'BLOQUEADO' : 'ACTIVO' }));
+        setEditNotes(prev => ({ ...prev, bloqueado: nextVal, estado: nextVal ? 'BLOQUEADO' : 'ACTIVO' }));
+        setClients(prev => prev.map(c => c.id === selectedClient.id ? { ...c, bloqueado: nextVal, estado: nextVal ? 'BLOQUEADO' : 'ACTIVO' } : c));
+        showToast(nextVal ? '🚫 Cliente bloqueado. La IA no le responderá y no podrá reservar por autogestión.' : '🟢 Cliente desbloqueado correctamente.');
       } else {
         showToast(data.error || 'Error al cambiar bloqueo del cliente.', 'error');
       }
@@ -854,7 +858,7 @@ function ClientesPageContent() {
       if (turnoIdParam) params.push(`turnoId=${encodeURIComponent(turnoIdParam)}`);
       params.push('fromAgendaReturn=true');
       const queryStr = params.length > 0 ? `?${params.join('&')}` : '';
-      router.push(`/admin/agenda${queryStr}`);
+      window.location.href = `/admin/agenda${queryStr}`;
     } else {
       router.push('/admin/clientes');
     }
@@ -1544,9 +1548,9 @@ function ClientesPageContent() {
                     <h3 className={styles.ficheTitle} style={{ margin: 0, fontSize: '1.3rem', wordBreak: 'break-word', color: 'var(--text-primary)' }}>
                       {selectedClient.nombreCompleto}
                     </h3>
-                    {selectedClient.bloqueado && (
+                    {(selectedClient.bloqueado || selectedClient.estado === 'BLOQUEADO') && (
                       <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #f87171', fontWeight: 'bold' }}>
-                        🚫 (Bloqueado)
+                        🚫 Bloqueado (IA y Autogestión)
                       </span>
                     )}
                     {selectedClient.recibioResena && (
@@ -2203,7 +2207,7 @@ function ClientesPageContent() {
                       onClick={handleToggleBloqueado}
                       className="btn btn-primary"
                       style={{
-                        backgroundColor: selectedClient.bloqueado ? '#16a34a' : '#b91c1c',
+                        backgroundColor: (selectedClient.bloqueado || selectedClient.estado === 'BLOQUEADO') ? '#16a34a' : '#b91c1c',
                         color: '#fff',
                         border: 'none',
                         display: 'flex',
@@ -2214,7 +2218,7 @@ function ClientesPageContent() {
                         padding: '0.75rem 1rem'
                       }}
                     >
-                      {selectedClient.bloqueado ? '🟢 Desbloquear Cliente' : '🚫 Bloquear Cliente'}
+                      {(selectedClient.bloqueado || selectedClient.estado === 'BLOQUEADO') ? '🟢 Desbloquear Cliente' : '🚫 Bloquear Cliente (IA y Autogestión)'}
                     </button>
 
                     <button

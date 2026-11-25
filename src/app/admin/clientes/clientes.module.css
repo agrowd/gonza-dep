@@ -530,7 +530,7 @@
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
-    touch-action: pan-y !important;
+    touch-action: manipulation !important;
   }
   .cardSection {
     padding: 0.85rem 0.75rem !important;
@@ -571,7 +571,7 @@
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
-    touch-action: pan-y !important;
+    touch-action: manipulation !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }

@@ -67,7 +67,8 @@ export async function GET() {
       mensaje_previo_dias: configs.mensaje_previo_dias || "7",
       duracion_formula: configs.duracion_formula || "ZONA_MAX_MAS_TERCIO",
       canales_adquisicion: configs.canales_adquisicion || JSON.stringify(["ORGANICO", "RECOMENDADO", "GOOGLE", "INSTAGRAM", "CAMPANAS", "WEB", "MANUAL"]),
-      zonas_otros_lista: configs.zonas_otros_lista || JSON.stringify(DEFAULT_ZONAS_OTROS)
+      zonas_otros_lista: configs.zonas_otros_lista || JSON.stringify(DEFAULT_ZONAS_OTROS),
+      ia_blocked_numbers: configs.ia_blocked_numbers || ""
     };
 
     return NextResponse.json(fullConfigs);
