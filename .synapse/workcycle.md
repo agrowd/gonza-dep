@@ -3473,3 +3473,27 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 3. **Verificación y Compilación**:
    - `npm run build` ejecutado exitosamente con Turbopack: 52/52 rutas compiladas con 0 errores.
 
+---
+
+## Sesión 25/11/2026 - Corrección de Scoping en Cancelación WhatsApp (withLossOfDeposit), Filtrado Anti-Caché de Autogestión y Exclusión de Imágenes en Siguiente Turno (D-188)
+
+### Diagnóstico e Implementación
+1. **Fix `ReferenceError: withLossOfDeposit is not defined` en WhatsApp de Cancelación (`media_1795620672097_2ec85e77.jpg`)**:
+   - *Reporte*: "Puedes fijarte que pasó que no se envió el WhatsApp de cancelación de turnos" (en Sergio Laguzzi, el mensaje de WhatsApp de cancelación figuraba con estado `FALLIDO`: `Error al enviar WhatsApp de cancelación: withLossOfDeposit is not defined`).
+   - *Causa*: En `src/app/api/admin/turnos/[id]/route.js`, `withLossOfDeposit` estaba declarada con `let` dentro del bloque `try` de envío de correo. Al saltar al bloque de WhatsApp a continuación, la variable estaba fuera de ámbito (block scoping), provocando un ReferenceError en la condición `else if (withLossOfDeposit && señaNumWpp > 0 ...)`.
+   - *Solución*: Se elevó la declaración y cálculo de `withLossOfDeposit` al ámbito superior de la función antes del bloque de email, dejándola disponible para ambas notificaciones (email y WhatsApp).
+2. **Filtrado Estricto Anti-Caché de Servicios/Zonas en Autogestión (`media_1795620597289_6365107e.jpg`, `media_1795620627408_6bd4bde8.png`)**:
+   - *Reporte*: "Esto no lo corregiste? Siguen apareciendo a pesar de estar bloqueados" / "por autogestión siguen apareciendo los servicios bloqueados de faciales y masajes".
+   - *Causa*: La base de datos tiene `habilitadoAutogestion: false` en los servicios FACIALES y MASAJES, pero en navegadores móviles (especialmente iOS Safari) la respuesta de `/api/zonas?autogestion=true` quedaba almacenada en la caché HTTP del navegador.
+   - *Solución*:
+     - En `src/app/api/zonas/route.js`: se exportó `dynamic = 'force-dynamic'`, `revalidate = 0` y se devolvieron cabeceras explícitas `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0`.
+     - En `src/app/page.js`: se añadió `_t=${Date.now()}` y `{ cache: 'no-store' }` en el fetch de zonas, reforzando la exclusión en el render de cualquier zona cuyo servicio esté inactivo o deshabilitado para autogestión.
+3. **Imágenes de Bienvenida (Dirección y Previas) SOLO en Primer Turno (`media_1795620609479_21dfb613.jpg`)**:
+   - *Reporte*: "Cuando encargo un siguiente turno, vuelve a mandar la dirección y las indicaciones que sólo se tiene que mandar, cuando se agenda por primera vez un turno".
+   - *Causa*: En `api/admin/turnos/route.js`, el cálculo de sesiones completadas evaluaba `turnos.filter(t => t.estado === 'REALIZADO')`. Si Gonzalo agendaba el siguiente turno antes de marcar el turno previo como realizado, o si el cliente era nuevo en el día pero ya estaba agendando su segunda cita, `completedSessionsCount` daba 0 y volvía a despachar los flyers.
+   - *Solución*:
+     - Se vinculó `isReallyFirstTurno` a un recuento estricto en base de datos: `!prevTurnoId && priorTurnosCount === 0 && sesionesPrevias === 0`.
+     - Si el cliente ya cuenta con cualquier turno previo registrado en el sistema o se agenda vía `prevTurnoId` (Siguiente Turno), las imágenes de dirección e indicaciones previas NUNCA se envían. Solo se despachan en la primerísima cita que agenda el cliente en su vida.
+4. **Verificación y Compilación**:
+   - `npm run build` ejecutado exitosamente con Turbopack: 51/51 rutas compiladas con 0 errores.
+

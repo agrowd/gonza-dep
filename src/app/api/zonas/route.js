@@ -4,6 +4,9 @@ import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
 import { ensureDefaultService } from '@/app/api/admin/servicios/route.js';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET: Lista pública de zonas, incluyendo su servicio asociado
 export async function GET(request) {
   try {
@@ -19,7 +22,7 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const isAutogestion = searchParams.get('autogestion') === 'true' || !isAdmin;
+    const isAutogestion = searchParams.get('autogestion') === 'true' || searchParams.get('public') === 'true' || !isAdmin;
 
     const where = isAutogestion ? {
       servicio: {
@@ -37,7 +40,12 @@ export async function GET(request) {
         nombre: 'asc'
       }
     });
-    return NextResponse.json(zonas);
+
+    return NextResponse.json(zonas, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+      }
+    });
   } catch (error) {
     console.error('Error fetching zones:', error);
     return NextResponse.json({ error: 'Error al obtener zonas' }, { status: 500 });

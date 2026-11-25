@@ -99,12 +99,17 @@ export default function Home() {
 
   // 1. Fetch Zones catalog on mount
   useEffect(() => {
-    fetch('/api/zonas?autogestion=true')
+    fetch(`/api/zonas?autogestion=true&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
           // Strictly filter only zones belonging to active, autogestion-enabled services (D-182)
-          const filtered = data.filter(z => z.servicio && z.servicio.activo !== false && z.servicio.habilitadoAutogestion !== false);
+          const filtered = data.filter(z => {
+            if (!z.servicio) return false;
+            if (z.servicio.activo === false) return false;
+            if (z.servicio.habilitadoAutogestion === false) return false;
+            return true;
+          });
           setZones(filtered);
         }
       })

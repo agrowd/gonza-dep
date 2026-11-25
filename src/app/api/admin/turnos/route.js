@@ -710,9 +710,16 @@ export async function POST(request) {
 
         await sendWhatsAppMessage(newTurno.cliente.whatsapp, msg);
 
-        // SOLO para clientes nuevos (0 sesiones realizadas en el sistema), enviar imágenes de bienvenida
-        const completedSessionsCount = (Number(newTurno.cliente?.sesionesPrevias) || 0) + (newTurno.cliente?.turnos ? newTurno.cliente.turnos.filter(t => t.id !== newTurno.id).length : 0);
-        if (completedSessionsCount === 0) {
+        // SOLO para clientes nuevos (su PRIMER TURNO jamás agendado), enviar imágenes de bienvenida (dirección e indicaciones).
+        // NUNCA enviar en Siguiente Turno (prevTurnoId) ni si el cliente ya tiene turnos previos registrados (D-188).
+        const priorTurnosCount = await prisma.turno.count({
+          where: {
+            clienteId: newTurno.clienteId,
+            id: { not: newTurno.id }
+          }
+        });
+        const isReallyFirstTurno = !prevTurnoId && priorTurnosCount === 0 && (Number(newTurno.cliente?.sesionesPrevias) || 0) === 0;
+        if (isReallyFirstTurno) {
           sendNewClientWelcomeImages(newTurno.cliente.whatsapp).catch(e => console.error('Error sending welcome images to new client:', e));
         }
 

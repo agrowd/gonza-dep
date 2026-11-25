@@ -103,10 +103,16 @@ export async function POST(request, { params }) {
 
       await sendWhatsAppMessage(targetWhatsapp, rawMessage);
 
-      // SOLO para clientes nuevos (0 sesiones realizadas en el sistema), enviar imágenes de bienvenida
+      // SOLO para clientes nuevos (su PRIMER TURNO jamás agendado), enviar imágenes de bienvenida (D-188)
       if (tipo === 'CONFIRMACION') {
-        const completedSessionsCount = (Number(turno.cliente?.sesionesPrevias) || 0) + (turno.cliente?.turnos ? turno.cliente.turnos.filter(t => t.id !== turno.id).length : 0);
-        if (completedSessionsCount === 0) {
+        const priorTurnosCount = await prisma.turno.count({
+          where: {
+            clienteId: turno.clienteId,
+            id: { not: turno.id }
+          }
+        });
+        const isReallyFirstTurno = priorTurnosCount === 0 && (Number(turno.cliente?.sesionesPrevias) || 0) === 0;
+        if (isReallyFirstTurno) {
           sendNewClientWelcomeImages(targetWhatsapp).catch(e => console.error('Error sending welcome images to new client on manual reenvio:', e));
         }
       }

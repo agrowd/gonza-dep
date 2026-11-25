@@ -890,15 +890,15 @@ export async function PUT(request, { params }) {
     // Email and WhatsApp Notification Trigger for Cancellation:
     // If state changes to "CANCELADO" and old state was not "CANCELADO"
     if (notificationsEnabled && estado === 'CANCELADO' && oldTurn.estado !== 'CANCELADO') {
-      try {
-        // Deposit is lost if admin explicitly set preserveDeposit to false, or if cancelled within 72h on web
-        let withLossOfDeposit = false;
-        if (typeof body.preserveDeposit === 'boolean') {
-          withLossOfDeposit = !body.preserveDeposit;
-        } else {
-          withLossOfDeposit = diffHours < 72;
-        }
+      // Deposit is lost if admin explicitly set preserveDeposit to false, or if cancelled within 72h on web
+      let withLossOfDeposit = false;
+      if (typeof body.preserveDeposit === 'boolean') {
+        withLossOfDeposit = !body.preserveDeposit;
+      } else {
+        withLossOfDeposit = diffHours < 72;
+      }
 
+      try {
         if (canSendNotification(updatedTurno.cliente, 'EMAIL', 'CANCELACION') && updatedTurno.cliente.email && !updatedTurno.cliente.email.includes('bloqueo')) {
           await sendCancellationEmail(
             updatedTurno.cliente.email,
