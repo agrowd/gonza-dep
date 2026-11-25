@@ -230,8 +230,13 @@ export default function ConfiguracionPage() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setBoxes(data);
+        else if (Array.isArray(data?.boxes)) setBoxes(data.boxes);
+        else setBoxes([]);
       })
-      .catch(err => console.error('Error fetching boxes:', err))
+      .catch(err => {
+        console.error('Error fetching boxes:', err);
+        setBoxes([]);
+      })
       .finally(() => setLoadingBoxes(false));
   };
 
@@ -515,9 +520,14 @@ export default function ConfiguracionPage() {
       .then(data => {
         if (Array.isArray(data)) {
           setServicios(data);
+        } else {
+          setServicios([]);
         }
       })
-      .catch(err => console.error('Error fetching servicios:', err))
+      .catch(err => {
+        console.error('Error fetching servicios:', err);
+        setServicios([]);
+      })
       .finally(() => setLoadingServicios(false));
   };
 
@@ -529,9 +539,14 @@ export default function ConfiguracionPage() {
       .then(data => {
         if (Array.isArray(data)) {
           setZones(data);
+        } else {
+          setZones([]);
         }
       })
-      .catch(err => console.error('Error fetching zones:', err))
+      .catch(err => {
+        console.error('Error fetching zones:', err);
+        setZones([]);
+      })
       .finally(() => setLoadingZones(false));
   };
 
@@ -620,9 +635,14 @@ export default function ConfiguracionPage() {
     fetch('/api/admin/promociones')
       .then(res => res.json())
       .then(data => {
-        if (data.promociones) setPromociones(data.promociones);
+        if (Array.isArray(data?.promociones)) setPromociones(data.promociones);
+        else if (Array.isArray(data)) setPromociones(data);
+        else setPromociones([]);
       })
-      .catch(err => console.error('Error fetching promociones:', err))
+      .catch(err => {
+        console.error('Error fetching promociones:', err);
+        setPromociones([]);
+      })
       .finally(() => setLoadingPromociones(false));
   };
 
@@ -632,9 +652,14 @@ export default function ConfiguracionPage() {
     fetch('/api/admin/cupones')
       .then(res => res.json())
       .then(data => {
-        if (data.cupones) setCupones(data.cupones);
+        if (Array.isArray(data?.cupones)) setCupones(data.cupones);
+        else if (Array.isArray(data)) setCupones(data);
+        else setCupones([]);
       })
-      .catch(err => console.error('Error fetching cupones:', err))
+      .catch(err => {
+        console.error('Error fetching cupones:', err);
+        setCupones([]);
+      })
       .finally(() => setLoadingCupones(false));
   };
 
@@ -644,9 +669,13 @@ export default function ConfiguracionPage() {
     fetch('/api/admin/usuarios')
       .then(res => res.json())
       .then(data => {
-        if (data.usuarios) setUsers(data.usuarios);
+        const uList = Array.isArray(data) ? data : (Array.isArray(data?.usuarios) ? data.usuarios : []);
+        setUsers(uList);
       })
-      .catch(err => console.error('Error fetching users:', err))
+      .catch(err => {
+        console.error('Error fetching users:', err);
+        setUsers([]);
+      })
       .finally(() => setLoadingUsers(false));
   };
 
@@ -2082,7 +2111,7 @@ export default function ConfiguracionPage() {
                     }}
                   >
                     <option value="">-- Seleccionar un servicio para gestionar --</option>
-                    {servicios.map(s => (
+                    {(Array.isArray(servicios) ? servicios : []).map(s => (
                       <option key={s.id} value={s.id}>
                         {s.nombre} ({s.zonas?.length || 0} {s.zonas?.length === 1 ? 'zona' : 'zonas'}) {s.habilitadoAutogestion === false ? '⛔ [Oculto en Autogestión]' : ''}
                       </option>
@@ -3474,7 +3503,7 @@ export default function ConfiguracionPage() {
 
             {loadingPromociones ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando promociones...</div>
-            ) : promociones.length === 0 ? (
+            ) : (!Array.isArray(promociones) || promociones.length === 0) ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                 No hay promociones configuradas aún. Crea combos de zonas para incentivar la venta.
               </div>
@@ -3492,7 +3521,7 @@ export default function ConfiguracionPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {promociones.map(promo => {
+                    {(Array.isArray(promociones) ? promociones : []).map(promo => {
                       let promoZonas = [];
                       try {
                         promoZonas = typeof promo.zonas === 'string' ? JSON.parse(promo.zonas) : (promo.zonas || []);
@@ -3597,7 +3626,7 @@ export default function ConfiguracionPage() {
 
             {loadingCupones ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando cupones...</div>
-            ) : cupones.length === 0 ? (
+            ) : (!Array.isArray(cupones) || cupones.length === 0) ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                 No hay cupones registrados. Crea códigos promocionales para tus clientes.
               </div>
@@ -3616,7 +3645,7 @@ export default function ConfiguracionPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cupones.map(cupon => {
+                    {(Array.isArray(cupones) ? cupones : []).map(cupon => {
                       let cuponZonas = [];
                       try {
                         cuponZonas = typeof cupon.zonas === 'string' ? JSON.parse(cupon.zonas) : (cupon.zonas || []);
@@ -3711,11 +3740,11 @@ export default function ConfiguracionPage() {
 
           {loadingUsers ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando usuarios...</div>
-          ) : users.length === 0 ? (
+          ) : (!Array.isArray(users) || users.length === 0) ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay usuarios registrados.</div>
           ) : (
             <div className={styles.userCardsGrid} id="userCardsGridSection">
-              {users.map(u => (
+              {(Array.isArray(users) ? users : []).map(u => (
                 <div key={u.id} className={`${styles.userCard} ${u.activo === false ? styles.userCardBlocked : ''}`}>
                   <div className={styles.userCardHeader}>
                     <div>
@@ -3894,7 +3923,7 @@ export default function ConfiguracionPage() {
 
           {loadingBoxes ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Cargando boxes...</div>
-          ) : boxes.length === 0 ? (
+          ) : (!Array.isArray(boxes) || boxes.length === 0) ? (
             <div style={{ textAlign: 'center', padding: '3rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
               <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📦</div>
               <p style={{ color: '#64748b', fontSize: '0.95rem' }}>No hay boxes configurados todavía.</p>
@@ -3908,7 +3937,7 @@ export default function ConfiguracionPage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.5rem' }}>
-              {boxes.map(b => (
+              {(Array.isArray(boxes) ? boxes : []).map(b => (
                 <div
                   key={b.id}
                   style={{

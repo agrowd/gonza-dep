@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import styles from '../configuracion/configuracion.module.css';
-import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
+import { formatMilesInput, cleanMilesInput, formatMoney } from '@/lib/formatNumber.js';
 
 const PlusIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -31,7 +31,8 @@ export default function UsuariosPage() {
     password: '',
     rol: 'OPERADOR',
     comisionTipo: 'PORCENTAJE',
-    comisionValor: '30'
+    comisionValor: '30',
+    comisionTurnoPct: 0
   });
   const [savingUser, setSavingUser] = useState(false);
   const [userError, setUserError] = useState('');
@@ -48,7 +49,7 @@ export default function UsuariosPage() {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
   const fetchUsers = async () => {
@@ -57,10 +58,14 @@ export default function UsuariosPage() {
       const res = await fetch('/api/admin/usuarios');
       if (res.ok) {
         const data = await res.json();
-        setUsers(data);
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.usuarios) ? data.usuarios : []);
+        setUsers(list);
+      } else {
+        setUsers([]);
       }
     } catch (err) {
       console.error('Error fetching users:', err);
+      setUsers([]);
     } finally {
       setLoadingUsers(false);
     }
@@ -82,7 +87,8 @@ export default function UsuariosPage() {
       password: '',
       rol: 'OPERADOR',
       comisionTipo: 'PORCENTAJE',
-      comisionValor: '30'
+      comisionValor: '30',
+      comisionTurnoPct: 0
     });
     setUserError('');
     setShowUserModal(true);
@@ -96,7 +102,8 @@ export default function UsuariosPage() {
       password: '',
       rol: u.rol,
       comisionTipo: u.comisionTipo || 'PORCENTAJE',
-      comisionValor: String(u.comisionValor ?? 30)
+      comisionValor: String(u.comisionValor ?? 30),
+      comisionTurnoPct: u.comisionTurnoPct ?? 0
     });
     setUserError('');
     setShowUserModal(true);
@@ -104,32 +111,32 @@ export default function UsuariosPage() {
 
   const handleSaveUser = async (e) => {
     e.preventDefault();
+    setUserError('');
     if (!userForm.nombre.trim() || !userForm.usuario.trim()) {
-      setUserError('El nombre y el usuario son obligatorios.');
+      setUserError('El nombre y el nombre de usuario son obligatorios.');
       return;
     }
-    if (!editingUserId && !userForm.password.trim()) {
-      setUserError('La contraseña es obligatoria para nuevos usuarios.');
+    if (!editingUserId && (!userForm.password || userForm.password.length < 6)) {
+      setUserError('La contraseña inicial debe tener al menos 6 caracteres.');
       return;
     }
 
     setSavingUser(true);
-    setUserError('');
-
     try {
-      const url = editingUserId ? `/api/admin/usuarios/${editingUserId}` : '/api/admin/usuarios';
-      const method = editingUserId ? 'PUT' : 'POST';
-
       const payload = {
         nombre: userForm.nombre.trim(),
         usuario: userForm.usuario.trim().toLowerCase(),
         rol: userForm.rol,
         comisionTipo: userForm.comisionTipo,
-        comisionValor: userForm.comisionValor ? parseFloat(userForm.comisionValor) : 0
+        comisionValor: parseFloat(cleanMilesInput(userForm.comisionValor)) || 0,
+        comisionTurnoPct: parseFloat(userForm.comisionTurnoPct) || 0
       };
-      if (userForm.password) {
-        payload.password = userForm.password;
+      if (userForm.password && userForm.password.trim().length >= 6) {
+        payload.password = userForm.password.trim();
       }
+
+      const url = editingUserId ? `/api/admin/usuarios/${editingUserId}` : '/api/admin/usuarios';
+      const method = editingUserId ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
@@ -139,11 +146,11 @@ export default function UsuariosPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Error al guardar el usuario');
+        throw new Error(err.error || 'Error al guardar usuario.');
       }
 
       setShowUserModal(false);
-      showToast(editingUserId ? 'Usuario actualizado.' : 'Usuario creado con éxito.');
+      showToast(editingUserId ? 'Usuario actualizado exitosamente.' : 'Usuario creado exitosamente.');
       fetchUsers();
     } catch (err) {
       setUserError(err.message);
@@ -154,7 +161,7 @@ export default function UsuariosPage() {
 
   const handleToggleUserStatus = async (user) => {
     if (user.id === currentUser?.id) {
-      showToast('No puedes desactivar tu propia cuenta.', 'error');
+      showToast('No puedes desactivar tu propia cuenta de usuario.', 'error');
       return;
     }
     try {
@@ -232,6 +239,8 @@ export default function UsuariosPage() {
     }
   };
 
+  const usersList = Array.isArray(users) ? users : [];
+
   return (
     <div className={styles.container}>
       {/* Toast Notification */}
@@ -277,18 +286,18 @@ export default function UsuariosPage() {
 
         {loadingUsers ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-gold)' }}>Cargando usuarios...</div>
-        ) : users.length === 0 ? (
+        ) : usersList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No hay usuarios registrados.</div>
         ) : (
           <div className={styles.userCardsGrid}>
-            {users.map(u => (
+            {usersList.map(u => (
               <div key={u.id} className={`${styles.userCard} ${u.activo === false ? styles.userCardBlocked : ''}`}>
                 <div className={styles.userCardHeader}>
                   <div>
                     <div className={styles.userCardName}>{u.nombre}</div>
                     <div className={styles.userCardHandle}>@{u.usuario}</div>
                   </div>
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
                     {u.rol === 'ADMIN' && (
                       <span className={styles.roleBadgeAdmin}>👑 Admin</span>
                     )}
@@ -298,6 +307,11 @@ export default function UsuariosPage() {
                     {u.rol === 'RECEPCION' && (
                       <span className={styles.roleBadgeRecepcion}>📋 Recepción</span>
                     )}
+                    {Number(u.comisionTurnoPct || 0) > 0 && (
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', backgroundColor: '#f5f3ff', border: '1px solid #ddd6fe', padding: '2px 6px', borderRadius: '4px' }}>
+                        🎯 {u.comisionTurnoPct}% comisionable
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -306,8 +320,8 @@ export default function UsuariosPage() {
                     u.comisionTipo === 'PORCENTAJE'
                       ? `${u.comisionValor}% por turno`
                       : u.comisionTipo === 'POR_DIA'
-                      ? `$${Number(u.comisionValor).toLocaleString('es-AR')} por día`
-                      : `$${Number(u.comisionValor).toLocaleString('es-AR')} por turno`
+                      ? `${formatMoney(u.comisionValor)} por día`
+                      : `${formatMoney(u.comisionValor)} por turno`
                   ) : 'Sin comisión'}
                 </div>
 
@@ -455,6 +469,20 @@ export default function UsuariosPage() {
                     placeholder="Ej: 30"
                   />
                 </div>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>🎯 Turno comisionable (% comisión por defecto para promotor / captador)</label>
+                <input 
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  className={styles.input}
+                  value={userForm.comisionTurnoPct ?? 0}
+                  onChange={(e) => setUserForm({ ...userForm, comisionTurnoPct: parseFloat(e.target.value) || 0 })}
+                  placeholder="Ej: 10"
+                />
               </div>
 
               <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>

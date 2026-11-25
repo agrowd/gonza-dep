@@ -404,9 +404,12 @@ export default function EstadisticasPage() {
         ? baseItems.filter(i => selectedCanalesFilter.includes(i.canalAdquisicion || 'ORGANICO'))
         : baseItems;
     } else if (selectedMetric === 'cumpleanos') {
-      rawItems = av.cumpleanos?.items || [];
+      rawItems = Array.isArray(av.cumpleanos?.items) ? av.cumpleanos.items : [];
+    } else if (selectedMetric === 'comisiones') {
+      rawItems = Array.isArray(av.comisiones?.items) ? av.comisiones.items : [];
     } else {
-      rawItems = av[selectedMetric]?.items || [];
+      const metricObj = av[selectedMetric];
+      rawItems = Array.isArray(metricObj?.items) ? metricObj.items : (Array.isArray(metricObj) ? metricObj : []);
     }
 
     const isFollowUpMetric = ['cancelados', 'ausentes', 'vaAAvisar', 'mantenimiento'].includes(selectedMetric);
@@ -649,7 +652,8 @@ export default function EstadisticasPage() {
 
   // Renderizado reutilizable de la tabla de registros (para la vista normal y el modal ampliado)
   const renderTurnosTable = () => {
-    if (activeMetricData.filteredItems.length === 0) {
+    const tableItems = Array.isArray(activeMetricData?.filteredItems) ? activeMetricData.filteredItems : [];
+    if (tableItems.length === 0) {
       return (
         <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#475569', fontWeight: 600 }}>
           No se encontraron registros para esta métrica en el período seleccionado ({formatDateDisplay(startDate)} al {formatDateDisplay(endDate)}).
@@ -707,7 +711,7 @@ export default function EstadisticasPage() {
               </thead>
             )}
             <tbody>
-              {activeMetricData.filteredItems.map(item => {
+              {tableItems.map(item => {
                 if (selectedMetric === 'cumpleanos') {
                   const cleanWpp = (item.whatsapp || '').replace(/\D/g, '');
                   const wppLink = cleanWpp ? `https://wa.me/${cleanWpp}` : null;
@@ -850,7 +854,7 @@ export default function EstadisticasPage() {
                         </div>
                       </td>
                       <td className={styles.td}>
-                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{formatLocalDate(item.fecha)}</div>
+                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{formatDateDisplay(item.fecha)}</div>
                         <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.horaInicio} - {item.horaFin} hs</div>
                       </td>
                       <td className={styles.td}>
@@ -867,10 +871,10 @@ export default function EstadisticasPage() {
                         {item.comisionPorcentaje}%
                       </td>
                       <td className={styles.td} style={{ fontWeight: 800, color: '#7c3aed', fontSize: '1.05rem', textAlign: 'right' }}>
-                        ${(item.comisionMonto || 0).toLocaleString('es-AR')}
+                        {formatMoney(item.comisionMonto || 0)}
                       </td>
                       <td className={styles.td} style={{ fontWeight: 600, color: '#64748b', textAlign: 'right' }}>
-                        ${(item.valorTotal || 0).toLocaleString('es-AR')}
+                        {formatMoney(item.valorTotal || 0)}
                       </td>
                     </tr>
                   );
@@ -1040,7 +1044,7 @@ export default function EstadisticasPage() {
 
         {/* VISTA MÓVIL (Tarjetas oscuras compactas sin scroll horizontal) */}
         <div className={styles.mobileTurnosList}>
-          {activeMetricData.filteredItems.map(item => {
+          {tableItems.map(item => {
             if (selectedMetric === 'cumpleanos') {
               const cleanWpp = (item.whatsapp || '').replace(/\D/g, '');
               const wppLink = cleanWpp ? `https://wa.me/${cleanWpp}` : null;
@@ -2071,14 +2075,14 @@ export default function EstadisticasPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {activeMetricData.filteredItems.length === 0 ? (
+                        {(!activeMetricData.filteredItems || activeMetricData.filteredItems.length === 0) ? (
                           <tr>
                             <td colSpan={selectedMetric === 'gananciaNeta' ? 9 : 10} style={{ textAlign: 'center', padding: '1.5rem' }}>
                               Sin registros en el período seleccionado.
                             </td>
                           </tr>
                         ) : (
-                          activeMetricData.filteredItems.map(item => {
+                          (activeMetricData.filteredItems || []).map(item => {
                             const isGN = selectedMetric === 'gananciaNeta';
                             const vFinal = isGN ? Number(item.ingresoCobradoPeriodo ?? item.valorTotal ?? 0) : Number(item.valorTotal || 0);
                             const vSena = isGN ? Number(item.señaCobradaPeriodo ?? 0) : Number(item.valorSeña || 0);
@@ -2120,14 +2124,14 @@ export default function EstadisticasPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {activeMetricData.filteredItems.length === 0 ? (
+                        {(!activeMetricData.filteredItems || activeMetricData.filteredItems.length === 0) ? (
                           <tr>
                             <td colSpan={10} style={{ textAlign: 'center', padding: '1.5rem' }}>
                               Sin registros en el período seleccionado.
                             </td>
                           </tr>
                         ) : (
-                          activeMetricData.filteredItems.map(item => {
+                          (activeMetricData.filteredItems || []).map(item => {
                             const val = Number(item.valorTotal || 0);
                             const senaT = Number(item.señaDelTurnoReporte ?? item.valorSeña ?? 0);
                             const ret = Number(item.señaRetenida || 0);

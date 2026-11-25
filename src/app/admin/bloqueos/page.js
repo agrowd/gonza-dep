@@ -26,23 +26,33 @@ export default function BloqueosPage() {
     color: '#2563eb'
   });
 
+  // Modal para reubicar feriado móvil
+  const [moveModal, setMoveModal] = useState({
+    isOpen: false,
+    feriado: null,
+    nuevaFechaStr: ''
+  });
+
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
   };
 
   const fetchFeriados = async (year = selectedFeriadosYear) => {
     try {
       setLoadingFeriados(true);
-      const res = await fetch(`/api/admin/feriados?year=${year}&_t=${Date.now()}`);
+      const res = await fetch(`/api/admin/bloqueos?ano=${year}&_t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
-        setFeriados(data.feriados || []);
+        setFeriados(Array.isArray(data) ? data : []);
+      } else {
+        setFeriados([]);
       }
     } catch (err) {
       console.error('Error fetching feriados:', err);
       showToast('Error al cargar feriados y bloqueos', 'error');
+      setFeriados([]);
     } finally {
       setLoadingFeriados(false);
     }
@@ -55,98 +65,169 @@ export default function BloqueosPage() {
   const handleCreateFeriado = async (e) => {
     e.preventDefault();
     if (!feriadoForm.fechaStr) {
-      showToast('La fecha de inicio es requerida', 'error');
+      showToast('Selecciona una fecha para el bloqueo', 'error');
       return;
     }
-    if (!feriadoForm.motivo.trim()) {
-      showToast('El motivo es obligatorio', 'error');
-      return;
-    }
-    if (feriadoForm.isRangoFechas && !feriadoForm.fechaHastaStr) {
-      showToast('Debes indicar la fecha hasta', 'error');
+    if (feriadoForm.isRangoFechas && feriadoForm.fechaHastaStr && feriadoForm.fechaHastaStr < feriadoForm.fechaStr) {
+      showToast('La Fecha Hasta no puede ser anterior a la Fecha Desde', 'error');
       return;
     }
 
     try {
-      const res = await fetch('/api/admin/feriados', {
+      const res = await fetch('/api/admin/bloqueos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(feriadoForm)
       });
       if (res.ok) {
-        showToast('Bloqueo / feriado registrado con éxito');
-        setFeriadoForm({
-          fechaStr: '',
-          fechaHastaStr: '',
-          isRangoFechas: false,
+        showToast(feriadoForm.isRangoFechas ? 'Rango de días bloqueado con éxito' : 'Feriado o bloqueo registrado con éxito');
+        setFeriadoForm(prev => ({
+          ...prev,
           motivo: '',
-          tipo: 'UNICO',
           esDiaCompleto: true,
-          horaInicio: '08:00',
-          horaFin: '22:00',
-          color: '#2563eb'
-        });
+          fechaHastaStr: '',
+          isRangoFechas: false
+        }));
         fetchFeriados(selectedFeriadosYear);
+      } else if (res.status === 409) {
+        const warnData = await res.json();
+        const conf = window.confirm(`⚠️ ${warnData.message || 'Existen turnos cargados en esa fecha. ¿Deseas aplicar el bloqueo de todas formas?'}`);
+        if (conf) {
+          const forceRes = await fetch('/api/admin/bloqueos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...feriadoForm, forzar: true })
+          });
+          if (forceRes.ok) {
+            showToast('Bloqueo forzado y registrado con éxito');
+            setFeriadoForm(prev => ({
+              ...prev,
+              motivo: '',
+              esDiaCompleto: true,
+              fechaHastaStr: '',
+              isRangoFechas: false
+            }));
+            fetchFeriados(selectedFeriadosYear);
+            return;
+          }
+        }
       } else {
         const err = await res.json();
-        showToast(err.error || 'Error al crear bloqueo', 'error');
+        showToast(err.error || 'Error al guardar bloqueo', 'error');
       }
     } catch (err) {
-      showToast('Error de red al registrar bloqueo', 'error');
+      console.error('Error creating feriado:', err);
+      showToast('Error de red al crear bloqueo', 'error');
     }
   };
 
-  const handleDeleteFeriado = async (f) => {
-    if (!confirm(`¿Estás seguro de eliminar el bloqueo "${f.motivo}"?`)) return;
+  const handleDeleteFeriado = async (id, isSynthesized, originalId) => {
+    const targetId = originalId || id;
+    if (!confirm('¿Seguro de que deseas eliminar este feriado o bloqueo de la agenda?')) return;
     try {
-      const res = await fetch(`/api/admin/feriados/${f.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/bloqueos/${targetId}`, { method: 'DELETE' });
       if (res.ok) {
-        showToast('Bloqueo eliminado correctamente');
+        showToast('Feriado o bloqueo eliminado correctamente');
         fetchFeriados(selectedFeriadosYear);
       } else {
         const err = await res.json();
-        showToast(err.error || 'Error al eliminar', 'error');
+        showToast(err.error || 'Error al eliminar bloqueo', 'error');
       }
     } catch (err) {
-      showToast('Error de red al eliminar', 'error');
+      console.error('Error deleting feriado:', err);
+      showToast('Error de red al eliminar bloqueo', 'error');
     }
   };
 
-  const handleToggleFeriadoActivo = async (f) => {
+  const handleOpenMoveModal = (feriado) => {
+    const origDateStr = feriado.fecha ? (typeof feriado.fecha === 'string' ? feriado.fecha.split('T')[0] : new Date(feriado.fecha).toISOString().split('T')[0]) : '';
+    const movedDateStr = feriado.fechaMovida ? (typeof feriado.fechaMovida === 'string' ? feriado.fechaMovida.split('T')[0] : new Date(feriado.fechaMovida).toISOString().split('T')[0]) : origDateStr;
+    setMoveModal({
+      isOpen: true,
+      feriado,
+      nuevaFechaStr: movedDateStr
+    });
+  };
+
+  const handleSaveMoveFeriado = async () => {
+    if (!moveModal.feriado || !moveModal.nuevaFechaStr) return;
     try {
-      const res = await fetch(`/api/admin/feriados/${f.id}`, {
+      const targetId = moveModal.feriado.originalId || moveModal.feriado.id;
+      const res = await fetch(`/api/admin/bloqueos/${targetId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activo: !f.activo })
+        body: JSON.stringify({
+          fechaMovidaStr: moveModal.nuevaFechaStr,
+          originalId: targetId
+        })
       });
       if (res.ok) {
-        showToast(f.activo ? 'Feriado desactivado (agenda abierta)' : 'Feriado activado (agenda bloqueada)');
+        showToast('Fecha de feriado móvil reubicada exitosamente');
+        setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' });
         fetchFeriados(selectedFeriadosYear);
       } else {
         const err = await res.json();
-        showToast(err.error || 'Error al actualizar', 'error');
+        showToast(err.error || 'Error al reubicar fecha', 'error');
       }
     } catch (err) {
-      showToast('Error de red al actualizar', 'error');
+      console.error('Error moving feriado:', err);
+      showToast('Error de red al reubicar fecha', 'error');
+    }
+  };
+
+  const handleResetMoveFeriado = async (feriado) => {
+    if (!confirm('¿Deseas restaurar la fecha original de este feriado móvil?')) return;
+    try {
+      const targetId = feriado.originalId || feriado.id;
+      const res = await fetch(`/api/admin/bloqueos/${targetId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fechaMovidaStr: null,
+          originalId: targetId
+        })
+      });
+      if (res.ok) {
+        showToast('Feriado restaurado a su fecha original');
+        fetchFeriados(selectedFeriadosYear);
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Error al restaurar fecha', 'error');
+      }
+    } catch (err) {
+      console.error('Error resetting feriado:', err);
+      showToast('Error de red al restaurar fecha', 'error');
     }
   };
 
   const formatFeriadoDate = (dateVal) => {
     if (!dateVal) return '';
     const dateStr = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
-    const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    return dateObj.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+      const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      return `${parts[2]} de ${months[d.getMonth()]} de ${parts[0]}`;
+    }
+    return dateStr;
   };
 
   const getFeriadoDayName = (dateVal) => {
     if (!dateVal) return '';
     const dateStr = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
-    const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    const day = dateObj.toLocaleDateString('es-AR', { weekday: 'long' });
-    return day.charAt(0).toUpperCase() + day.slice(1);
+    const parts = dateStr.split('T')[0].split('-');
+    let d;
+    if (parts.length === 3) {
+      d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+    } else {
+      d = new Date(dateVal);
+    }
+    if (isNaN(d.getTime())) return '';
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return days[d.getDay()];
   };
+
+  const feriadosList = Array.isArray(feriados) ? feriados : [];
 
   return (
     <div className={styles.container}>
@@ -356,7 +437,7 @@ export default function BloqueosPage() {
                 }}
                 onClick={() => setFeriadoFilterTipo('ALL')}
               >
-                Todos ({feriados.length})
+                Todos ({feriadosList.length})
               </button>
               <button
                 type="button"
@@ -372,7 +453,7 @@ export default function BloqueosPage() {
                 }}
                 onClick={() => setFeriadoFilterTipo('UNICO')}
               >
-                🔵 Únicos ({feriados.filter(f => f.tipo === 'UNICO' || !f.tipo).length})
+                🔵 Únicos ({feriadosList.filter(f => f.tipo === 'UNICO' || !f.tipo).length})
               </button>
               <button
                 type="button"
@@ -388,7 +469,7 @@ export default function BloqueosPage() {
                 }}
                 onClick={() => setFeriadoFilterTipo('FIJO')}
               >
-                🔴 Fijos ({feriados.filter(f => f.tipo === 'FIJO').length})
+                🔴 Fijos ({feriadosList.filter(f => f.tipo === 'FIJO').length})
               </button>
               <button
                 type="button"
@@ -404,7 +485,7 @@ export default function BloqueosPage() {
                 }}
                 onClick={() => setFeriadoFilterTipo('MOVIL')}
               >
-                🟡 Móviles ({feriados.filter(f => f.tipo === 'MOVIL').length})
+                🟠 Móviles ({feriadosList.filter(f => f.tipo === 'MOVIL').length})
               </button>
             </div>
           </div>
@@ -420,13 +501,13 @@ export default function BloqueosPage() {
 
         {loadingFeriados ? (
           <p style={{ textAlign: 'center', color: '#64748b', padding: '1.5rem 0' }}>Cargando feriados y bloqueos...</p>
-        ) : feriados.length === 0 ? (
+        ) : feriadosList.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem 1rem', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
             No hay feriados ni bloqueos registrados para el año {selectedFeriadosYear}.
           </div>
         ) : (
           <div className={styles.bloqueoCardList} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {feriados
+            {feriadosList
               .filter(f => {
                 if (feriadoFilterTipo === 'ALL') return true;
                 if (feriadoFilterTipo === 'UNICO') return f.tipo === 'UNICO' || !f.tipo;
@@ -437,6 +518,7 @@ export default function BloqueosPage() {
               .map((f) => {
                 const isMovil = f.tipo === 'MOVIL';
                 const isFijo = f.tipo === 'FIJO';
+                const hasMoved = isMovil && f.fechaMovida;
                 const dotColor = f.color || (isFijo ? '#dc2626' : (isMovil ? '#d97706' : '#2563eb'));
                 const dayName = getFeriadoDayName(f.fecha);
                 const dateFormatted = `${formatFeriadoDate(f.fecha)} (${dayName})`;
@@ -446,53 +528,125 @@ export default function BloqueosPage() {
                     key={f.id}
                     className={styles.bloqueoCardItem}
                     style={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '0.9rem 1.1rem',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.85rem 1.1rem',
-                      backgroundColor: f.activo ? '#ffffff' : '#f8fafc',
-                      border: `1.5px solid ${f.activo ? '#e2e8f0' : '#cbd5e1'}`,
-                      borderRadius: '10px',
-                      opacity: f.activo ? 1 : 0.65
+                      flexDirection: 'column',
+                      gap: '0.6rem'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                      <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: dotColor, flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '0.94rem', color: '#1e293b' }}>
-                          {f.motivo}
-                        </div>
-                        <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.15rem' }}>
-                          📅 {dateFormatted} {f.esDiaCompleto ? '• Día Completo' : `• ${f.horaInicio} a ${f.horaFin} hs`}
-                          {isFijo && ' • Feriado Fijo Anual'}
-                          {isMovil && ' • Feriado Móvil'}
-                        </div>
-                      </div>
+                    {/* Header: Dot + Badge + Fecha */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+                      <span 
+                        style={{
+                          backgroundColor: dotColor,
+                          width: '9px',
+                          height: '9px',
+                          borderRadius: '50%',
+                          display: 'inline-block',
+                          flexShrink: 0
+                        }} 
+                      />
+                      {isFijo ? (
+                        <span style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                          FIJO
+                        </span>
+                      ) : isMovil ? (
+                        <span style={{ backgroundColor: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                          MÓVIL
+                        </span>
+                      ) : (
+                        <span style={{ backgroundColor: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                          ÚNICO
+                        </span>
+                      )}
+                      <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1e293b' }}>
+                        {dateFormatted}
+                      </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeriadoActivo(f)}
-                        className="btn btn-secondary"
-                        style={{
-                          padding: '0.35rem 0.65rem',
-                          fontSize: '0.78rem',
-                          color: f.activo ? '#166534' : '#64748b',
-                          backgroundColor: f.activo ? '#f0fdf4' : '#f1f5f9'
-                        }}
-                      >
-                        {f.activo ? '✓ Activo' : '○ Pausado'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteFeriado(f)}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.35rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
-                        title="Eliminar bloqueo"
-                      >
-                        <TrashIcon />
-                      </button>
+                    {/* Body: Motivo | Horario | Acciones */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1.5, minWidth: '150px' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                          Motivo
+                        </span>
+                        <span style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 600 }}>
+                          {f.motivo || 'Bloqueo administrativo'}
+                        </span>
+                        {hasMoved && (
+                          <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '0.2rem' }}>
+                            ➡️ Reubicado al: <strong>{formatFeriadoDate(f.fechaMovida)} ({getFeriadoDayName(f.fechaMovida)})</strong>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1, minWidth: '110px' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                          Horario
+                        </span>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+                          {f.esDiaCompleto ? (
+                            <span style={{ color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }}></span>
+                              Día completo
+                            </span>
+                          ) : (
+                            <span style={{ color: '#334155', fontWeight: 600 }}>{f.horaInicio} - {f.horaFin} hs</span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+                        {isMovil && (
+                          <>
+                            <button
+                              type="button"
+                              className={styles.actionBtnSmall}
+                              onClick={() => handleOpenMoveModal(f)}
+                              title="Reubicar este feriado a otra fecha"
+                            >
+                              🗓️ Reubicar
+                            </button>
+                            {hasMoved && (
+                              <button
+                                type="button"
+                                className={styles.actionBtnSmall}
+                                onClick={() => handleResetMoveFeriado(f)}
+                                title="Restaurar fecha original"
+                              >
+                                ↩️ Restaurar
+                              </button>
+                            )}
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteFeriado(f.id, f.isSynthesized, f.originalId)}
+                          title="Eliminar este feriado o bloqueo"
+                          style={{
+                            border: '1px solid #fca5a5',
+                            backgroundColor: '#ffffff',
+                            color: '#dc2626',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -500,6 +654,59 @@ export default function BloqueosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Reubicar Feriado Móvil */}
+      {moveModal.isOpen && (
+        <div className={styles.modalOverlay} onClick={() => setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' })}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitle}>
+                🗓️ Reubicar Fecha de Feriado Móvil
+              </div>
+              <button 
+                type="button" 
+                className={styles.modalCloseBtn}
+                onClick={() => setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' })}
+              >
+                ✕
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <p style={{ fontSize: '0.88rem', color: '#475569', marginBottom: '1rem', lineHeight: '1.4' }}>
+                Estás reubicando: <strong>{moveModal.feriado?.motivo}</strong>
+                <br />
+                Fecha oficial original: <strong>{formatFeriadoDate(moveModal.feriado?.fecha)} ({getFeriadoDayName(moveModal.feriado?.fecha)})</strong>
+              </p>
+              <div className={styles.formField}>
+                <label>Nueva Fecha Efectiva para Bloquear la Agenda *</label>
+                <input
+                  type="date"
+                  className={styles.input}
+                  value={moveModal.nuevaFechaStr}
+                  onChange={(e) => setMoveModal(prev => ({ ...prev, nuevaFechaStr: e.target.value }))}
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setMoveModal({ isOpen: false, feriado: null, nuevaFechaStr: '' })}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveMoveFeriado}
+                >
+                  Guardar Reubicación
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

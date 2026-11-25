@@ -2386,3 +2386,18 @@
   7. **Fix de touch freeze y retorno a turno en iPhone**: Prevención de bloqueo en WebKit (`safeLockBodyScroll` limitado a body), recarga en `pageshow` persistido y reapertura garantizada del turno vía query params.
 - **Verificación**: `npm run build` ejecutado exitosamente (52/52 páginas generadas, 0 errores). Despliegue directo a producción.
 
+---
+
+## 25/11/2026 - Sesión 25/11/2026 - Corrección de Endpoint en Bloqueos/Feriados, Extracción Segura de Arrays en Usuarios/Configuración y Fix en Estadísticas Comisionables (D-185)
+
+- **Solicitud del Usuario / Reportes de Gonzalo Siri**:
+  1. **Bloqueos vacíos (`media_1795565103560_ce5ddfb1.png`)**:
+     - Gonzalo reportó: *"En Bloqueos se borraron todos los bloqueos que estaban puestos"*. El filtro mostraba Todos (0), Únicos (0), Fijos (0), Móviles (0).
+     - *Causa*: `src/app/admin/bloqueos/page.js` consultaba `/api/admin/feriados?year=2026` (ruta inexistente que devolvía 404). Los datos en PostgreSQL estaban 100% íntegros en la tabla `Bloqueo`.
+     - *Solución*: Se actualizó el endpoint a `/api/admin/bloqueos?ano=${year}&_t=${Date.now()}`. Se implementó soporte completo para HTTP 409 (conflictos con turnos agendados y confirmación `forzar`), modal de reubicación y restauración de feriados móviles y diseño completo con tarjetas y badges idéntico al de configuración.
+  2. **Crash en Usuarios, Configuración y Estadísticas $\rightarrow$ Comisionable (`media_1795565115767_1d529772.png`)**:
+     - Gonzalo reportó pantalla de error: *"Ocurrió un error en el Panel de Control: map is not a function (e.map is not a function)"* al acceder a Usuarios, Configuración y Estadísticas $\rightarrow$ Comisionable.
+     - *Causa*: `/api/admin/usuarios` devolvía `{ usuarios: [...] }`. Al hacer `setUsers(data)`, `users` se convertía en objeto en vez de array y `users.map()` fallaba. Además, en `/admin/configuracion` las llamadas no contenían chequeos defensivos para `.map()`. En `/admin/estadisticas`, se llamaba a `formatLocalDate(item.fecha)` (función inexistente en el archivo, arrojando `ReferenceError`).
+     - *Solución*: En `usuarios/page.js`, se implementó `Array.isArray(data) ? data : (Array.isArray(data?.usuarios) ? data.usuarios : [])` y se protegieron todos los `.map()`. En `configuracion/page.js`, se añadieron defensas similares en `fetchServicios`, `fetchZones`, `fetchBoxes`, `fetchPromociones`, `fetchCupones` y `fetchUsers`. En `estadisticas/page.js`, se reemplazó `formatLocalDate` por `formatDateDisplay(item.fecha)`, se formatearon montos con `formatMoney(...)` y se blindaron con array fallback todas las tablas de escritorio y móvil.
+- **Verificación**: `npm run build` ejecutado localmente con Turbopack (52/52 páginas estáticas y dinámicas compiladas en 90s, 0 errores). Despliegue sincronizado a Staging y Producción.
+

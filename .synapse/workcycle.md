@@ -3397,3 +3397,22 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 8. **Validación y Despliegue**:
    - Compilación exitosa `npm run build` con 52/52 rutas generadas sin errores.
 
+---
+
+## Sesión 25/11/2026 - Corrección de Endpoint en Bloqueos/Feriados, Extracción Segura de Arrays en Usuarios/Configuración y Fix en Estadísticas Comisionables (D-185)
+
+### Diagnóstico de Problemas Reportados
+1. **Bloqueos vacíos (`media_1795565103560_ce5ddfb1.png`)**:
+   - *Reporte*: "En Bloqueos se borraron todos los bloqueos que estaban puestos" (Filtro mostraba Todos (0), Únicos (0), etc.).
+   - *Causa*: La nueva página `src/app/admin/bloqueos/page.js` consultaba `/api/admin/feriados?year=2026`. Esa ruta no existe en Next.js (devolviendo 404). Los datos en PostgreSQL estaban 100% seguros e intactos en la tabla `Bloqueo`.
+   - *Solución*: Se actualizó a `/api/admin/bloqueos?ano=${year}&_t=${Date.now()}`. Se implementó manejo completo de conflictos (HTTP 409 con confirmación `forzar`), modal de reubicación y restauración de feriados móviles y diseño completo con tarjetas y filtros idéntico al de configuración.
+2. **Crash en Usuarios y Configuración (`media_1795565115767_1d529772.png`)**:
+   - *Reporte*: "Ocurrió un error en el Panel: map is not a function (e.map is not a function)" en Usuarios y Configuración.
+   - *Causa*: `/api/admin/usuarios` retorna `{ usuarios: [...] }`. Al hacer `setUsers(data)`, `users` se convertía en objeto en vez de array, fallando al invocar `users.map(...)`.
+   - *Solución*: En `src/app/admin/usuarios/page.js`, se implementó `const list = Array.isArray(data) ? data : (Array.isArray(data?.usuarios) ? data.usuarios : [])` y se protegieron todos los mapeos en el render. En `src/app/admin/configuracion/page.js`, se añadieron defensas similares en `fetchServicios`, `fetchZones`, `fetchBoxes`, `fetchPromociones`, `fetchCupones` y `fetchUsers`.
+3. **Crash en Estadísticas -> Comisionable**:
+   - *Causa*: En `src/app/admin/estadisticas/page.js` en la métrica `comisiones`, se llamaba a `formatLocalDate(item.fecha)` (función no definida en el archivo), arrojando `ReferenceError`.
+   - *Solución*: Se reemplazó por `formatDateDisplay(item.fecha)`, se formatearon montos con `formatMoney(...)` y se blindaron con array fallback todas las tablas de escritorio y móvil.
+4. **Verificación y Compilación**:
+   - `npm run build` ejecutado exitosamente con Turbopack: 52/52 rutas compiladas con 0 errores.
+
