@@ -1724,6 +1724,47 @@ function ClientesPageContent() {
                             });
                           });
 
+                          // Sort history items in strict reverse-chronological order (D-187)
+                          historyItems.sort((a, b) => {
+                            const getTime = (item) => {
+                              if (item.isVirtualRescheduled) {
+                                const parts = (item.originalDateStr || '').split('/');
+                                const day = parseInt(parts[0], 10) || 1;
+                                const month = (parseInt(parts[1], 10) || 1) - 1;
+                                let year = parts[2] ? parseInt(parts[2], 10) : new Date(item.parentTurno.fecha).getFullYear();
+                                if (year < 100) year += 2000;
+                                let hours = 0;
+                                let minutes = 0;
+                                if (item.originalTimeStr) {
+                                  const timeParts = item.originalTimeStr.split(':');
+                                  hours = parseInt(timeParts[0], 10) || 0;
+                                  minutes = parseInt(timeParts[1], 10) || 0;
+                                }
+                                return new Date(year, month, day, hours, minutes, 0).getTime();
+                              } else {
+                                const d = new Date(item.fecha);
+                                const y = d.getUTCFullYear();
+                                const m = d.getUTCMonth();
+                                const day = d.getUTCDate();
+                                let hours = 0;
+                                let minutes = 0;
+                                if (item.horaInicio) {
+                                  const timeParts = item.horaInicio.split(':');
+                                  hours = parseInt(timeParts[0], 10) || 0;
+                                  minutes = parseInt(timeParts[1], 10) || 0;
+                                }
+                                return new Date(y, m, day, hours, minutes, 0).getTime();
+                              }
+                            };
+
+                            const timeA = getTime(a);
+                            const timeB = getTime(b);
+                            if (timeB !== timeA) return timeB - timeA;
+                            if (a.isVirtualRescheduled && !b.isVirtualRescheduled) return 1;
+                            if (!a.isVirtualRescheduled && b.isVirtualRescheduled) return -1;
+                            return 0;
+                          });
+
                           return historyItems.map((item, idx) => {
                             if (item.isVirtualRescheduled) {
                               const t = item.parentTurno;
@@ -1772,7 +1813,7 @@ function ClientesPageContent() {
                                       </span>
                                     </div>
                                   </div>
-                                  <div style={{ fontSize: '0.8rem', color: '#991b1b', fontWeight: 600, marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  <div style={{ fontSize: '0.8rem', color: '#991b1b', fontWeight: 600, marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                                     <span>⚠️ Horario original reprogramado al</span>
                                     <strong>{formatLocalDate(t.fecha)} a las {t.horaInicio} hs</strong>
                                     {item.authorText && <span style={{ color: '#7f1d1d' }}>({item.authorText})</span>}

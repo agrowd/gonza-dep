@@ -6170,13 +6170,13 @@ export default function AgendaPage() {
                                 </button>
                                 {isFutureSenasOpen && (
                                   <div style={{ padding: '0.5rem 0.6rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', boxSizing: 'border-box' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', minWidth: '320px' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', minWidth: '420px', tableLayout: 'auto' }}>
                                       <thead>
                                         <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
-                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, width: '90px' }}>FECHA</th>
-                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, minWidth: '130px' }}>ZONAS</th>
-                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, textAlign: 'right', width: '75px' }}>SEÑA</th>
-                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, textAlign: 'center', width: '45px' }}>COBRAR</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, width: '105px', minWidth: '105px', whiteSpace: 'nowrap' }}>FECHA</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, minWidth: '160px', whiteSpace: 'nowrap' }}>ZONAS</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, textAlign: 'right', width: '80px', minWidth: '80px', whiteSpace: 'nowrap' }}>SEÑA</th>
+                                          <th style={{ padding: '0.35rem 0.4rem', fontWeight: 700, textAlign: 'center', width: '55px', minWidth: '55px', whiteSpace: 'nowrap' }}>COBRAR</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -6194,7 +6194,7 @@ export default function AgendaPage() {
                                                   </span>
                                                 )}
                                               </td>
-                                              <td style={{ padding: '0.4rem', color: '#475569', minWidth: '130px', wordBreak: 'normal', whiteSpace: 'normal', verticalAlign: 'top', lineHeight: '1.3' }}>
+                                              <td style={{ padding: '0.4rem', color: '#475569', minWidth: '160px', wordBreak: 'normal', whiteSpace: 'normal', overflowWrap: 'break-word', verticalAlign: 'top', lineHeight: '1.3' }}>
                                                 {formatTurnoZonasList(ft.zonas)}
                                               </td>
                                               <td style={{ padding: '0.4rem', textAlign: 'right', fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap', verticalAlign: 'top' }}>

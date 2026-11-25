@@ -3450,3 +3450,26 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 6. **Compilación y Verificación**:
    - `npm run build` ejecutado exitosamente con 52/52 rutas generadas sin errores con Turbopack.
 
+---
+
+## Sesión 25/11/2026 - Corrección de Columnas en Siguientes Turnos Agendados y Orden Cronológico Estricto de Reprogramados en Historial (D-187)
+
+### Diagnóstico e Implementación
+1. **Ajuste de Columnas y Desborde en Tabla de Siguientes Turnos Agendados (`media_1795615711516_8ee4fe02.png`)**:
+   - *Reporte*: "Los turnos agendados aparecen asi las zonas" (en el modal de Esteban Medina, la columna ZONAS y el texto `Otros: Barba` se comprimían a un ancho de 1 carácter, quebrando letra por letra verticalmente).
+   - *Causa*: En `src/app/admin/agenda/page.js`, la tabla del acordeón "📅 Siguiente turno agendado" tenía `minWidth: '320px'` y no protegía el ancho de la columna `ZONAS`. En móviles con pantalla estrecha (360-390px) con padding modal, el espacio disponible era menor a 280px. El navegador asignaba el ancho a `FECHA`, `SEÑA` y `COBRAR`, dejando a `ZONAS` con menos de 15px.
+   - *Solución*:
+     - Se actualizó la tabla con `minWidth: '420px'`, `tableLayout: 'auto'`, y `whiteSpace: 'nowrap'` en todos los encabezados `<th>` (`FECHA` 105px, `ZONAS` 160px, `SEÑA` 80px, `COBRAR` 55px).
+     - En la celda `<td>` de `ZONAS` se fijó `minWidth: '160px'`, `wordBreak: 'normal'`, `whiteSpace: 'normal'` y `overflowWrap: 'break-word'` dentro del contenedor con `overflowX: 'auto'` y `-webkit-overflow-scrolling: touch`.
+     - Ahora cualquier zona larga o extra (`Otros: Barba`) se visualiza nítida y completa sin partirse por letras.
+2. **Orden Cronológico Estricto de Turnos Reprogramados en Historial de Cliente (`media_1795615719806_3ccd6261.jpg`)**:
+   - *Reporte*: "Y el turno reprogramado cancelado debería aparecer antes del turno ya cambiado, porque el cancelado es el 19 y el nuevo es el 24" (en la ficha de Alejandro Iñiguez, la tarjeta virtual roja de 19/11/2026 se mostraba por encima del turno nuevo del 24/11/2026).
+   - *Causa*: En `src/app/admin/clientes/page.js`, al generar `historyItems`, el bucle que detectaba `[Turno reprogramado de DD/MM/AAAA a las HH:MM hs]` insertaba la tarjeta virtual `isVirtualRescheduled` inmediatamente antes del turno destino `t`. En una lista descendente por fecha (más reciente arriba), esto provocaba que el slot del 19 de noviembre quedara por encima del 24 de noviembre, rompiendo el orden temporal de la historia.
+   - *Solución*:
+     - Se implementó un clasificador estricto `historyItems.sort(...)` que calcula el timestamp real tanto de los turnos de base de datos como de las tarjetas virtuales reprogramadas.
+     - En el orden descendente de la ficha (`timeB - timeA`): el turno nuevo del 24 de noviembre queda arriba, la tarjeta virtual cancelada/reprogramada del 19 de noviembre queda inmediatamente debajo (entre el 24 de noviembre y el 22 de octubre).
+     - Cronológicamente (de pasado a presente): 22/10 $\rightarrow$ 19/11 (cancelado/reprogramado) $\rightarrow$ 24/11 (nuevo cambiado). El turno cancelado del 19 aparece antes en el tiempo que el del 24, exactamente como solicitó Gonzalo.
+     - Se añadió `flexWrap: 'wrap'` en el subtítulo informativo del slot original para que nunca desborde en móviles.
+3. **Verificación y Compilación**:
+   - `npm run build` ejecutado exitosamente con Turbopack: 52/52 rutas compiladas con 0 errores.
+
