@@ -198,7 +198,7 @@ export default function NotificacionesPage() {
 
   useEffect(() => {
     fetchNotificationsList();
-  }, [category, showAllNotified]);
+  }, [category, showAllNotified, filterBy, startDate, endDate]);
 
   const handleCategoryChange = (newCat) => {
     setCategory(newCat);

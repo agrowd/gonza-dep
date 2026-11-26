@@ -3553,3 +3553,22 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 4. **Scroll en Modales de `/admin/usuarios` (`media_1795728677677_051465ca.jpg`)**:
    - `.modal-overlay` y `.modal-content` no existían en ningún CSS del proyecto. Se agregaron reglas globales responsivas con scroll táctil nativo en `src/app/globals.css`, clases equivalentes en `src/app/admin/configuracion/configuracion.module.css` (para `/admin/bloqueos`) y mejoras en los modales de `src/app/admin/usuarios/page.js`.
 
+---
+
+## Sesión 26/11/2026 (Parte 4) - Efectivo/Transferencia en Filtros de Agenda, Scroll Arriba en Actualizar/Refresh, Comisiones por Rol en Usuarios y Fix "Va a avisar" en Notificaciones (D-192 / ERR-76)
+
+### Diagnóstico e Implementación
+1. **Efectivo + Transferencia en Agenda al filtrar por Box u Operador (`media_1795731085910_fe617930.jpg`, `media_1795731098528_a99d88e9.jpg`)**:
+   - *Causa*: En `src/app/admin/agenda/page.js`, cuando `isFilteredView` era `true`, `totalEfectivoDia` y `totalTransferenciaDia` se establecían en `0`, cayendo al texto `(saldos + señas)`.
+   - *Solución*: Se filtran también `daySenas.turnos` por `selectedBoxId` y `selectedOperadorId`, y se calcula el desglose exacto `efectivo + transferencia` sobre los turnos realizados filtrados y señas filtradas, mostrando siempre `($X efectivo + $Y transferencia)`.
+2. **Scroll arriba del todo al tocar `🔄 Actualizar` o hacer Refresh (`media_1795731098528_a99d88e9.jpg`)**:
+   - *Causa*: `sessionStorage['agenda_scroll_state']` y `savedScrollRef.current` persistían tras cerrar modales o recargar, provocando que el `useEffect` de carga volviera a bajar la vista.
+   - *Solución*: Se implementó `clearSavedAgendaScroll()`, invocado en `resetAgendaScroll()`, `handleManualRefresh()`, tras completar la restauración y en recargas de página (`navigation.type === 'reload'`) sin parámetros de retorno.
+3. **Campos de comisión diferenciados por rol y renombrados en `/admin/usuarios` (`media_1795731108528_5f89b1ae.jpg`, `media_1795731131373_b2b85c03.jpg`, `media_1795731145272_89df6aa1.jpg`)**:
+   - `OPERADOR`: muestra únicamente `Tipo de Comisión por turno (operadores)` (incorporando opción `POR_HORA` faltante) y `Comisión por turno (operadores)`, ocultando captador y guardando `comisionTurnoPct: 0`.
+   - `RECEPCION`: muestra únicamente `🎯 Comisión por captador (%)`, ocultando comisión por turno y guardando `comisionValor: 0`.
+   - `ADMIN`: muestra ambos claramente diferenciados. Tarjetas del listado actualizadas con etiquetas claras y formato `por hora`.
+4. **Restauración de Clientes "Va a avisar" en `/admin/notificaciones` (`media_1795731162567_d46796d0.png`)**:
+   - *Causa*: En `src/app/api/admin/notificaciones/route.js` (categoría `va_a_avisar`), la consulta filtraba `where: { estado: 'ACTIVO' }` y luego la línea 86 descartaba `if (cl.estado === 'ACTIVO') continue;` (copia accidental de la guarda D-140 de Mantenimiento), vaciando el 100% de los 16 clientes con etiqueta `VA_A_AVISAR`.
+   - *Solución*: Eliminada esa guarda errónea de `va_a_avisar` (conservada en `mantenimiento`), y añadidos `filterBy`, `startDate` y `endDate` al `useEffect` de `src/app/admin/notificaciones/page.js` para recarga automática inmediata.
+

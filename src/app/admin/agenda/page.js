@@ -767,9 +767,20 @@ export default function AgendaPage() {
   const savedScrollRef = useRef(null);
   const gridBodyRef = useRef(null);
 
-  // Helper to reset scroll position to top when navigating weeks/months or switching views
+  const clearSavedAgendaScroll = () => {
+    savedScrollRef.current = null;
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem('agenda_scroll_state');
+        sessionStorage.removeItem('agenda_scroll_pos');
+      } catch (e) {}
+    }
+  };
+
+  // Helper to reset scroll position to top when navigating weeks/months, switching views, or refreshing
   const resetAgendaScroll = () => {
     if (typeof window === 'undefined') return;
+    clearSavedAgendaScroll();
     const mainEl = document.querySelector('main');
     const calEl = calendarRef.current;
     const gridEl = gridBodyRef.current;
@@ -848,15 +859,32 @@ export default function AgendaPage() {
     }
   };
 
+  // On explicit browser reload (F5 / pull-to-refresh) without modal/return params, stay at top (D-192)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const isReturningContext = Boolean(sp.get('turnoId') || sp.get('fromClient') || sp.get('reprogramarTurnoId') || sp.get('newTurno'));
+      const navEntry = performance.getEntriesByType?.('navigation')?.[0];
+      if (!isReturningContext && navEntry?.type === 'reload') {
+        resetAgendaScroll();
+      }
+    } catch (e) {}
+  }, []);
+
   // Restore scroll position when closing details modal
   useEffect(() => {
     if (viewMode === 'day' && !isDetailsOpen && savedScrollRef.current) {
       restoreAgendaScroll();
       const t1 = setTimeout(restoreAgendaScroll, 50);
       const t2 = setTimeout(restoreAgendaScroll, 150);
+      const t3 = setTimeout(() => {
+        clearSavedAgendaScroll();
+      }, 350);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
+        clearTimeout(t3);
       };
     }
   }, [isDetailsOpen, viewMode]);
@@ -870,7 +898,10 @@ export default function AgendaPage() {
         runRestore();
         const t1 = setTimeout(runRestore, 60);
         const t2 = setTimeout(runRestore, 200);
-        const t3 = setTimeout(runRestore, 450);
+        const t3 = setTimeout(() => {
+          runRestore();
+          clearSavedAgendaScroll();
+        }, 450);
         return () => {
           clearTimeout(t1);
           clearTimeout(t2);
@@ -2144,12 +2175,15 @@ export default function AgendaPage() {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  // Recarga manual rápida solicitada por Gonzalo/Luciano
+  // Recarga manual rápida solicitada por Gonzalo/Luciano (siempre vuelve arriba del todo - D-192)
   const handleManualRefresh = async () => {
     if (isRefreshing) return;
+    resetAgendaScroll();
     setIsRefreshing(true);
     try {
       await fetchAppointments(true);
+      resetAgendaScroll();
+      setTimeout(resetAgendaScroll, 80);
       showToast('🔄 Agenda actualizada con los últimos cambios');
     } catch (err) {
       console.error('Error refreshing agenda:', err);
@@ -4032,20 +4066,80 @@ export default function AgendaPage() {
                     return sum + Math.max(0, Number(a.dineroAFavor || 0) - senaExcedente);
                   }, 0);
 
-              // 3) Señas cobradas en este día (turnos agendados en esta fecha en timezone UTC-3)
-              const totalSenasCobradasHoy = Number(daySenas?.totalSenas || 0);
+              // 3) Señas cobradas en este día (respetando filtros de Box y Operador - D-192)
+              const filteredSenasTurnos = isFilteredView
+                ? (daySenas?.turnos || []).filter(t => {
+                    if (selectedBoxId && selectedBoxId !== 'ALL' && t.boxId !== selectedBoxId) return false;
+                    if (selectedOperadorId && selectedOperadorId !== 'ALL' && t.operadorId !== selectedOperadorId) return false;
+                    return true;
+                  })
+                : (daySenas?.turnos || []);
+
+              const totalSenasCobradasHoy = !isFilteredView && daySenas?.totalSenas !== undefined
+                ? Number(daySenas.totalSenas)
+                : filteredSenasTurnos.reduce((sum, t) => sum + Number(t.valorSeña || 0), 0);
 
               // 4) Ingreso neto total de caja = Saldos + Dinero a favor + Señas
               const ingresoNeto = !isFilteredView && daySenas?.ingresoNeto !== undefined
                 ? Number(daySenas.ingresoNeto)
                 : (totalSaldosRealizados + totalDineroAFavorHoy + totalSenasCobradasHoy);
 
-              const totalEfectivoDia = !isFilteredView && daySenas?.totalEfectivo !== undefined
-                ? Number(daySenas.totalEfectivo)
-                : 0;
-              const totalTransferenciaDia = !isFilteredView && daySenas?.totalTransferencia !== undefined
-                ? Number(daySenas.totalTransferencia)
-                : 0;
+              // 5) Desglose Efectivo vs Transferencia (siempre calculado incluso con filtro de Box u Operador - D-192)
+              let totalEfectivoDia = 0;
+              let totalTransferenciaDia = 0;
+              if (!isFilteredView && daySenas?.totalEfectivo !== undefined && daySenas?.totalTransferencia !== undefined) {
+                totalEfectivoDia = Number(daySenas.totalEfectivo);
+                totalTransferenciaDia = Number(daySenas.totalTransferencia);
+              } else {
+                // a) Saldos y dinero a favor fresco de turnos realizados filtrados
+                turnosRealizados.forEach(a => {
+                  const vTotal = Number(a.valorTotal || 0);
+                  const vSena = Number(a.valorSeña || 0);
+                  const senaExcedente = Math.max(0, vSena - vTotal);
+                  const dineroAFavorFresco = Math.max(0, Number(a.dineroAFavor || 0) - senaExcedente);
+                  const saldoCobrado = Math.max(0, vTotal - vSena) + dineroAFavorFresco;
+                  const metodo = String(a.metodoPago || '').toUpperCase();
+                  if (metodo === 'AMBOS') {
+                    const ef = Math.max(0, Number(a.montoEfectivo || 0));
+                    const tr = Math.max(0, Number(a.montoTransferencia || 0));
+                    if (ef + tr > 0) {
+                      const efCobrado = Math.min(saldoCobrado, ef > 0 ? ef : Math.max(0, saldoCobrado - tr));
+                      const trCobrado = Math.max(0, saldoCobrado - efCobrado);
+                      totalEfectivoDia += efCobrado;
+                      totalTransferenciaDia += trCobrado;
+                    } else {
+                      const mitad = Math.round(saldoCobrado / 2);
+                      totalEfectivoDia += mitad;
+                      totalTransferenciaDia += (saldoCobrado - mitad);
+                    }
+                  } else if (metodo === 'EFECTIVO') {
+                    totalEfectivoDia += saldoCobrado;
+                  } else {
+                    totalTransferenciaDia += saldoCobrado;
+                  }
+                });
+                // b) Señas cobradas hoy correspondientes a los turnos filtrados
+                filteredSenasTurnos.forEach(t => {
+                  const seña = Math.max(0, Number(t.valorSeña || 0));
+                  const metodo = String(t.metodoPago || '').toUpperCase();
+                  if (metodo === 'AMBOS') {
+                    const ef = Math.max(0, Number(t.montoEfectivo || 0));
+                    const tr = Math.max(0, Number(t.montoTransferencia || 0));
+                    if (ef + tr > 0) {
+                      const efSena = Math.min(seña, ef > 0 ? ef : Math.max(0, seña - tr));
+                      const trSena = Math.max(0, seña - efSena);
+                      totalEfectivoDia += efSena;
+                      totalTransferenciaDia += trSena;
+                    } else {
+                      totalTransferenciaDia += seña;
+                    }
+                  } else if (metodo === 'EFECTIVO') {
+                    totalEfectivoDia += seña;
+                  } else {
+                    totalTransferenciaDia += seña;
+                  }
+                });
+              }
 
               // Liquidación de Operadores (Desde primer turno hasta último turno con su etiqueta)
               const activeDayApps = dayApps.filter(a => a.estado !== 'CANCELADO');
@@ -4149,7 +4243,7 @@ export default function AgendaPage() {
                             <div className={styles.dayCardStatItem}>
                               <span className={styles.dayCardStatLabel}>Ingreso neto</span>
                               <span className={styles.dayCardStatValGreen}>${ingresoNeto.toLocaleString('es-AR')}</span>
-                              {(totalEfectivoDia > 0 || totalTransferenciaDia > 0) ? (
+                              {(ingresoNeto > 0 || totalEfectivoDia > 0 || totalTransferenciaDia > 0) && (
                                 <span style={{
                                   fontSize: '0.82rem',
                                   color: '#15803d',
@@ -4158,18 +4252,6 @@ export default function AgendaPage() {
                                   marginTop: '2px'
                                 }}>
                                   (${totalEfectivoDia.toLocaleString('es-AR')} efectivo + ${totalTransferenciaDia.toLocaleString('es-AR')} transferencia)
-                                </span>
-                              ) : totalSenasCobradasHoy > 0 && (
-                                <span style={{
-                                  fontSize: '0.82rem',
-                                  color: '#15803d',
-                                  fontWeight: 700,
-                                  whiteSpace: 'nowrap',
-                                  marginTop: '2px'
-                                }}>
-                                  {totalSaldosRealizados > 0
-                                    ? `(${totalSaldosRealizados.toLocaleString('es-AR')} saldos + ${totalSenasCobradasHoy.toLocaleString('es-AR')} señas)`
-                                    : `(${totalSenasCobradasHoy.toLocaleString('es-AR')} señas del día)`}
                                 </span>
                               )}
                             </div>

@@ -123,13 +123,15 @@ export default function UsuariosPage() {
 
     setSavingUser(true);
     try {
+      const isOperadorRole = userForm.rol === 'OPERADOR';
+      const isRecepcionRole = userForm.rol === 'RECEPCION';
       const payload = {
         nombre: userForm.nombre.trim(),
         usuario: userForm.usuario.trim().toLowerCase(),
         rol: userForm.rol,
-        comisionTipo: userForm.comisionTipo,
-        comisionValor: parseFloat(cleanMilesInput(userForm.comisionValor)) || 0,
-        comisionTurnoPct: parseFloat(userForm.comisionTurnoPct) || 0
+        comisionTipo: isRecepcionRole ? 'PORCENTAJE' : userForm.comisionTipo,
+        comisionValor: isRecepcionRole ? 0 : (parseFloat(cleanMilesInput(userForm.comisionValor)) || 0),
+        comisionTurnoPct: isOperadorRole ? 0 : (parseFloat(userForm.comisionTurnoPct) || 0)
       };
       if (userForm.password && userForm.password.trim().length >= 6) {
         payload.password = userForm.password.trim();
@@ -307,22 +309,28 @@ export default function UsuariosPage() {
                     {u.rol === 'RECEPCION' && (
                       <span className={styles.roleBadgeRecepcion}>📋 Recepción</span>
                     )}
-                    {Number(u.comisionTurnoPct || 0) > 0 && (
+                    {u.rol !== 'OPERADOR' && Number(u.comisionTurnoPct || 0) > 0 && (
                       <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed', backgroundColor: '#f5f3ff', border: '1px solid #ddd6fe', padding: '2px 6px', borderRadius: '4px' }}>
-                        🎯 {u.comisionTurnoPct}% comisionable
+                        🎯 {u.comisionTurnoPct}% comisión por captador
                       </span>
                     )}
                   </div>
                 </div>
 
                 <div className={styles.userCardRate}>
-                  {u.comisionValor ? (
+                  {u.rol === 'RECEPCION' ? (
+                    Number(u.comisionTurnoPct || 0) > 0
+                      ? `Comisión por captador: ${u.comisionTurnoPct}%`
+                      : 'Sin comisión por captador'
+                  ) : u.comisionValor ? (
                     u.comisionTipo === 'PORCENTAJE'
                       ? `${u.comisionValor}% por turno`
+                      : u.comisionTipo === 'POR_HORA'
+                      ? `${formatMoney(u.comisionValor)} por hora`
                       : u.comisionTipo === 'POR_DIA'
                       ? `${formatMoney(u.comisionValor)} por día`
                       : `${formatMoney(u.comisionValor)} por turno`
-                  ) : 'Sin comisión'}
+                  ) : 'Sin comisión por turno'}
                 </div>
 
                 <div className={styles.userCardActions}>
@@ -442,48 +450,55 @@ export default function UsuariosPage() {
                 />
               </div>
 
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Tipo de Comisión</label>
-                  <select 
-                    className={styles.input}
-                    value={userForm.comisionTipo}
-                    onChange={(e) => setUserForm({ ...userForm, comisionTipo: e.target.value })}
-                  >
-                    <option value="PORCENTAJE">Porcentaje (%)</option>
-                    <option value="POR_TURNO">Monto Fijo por Turno ($)</option>
-                    <option value="POR_DIA">Monto Fijo por Día ($)</option>
-                  </select>
-                </div>
+              {userForm.rol !== 'RECEPCION' && (
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Tipo de Comisión por turno (operadores)</label>
+                    <select 
+                      className={styles.input}
+                      value={userForm.comisionTipo}
+                      onChange={(e) => setUserForm({ ...userForm, comisionTipo: e.target.value })}
+                    >
+                      <option value="PORCENTAJE">Porcentaje (%)</option>
+                      <option value="POR_TURNO">Monto Fijo por Turno ($)</option>
+                      <option value="POR_HORA">Monto Fijo por Hora ($)</option>
+                      <option value="POR_DIA">Monto Fijo por Día ($)</option>
+                    </select>
+                  </div>
 
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      {userForm.comisionTipo === 'PORCENTAJE'
+                        ? 'Comisión por turno (operadores) (%)'
+                        : 'Comisión por turno (operadores) ($ ARS)'}
+                    </label>
+                    <input 
+                      type="text" 
+                      inputMode="numeric"
+                      className={styles.input} 
+                      value={formatMilesInput(userForm.comisionValor)}
+                      onChange={(e) => setUserForm({ ...userForm, comisionValor: cleanMilesInput(e.target.value) })}
+                      placeholder="Ej: 30"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {userForm.rol !== 'OPERADOR' && (
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>
-                    {userForm.comisionTipo === 'PORCENTAJE' ? 'Porcentaje (%)' : 'Valor Comisión ($ ARS)'}
-                  </label>
+                  <label className={styles.label}>🎯 Comisión por captador (%)</label>
                   <input 
-                    type="text" 
-                    inputMode="numeric"
-                    className={styles.input} 
-                    value={formatMilesInput(userForm.comisionValor)}
-                    onChange={(e) => setUserForm({ ...userForm, comisionValor: cleanMilesInput(e.target.value) })}
-                    placeholder="Ej: 30"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    className={styles.input}
+                    value={userForm.comisionTurnoPct ?? 0}
+                    onChange={(e) => setUserForm({ ...userForm, comisionTurnoPct: parseFloat(e.target.value) || 0 })}
+                    placeholder="Ej: 10"
                   />
                 </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>🎯 Turno comisionable (% comisión por defecto para promotor / captador)</label>
-                <input 
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  className={styles.input}
-                  value={userForm.comisionTurnoPct ?? 0}
-                  onChange={(e) => setUserForm({ ...userForm, comisionTurnoPct: parseFloat(e.target.value) || 0 })}
-                  placeholder="Ej: 10"
-                />
-              </div>
+              )}
 
               <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" onClick={() => setShowUserModal(false)} className="btn btn-secondary">

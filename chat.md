@@ -2508,5 +2508,15 @@
   3. **Zonas Extra (`Otros`) en filas distintas en `Zonas realizadas`**: En `getZonasRealizadasSummary` (`src/app/admin/agenda/page.js`), se separan por coma las subzonas de `Otros:` (limpiando `Otros:` y `(Bonificado)`) para listar cada una en su propia fila (`Laterales`, `1/2 Brazo`, etc.), sin alterar el título superior del turno.
   4. **Scroll en modales de `/admin/usuarios` (Nuevo Usuario / Editar Usuario)**: Agregadas las reglas CSS globales faltantes de `.modal-overlay` / `.modal-content` (con `position: fixed`, `max-height: calc(100dvh - 1rem)`, `overflow-y: auto` y `-webkit-overflow-scrolling: touch`) en `src/app/globals.css`, en `configuracion.module.css` para `/admin/bloqueos`, y ajustado `src/app/admin/usuarios/page.js`.
 
+---
+
+## 26/11/2026 (Parte 4) - Efectivo/Transferencia en Filtros de Agenda, Scroll Arriba en Actualizar/Refresh, Comisiones por Rol en Usuarios y Fix "Va a avisar" en Notificaciones (D-192 / ERR-76)
+
+- **Solicitudes de Gonzalo Siri (`media_1795731085910_fe617930.jpg` a `media_1795731162567_d46796d0.png`)**:
+  1. **Efectivo + Transferencia persistente al filtrar Agenda por Box u Operador**: En `src/app/admin/agenda/page.js`, se filtran también `daySenas.turnos` por Box y Operador y se calcula el desglose exacto `($X efectivo + $Y transferencia)` para las vistas filtradas, sin caer nunca en `(saldos + señas)`.
+  2. **Scroll arriba del todo al tocar `🔄 Actualizar` o hacer Refresh**: Agregado `clearSavedAgendaScroll()` en `resetAgendaScroll()`, `handleManualRefresh()`, tras completar la restauración y en recargas manuales del navegador (`reload`) para que al actualizar permanezca arriba del todo.
+  3. **Comisiones diferenciadas por rol y renombradas en `/admin/usuarios`**: Para `OPERADOR` solo se muestra `Comisión por turno (operadores)` (incluyendo opción `POR_HORA`), para `RECEPCION` solo `🎯 Comisión por captador (%)`, y se actualizaron las tarjetas del listado.
+  4. **Clientes "Va a avisar" en `/admin/notificaciones`**: Eliminada la guarda contradictoria `if (cl.estado === 'ACTIVO') continue;` (copia accidental de D-140 de Mantenimiento) en `src/app/api/admin/notificaciones/route.js` que devolvía `0` clientes, y añadida recarga reactiva al cambiar `filterBy` / rango de fechas en `src/app/admin/notificaciones/page.js`.
+
 
 
