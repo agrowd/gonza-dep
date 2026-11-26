@@ -16,238 +16,114 @@ if (!globalThis.whatsappQr) {
 if (!globalThis.whatsappRelayStatus) {
   globalThis.whatsappRelayStatus = 'DISCONNECTED';
 }
+if (!globalThis.whatsappRelayQr) {
+  globalThis.whatsappRelayQr = '';
+}
+if (globalThis.whatsappRelayError === undefined) {
+  globalThis.whatsappRelayError = null;
+}
+
+const IA_RELAY_BASE_URL = process.env.IA_WHATSAPP_RELAY_URL || 'http://127.0.0.1:3007';
 
 let lastRelayCheckTime = 0;
 
-export async function checkRelayStatus() {
+export async function checkRelayStatus(force = false) {
   const now = Date.now();
-  if (now - lastRelayCheckTime < 4000 && globalThis.whatsappRelayStatus) {
+  if (!force && now - lastRelayCheckTime < 2500 && globalThis.whatsappRelayStatus) {
     return globalThis.whatsappRelayStatus;
   }
   try {
     lastRelayCheckTime = now;
-    const res = await fetch('http://localhost:3007/api/whatsapp/status', {
-      signal: AbortSignal.timeout(2500)
+    const res = await fetch(`${IA_RELAY_BASE_URL}/api/whatsapp/status`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3500)
     });
     if (res.ok) {
       const data = await res.json();
       globalThis.whatsappRelayStatus = data.status || 'DISCONNECTED';
+      globalThis.whatsappRelayQr = data.qr || data.rawQr || '';
+      globalThis.whatsappRelayError = data.error || null;
+      globalThis.whatsappRelayReachable = true;
     } else {
       globalThis.whatsappRelayStatus = 'DISCONNECTED';
+      globalThis.whatsappRelayQr = '';
+      globalThis.whatsappRelayError = `Servicio WhatsApp IA devolvió HTTP ${res.status}`;
+      globalThis.whatsappRelayReachable = false;
     }
   } catch (err) {
     globalThis.whatsappRelayStatus = 'DISCONNECTED';
+    globalThis.whatsappRelayQr = '';
+    globalThis.whatsappRelayError = 'No se pudo conectar con el servicio central de WhatsApp (puerto 3007).';
+    globalThis.whatsappRelayReachable = false;
   }
   return globalThis.whatsappRelayStatus;
 }
 
+export async function triggerRelayAction(action = 'INITIALIZE') {
+  try {
+    const res = await fetch(`${IA_RELAY_BASE_URL}/api/whatsapp/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await res.json().catch(() => ({}));
+    await checkRelayStatus(true);
+    return { ok: res.ok, ...data };
+  } catch (err) {
+    console.error(`[WhatsApp Relay] Error forwarding action ${action}:`, err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
 export function getWhatsAppStatus() {
-  if (globalThis.whatsappStatus === 'CONNECTED') {
-    return {
-      status: 'CONNECTED',
-      qr: '',
-      error: null
-    };
-  }
-
-  if (globalThis.whatsappRelayStatus === 'CONNECTED') {
-    return {
-      status: 'CONNECTED',
-      qr: '',
-      error: null,
-      viaRelay: true
-    };
-  }
-
+  // Instancia única unificada vía ia-gonzadep (D-83 / D-90)
   return {
-    status: globalThis.whatsappStatus,
-    qr: globalThis.whatsappQr,
-    error: globalThis.whatsappError || null
+    status: globalThis.whatsappRelayStatus || 'DISCONNECTED',
+    qr: globalThis.whatsappRelayQr || '',
+    error: globalThis.whatsappRelayStatus === 'CONNECTED' ? null : (globalThis.whatsappRelayError || null),
+    viaRelay: true
   };
 }
 
 let watchdogInterval = null;
-let lastAutoReconnectAttempt = 0;
 
 export function startWhatsAppWatchdog() {
   if (watchdogInterval) return;
 
-  console.log('[WhatsApp Watchdog] Initializing automated health-check and auto-reconnect watchdog (checks every 2 minutes)...');
+  console.log('[WhatsApp Watchdog] Initializing unified relay health-check watchdog (checks every 2 minutes, NO local Chromium)...');
 
   watchdogInterval = setInterval(async () => {
     try {
-      const status = globalThis.whatsappStatus;
-      const hasAuthDir = fs.existsSync('./.wwebjs_auth');
-      const now = Date.now();
+      await checkRelayStatus(true);
+      const status = globalThis.whatsappRelayStatus;
 
-      // 0. Proactively check if client is nominally CONNECTED but Chromium process died/detached
-      if (status === 'CONNECTED' && globalThis.whatsappClient) {
-        try {
-          if (globalThis.whatsappClient.pupBrowser && !globalThis.whatsappClient.pupBrowser.isConnected()) {
-            console.warn('[WhatsApp Watchdog] Chromium browser disconnected unexpectedly. Resetting client...');
-            try { await globalThis.whatsappClient.destroy(); } catch (e) {}
-            globalThis.whatsappClient = null;
-            globalThis.whatsappStatus = 'DISCONNECTED';
-          }
-        } catch (err) {
-          console.error('[WhatsApp Watchdog] Error checking browser liveness:', err);
-        }
-      }
-
-      // 1. If DISCONNECTED and session directory exists, attempt auto-reconnect with 3-minute backoff (unless relay is already handling it)
-      if (status === 'DISCONNECTED' && hasAuthDir && globalThis.whatsappRelayStatus !== 'CONNECTED') {
-        if (now - lastAutoReconnectAttempt > 3 * 60 * 1000) {
-          lastAutoReconnectAttempt = now;
-          console.log('[WhatsApp Watchdog] WhatsApp is DISCONNECTED with active session. Triggering automatic reconnection...');
-          try {
-            initWhatsAppClient();
-          } catch (err) {
-            console.error('[WhatsApp Watchdog] Error during auto-reconnect initWhatsAppClient:', err);
-          }
-        }
-      }
-
-      // 2. Disconnect Alert Email Trigger (sent once per disconnection event, only if relay is also disconnected)
-      if (status === 'DISCONNECTED' && globalThis.whatsappRelayStatus !== 'CONNECTED') {
+      // Disconnect Alert Email Trigger (sent once per disconnection event)
+      if (status === 'DISCONNECTED') {
         if (!globalThis.wasDisconnectedAlertSent) {
           globalThis.wasDisconnectedAlertSent = true;
-          const reason = globalThis.whatsappError || 'Conexión interrumpida con el dispositivo o sesión desvinculada.';
-          console.warn('[WhatsApp Watchdog] WhatsApp disconnected. Sending alert email to administrator...');
-          await sendWhatsAppDisconnectAlertEmail(reason, 'El guardián automático del sistema intentará reconectar usando la sesión guardada.');
+          const reason = globalThis.whatsappRelayError || 'Conexión interrumpida con el dispositivo o sesión desvinculada.';
+          console.warn('[WhatsApp Watchdog] WhatsApp relay disconnected. Sending alert email to administrator...');
+          await sendWhatsAppDisconnectAlertEmail(reason, 'Por favor verificá la vinculación de WhatsApp en el panel administrativo.');
         }
       }
 
-      // 3. Recovery Alert Email Trigger (sent when re-connected after an alert)
+      // Recovery Alert Email Trigger (sent when re-connected after an alert)
       if (status === 'CONNECTED' && globalThis.wasDisconnectedAlertSent) {
         globalThis.wasDisconnectedAlertSent = false;
-        console.log('[WhatsApp Watchdog] WhatsApp reconnected successfully. Sending recovery email to administrator...');
+        console.log('[WhatsApp Watchdog] WhatsApp relay reconnected successfully. Sending recovery email to administrator...');
         await sendWhatsAppReconnectedAlertEmail();
-      }
-
-      // 4. Stale INITIALIZING State Cleanup (reset if stuck > 4 minutes)
-      if (status === 'INITIALIZING') {
-        if (!globalThis.initializingStartedAt) {
-          globalThis.initializingStartedAt = now;
-        } else if (now - globalThis.initializingStartedAt > 4 * 60 * 1000) {
-          console.warn('[WhatsApp Watchdog] Client stuck in INITIALIZING state >4 minutes. Forcefully resetting instance...');
-          globalThis.initializingStartedAt = null;
-          if (globalThis.whatsappClient) {
-            try { await globalThis.whatsappClient.destroy(); } catch (e) {}
-            globalThis.whatsappClient = null;
-          }
-          globalThis.whatsappStatus = 'DISCONNECTED';
-        }
-      } else {
-        globalThis.initializingStartedAt = null;
       }
     } catch (err) {
       console.error('[WhatsApp Watchdog] Error in watchdog interval tick:', err);
     }
-  }, 2 * 60 * 1000); // 2 minutes
+  }, 2 * 60 * 1000);
 }
 
 export function initWhatsAppClient() {
-  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' ||
-    process.env.npm_lifecycle_event === 'build' ||
-    (process.argv && process.argv.some(arg => String(arg).includes('build')));
-  if (isBuildPhase) {
-    return null;
-  }
-
-  if (globalThis.whatsappClient) {
-    if (globalThis.whatsappStatus === 'CONNECTED') {
-      startReminderCron();
-    }
-    return globalThis.whatsappClient;
-  }
-
-  globalThis.whatsappStatus = 'INITIALIZING';
-  globalThis.whatsappError = null;
-  globalThis.whatsappQr = '';
-  globalThis.initializingStartedAt = Date.now();
-
-  console.log('Initializing WhatsApp Client...');
-
-  const client = new Client({
-    authStrategy: new LocalAuth({
-      dataPath: './.wwebjs_auth' // Persist session in this directory
-    }),
-    puppeteer: {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process', // helps run inside small VMs/VPS
-        '--disable-gpu',
-        '--disable-software-rasterizer'
-      ]
-    }
-  });
-
-  client.on('qr', (qr) => {
-    console.log('WhatsApp QR received.');
-    globalThis.whatsappStatus = 'QR_RECEIVED';
-    globalThis.whatsappQr = qr;
-  });
-
-  client.on('ready', () => {
-    console.log('WhatsApp Client is ready!');
-    globalThis.whatsappStatus = 'CONNECTED';
-    globalThis.whatsappQr = '';
-    globalThis.initializingStartedAt = null;
-    startReminderCron();
-    startWhatsAppWatchdog();
-
-    // Trigger recovery email if an alert was previously sent
-    if (globalThis.wasDisconnectedAlertSent) {
-      globalThis.wasDisconnectedAlertSent = false;
-      sendWhatsAppReconnectedAlertEmail().catch(e => console.error('Error sending recovery email:', e));
-    }
-  });
-
-  client.on('authenticated', () => {
-    console.log('WhatsApp Client authenticated.');
-  });
-
-  client.on('auth_failure', (msg) => {
-    console.error('WhatsApp Authentication failure:', msg);
-    globalThis.whatsappStatus = 'DISCONNECTED';
-    globalThis.whatsappError = `Autenticación fallida: ${msg}`;
-    globalThis.whatsappQr = '';
-    globalThis.whatsappClient = null;
-
-    if (!globalThis.wasDisconnectedAlertSent) {
-      globalThis.wasDisconnectedAlertSent = true;
-      sendWhatsAppDisconnectAlertEmail(`Autenticación fallida: ${msg}`, 'Se requiere volver a escanear el código QR en el panel administrativo.').catch(e => console.error('Error sending auth failure alert:', e));
-    }
-  });
-
-  client.on('disconnected', (reason) => {
-    console.log('WhatsApp Client was disconnected:', reason);
-    globalThis.whatsappStatus = 'DISCONNECTED';
-    globalThis.whatsappQr = '';
-    globalThis.whatsappClient = null;
-
-    // Trigger immediate Watchdog check to attempt auto-reconnect if session exists
-    if (fs.existsSync('./.wwebjs_auth')) {
-      console.log('[WhatsApp Event] Client disconnected. Triggering Watchdog auto-reconnect...');
-      startWhatsAppWatchdog();
-    }
-  });
-
-  client.initialize().catch((err) => {
-    console.error('Failed to initialize WhatsApp client:', err);
-    globalThis.whatsappStatus = 'DISCONNECTED';
-    globalThis.whatsappError = err.message;
-    globalThis.whatsappClient = null;
-  });
-
-  globalThis.whatsappClient = client;
-  return client;
+  // Instancia única gestionada por ia-gonzadep (puerto 3007). Jamás lanzar un segundo Chromium local.
+  triggerRelayAction('INITIALIZE').catch(() => {});
+  return null;
 }
 
 export function normalizeWhatsApp(phone) {
@@ -360,8 +236,8 @@ export async function sendWhatsAppMessage(phone, text) {
   // 2. Relay via ia-gonzadep (port 3007)
   try {
     const normalizedTarget = normalizeWhatsApp(phone) || (phone || '').replace(/\D/g, '');
-    console.log(`[WhatsApp Relay] Relaying message for ${phone} (target: ${normalizedTarget}) to http://localhost:3007/api/whatsapp/send...`);
-    const res = await fetch('http://localhost:3007/api/whatsapp/send', {
+    console.log(`[WhatsApp Relay] Relaying message for ${phone} (target: ${normalizedTarget}) to ${IA_RELAY_BASE_URL}/api/whatsapp/send...`);
+    const res = await fetch(`${IA_RELAY_BASE_URL}/api/whatsapp/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target: normalizedTarget, message: text }),
@@ -440,8 +316,8 @@ export async function sendWhatsAppMedia(phone, { relativeUrl, caption = '' }) {
 
     // 2. Relay via ia-gonzadep (port 3007)
     const normalizedTarget = normalizeWhatsApp(phone) || (phone || '').replace(/\D/g, '');
-    console.log(`[WhatsApp Relay] Relaying media for ${phone} (${filename}) to http://localhost:3007/api/whatsapp/send...`);
-    const res = await fetch('http://localhost:3007/api/whatsapp/send', {
+    console.log(`[WhatsApp Relay] Relaying media for ${phone} (${filename}) to ${IA_RELAY_BASE_URL}/api/whatsapp/send...`);
+    const res = await fetch(`${IA_RELAY_BASE_URL}/api/whatsapp/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -500,33 +376,11 @@ export async function sendNewClientWelcomeImages(phone) {
 }
 
 export async function logoutWhatsApp() {
-  const client = globalThis.whatsappClient;
-  if (client) {
-    try {
-      await client.logout();
-    } catch (e) {
-      console.error('Error during WhatsApp client.logout():', e);
-    }
-    try {
-      await client.destroy();
-    } catch (e) {
-      console.error('Error during WhatsApp client.destroy():', e);
-    }
-    globalThis.whatsappClient = null;
-  }
-
-  try {
-    const fs = await import('fs');
-    if (fs.existsSync('./.wwebjs_auth')) {
-      fs.rmSync('./.wwebjs_auth', { recursive: true, force: true });
-      console.log('Forcefully removed WhatsApp session directory .wwebjs_auth');
-    }
-  } catch (e) {
-    console.error('Error deleting .wwebjs_auth directory:', e);
-  }
-
+  await triggerRelayAction('LOGOUT');
   globalThis.whatsappStatus = 'DISCONNECTED';
   globalThis.whatsappQr = '';
+  globalThis.whatsappRelayStatus = 'DISCONNECTED';
+  globalThis.whatsappRelayQr = '';
 }
 
 export function parseTemplate(template, client = {}, turno = {}, address = '') {
@@ -1248,14 +1102,8 @@ if (typeof window === 'undefined' && !isBuildPhase) {
   if (process.env.WHATSAPP_ENABLED !== 'false') {
     startWhatsAppWatchdog();
     startReminderCron();
-    if (fs.existsSync('./.wwebjs_auth') && globalThis.whatsappStatus === 'DISCONNECTED' && !globalThis.whatsappClient) {
-      console.log('[WhatsApp Auto-Boot] Discovered existing session .wwebjs_auth. Auto-initializing client on boot...');
-      try {
-        initWhatsAppClient();
-      } catch (e) {
-        console.error('[WhatsApp Auto-Boot] Error auto-initializing client:', e);
-      }
-    }
+    // Instancia única de WhatsApp gestionada por ia-gonzadep (puerto 3007): NO iniciar Chromium local en Agenda (D-83 / D-90)
+    checkRelayStatus(true).catch(() => {});
   } else {
     console.log('[WhatsApp] WHATSAPP_ENABLED=false: Watchdog, reminder cron and auto-boot disabled.');
   }

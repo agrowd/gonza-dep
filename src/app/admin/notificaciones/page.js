@@ -113,16 +113,32 @@ export default function NotificacionesPage() {
   // 1. WhatsApp status polling function
   const fetchWhatsAppStatus = async () => {
     try {
-      const res = await fetch('/api/whatsapp/status');
+      const res = await fetch('/api/whatsapp/status', { cache: 'no-store' });
       const data = await res.json();
-      if (!data.error) {
+      if (res.ok && data.status) {
         setWppStatus(data.status);
-        setWppQr(data.qr);
-        setWppError(data.error);
+        setWppQr(data.qr || '');
+        setWppError(data.error || '');
       }
     } catch (e) {
       console.error('Error fetching WhatsApp status:', e);
     } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  // Trigger central WhatsApp client initialization / QR generation
+  const handleInitWhatsApp = async () => {
+    setCheckingStatus(true);
+    try {
+      await fetch('/api/whatsapp/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'INITIALIZE' })
+      });
+      setTimeout(fetchWhatsAppStatus, 1500);
+    } catch (e) {
+      console.error('Error initializing WhatsApp:', e);
       setCheckingStatus(false);
     }
   };
@@ -291,10 +307,17 @@ export default function NotificacionesPage() {
     } else if (wppStatus === 'INITIALIZING') {
       badgeClass = styles.badgeInitializing;
       badgeText = 'Iniciando...';
+    } else if (wppStatus === 'AUTHENTICATED') {
+      badgeClass = styles.badgeInitializing;
+      badgeText = 'Autenticando...';
     } else if (wppStatus === 'QR_RECEIVED') {
       badgeClass = styles.badgeQr;
       badgeText = 'Esperando Escaneo';
     }
+
+    const qrImgSrc = (wppQr && wppQr.startsWith('data:image/'))
+      ? wppQr
+      : `/api/whatsapp/qr-image?t=${Date.now()}`;
 
     return (
       <div className={styles.wppStatusBox}>
@@ -306,7 +329,7 @@ export default function NotificacionesPage() {
         {wppStatus === 'QR_RECEIVED' && (
           <div className={styles.qrWrapper}>
             <img 
-              src={`/api/whatsapp/qr-image?t=${new Date().getTime()}`} 
+              src={qrImgSrc} 
               alt="Escanear Código QR" 
               className={styles.qrImage}
             />
@@ -320,6 +343,17 @@ export default function NotificacionesPage() {
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             El sistema está listo para despachar avisos y recordatorios por WhatsApp.
           </div>
+        )}
+
+        {wppStatus === 'DISCONNECTED' && (
+          <button
+            onClick={handleInitWhatsApp}
+            className="btn btn-primary"
+            style={{ width: '100%', padding: '0.6rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+            disabled={checkingStatus}
+          >
+            <RefreshIcon /> Iniciar y Generar QR
+          </button>
         )}
 
         {wppError && (
