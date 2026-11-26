@@ -507,13 +507,23 @@ export async function POST(request) {
       }
     }
 
-    // 5. Determine dinero a favor del cliente si tiene saldo acumulado (D-151 / D-170)
-    let finalDineroAFavor = 0;
-    if (body.dineroAFavor !== undefined && body.dineroAFavor !== null && body.dineroAFavor !== '') {
-      finalDineroAFavor = Math.max(0, Number(body.dineroAFavor));
-    } else if (Number(clientRecord?.saldoAFavor || 0) > 0) {
-      finalDineroAFavor = Number(clientRecord.saldoAFavor);
-    }
+    // 5. Consumo de saldo a favor como seña del nuevo turno (D-151 / D-170 / D-191)
+    // Si el cliente tenía saldo a favor previo y se usa como seña al agendar este nuevo turno,
+    // dineroAFavor en el nuevo turno queda en 0 (no se arrastra el monto ya consumido como seña),
+    // señaEstado se marca como 'SALDO_A_FAVOR', y Cliente.saldoAFavor se reduce en lo consumido.
+    const clientAvailableSaldo = Math.max(0, Number(clientRecord?.saldoAFavor || 0));
+    const explicitDineroAFavor = (body.dineroAFavor !== undefined && body.dineroAFavor !== null && body.dineroAFavor !== '')
+      ? Math.max(0, Number(body.dineroAFavor))
+      : null;
+    const isUsingSaldoAsSena = (
+      body.señaEstado === 'SALDO_A_FAVOR' ||
+      body.señaEstado === 'CONSERVADA' ||
+      (clientAvailableSaldo > 0 && finalValorSeña > 0)
+    );
+    const saldoConsumidoEnSena = isUsingSaldoAsSena ? Math.min(clientAvailableSaldo, finalValorSeña) : 0;
+    const saldoRestanteCliente = Math.max(0, clientAvailableSaldo - saldoConsumidoEnSena);
+    const finalDineroAFavor = explicitDineroAFavor !== null ? explicitDineroAFavor : 0;
+    const finalSeñaEstado = body.señaEstado || (saldoConsumidoEnSena > 0 ? 'SALDO_A_FAVOR' : null);
 
     const comisionUser = comisionUsuarioId ? String(comisionUsuarioId) : null;
     const comisionPct = comisionUser && comisionPorcentaje !== undefined && comisionPorcentaje !== null ? Number(comisionPorcentaje) : 0;
@@ -540,7 +550,7 @@ export async function POST(request) {
         descuentoTipo: descuentoTipo || 'NINGUNO',
         descuentoValor: Number(descuentoValor || 0),
         estado: estado || 'SEÑADO',
-        señaEstado: body.señaEstado || (finalDineroAFavor > 0 ? 'SALDO_A_FAVOR' : null),
+        señaEstado: finalSeñaEstado,
         metodoPago: body.metodoPago || 'TRANSFERENCIA',
         montoEfectivo: Math.max(0, Number(body.montoEfectivo) || 0),
         montoTransferencia: Math.max(0, Number(body.montoTransferencia) || 0),
@@ -577,18 +587,13 @@ export async function POST(request) {
       }
     });
 
-    // Descontar saldo a favor utilizado del cliente (D-151 / D-170)
-    if (finalDineroAFavor > 0 && finalClienteId) {
+    // Actualizar saldo a favor del cliente al consumirlo como seña en este turno (D-151 / D-170 / D-191)
+    if (finalClienteId && (saldoConsumidoEnSena > 0 || isUsingSaldoAsSena)) {
       try {
-        const clientCurrent = await prisma.cliente.findUnique({
-          where: { id: finalClienteId },
-          select: { saldoAFavor: true }
-        });
-        const currentBal = Number(clientCurrent?.saldoAFavor || 0);
         await prisma.cliente.update({
           where: { id: finalClienteId },
           data: {
-            saldoAFavor: Math.max(0, currentBal - finalDineroAFavor)
+            saldoAFavor: saldoRestanteCliente
           }
         });
       } catch (saldoErr) {
@@ -621,14 +626,6 @@ export async function POST(request) {
       } catch (solErr) {
         console.error('Error updating solicitud autogestión to AGENDADO:', solErr);
       }
-    }
-
-    // Si el cliente tenía saldo a favor que se aplicó a este nuevo turno, resetear saldoAFavor
-    if (finalClienteId) {
-      await prisma.cliente.update({
-        where: { id: finalClienteId },
-        data: { saldoAFavor: 0 }
-      }).catch(err => console.error('Error resetting client saldoAFavor:', err));
     }
 
     if (body.clientObservaciones !== undefined && body.clientObservaciones !== '' && finalClienteId) {

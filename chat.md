@@ -2498,5 +2498,15 @@
   4. Auditoría de todo `src/app/admin/`: 0 setters indefinidos restantes.
   5. Consolidados en commit previo dedicado los 9 archivos ya activos en producción (`formatCurrencyArs` / `es-AR`), compilación local con Turbopack y despliegue en Producción (`:3006`) y Staging (`:3008`).
 
+---
+
+## 26/11/2026 (Parte 3) - Neto en Estadísticas (Matías Page), Reset de `dineroAFavor`, Filas Separadas en `Zonas realizadas` y Scroll en Modales de Usuarios (D-191 / ERR-75)
+
+- **Solicitudes de Gonzalo Siri (`media_1795728643064_3c64bfd0.jpg`, `media_1795728647345_7302c6ab.jpg`, `media_1795728677677_051465ca.jpg`, `media_1795728725368_f1552bdb.png`)**:
+  1. **Estadísticas — Valor Neto desfasado por Matías Sanchez Page (`SALDO_A_FAVOR`)**: Se implementaron `isFreshSenaCash(t)` y `getSessionCashCollected(t)` en `src/app/api/admin/estadisticas/route.js` 100% alineados con `senas-dia/route.js`, excluyendo señas cubiertas con `SALDO_A_FAVOR` / `CONSERVADA` y evitando doble conteo de turnos futuros de otros períodos para que el Neto de Estadísticas coincida exactamente con el de la cabecera de Agenda.
+  2. **Campo `dineroAFavor` no debe arrastrarse si se usó como seña**: Corregido `POST /api/admin/turnos/route.js` para dejar `newTurno.dineroAFavor = 0` cuando el saldo previo se usa como seña (manteniendo `señaEstado = 'SALDO_A_FAVOR'` y descontando `Cliente.saldoAFavor`). Además se sanearon en PostgreSQL los 3 turnos futuros que habían quedado arrastrados (Matías Sanchez Page `$50.000 -> $0`, Agustín Di Nubila `$13.500 -> $0`, Ramiro Ramos `$30.000 -> $0`).
+  3. **Zonas Extra (`Otros`) en filas distintas en `Zonas realizadas`**: En `getZonasRealizadasSummary` (`src/app/admin/agenda/page.js`), se separan por coma las subzonas de `Otros:` (limpiando `Otros:` y `(Bonificado)`) para listar cada una en su propia fila (`Laterales`, `1/2 Brazo`, etc.), sin alterar el título superior del turno.
+  4. **Scroll en modales de `/admin/usuarios` (Nuevo Usuario / Editar Usuario)**: Agregadas las reglas CSS globales faltantes de `.modal-overlay` / `.modal-content` (con `position: fixed`, `max-height: calc(100dvh - 1rem)`, `overflow-y: auto` y `-webkit-overflow-scrolling: touch`) en `src/app/globals.css`, en `configuracion.module.css` para `/admin/bloqueos`, y ajustado `src/app/admin/usuarios/page.js`.
+
 
 

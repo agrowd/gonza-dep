@@ -1355,7 +1355,23 @@ export default function AgendaPage() {
           let name = z?.nombre || (typeof z === 'string' ? z : null);
           if (name) {
             name = name.trim();
-            counts[name] = (counts[name] || 0) + 1;
+            // Separar subzonas de "Otros: Zona1, Zona2" en filas individuales (D-191)
+            if (/^Otros\s*:/i.test(name)) {
+              const rawSubs = name.replace(/^Otros\s*:\s*/i, '').trim();
+              const parts = rawSubs
+                .split(',')
+                .map(s => s.replace(/\s*\(Bonificado\)\s*/gi, '').trim())
+                .filter(Boolean);
+              if (parts.length > 0) {
+                parts.forEach(subName => {
+                  counts[subName] = (counts[subName] || 0) + 1;
+                });
+              } else {
+                counts['Otros'] = (counts['Otros'] || 0) + 1;
+              }
+            } else {
+              counts[name] = (counts[name] || 0) + 1;
+            }
           }
         });
       }

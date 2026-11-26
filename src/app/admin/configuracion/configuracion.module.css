@@ -1047,5 +1047,72 @@
   }
 }
 
+/* Modals (used by Bloqueos / Usuarios / Configuracion) */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 0.75rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.modalCard {
+  background-color: var(--bg-card, #ffffff);
+  color: var(--text-primary, #1d1d1d);
+  border: 1px solid var(--border-color, #dcd9d0);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: manipulation;
+  padding: 1.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color, #dcd9d0);
+}
+
+.modalTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary, #1d1d1d);
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #5a5a5a);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
 
 

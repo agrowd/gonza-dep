@@ -344,7 +344,7 @@ export async function GET(request) {
     // Saldos de turnos se computan en fecha de sesión (fecha)
     // ==========================================
 
-    // Helper: calculate session balance collected (valorTotal - valorSeña)
+    // Helper: calculate session balance collected (valorTotal - valorSeña) + dineroAFavor fresco (excluyendo seña excedente)
     const isCompletedSession = (t) => {
       if (!t || t.estado === 'CANCELADO' || t.estado === 'NO_ASISTIO' || t.estado === 'BLOQUEADO') {
         return false;
@@ -352,36 +352,58 @@ export async function GET(request) {
       return t.estado === 'REALIZADO';
     };
 
+    // Helper sincronizado con senas-dia/route.js (D-157 / D-182 / D-191):
+    // Excluir señas provenientes de saldo a favor o seña guardada/conservada de un turno previo (no ingresó dinero nuevo a caja)
+    const isFreshSenaCash = (t) => {
+      if (!t || Number(t.valorSeña || 0) <= 0) return false;
+      if (t.estado === 'BLOQUEADO') return false;
+      if (t.estado === 'CANCELADO' && t.señaEstado !== 'PERDIDA') return false;
+      if (t.señaEstado === 'SALDO_A_FAVOR' || t.señaEstado === 'CONSERVADA') return false;
+      if (t.estado !== 'REALIZADO' && Number(t.dineroAFavor || 0) > 0) return false;
+      const obs = (t.observaciones || '').toLowerCase();
+      if (obs.includes('seña guardada') || obs.includes('saldo a favor') || obs.includes('seña conservada') || obs.includes('conservada')) return false;
+      return true;
+    };
+
+    const getSessionCashCollected = (t) => {
+      const vTotal = Number(t.valorTotal || 0);
+      const vSena = Number(t.valorSeña || 0);
+      const saldo = Math.max(0, vTotal - vSena);
+      const senaExcedente = Math.max(0, vSena - vTotal);
+      const dineroAFavorFresco = Math.max(0, Number(t.dineroAFavor || 0) - senaExcedente);
+      return { saldo, dineroAFavorFresco, totalCobradoLocal: saldo + dineroAFavorFresco };
+    };
+
     // Hoy
     const entradasTurnosHoy = turnosHoyFecha
       .filter(t => isCompletedSession(t))
-      .reduce((acc, t) => acc + Math.max(0, (t.valorTotal || 0) - (t.valorSeña || 0)), 0);
+      .reduce((acc, t) => acc + getSessionCashCollected(t).totalCobradoLocal, 0);
 
     const entradasSenasHoy = turnosHoyCreated
-      .filter(t => (t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO')
-      .reduce((acc, t) => acc + (t.valorSeña || 0), 0);
+      .filter(t => isFreshSenaCash(t))
+      .reduce((acc, t) => acc + Number(t.valorSeña || 0), 0);
 
     const totalHoy = entradasTurnosHoy + entradasSenasHoy;
 
     // Esta Semana
     const entradasTurnosSemana = turnosSemanaFecha
       .filter(t => isCompletedSession(t))
-      .reduce((acc, t) => acc + Math.max(0, (t.valorTotal || 0) - (t.valorSeña || 0)), 0);
+      .reduce((acc, t) => acc + getSessionCashCollected(t).totalCobradoLocal, 0);
 
     const entradasSenasSemana = turnosSemanaCreated
-      .filter(t => (t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO')
-      .reduce((acc, t) => acc + (t.valorSeña || 0), 0);
+      .filter(t => isFreshSenaCash(t))
+      .reduce((acc, t) => acc + Number(t.valorSeña || 0), 0);
 
     const totalSemana = entradasTurnosSemana + entradasSenasSemana;
 
     // Período Seleccionado
     const entradasTurnosPeriodo = turnosPeriodo
       .filter(t => isCompletedSession(t))
-      .reduce((acc, t) => acc + Math.max(0, (t.valorTotal || 0) - (t.valorSeña || 0)), 0);
+      .reduce((acc, t) => acc + getSessionCashCollected(t).totalCobradoLocal, 0);
 
     const entradasSenasPeriodo = turnosCreatedPeriodo
-      .filter(t => (t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO')
-      .reduce((acc, t) => acc + (t.valorSeña || 0), 0);
+      .filter(t => isFreshSenaCash(t))
+      .reduce((acc, t) => acc + Number(t.valorSeña || 0), 0);
 
     const totalPeriodo = entradasTurnosPeriodo + entradasSenasPeriodo;
 
@@ -562,7 +584,7 @@ export async function GET(request) {
     // - Turnos sin siguiente: Si un cliente se atendió y no agendó nuevo turno, solo se suma el saldo pendiente abonado en la sesión.
     const createdInPeriodIds = new Set(
       turnosCreatedPeriodo
-        .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO')
+        .filter(t => isFreshSenaCash(t))
         .map(t => t.id)
     );
     const completedInPeriodIds = new Set(
@@ -572,7 +594,7 @@ export async function GET(request) {
     // Mapear señas de próximos turnos creados en el período por clienteId (que no sean sesiones ya realizadas en el período)
     const futureSenasByClient = new Map();
     turnosCreatedPeriodo
-      .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO' && !completedInPeriodIds.has(t.id))
+      .filter(t => isFreshSenaCash(t) && !completedInPeriodIds.has(t.id))
       .forEach(t => {
         const list = futureSenasByClient.get(t.clienteId) || [];
         list.push(t);
@@ -587,22 +609,9 @@ export async function GET(request) {
 
     // A) Sesiones realizadas dentro del período
     turnosPeriodo.filter(t => isCompletedSession(t)).forEach(t => {
-      const vTotal = Number(t.valorTotal || 0);
       const vSena = Number(t.valorSeña || 0);
-      const saldo = Math.max(0, vTotal - vSena);
+      const { saldo, dineroAFavorFresco, totalCobradoLocal } = getSessionCashCollected(t);
       const fueCreadoEnPeriodo = createdInPeriodIds.has(t.id);
-
-      // Verificar turnos futuros activos del cliente (D-162)
-      const cl = t.clienteId ? allClients.find(c => c.id === t.clienteId) : null;
-      const allActiveFutureTurnos = (cl?.turnos || []).filter(ft => {
-        if (ft.id === t.id) return false;
-        if (consumedFutureTurnoIds.has(ft.id)) return false;
-        if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION', 'PENDIENTE_PAGO'].includes(ft.estado)) return false;
-        return new Date(ft.fecha).getTime() > new Date(t.fecha).getTime() && Number(ft.valorSeña || 0) > 0;
-      }).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-
-      let senaSiguiente = 0;
-      const nextTurnosAdded = [];
 
       // Parse explicit selected future turnos if any were checked in this session (D-162)
       let selectedFutureIds = [];
@@ -615,6 +624,21 @@ export async function GET(request) {
         selectedFutureIds = [];
       }
 
+      // Verificar turnos futuros activos del cliente creados en el período o marcados explícitamente (D-162 / D-191)
+      // Excluye estrictamente turnos cuya seña provenga de SALDO_A_FAVOR / CONSERVADA
+      const cl = t.clienteId ? allClients.find(c => c.id === t.clienteId) : null;
+      const allActiveFutureTurnos = (cl?.turnos || []).filter(ft => {
+        if (ft.id === t.id) return false;
+        if (consumedFutureTurnoIds.has(ft.id)) return false;
+        if (!['SEÑADO', 'REPROGRAMADO', 'PENDIENTE_AUTORIZACION', 'PENDIENTE_PAGO'].includes(ft.estado)) return false;
+        if (!isFreshSenaCash(ft)) return false;
+        const isInPeriodOrChecked = createdInPeriodIds.has(ft.id) || selectedFutureIds.includes(ft.id);
+        return isInPeriodOrChecked && new Date(ft.fecha).getTime() > new Date(t.fecha).getTime();
+      }).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+      let senaSiguiente = 0;
+      const nextTurnosAdded = [];
+
       if (allActiveFutureTurnos.length > 1) {
         // Múltiples turnos futuros: SOLO se cobran las señas seleccionadas explícitamente con checkbox
         if (selectedFutureIds.length > 0) {
@@ -626,51 +650,54 @@ export async function GET(request) {
           });
         }
       } else if (allActiveFutureTurnos.length === 1) {
-        // Un solo turno siguiente agendado: mantiene el comportamiento automático habitual
+        // Un solo turno siguiente agendado en el período: mantiene el comportamiento automático habitual
         const singleTurno = allActiveFutureTurnos[0];
         consumedFutureTurnoIds.add(singleTurno.id);
         senaSiguiente = Number(singleTurno.valorSeña || 0);
         nextTurnosAdded.push(singleTurno);
       }
 
+      const extraFavorSuffix = dineroAFavorFresco > 0 ? ` + Favor $${dineroAFavorFresco.toLocaleString('es-AR')}` : '';
+
       if (senaSiguiente > 0) {
         const senaPropiaEnPeriodo = fueCreadoEnPeriodo ? vSena : 0;
-        const ingresoTotalFila = saldo + senaSiguiente + senaPropiaEnPeriodo;
+        const ingresoTotalFila = totalCobradoLocal + senaSiguiente + senaPropiaEnPeriodo;
         montoTurnosSiguientes += ingresoTotalFila;
 
         const subDesc = nextTurnosAdded.length > 1
-          ? `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + ${nextTurnosAdded.length} señas próx. $${senaSiguiente.toLocaleString('es-AR')})`
-          : `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')} + Seña próx. $${senaSiguiente.toLocaleString('es-AR')})`;
+          ? `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')}${extraFavorSuffix} + ${nextTurnosAdded.length} señas próx. $${senaSiguiente.toLocaleString('es-AR')})`
+          : `Turno siguiente (Saldo $${saldo.toLocaleString('es-AR')}${extraFavorSuffix} + Seña próx. $${senaSiguiente.toLocaleString('es-AR')})`;
 
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
             ingresoCobradoPeriodo: ingresoTotalFila,
             señaCobradaPeriodo: senaSiguiente + senaPropiaEnPeriodo,
-            saldoCobradoPeriodo: saldo,
+            saldoCobradoPeriodo: totalCobradoLocal,
             subtipoGanancia: subDesc
           })
         );
       } else {
         const senaPropiaEnPeriodo = fueCreadoEnPeriodo ? vSena : 0;
-        const ingresoTotalFila = saldo + senaPropiaEnPeriodo;
+        const ingresoTotalFila = totalCobradoLocal + senaPropiaEnPeriodo;
         montoTurnosSinSiguiente += ingresoTotalFila;
 
         itemsGananciaNeta.push(
           formatTurnoItem(t, {
             ingresoCobradoPeriodo: ingresoTotalFila,
             señaCobradaPeriodo: senaPropiaEnPeriodo,
-            saldoCobradoPeriodo: saldo,
+            saldoCobradoPeriodo: totalCobradoLocal,
             subtipoGanancia: fueCreadoEnPeriodo
-              ? 'Turno realizado en período (Seña + Saldo)'
-              : 'Turno sin siguiente (Solo Saldo cobrado)'
+              ? `Turno realizado en período (Seña + Saldo${extraFavorSuffix})`
+              : `Turno sin siguiente (Solo Saldo cobrado${extraFavorSuffix})`
           })
         );
       }
     });
 
     // B) Turnos nuevos / señas agendadas en el período (sin sesión realizada en el período)
+    // Excluye estrictamente señas cubiertas con SALDO_A_FAVOR / CONSERVADA (D-191)
     turnosCreatedPeriodo
-      .filter(t => Number(t.valorSeña || 0) > 0 && t.estado !== 'CANCELADO' && !completedInPeriodIds.has(t.id) && !consumedFutureTurnoIds.has(t.id))
+      .filter(t => isFreshSenaCash(t) && !completedInPeriodIds.has(t.id) && !consumedFutureTurnoIds.has(t.id))
       .forEach(t => {
         const vSena = Number(t.valorSeña || 0);
         montoTurnosNuevos += vSena;

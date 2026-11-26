@@ -77,10 +77,10 @@ export async function GET(request) {
       }
     });
 
-    // Excluir turnos cuya seña provino de saldo a favor o seña guardada/conservada de un turno previo (no ingresó dinero nuevo a caja hoy) (D-157 / D-182)
+    // Excluir turnos cuya seña provino de saldo a favor o seña guardada/conservada de un turno previo (no ingresó dinero nuevo a caja hoy) (D-157 / D-182 / D-191)
     const turnosValidos = turnos.filter(t => {
       if (t.señaEstado === 'SALDO_A_FAVOR' || t.señaEstado === 'CONSERVADA') return false;
-      if (Number(t.dineroAFavor || 0) > 0) return false;
+      if (t.estado !== 'REALIZADO' && Number(t.dineroAFavor || 0) > 0) return false;
       const obs = (t.observaciones || '').toLowerCase();
       if (obs.includes('seña guardada') || obs.includes('saldo a favor') || obs.includes('seña conservada') || obs.includes('conservada')) return false;
       return true;

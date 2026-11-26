@@ -376,10 +376,10 @@ export default function UsuariosPage() {
       {/* MODAL: NUEVO / EDITAR USUARIO */}
       {showUserModal && (
         <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px', maxHeight: 'calc(100dvh - 1.5rem)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <div className="modal-header">
               <h3>{editingUserId ? '✏️ Editar Usuario' : '➕ Nuevo Usuario'}</h3>
-              <button onClick={() => setShowUserModal(false)} className="close-btn">&times;</button>
+              <button type="button" onClick={() => setShowUserModal(false)} className="close-btn">&times;</button>
             </div>
 
             {userError && (
@@ -388,7 +388,7 @@ export default function UsuariosPage() {
               </div>
             )}
 
-            <form onSubmit={handleSaveUser}>
+            <form onSubmit={handleSaveUser} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', paddingBottom: '0.5rem' }}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Nombre Completo *</label>
                 <input 
@@ -501,10 +501,10 @@ export default function UsuariosPage() {
       {/* MODAL: RESET PASSWORD */}
       {showPasswordModal && (
         <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px', maxHeight: 'calc(100dvh - 1.5rem)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <div className="modal-header">
               <h3>🔑 Restablecer Contraseña</h3>
-              <button onClick={() => setShowPasswordModal(false)} className="close-btn">&times;</button>
+              <button type="button" onClick={() => setShowPasswordModal(false)} className="close-btn">&times;</button>
             </div>
 
             <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>

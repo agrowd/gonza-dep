@@ -3537,3 +3537,19 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 3. **Consolidación Git y Despliegue**:
    - Se consolidaron previamente en commit dedicado los 9 archivos idénticos que ya estaban activos en el VPS desde las 11:06 (`formatCurrencyArs` y formato `es-AR`), luego se commiteó D-190 y se desplegó a Producción (`:3006`) y Staging (`:3008`).
 
+---
+
+## Sesión 26/11/2026 (Parte 3) - Sincronización de Neto en Estadísticas (Matías Page), Reset de `dineroAFavor` al Usarse como Seña, Subzonas `Otros` en Filas Separadas y Scroll en Modales de Usuarios (D-191 / ERR-75)
+
+### Diagnóstico e Implementación
+1. **Valor Neto en Estadísticas vs Agenda (Caso Matías Sanchez Page, `media_1795728725368_f1552bdb.png`)**:
+   - *Causa*: En PostgreSQL, el turno de Matías Page (`80f60b50-989c-4cc8-9290-ee4518d14770`, `2026-12-02`, creado `2026-11-24 20:14`) tenía `señaEstado = 'SALDO_A_FAVOR'` y `valorSeña = 50000`. `senas-dia/route.js` (Agenda) lo excluía correctamente, pero `estadisticas/route.js` no filtraba `SALDO_A_FAVOR` / `CONSERVADA` en ningún punto de `caja` ni de `gananciaNeta`.
+   - *Solución*: Se unificaron `isFreshSenaCash(t)` y `getSessionCashCollected(t)` en `src/app/api/admin/estadisticas/route.js` (100% sincronizado con `senas-dia/route.js`), excluyendo `SALDO_A_FAVOR` / `CONSERVADA` / observaciones de seña conservada y evitando doble conteo de turnos futuros de otros períodos.
+2. **Monto a favor arrastrado en el turno nuevo (`src/app/api/admin/turnos/route.js`)**:
+   - *Causa*: Al agendar un turno para un cliente con `saldoAFavor > 0`, `POST /api/admin/turnos` copiaba `clientRecord.saldoAFavor` en `newTurno.dineroAFavor` (dejando `$50.000` en Page, `$13.500` en Agustín Di Nubila y `$30.000` en Ramiro Ramos).
+   - *Solución*: `newTurno.dineroAFavor` ahora queda en `0` cuando el saldo previo se consume como seña (conservando `señaEstado = 'SALDO_A_FAVOR'`), y `Cliente.saldoAFavor` se descuenta exactamente por lo consumido (`saldoRestanteCliente`). Saneamiento SQL en producción sobre los 3 turnos futuros afectados tras backup previo.
+3. **Subzonas de `Otros` en filas separadas en `Zonas realizadas` (`media_1795728643064_3c64bfd0.jpg`, `media_1795728647345_7302c6ab.jpg`)**:
+   - En `getZonasRealizadasSummary` (`src/app/admin/agenda/page.js`), se dividen por coma las subzonas bajo `Otros:` (quitando el prefijo `Otros:` y `(Bonificado)`), manteniendo intacto el título del turno pero mostrando cada subzona (`Laterales`, `1/2 Brazo`, etc.) en su propia fila con su conteo individual.
+4. **Scroll en Modales de `/admin/usuarios` (`media_1795728677677_051465ca.jpg`)**:
+   - `.modal-overlay` y `.modal-content` no existían en ningún CSS del proyecto. Se agregaron reglas globales responsivas con scroll táctil nativo en `src/app/globals.css`, clases equivalentes en `src/app/admin/configuracion/configuracion.module.css` (para `/admin/bloqueos`) y mejoras en los modales de `src/app/admin/usuarios/page.js`.
+
