@@ -2481,6 +2481,22 @@
   2. Se auditó todo `src/` confirmando que era el único archivo con `router` sin declarar.
   3. Se consolidaron en Git (commit dedicado previo) los 5 hotfixes ya activos en producción del 25/11 (`whatsapp.js`, `status/route.js`, `qr-image/route.js`, `notificaciones/page.js`, `layout.module.css`) para no revertirlos al desplegar.
 - **Verificación**: `npm run build` ejecutado exitosamente con Turbopack (49/49 rutas compiladas sin errores). Push a `main` y `staging`, y despliegue verificado en Producción (`:3006`) y Staging (`:3008`).
+- **Diagnóstico posterior (`media_1795702143072_813411ad.png`)**: El `ChunkLoadError` en `/admin/notificaciones` (`2w6ogx8r129t1.js`) se produjo exactamente a las `11:06:54 AR` (`HTTP 500` en Nginx) mientras una recompilación paralela en `/srv/gonzalo-dep` sobreescribía `.next` (finalizó a las `11:07:09 AR`). Actualmente el chunk responde `HTTP 200 OK` y basta recargar (`F5`). No se redesplegó para no pisar 9 archivos modificados en vivo en el VPS por otra sesión paralela.
+
+---
+
+## 26/11/2026 (Parte 2) - Fix `ReferenceError: setCuponInput is not defined` al Agendar desde Turnos Autogestión con Cupón y Auto-Recuperación de `ChunkLoadError` (D-190 / ERR-74)
+
+- **Solicitud del Usuario (`media_1795728138728_4ba43cb4.jpg` y `media_1795728157865_78ffa2b4.jpg`)**:
+  - Reporte: *"Cuando pongo para agendar un turno desde el módulo de turnos autogestión, me manda error"* -> pantalla roja `ReferenceError: setCuponInput is not defined` (caso Luciano Gomez, `[Cupón: LUCHI4313]`).
+- **Causa Raíz**:
+  - En `src/app/admin/agenda/page.js` (bloque `if (cuponCodigoParam)`), se detectaron 4 fallos encadenados: 1) invocaba `setCuponInput` en lugar del setter real `setCuponCodeInput`; 2) invocaba `setAppliedCupon` (inexistente en `agenda/page.js`); 3) hacía `GET /api/cupones/validar?codigo=...` cuando esa ruta solo exporta `POST`; y 4) los cupones de 1 solo uso ya consumidos por `/api/reservas/crear` al crear la solicitud fallaban si se validaban por la ruta pública.
+- **Solución Aplicada**:
+  1. En `src/app/admin/agenda/page.js`: reemplazado `setCuponInput` por `setCuponCodeInput`, eliminado `setAppliedCupon`, consultando `/api/admin/cupones` para recuperar el tipo (`PORCENTAJE`/`PESOS`) y valor del cupón preservando `manualTotalOverride` y `manualSeñaOverride`. También se ajustó `Total Base (Zonas)` para reflejar el total base cuando hay descuento aplicado.
+  2. En `src/app/admin/turnos-autogestion/page.js`: eliminado `descuentoTipo=PORCENTAJE` hardcodeado.
+  3. En `src/app/admin/error.js`: agregada auto-recuperación única (cooldown 15s) y recarga completa en botón "Reintentar Cargar" ante `ChunkLoadError`.
+  4. Auditoría de todo `src/app/admin/`: 0 setters indefinidos restantes.
+  5. Consolidados en commit previo dedicado los 9 archivos ya activos en producción (`formatCurrencyArs` / `es-AR`), compilación local con Turbopack y despliegue en Producción (`:3006`) y Staging (`:3008`).
 
 
 

@@ -1795,18 +1795,21 @@ export default function AgendaPage() {
         setIsNewOpen(true);
 
         if (cuponCodigoParam) {
-          setCuponInput(cuponCodigoParam);
-          fetch(`/api/cupones/validar?codigo=${encodeURIComponent(cuponCodigoParam)}`)
-            .then(res => res.json())
+          const cleanCuponCode = String(cuponCodigoParam).trim().toUpperCase();
+          setCuponCodeInput(cleanCuponCode);
+          fetch('/api/admin/cupones', { cache: 'no-store' })
+            .then(res => (res.ok ? res.json() : null))
             .then(data => {
-              if (data && data.valido && data.cupon) {
-                setAppliedCupon(data.cupon);
+              const list = Array.isArray(data?.cupones) ? data.cupones : (Array.isArray(data) ? data : []);
+              const matched = list.find(c => String(c.codigo || '').trim().toUpperCase() === cleanCuponCode);
+              if (matched) {
+                const mappedType = matched.descuentoTipo === 'PORCENTAJE' ? 'PORCENTAJE' : 'PESOS';
                 setNewTurno(curr => ({
                   ...curr,
-                  descuentoTipo: data.cupon.descuentoTipo || 'PORCENTAJE',
-                  descuentoValor: data.cupon.descuentoValor,
-                  manualTotalOverride: manualTotalParam ? Number(manualTotalParam) : curr.manualTotalOverride,
-                  manualSeñaOverride: manualSeñaParam ? Number(manualSeñaParam) : curr.manualSeñaOverride
+                  descuentoTipo: mappedType,
+                  descuentoValor: matched.descuentoValor,
+                  manualTotalOverride: manualTotalParam !== null && manualTotalParam !== undefined ? Number(manualTotalParam) : curr.manualTotalOverride,
+                  manualSeñaOverride: manualSeñaParam !== null && manualSeñaParam !== undefined ? Number(manualSeñaParam) : curr.manualSeñaOverride
                 }));
               }
             })
@@ -4600,7 +4603,7 @@ export default function AgendaPage() {
                                     <div className={styles.neocitaFinancialRow}>
                                       <div className={styles.neocitaFinItem}>
                                         <span style={{ color: 'var(--text-secondary)' }}>Total:</span>
-                                        <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>${Number(cardTotal).toLocaleString('es-ES')}</span>
+                                        <span style={{ fontWeight: 700, color: 'var(--color-gold)' }}>${Number(cardTotal).toLocaleString('es-AR')}</span>
                                       </div>
                                       {app.descuentoTipo && app.descuentoTipo !== 'NINGUNO' && (
                                         <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(239, 83, 80, 0.15)', color: '#ef5350', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, marginLeft: 'auto' }}>
@@ -5260,7 +5263,7 @@ export default function AgendaPage() {
                         <label className={styles.inputLabel}>Zonas Normales ($)</label>
                         <input
                           type="text"
-                          value={`$${Number(editTurno.autoTotalZonas || 0).toLocaleString('es-ES')}`}
+                          value={`$${Number(editTurno.autoTotalZonas || 0).toLocaleString('es-AR')}`}
                           disabled
                           style={{ backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 }}
                         />
@@ -5446,20 +5449,20 @@ export default function AgendaPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                         <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
                         <span style={{ fontWeight: '600' }}>
-                          ${(editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '' ? Number(editTurno.manualTotalOverride) : (editTurno.autoTotal || 0)).toLocaleString('es-ES')}
+                          ${(editTurno.manualTotalOverride !== undefined && editTurno.manualTotalOverride !== null && editTurno.manualTotalOverride !== '' ? Number(editTurno.manualTotalOverride) : (editTurno.autoTotal || 0)).toLocaleString('es-AR')}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                         <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Descuento Aplicado:</span>
-                        <span style={{ color: '#d32f2f', fontWeight: '600' }}>-${(editTurno.bonificacion || 0).toLocaleString('es-ES')}</span>
+                        <span style={{ color: '#d32f2f', fontWeight: '600' }}>-${(editTurno.bonificacion || 0).toLocaleString('es-AR')}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
                         <span style={{ fontWeight: '700' }}>Monto Final de Venta:</span>
-                        <span style={{ fontWeight: '800', color: 'var(--color-gold)' }}>${Number(editTurno.valorTotal || 0).toLocaleString('es-ES')}</span>
+                        <span style={{ fontWeight: '800', color: 'var(--color-gold)' }}>${Number(editTurno.valorTotal || 0).toLocaleString('es-AR')}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                         <span style={{ fontWeight: '700' }}>Saldo a Pagar en Local:</span>
-                        <span style={{ fontWeight: '800', color: '#2e7d32' }}>${Math.max(0, Number(editTurno.valorTotal || 0) - Number(editTurno.valorSeña || 0)).toLocaleString('es-ES')}</span>
+                        <span style={{ fontWeight: '800', color: '#2e7d32' }}>${Math.max(0, Number(editTurno.valorTotal || 0) - Number(editTurno.valorSeña || 0)).toLocaleString('es-AR')}</span>
                       </div>
                     </div>
                   )}
@@ -5506,7 +5509,7 @@ export default function AgendaPage() {
                       </label>
                       {editTurno.comisionUsuarioId && (
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>
-                          Comisión estimada: ${Math.round((Number(editTurno.valorTotal || 0) * Number(editTurno.comisionPorcentaje || 0)) / 100).toLocaleString('es-ES')}
+                          Comisión estimada: ${Math.round((Number(editTurno.valorTotal || 0) * Number(editTurno.comisionPorcentaje || 0)) / 100).toLocaleString('es-AR')}
                         </span>
                       )}
                     </div>
@@ -5847,10 +5850,10 @@ export default function AgendaPage() {
                             <div className={styles.detailItem} style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(212, 165, 77, 0.14)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(212, 165, 77, 0.4)', marginBottom: '0.25rem' }}>
                               <span className={styles.detailLabel} style={{ color: 'var(--color-gold)', fontWeight: 700, fontSize: '0.85rem' }}>VALOR TOTAL (A COBRAR)</span>
                               <span className={styles.detailValue} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem', display: 'inline-flex', alignItems: 'baseline', gap: '0.45rem', flexWrap: 'wrap' }}>
-                                <span>${Number(dynPrices.valorTotal).toLocaleString('es-ES')}</span>
+                                <span>${Number(dynPrices.valorTotal).toLocaleString('es-AR')}</span>
                                 {hasOtrosDetalle && otrosMontoDetalle > 0 && (
                                   <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                                    (Otros: ${Number(otrosMontoDetalle).toLocaleString('es-ES')})
+                                    (Otros: ${Number(otrosMontoDetalle).toLocaleString('es-AR')})
                                   </span>
                                 )}
                               </span>
@@ -5862,7 +5865,7 @@ export default function AgendaPage() {
                                   Valor Original (Sin Descuento)
                                 </span>
                                 <span className={styles.detailValue} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0, textDecoration: 'line-through', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                  ${Number(dynPrices.valorOriginal).toLocaleString('es-ES')}
+                                  ${Number(dynPrices.valorOriginal).toLocaleString('es-AR')}
                                 </span>
                               </div>
                             )}
@@ -5871,7 +5874,7 @@ export default function AgendaPage() {
                                 Seña Cobrada
                               </span>
                               <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#2e7d32', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                ${Number(selectedTurno.valorSeña || 0).toLocaleString('es-ES')}
+                                ${Number(selectedTurno.valorSeña || 0).toLocaleString('es-AR')}
                               </span>
                             </div>
                             <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1' }}>
@@ -5879,7 +5882,7 @@ export default function AgendaPage() {
                                 Saldo Pendiente en Local
                               </span>
                               <span className={styles.detailValue} style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-gold)', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                ${saldoPendiente.toLocaleString('es-ES')}
+                                ${saldoPendiente.toLocaleString('es-AR')}
                               </span>
                             </div>
                             {sumSelectedFutureSenas > 0 && (
@@ -5889,7 +5892,7 @@ export default function AgendaPage() {
                                     + Señas seleccionadas de turnos siguientes
                                   </span>
                                   <span className={styles.detailValue} style={{ fontSize: '1rem', fontWeight: 700, color: '#16a34a', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    +${sumSelectedFutureSenas.toLocaleString('es-ES')}
+                                    +${sumSelectedFutureSenas.toLocaleString('es-AR')}
                                   </span>
                                 </div>
                                 <div className={styles.detailRowBetween} style={{ gridColumn: '1 / -1', borderTop: '1px dashed #cbd5e1', paddingTop: '0.35rem', marginTop: '0.2rem' }}>
@@ -5897,7 +5900,7 @@ export default function AgendaPage() {
                                     Total a cobrar en sesión
                                   </span>
                                   <span className={styles.detailValue} style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563eb', margin: 0, textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    ${totalACobrarSesion.toLocaleString('es-ES')}
+                                    ${totalACobrarSesion.toLocaleString('es-AR')}
                                   </span>
                                 </div>
                               </>
@@ -6061,7 +6064,7 @@ export default function AgendaPage() {
                                   Descuento Aplicado
                                 </span>
                                 <span className={styles.detailValue} style={{ color: '#ff5252', fontWeight: 700, margin: 0, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.9rem', flexShrink: 0 }}>
-                                  -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-ES')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-ES')}`})
+                                  -${Number(dynPrices.bonificacion || selectedTurno.bonificacion).toLocaleString('es-AR')} ({selectedTurno.descuentoTipo === 'PORCENTAJE' ? `${selectedTurno.descuentoValor || Math.round((dynPrices.bonificacion / dynPrices.valorOriginal) * 100)}%` : `$${Number(selectedTurno.descuentoValor || dynPrices.bonificacion).toLocaleString('es-AR')}`})
                                 </span>
                               </div>
                             )}
@@ -6086,8 +6089,8 @@ export default function AgendaPage() {
                                     </span>
                                     <span style={{ fontSize: '0.68rem', color: señaExcedente > 0 ? '#15803d' : (clientSaldo > 0 ? '#166534' : '#64748b'), fontWeight: (señaExcedente > 0 || clientSaldo > 0) ? 700 : 400 }}>
                                       {señaExcedente > 0 
-                                        ? `🎁 Seña excedente del turno anterior: $${señaExcedente.toLocaleString('es-ES')} (Pasa a la próxima sesión)` 
-                                        : (clientSaldo > 0 ? `Saldo disponible del cliente: $${clientSaldo.toLocaleString('es-ES')}` : 'Se aplicará en el próximo turno')}
+                                        ? `🎁 Seña excedente del turno anterior: $${señaExcedente.toLocaleString('es-AR')} (Pasa a la próxima sesión)` 
+                                        : (clientSaldo > 0 ? `Saldo disponible del cliente: $${clientSaldo.toLocaleString('es-AR')}` : 'Se aplicará en el próximo turno')}
                                     </span>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -6198,7 +6201,7 @@ export default function AgendaPage() {
                                                 {formatTurnoZonasList(ft.zonas)}
                                               </td>
                                               <td style={{ padding: '0.4rem', textAlign: 'right', fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                                                ${Number(ft.valorSeña || 0).toLocaleString('es-ES')}
+                                                ${Number(ft.valorSeña || 0).toLocaleString('es-AR')}
                                               </td>
                                               <td style={{ padding: '0.4rem', textAlign: 'center', verticalAlign: 'top' }}>
                                                 <input
@@ -6233,7 +6236,7 @@ export default function AgendaPage() {
                                         alignItems: 'center'
                                       }}>
                                         <span>Señas seleccionadas a cobrar:</span>
-                                        <span>+${sumSelectedFutureSenas.toLocaleString('es-ES')}</span>
+                                        <span>+${sumSelectedFutureSenas.toLocaleString('es-AR')}</span>
                                       </div>
                                     )}
                                   </div>
@@ -7088,7 +7091,7 @@ export default function AgendaPage() {
                       </span>
                       {tempComisionUsuarioId && (
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>
-                          Comisión estimada: ${Math.round((Number(selectedTurno.valorTotal || 0) * Number(tempComisionPorcentaje || 0)) / 100).toLocaleString('es-ES')}
+                          Comisión estimada: ${Math.round((Number(selectedTurno.valorTotal || 0) * Number(tempComisionPorcentaje || 0)) / 100).toLocaleString('es-AR')}
                         </span>
                       )}
                     </div>
@@ -7448,7 +7451,7 @@ export default function AgendaPage() {
                   📅 {formatLocalDate(cancelModalTurno.fecha)} — ⏰ {cancelModalTurno.horaInicio} a {cancelModalTurno.horaFin} hs
                 </div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2e7d32', marginTop: '0.5rem' }}>
-                  Seña Abonada: ${Number(cancelModalTurno.valorSeña || 0).toLocaleString('es-ES')}
+                  Seña Abonada: ${Number(cancelModalTurno.valorSeña || 0).toLocaleString('es-AR')}
                 </div>
               </div>
 
@@ -7482,7 +7485,7 @@ export default function AgendaPage() {
                     🟢 Conservar Seña a Favor del Cliente
                   </span>
                   <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', fontWeight: 400 }}>
-                    Excepción: la seña de ${Number(cancelModalTurno.valorSeña || 0).toLocaleString('es-ES')} queda guardada en su ficha para su próxima sesión.
+                    Excepción: la seña de ${Number(cancelModalTurno.valorSeña || 0).toLocaleString('es-AR')} queda guardada en su ficha para su próxima sesión.
                   </span>
                 </button>
 
@@ -8073,7 +8076,7 @@ export default function AgendaPage() {
                       <label className={styles.inputLabel}>Zonas Normales ($)</label>
                       <input
                         type="text"
-                        value={`$${Number(newTurno.autoTotalZonas || 0).toLocaleString('es-ES')}`}
+                        value={`$${Number(newTurno.autoTotalZonas || 0).toLocaleString('es-AR')}`}
                         disabled
                         style={{ backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 }}
                       />
@@ -8134,15 +8137,15 @@ export default function AgendaPage() {
                         (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>✅</span>
-                            <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} para este turno</span>
+                            <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-AR')} para este turno</span>
                           </div>
                         ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña') || lastClientTurnoInfo.estado === 'NO_ASISTIO') ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>⚠️</span>
                             <span>
                               {lastClientTurnoInfo.estado === 'NO_ASISTIO'
-                                ? `Perdió la seña de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} por inasistencia en su turno anterior`
-                                : `Seña perdida de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior`}
+                                ? `Perdió la seña de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-AR')} por inasistencia en su turno anterior`
+                                : `Seña perdida de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-AR')} en cancelación anterior`}
                             </span>
                           </div>
                         ) : null
@@ -8208,15 +8211,15 @@ export default function AgendaPage() {
                         (lastClientTurnoInfo.señaEstado === 'CONSERVADA' || (lastClientTurnoInfo.observaciones || '').includes('Guardada')) ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#16a34a', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>✅</span>
-                            <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} para este turno</span>
+                            <span>Seña guardada de ${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-AR')} para este turno</span>
                           </div>
                         ) : (lastClientTurnoInfo.señaEstado === 'PERDIDA' || (lastClientTurnoInfo.observaciones || '').includes('Pierde seña') || lastClientTurnoInfo.estado === 'NO_ASISTIO') ? (
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#dc2626', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             <span>⚠️</span>
                             <span>
                               {lastClientTurnoInfo.estado === 'NO_ASISTIO'
-                                ? `Perdió la seña de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} por inasistencia en su turno anterior`
-                                : `Seña perdida de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-ES')} en cancelación anterior`}
+                                ? `Perdió la seña de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-AR')} por inasistencia en su turno anterior`
+                                : `Seña perdida de $${Number(lastClientTurnoInfo.valorSeña || 0).toLocaleString('es-AR')} en cancelación anterior`}
                             </span>
                           </div>
                         ) : null
@@ -8424,19 +8427,19 @@ export default function AgendaPage() {
                   <div className={styles.inputGroup} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(var(--color-primary-rgb), 0.05)', padding: '0.75rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', gap: '0.25rem', width: '100%', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                       <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Total Base (Zonas):</span>
-                      <span style={{ fontWeight: '600' }}>${(newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '' ? Number(newTurno.manualTotalOverride) : (newTurno.autoTotal || 0)).toLocaleString('es-ES')}</span>
+                      <span style={{ fontWeight: '600' }}>${((newTurno.bonificacion > 0 && newTurno.autoTotal > 0) ? Number(newTurno.autoTotal) : (newTurno.manualTotalOverride !== undefined && newTurno.manualTotalOverride !== null && newTurno.manualTotalOverride !== '' ? Number(newTurno.manualTotalOverride) : (newTurno.autoTotal || 0))).toLocaleString('es-AR')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                       <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>Descuento Aplicado:</span>
-                      <span style={{ color: '#d32f2f', fontWeight: '600' }}>-${(newTurno.bonificacion || 0).toLocaleString('es-ES')}</span>
+                      <span style={{ color: '#d32f2f', fontWeight: '600' }}>-${(newTurno.bonificacion || 0).toLocaleString('es-AR')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
                       <span style={{ fontWeight: '700' }}>Monto Final de Venta:</span>
-                      <span style={{ fontWeight: '800', color: 'var(--color-gold)' }}>${Number(newTurno.valorTotal || 0).toLocaleString('es-ES')}</span>
+                      <span style={{ fontWeight: '800', color: 'var(--color-gold)' }}>${Number(newTurno.valorTotal || 0).toLocaleString('es-AR')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                       <span style={{ fontWeight: '700' }}>Saldo a Pagar en Local:</span>
-                      <span style={{ fontWeight: '800', color: '#2e7d32' }}>${Math.max(0, Number(newTurno.valorTotal || 0) - Number(newTurno.valorSeña || 0)).toLocaleString('es-ES')}</span>
+                      <span style={{ fontWeight: '800', color: '#2e7d32' }}>${Math.max(0, Number(newTurno.valorTotal || 0) - Number(newTurno.valorSeña || 0)).toLocaleString('es-AR')}</span>
                     </div>
                   </div>
                 )}
@@ -8459,7 +8462,7 @@ export default function AgendaPage() {
                     </label>
                     {newTurno.comisionUsuarioId && (
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>
-                        Comisión estimada: ${Math.round((Number(newTurno.valorTotal || 0) * Number(newTurno.comisionPorcentaje || 0)) / 100).toLocaleString('es-ES')}
+                        Comisión estimada: ${Math.round((Number(newTurno.valorTotal || 0) * Number(newTurno.comisionPorcentaje || 0)) / 100).toLocaleString('es-AR')}
                       </span>
                     )}
                   </div>

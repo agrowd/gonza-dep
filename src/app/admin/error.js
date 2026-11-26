@@ -3,10 +3,26 @@
 import { useEffect } from 'react';
 
 export default function Error({ error, reset }) {
+  const errMsg = `${error?.name || ''} ${error?.message || ''} ${error?.toString?.() || ''}`;
+  const isChunkError = /ChunkLoadError|Failed to load chunk|Loading chunk/i.test(errMsg);
+
   useEffect(() => {
     // Log the error to the console
     console.error('Admin Area Error:', error);
-  }, [error]);
+
+    // Auto-recover once on Next.js ChunkLoadError after a deploy (15s cooldown prevents loops)
+    if (isChunkError && typeof window !== 'undefined') {
+      try {
+        const lastReload = Number(sessionStorage.getItem('admin_chunk_reload_at') || 0);
+        if (Date.now() - lastReload > 15000) {
+          sessionStorage.setItem('admin_chunk_reload_at', String(Date.now()));
+          window.location.reload();
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [error, isChunkError]);
 
   return (
     <div style={{
@@ -57,7 +73,7 @@ export default function Error({ error, reset }) {
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
           <button
-            onClick={() => reset()}
+            onClick={() => (isChunkError ? window.location.reload() : reset())}
             style={{
               padding: '0.6rem 1.2rem',
               backgroundColor: '#d4a54d',

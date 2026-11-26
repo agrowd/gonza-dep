@@ -3512,4 +3512,28 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 3. **Verificación y Despliegue**:
    - `npm run build` ejecutado exitosamente con Turbopack: 49/49 rutas compiladas sin errores.
    - Commit y push a `main` y `staging`, despliegue verificado en Producción y Staging sin reiniciar `ia-gonzadep`.
+4. **Diagnóstico `ChunkLoadError` en `/admin/notificaciones` (`media_1795702143072_813411ad.png`)**:
+   - El log de Nginx confirmó que el pedido `GET /_next/static/chunks/2w6ogx8r129t1.js` ocurrió exactamente a las `14:06:54 UTC` (`11:06:54 AR`) devolviendo `HTTP 500` mientras otro proceso/sesión en paralelo estaba recompilando `.next` in-place en `/srv/gonzalo-dep` (terminando a las `14:07:09 UTC`).
+   - Verificado que actualmente el chunk existe (`26.969 bytes`) y responde `HTTP 200 OK` tanto en `:3006` como en HTTPS. Se advirtió al usuario sobre los 9 archivos modificados en vivo en `/srv/gonzalo-dep` sin commitear para no pisarlos con un deploy automático.
+
+---
+
+## Sesión 26/11/2026 (Parte 2) - Fix `ReferenceError: setCuponInput is not defined` al Agendar desde Autogestión con Cupón y Auto-Recuperación de `ChunkLoadError` (D-190 / ERR-74)
+
+### Diagnóstico e Implementación
+1. **Crash al agendar desde `/admin/turnos-autogestion` (`media_1795728138728_4ba43cb4.jpg` y `media_1795728157865_78ffa2b4.jpg`)**:
+   - *Reporte*: "Cuando pongo para agendar un turno desde el módulo de turnos autogestión, me manda error" -> `ReferenceError: setCuponInput is not defined` (caso Luciano Gomez, `[Cupón: LUCHI4313]`).
+   - *Causa*: En `src/app/admin/agenda/page.js` (bloque `if (cuponCodigoParam)`), se encontraron 4 errores encadenados:
+     1. Llamaba a `setCuponInput` (no existe; el setter real es `setCuponCodeInput`).
+     2. Llamaba a `setAppliedCupon` (no existe en `agenda/page.js`).
+     3. Llamaba `GET /api/cupones/validar?codigo=...` cuando el endpoint solo exporta `POST` (HTTP 405).
+     4. Como `/api/reservas/crear` ya incrementa `usosActuales` al generar la solicitud, los cupones de 1 solo uso (`LUCHI4313`) devolvían error de límite alcanzado en el endpoint público.
+   - *Solución*:
+     - En `src/app/admin/agenda/page.js`: se usa `setCuponCodeInput(cleanCuponCode)`, se consulta `/api/admin/cupones` para obtener el tipo (`PORCENTAJE` / `PESOS`) y valor del cupón aunque ya esté consumido por la solicitud, y se preservan `manualTotalOverride` y `manualSeñaOverride`. También se ajustó `Total Base (Zonas)` en el resumen de Nuevo Turno para mostrar `autoTotal` cuando hay bonificación aplicada.
+     - En `src/app/admin/turnos-autogestion/page.js`: se quitó el `descuentoTipo=PORCENTAJE` hardcodeado para soportar cupones de monto fijo.
+     - Auditoría automática sobre todo `src/app/admin/`: 0 setters faltantes restantes.
+2. **Auto-recuperación de `ChunkLoadError` en `src/app/admin/error.js`**:
+   - Detecta `ChunkLoadError` / `Failed to load chunk`, recarga automáticamente una sola vez (cooldown 15s en `sessionStorage`) y hace que "Reintentar Cargar" ejecute `window.location.reload()` en caso de error de chunk.
+3. **Consolidación Git y Despliegue**:
+   - Se consolidaron previamente en commit dedicado los 9 archivos idénticos que ya estaban activos en el VPS desde las 11:06 (`formatCurrencyArs` y formato `es-AR`), luego se commiteó D-190 y se desplegó a Producción (`:3006`) y Staging (`:3008`).
 

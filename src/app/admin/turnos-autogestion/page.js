@@ -112,7 +112,6 @@ export default function TurnosAutogestionPage() {
 
     if (cuponCodigo) {
       params.set('cuponCodigo', cuponCodigo);
-      params.set('descuentoTipo', 'PORCENTAJE');
     }
     if (sol.observaciones) {
       params.set('observaciones', sol.observaciones);
@@ -250,13 +249,13 @@ export default function TurnosAutogestionPage() {
                 <div className={styles.infoCol}>
                   <span className={styles.infoLabel}>Valor Total</span>
                   <span className={styles.infoValue}>
-                    ${Number(sol.valorTotal || 0).toLocaleString('es-ES')}
+                    ${Number(sol.valorTotal || 0).toLocaleString('es-AR')}
                   </span>
                 </div>
                 <div className={styles.infoCol}>
                   <span className={styles.infoLabel}>Seña</span>
                   <span className={styles.infoValue} style={{ color: '#16a34a' }}>
-                    ${Number(sol.valorSeña || 0).toLocaleString('es-ES')}
+                    ${Number(sol.valorSeña || 0).toLocaleString('es-AR')}
                   </span>
                 </div>
                 <div className={styles.infoCol}>
