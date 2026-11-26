@@ -765,3 +765,9 @@ Next.js 16.2.9 con Turbopack intenta descargar y procesar binarios tipográficos
 **Root Cause:** En `src/app/api/admin/turnos/[id]/recibo/route.js` y `src/lib/email.js` (`sendReceiptEmail`), se evaluaba `z.precio || (turno.valorTotal / parsedZonas.length)`. Al ser `0` falsy en JavaScript, se disparaba el fallback promediando `$122.000 / 6 = $20.333,33`.
 **Solución:** Se valida explícitamente `z.precio !== undefined && z.precio !== null && z.precio !== ''`, y cuando un ítem es `Otros` con importe `<= 0` se devuelve `precioUnitario: null, subtotal: null` para que el recibo (PDF/web y email) deje las celdas vacías sin devolver ningún importe falso.
 **Estado:** ✅ FIXED
+
+## ERR-73: Crash en Configuración de Agenda (`ReferenceError: Can't find variable: router`) (26/11/2026)
+**Síntoma:** Al ingresar a `/admin/configuracion` desde iPhone/Safari (`media_1795699860402_0897e7cd.jpg`), la pantalla fallaba inmediatamente en el Error Boundary administrativo mostrando: *"Ocurrió un error en el Panel - Can't find variable: router"*.
+**Root Cause:** Al separar Usuarios y Bloqueos a módulos propios (D-184), en `src/app/admin/configuracion/page.js` se agregaron llamadas `router.replace(...)`, `router.push(...)` y la dependencia `[router]` en `useEffect`, pero se omitió `import { useRouter } from 'next/navigation'` y `const router = useRouter()` dentro de `ConfiguracionPage()`. Al montarse el componente, React evaluaba `[router]` y arrojaba `ReferenceError`.
+**Solución:** Se agregó `import { useRouter } from 'next/navigation';` y `const router = useRouter();` en `src/app/admin/configuracion/page.js`. Se auditó todo `src/` confirmando que ningún otro componente presentaba referencias faltantes a `router`. Compilado con Turbopack (49/49 rutas sin errores) y desplegado en Producción y Staging (D-189).
+**Estado:** ✅ FIXED

@@ -3497,3 +3497,19 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 4. **Verificación y Compilación**:
    - `npm run build` ejecutado exitosamente con Turbopack: 51/51 rutas compiladas con 0 errores.
 
+---
+
+## Sesión 26/11/2026 - Corrección de `ReferenceError: Can't find variable: router` en Configuración de Agenda y Consolidación de Hotfixes Activos (D-189 / ERR-73)
+
+### Diagnóstico e Implementación
+1. **Crash en `/admin/configuracion` (`media_1795699860402_0897e7cd.jpg`)**:
+   - *Reporte*: "Si entro a configuración de agenda me tira este error desde ayer" -> `Ocurrió un error en el Panel: Can't find variable: router`.
+   - *Causa*: En `src/app/admin/configuracion/page.js`, existían llamadas `router.replace('/admin/usuarios')`, `router.replace('/admin/bloqueos')`, `router.push(...)` y la dependencia `[router]` en `useEffect`, pero faltaba `import { useRouter } from 'next/navigation'` y `const router = useRouter()`.
+   - *Solución*: Se agregó la importación de `useRouter` y la inicialización `const router = useRouter();` en `ConfiguracionPage()`. Se ejecutó auditoría sobre todo `src/` confirmando que no había ningún otro archivo con `router` sin declarar.
+2. **Consolidación de Hotfixes Activos en Producción**:
+   - Al inspeccionar el VPS (`/srv/gonzalo-dep`) antes de desplegar, se detectó que 5 archivos (`src/app/admin/layout.module.css`, `src/app/admin/notificaciones/page.js`, `src/app/api/whatsapp/qr-image/route.js`, `src/app/api/whatsapp/status/route.js`, `src/lib/whatsapp.js`) tenían modificaciones idénticas en local y en producción del 25/11 a las 19:33–19:38 (relay unificado WhatsApp vía `ia-gonzadep:3007` sin Chromium duplicado + scroll del sidebar) aún no versionadas en Git.
+   - Se versionan en commit separado previo a D-189 para asegurar que `git reset --hard origin/main` preserve intactas esas correcciones tanto en Producción (`:3006`) como en Staging (`:3008`).
+3. **Verificación y Despliegue**:
+   - `npm run build` ejecutado exitosamente con Turbopack: 49/49 rutas compiladas sin errores.
+   - Commit y push a `main` y `staging`, despliegue verificado en Producción y Staging sin reiniciar `ia-gonzadep`.
+

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Fragment } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './configuracion.module.css';
 import { formatMilesInput, cleanMilesInput } from '@/lib/formatNumber.js';
 import { DEFAULT_ZONAS_OTROS, parseZonasOtrosLista } from '@/lib/zonasOtros.js';
@@ -30,6 +31,7 @@ const DAYS_OF_WEEK = [
 ];
 
 export default function ConfiguracionPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('zones'); // 'zones', 'hours', 'templates'
   const usersSectionRef = useRef(null);
 

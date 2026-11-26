@@ -2468,5 +2468,19 @@
        - Si el cliente ya cuenta con cualquier turno previo registrado en el sistema o se agenda vía `prevTurnoId` (Siguiente Turno), las imágenes de dirección e indicaciones previas NUNCA se envían. Solo se despachan en la primerísima cita que agenda el cliente en su vida.
 - **Verificación**: `npm run build` ejecutado exitosamente con Turbopack (51/51 rutas compiladas en 50s, 0 errores). Despliegue sincronizado a Staging y Producción con HTTP 200 OK.
 
+---
+
+## 26/11/2026 - Sesión 26/11/2026 - Corrección de `ReferenceError: Can't find variable: router` en Configuración de Agenda (D-189 / ERR-73)
+
+- **Solicitud del Usuario / Reporte de Gonzalo Siri (`media_1795699860402_0897e7cd.jpg`)**:
+  - Gonzalo: *"Si entro a configuración de agenda me tira este error desde ayer"* (pantalla roja de error en iPhone/Safari: *"Ocurrió un error en el Panel - Can't find variable: router"*).
+- **Causa Raíz**:
+  - En `src/app/admin/configuracion/page.js`, tras la migración de Usuarios y Bloqueos a secciones independientes (D-184), quedaron redirecciones `router.replace('/admin/usuarios')`, `router.replace('/admin/bloqueos')`, `router.push(...)` y la dependencia `[router]` en `useEffect`, pero faltaba importar `useRouter` desde `next/navigation` y declararlo (`const router = useRouter()`). Al montar la vista, Safari lanzaba `ReferenceError: Can't find variable: router`.
+- **Solución Aplicada**:
+  1. Se importó `useRouter` desde `next/navigation` y se inicializó `const router = useRouter();` en `ConfiguracionPage()` (`src/app/admin/configuracion/page.js`).
+  2. Se auditó todo `src/` confirmando que era el único archivo con `router` sin declarar.
+  3. Se consolidaron en Git (commit dedicado previo) los 5 hotfixes ya activos en producción del 25/11 (`whatsapp.js`, `status/route.js`, `qr-image/route.js`, `notificaciones/page.js`, `layout.module.css`) para no revertirlos al desplegar.
+- **Verificación**: `npm run build` ejecutado exitosamente con Turbopack (49/49 rutas compiladas sin errores). Push a `main` y `staging`, y despliegue verificado en Producción (`:3006`) y Staging (`:3008`).
+
 
 
