@@ -383,6 +383,17 @@ export async function logoutWhatsApp() {
   globalThis.whatsappRelayQr = '';
 }
 
+/**
+ * Formatea un monto monetario en pesos argentinos con signo "$" y separador de miles "."
+ * de forma determinista e independiente del locale del sistema operativo (ej: 17500 -> "$17.500", 5000 -> "$5.000").
+ */
+export function formatCurrencyArs(amount) {
+  const num = Math.round(Number(amount || 0));
+  const sign = num < 0 ? '-' : '';
+  const formatted = Math.abs(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${sign}$${formatted}`;
+}
+
 export function parseTemplate(template, client = {}, turno = {}, address = '') {
   if (!template) return '';
   const d = new Date(turno.fecha);
@@ -422,6 +433,10 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
   // If template does not have explicit [Día], use dateStrWithDay (e.g., "Viernes 04/09/2026") for [FechaTurno] / [Fecha]
   const finalDateForPlaceholder = hasExplicitDay ? dateStr : dateStrWithDay;
 
+  const valorTotalNum = Number(turno.valorTotal || 0);
+  const valorSeñaNum = Number(turno.valorSeña || 0);
+  const saldoNum = Math.max(0, valorTotalNum - valorSeñaNum);
+
   return template
     .replace(/(\[|\{)Nombre(\]|\})/gi, nombre)
     .replace(/(\[|\{)Apellido(\]|\})/gi, apellido)
@@ -434,8 +449,9 @@ export function parseTemplate(template, client = {}, turno = {}, address = '') {
     .replace(/(\[|\{)HoraInicio(\]|\})/gi, turno.horaInicio || '')
     .replace(/(\[|\{)HoraFin(\]|\})/gi, turno.horaFin || '')
     .replace(/(\[|\{)Zonas(\]|\})/gi, zonesStr)
-    .replace(/(\[|\{)ValorTotal(\]|\})/gi, () => (turno.valorTotal || 0).toString())
-    .replace(/(\[|\{)Seña(\]|\})/gi, () => (turno.valorSeña || 0).toString())
+    .replace(/(?:\$\s*)?(\[|\{)(ValorTotal|Valor|Total)(\]|\})/gi, () => formatCurrencyArs(valorTotalNum))
+    .replace(/(?:\$\s*)?(\[|\{)(Seña|Sena)(\]|\})/gi, () => formatCurrencyArs(valorSeñaNum))
+    .replace(/(?:\$\s*)?(\[|\{)Saldo(\]|\})/gi, () => formatCurrencyArs(saldoNum))
     .replace(/(\[|\{)Direccion(\]|\})/gi, address || '')
     .replace(/(\[|\{)Dirección(\]|\})/gi, address || '');
 }
@@ -780,7 +796,10 @@ export async function checkAndSendReminders(force = false) {
         const rawMsg = vaAAvisarTemplate
           .replaceAll('[Nombre]', firstName)
           .replaceAll('{cliente}', cl.nombreCompleto || '')
-          .replaceAll('[FechaTurno]', lastTurno.fecha ? new Date(lastTurno.fecha).toLocaleDateString('es-AR') : '');
+          .replaceAll('[FechaTurno]', lastTurno.fecha ? new Date(lastTurno.fecha).toLocaleDateString('es-AR') : '')
+          .replace(/(?:\$\s*)?(\[|\{)(ValorTotal|Valor|Total)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorTotal))
+          .replace(/(?:\$\s*)?(\[|\{)(Seña|Sena)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorSeña))
+          .replace(/(?:\$\s*)?(\[|\{)Saldo(\]|\})/gi, () => formatCurrencyArs(Math.max(0, Number(lastTurno.valorTotal || 0) - Number(lastTurno.valorSeña || 0))));
 
         try {
           console.log(`[Reminder Cron] Sending automated "Va a avisar" WhatsApp to ${cl.nombreCompleto} (${cl.whatsapp})...`);
@@ -901,7 +920,10 @@ export async function checkAndSendReminders(force = false) {
           const rawWtspMsg = wtspMaintTemplate
             .replaceAll('[Nombre]', firstName)
             .replaceAll('{cliente}', cl.nombreCompleto || '')
-            .replaceAll('{zonas}', zonesText);
+            .replaceAll('{zonas}', zonesText)
+            .replace(/(?:\$\s*)?(\[|\{)(ValorTotal|Valor|Total)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorTotal))
+            .replace(/(?:\$\s*)?(\[|\{)(Seña|Sena)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorSeña))
+            .replace(/(?:\$\s*)?(\[|\{)Saldo(\]|\})/gi, () => formatCurrencyArs(Math.max(0, Number(lastTurno.valorTotal || 0) - Number(lastTurno.valorSeña || 0))));
 
           try {
             console.log(`[Reminder Cron] Sending automated maintenance WhatsApp to ${cl.nombreCompleto} (${cl.whatsapp})...`);

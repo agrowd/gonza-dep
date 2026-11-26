@@ -66,6 +66,13 @@ export function formatEmailParagraphs(rawText) {
     .join('');
 }
 
+function formatCurrencyArsEmail(amount) {
+  const num = Math.round(Number(amount || 0));
+  const sign = num < 0 ? '-' : '';
+  const formatted = Math.abs(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${sign}$${formatted}`;
+}
+
 /**
  * Replaces placeholders in subject strings without HTML tags.
  */
@@ -107,9 +114,9 @@ export function applyEmailTemplatePlaceholdersPlain(templateText, clientName = '
     .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, dateFormatted)
     .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])(\s*hs\b)?/gi, `${horaStr} hs`)
     .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, zonesText)
-    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, () => `$${señaNum.toLocaleString('es-AR')}`)
-    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, () => `$${saldoNum.toLocaleString('es-AR')}`)
-    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, () => `$${totalNum.toLocaleString('es-AR')}`)
+    .replace(/(?:\$\s*)?(\{|\[)(seña|Seña|sena|Sena)(\}|\])/gi, () => formatCurrencyArsEmail(señaNum))
+    .replace(/(?:\$\s*)?(\{|\[)(saldo|Saldo)(\}|\])/gi, () => formatCurrencyArsEmail(saldoNum))
+    .replace(/(?:\$\s*)?(\{|\[)(total|Total|valorTotal|valor|Valor)(\}|\])/gi, () => formatCurrencyArsEmail(totalNum))
     .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, addrStr);
 }
 
@@ -156,9 +163,9 @@ export function applyEmailTemplatePlaceholders(templateText, clientName = '', tu
     .replace(/(\{|\[)(fecha|Fecha|FechaTurno)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; text-transform: capitalize; font-weight: bold;">${dateFormatted}</strong></a>`)
     .replace(/(\{|\[)(horario|Horario|hora|Hora)(\}|\])(\s*hs\b)?/gi, `<a href="#" class="dummy-link" style="color: #d4a54d !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #d4a54d !important; font-weight: bold;">${horaStr} hs</strong></a>`)
     .replace(/(\{|\[)(zonas|Zonas)(\}|\])/gi, `<strong style="color: #ffffff !important;">${zonesText}</strong>`)
-    .replace(/(\{|\[)(seña|Seña)(\}|\])/gi, () => `<strong style="color: #a5d6a7 !important;">$${señaNum.toLocaleString('es-AR')}</strong>`)
-    .replace(/(\{|\[)(saldo|Saldo)(\}|\])/gi, () => `<strong style="color: #ffb74d !important;">$${saldoNum.toLocaleString('es-AR')}</strong>`)
-    .replace(/(\{|\[)(total|Total|valorTotal)(\}|\])/gi, () => `<strong style="color: #ffffff !important;">$${totalNum.toLocaleString('es-AR')}</strong>`)
+    .replace(/(?:\$\s*)?(\{|\[)(seña|Seña|sena|Sena)(\}|\])/gi, () => `<strong style="color: #a5d6a7 !important;">${formatCurrencyArsEmail(señaNum)}</strong>`)
+    .replace(/(?:\$\s*)?(\{|\[)(saldo|Saldo)(\}|\])/gi, () => `<strong style="color: #ffb74d !important;">${formatCurrencyArsEmail(saldoNum)}</strong>`)
+    .replace(/(?:\$\s*)?(\{|\[)(total|Total|valorTotal|valor|Valor)(\}|\])/gi, () => `<strong style="color: #ffffff !important;">${formatCurrencyArsEmail(totalNum)}</strong>`)
     .replace(/(\{|\[)(direccion|dirección|Direccion|Dirección)(\}|\])/gi, `<a href="#" class="dummy-link" style="color: #ffffff !important; text-decoration: none !important; pointer-events: none; cursor: default;"><strong style="color: #ffffff !important;">${addrStr}</strong></a>`);
 }
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken, setSessionCookie } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
-import { sendWhatsAppMessage, parseTemplate, parseWppTemplate } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, parseTemplate, parseWppTemplate, formatCurrencyArs } from '@/lib/whatsapp.js';
 import { sendNoShowEmail, sendCancellationEmail, sendRescheduleEmail } from '@/lib/email.js';
 import { canSendNotification } from '@/lib/notifications.js';
 
@@ -508,13 +508,13 @@ export async function PUT(request, { params }) {
         if (body.preserveDeposit) {
           updateData.señaEstado = 'CONSERVADA';
           depositToPreserve = Number(oldTurn.valorSeña);
-          const creditTag = `[Cancelado - Seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - ${authorLabel}]`;
+          const creditTag = `[Cancelado - Seña de ${formatCurrencyArs(oldTurn.valorSeña)} Guardada para siguiente turno - ${authorLabel}]`;
           if (!currentTurnoObs.includes(creditTag)) {
             updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${creditTag}`.trim() : creditTag;
           }
         } else {
           updateData.señaEstado = 'PERDIDA';
-          const lossTag = `[Cancelado - Pierde seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} - ${authorLabel}]`;
+          const lossTag = `[Cancelado - Pierde seña de ${formatCurrencyArs(oldTurn.valorSeña)} - ${authorLabel}]`;
           if (!currentTurnoObs.includes(lossTag)) {
             updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${lossTag}`.trim() : lossTag;
           }
@@ -581,7 +581,7 @@ export async function PUT(request, { params }) {
       const currentTurnoObs = updateData.observaciones !== undefined ? updateData.observaciones : (oldTurn.observaciones || '');
       if (Number(oldTurn.valorSeña) > 0) {
         updateData.señaEstado = 'PERDIDA';
-        const lossTag = `[Ausente - Pierde seña de $${Number(oldTurn.valorSeña).toLocaleString('es-ES')} - ${authorLabel}]`;
+        const lossTag = `[Ausente - Pierde seña de ${formatCurrencyArs(oldTurn.valorSeña)} - ${authorLabel}]`;
         if (!currentTurnoObs.includes(lossTag)) {
           updateData.observaciones = currentTurnoObs ? `${currentTurnoObs} ${lossTag}`.trim() : lossTag;
         }
@@ -913,15 +913,15 @@ export async function PUT(request, { params }) {
           );
 
           // Log in database
-          const señaFormateada = Number(updatedTurno.valorSeña || 0).toLocaleString('es-AR');
+          const señaFormateada = formatCurrencyArs(updatedTurno.valorSeña);
           await prisma.notificacion.create({
             data: {
               clienteId: updatedTurno.clienteId,
               turnoId: updatedTurno.id,
               canal: 'EMAIL',
               mensaje: withLossOfDeposit
-                ? `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.${Number(updatedTurno.valorSeña) > 0 ? `\n\nTené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de $${señaFormateada} se pierde y no es reembolsable.` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`
-                : `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.${Number(updatedTurno.valorSeña) > 0 ? `\n\nTu seña abonada de $${señaFormateada} queda registrada a tu favor para tu próxima sesión.` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`,
+                ? `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.${Number(updatedTurno.valorSeña) > 0 ? `\n\nTené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de ${señaFormateada} se pierde y no es reembolsable.` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`
+                : `Te informamos que tu turno para depilación láser del ${formatDate(updatedTurno.fecha)} a las ${updatedTurno.horaInicio} hs ha sido cancelado.${Number(updatedTurno.valorSeña) > 0 ? `\n\nTu seña abonada de ${señaFormateada} queda registrada a tu favor para tu próxima sesión.` : ''}\n\nSi deseas agendar una nueva cita, podés hacerlo ingresando a nuestro sitio web.`,
               estado: 'ENVIADO'
             }
           });
@@ -954,13 +954,13 @@ export async function PUT(request, { params }) {
           });
 
           const señaNumWpp = Number(updatedTurno.valorSeña || 0);
-          const señaFormattedWpp = señaNumWpp.toLocaleString('es-AR');
+          const señaFormattedWpp = formatCurrencyArs(señaNumWpp);
           const defaultCancelTpl = "¡Hola [Nombre]! Te informamos que tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
           let templateVal = wppCancelConfig?.value || defaultCancelTpl;
           if (body.preserveDeposit && señaNumWpp > 0) {
-            templateVal = `¡Hola [Nombre]! Te informamos que tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Tu seña de $${señaFormattedWpp} queda registrada A TU FAVOR para tu próxima sesión. Comunicate con nosotros cuando desees coordinar tu nueva cita. ¡Saludos!`;
+            templateVal = `¡Hola [Nombre]! Te informamos que tu turno para el día [FechaTurno] a las [Horario] fue cancelado. Tu seña de ${señaFormattedWpp} queda registrada A TU FAVOR para tu próxima sesión. Comunicate con nosotros cuando desees coordinar tu nueva cita. ¡Saludos!`;
           } else if (withLossOfDeposit && señaNumWpp > 0 && !/seña|reten|pierd|reembols/i.test(templateVal)) {
-            const lossParagraph = `Tené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de $${señaFormattedWpp} se pierde y no es reembolsable.`;
+            const lossParagraph = `Tené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de ${señaFormattedWpp} se pierde y no es reembolsable.`;
             const ctaMatch = templateVal.match(/\n\s*(Para agendar|Si dese[aá]s|Pod[eé]s|https?:\/\/)/i);
             if (ctaMatch && ctaMatch.index !== undefined) {
               templateVal = `${templateVal.slice(0, ctaMatch.index).trimEnd()}\n\n${lossParagraph}\n\n${templateVal.slice(ctaMatch.index).trimStart()}`;

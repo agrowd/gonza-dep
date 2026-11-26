@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db.js';
-import { sendWhatsAppMessage, parseWppTemplate } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, parseWppTemplate, formatCurrencyArs } from '@/lib/whatsapp.js';
 import { sendCancellationEmail } from '@/lib/email.js';
 import { emailsMatch } from '@/lib/emailNormalize.js';
 
@@ -52,9 +52,9 @@ export async function POST(request) {
     let cancelTag = '';
     if (Number(turno.valorSeña) > 0) {
       if (!withLossOfDeposit) {
-        cancelTag = `[Cancelado - Seña de $${Number(turno.valorSeña).toLocaleString('es-ES')} Guardada para siguiente turno - Autogestión]`;
+        cancelTag = `[Cancelado - Seña de ${formatCurrencyArs(turno.valorSeña)} Guardada para siguiente turno - Autogestión]`;
       } else {
-        cancelTag = `[Cancelado - Pierde seña de $${Number(turno.valorSeña).toLocaleString('es-ES')} - Autogestión]`;
+        cancelTag = `[Cancelado - Pierde seña de ${formatCurrencyArs(turno.valorSeña)} - Autogestión]`;
       }
     } else {
       cancelTag = `[Cancelado - Autogestión]`;
@@ -132,7 +132,7 @@ export async function POST(request) {
           where: { key: 'address' }
         });
         const señaNumWpp = Number(updatedTurno.valorSeña || 0);
-        const señaFormattedWpp = señaNumWpp.toLocaleString('es-AR');
+        const señaFormattedWpp = formatCurrencyArs(señaNumWpp);
         const defaultCancelTpl = "¡Hola [Nombre]! Te informamos que tu turno para el día [Día] [FechaTurno] a las [Horario] fue cancelado.\n\nPara agendar un nuevo turno, podés consultar todos los días y horarios disponibles directamente desde nuestro link de autogestión:\nhttps://agenda.depilacionparahombres.com";
         let wppTemplate = wppCancelConfig?.value || defaultCancelTpl;
         if (señaNumWpp > 0) {
@@ -144,9 +144,9 @@ export async function POST(request) {
             return `${baseText.trimEnd()}\n\n${notice}`;
           };
           if (withLossOfDeposit && !/seña|reten|pierd|reembols/i.test(wppTemplate)) {
-            wppTemplate = injectWppNotice(wppTemplate, `Tené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de $${señaFormattedWpp} se pierde y no es reembolsable.`);
+            wppTemplate = injectWppNotice(wppTemplate, `Tené en cuenta que, de acuerdo a nuestras políticas de reserva y cancelación, la seña abonada de ${señaFormattedWpp} se pierde y no es reembolsable.`);
           } else if (!withLossOfDeposit && !/seña|favor/i.test(wppTemplate)) {
-            wppTemplate = injectWppNotice(wppTemplate, `Tu seña de $${señaFormattedWpp} queda registrada a tu favor para tu próxima sesión.`);
+            wppTemplate = injectWppNotice(wppTemplate, `Tu seña de ${señaFormattedWpp} queda registrada a tu favor para tu próxima sesión.`);
           }
         }
         const wppMsg = parseWppTemplate(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);

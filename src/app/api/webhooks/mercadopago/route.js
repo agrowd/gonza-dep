@@ -66,12 +66,13 @@ export async function POST(request) {
           });
 
           // 3. Create Notification alert in database for Gonzalo/Luciano
+          const { parseWppTemplate, formatCurrencyArs } = await import('@/lib/whatsapp.js');
           await prisma.notificacion.create({
             data: {
               clienteId: updatedTurno.clienteId,
               turnoId: updatedTurno.id,
               canal: 'WHATSAPP', // log type
-              mensaje: `Reserva online confirmada automáticamente para ${updatedTurno.cliente.nombreCompleto} (Seña de $${valorSeña} aprobada).`,
+              mensaje: `Reserva online confirmada automáticamente para ${updatedTurno.cliente.nombreCompleto} (Seña de ${formatCurrencyArs(valorSeña)} aprobada).`,
               estado: 'ENVIADO'
             }
           });
@@ -85,34 +86,11 @@ export async function POST(request) {
               where: { key: 'address' }
             });
             const wppTemplate = wppConfig?.value || "¡Hola [Nombre]! Tu reserva para el día [FechaTurno] a las [Horario] para [Zonas] fue aprobada con éxito. Recordá venir afeitado al ras. ¡Te esperamos!";
-            
-            const formatDateLocal = (date) => {
-              return new Date(date).toLocaleDateString('es-ES', { dateStyle: 'long', timeZone: 'UTC' });
-            };
-            
-            const parseWppTemplateLocal = (template, client, appointment, address) => {
-              if (!template) return '';
-              let zonesText = '';
-              try {
-                const parsedZonas = JSON.parse(appointment.zonas);
-                zonesText = parsedZonas.map(z => z.nombre).join(', ');
-              } catch (e) {
-                zonesText = appointment.zonas || 'tratamiento';
-              }
-              return template
-                .replaceAll('[Nombre]', client.nombreCompleto)
-                .replaceAll('[FechaTurno]', formatDateLocal(appointment.fecha))
-                .replaceAll('[Horario]', `${appointment.horaInicio} hs`)
-                .replaceAll('[Zonas]', zonesText)
-                .replaceAll('[ValorTotal]', `$${appointment.valorTotal}`)
-                .replaceAll('[Seña]', `$${appointment.valorSeña}`)
-                .replaceAll('[Direccion]', address || 'Paraná 597');
-            };
 
             const clientNotificationsEnabled = updatedTurno.cliente ? updatedTurno.cliente.enviarNotificaciones !== false : true;
             const notificationsEnabled = clientNotificationsEnabled;
 
-            const wppMsg = parseWppTemplateLocal(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value);
+            const wppMsg = parseWppTemplate(wppTemplate, updatedTurno.cliente, updatedTurno, addressConfig?.value || 'Paraná 597');
             
             if (notificationsEnabled && updatedTurno.cliente.whatsapp && !updatedTurno.cliente.whatsapp.includes('bloqueo')) {
               await sendWhatsAppMessage(updatedTurno.cliente.whatsapp, wppMsg);

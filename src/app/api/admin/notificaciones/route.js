@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
-import { sendWhatsAppMessage, getWhatsAppStatus, parseTemplate, checkRelayStatus } from '@/lib/whatsapp.js';
+import { sendWhatsAppMessage, getWhatsAppStatus, parseTemplate, checkRelayStatus, formatCurrencyArs } from '@/lib/whatsapp.js';
 import { canSendNotification } from '@/lib/notifications.js';
 
 export const dynamic = 'force-dynamic';
@@ -130,8 +130,9 @@ export async function GET(request) {
           .replaceAll('[Fecha]', new Date(lastTurno.fecha).toLocaleDateString('es-AR'))
           .replaceAll('[Zonas]', zonesText)
           .replaceAll('{zonas}', zonesText)
-          .replaceAll('[ValorTotal]', (lastTurno.valorTotal || 0).toLocaleString('es-AR'))
-          .replaceAll('{valor}', (lastTurno.valorTotal || 0).toLocaleString('es-AR'));
+          .replace(/(?:\$\s*)?(\[|\{)(ValorTotal|Valor|Total)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorTotal))
+          .replace(/(?:\$\s*)?(\[|\{)(Seña|Sena)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorSeña))
+          .replace(/(?:\$\s*)?(\[|\{)Saldo(\]|\})/gi, () => formatCurrencyArs(Math.max(0, Number(lastTurno.valorTotal || 0) - Number(lastTurno.valorSeña || 0))));
 
         items.push({
           id: lastTurno.id,
@@ -266,8 +267,9 @@ export async function GET(request) {
           .replaceAll('[Fecha]', new Date(lastTurno.fecha).toLocaleDateString('es-AR'))
           .replaceAll('[Zonas]', zonesText)
           .replaceAll('{zonas}', zonesText)
-          .replaceAll('[ValorTotal]', (lastTurno.valorTotal || 0).toLocaleString('es-AR'))
-          .replaceAll('{valor}', (lastTurno.valorTotal || 0).toLocaleString('es-AR'));
+          .replace(/(?:\$\s*)?(\[|\{)(ValorTotal|Valor|Total)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorTotal))
+          .replace(/(?:\$\s*)?(\[|\{)(Seña|Sena)(\]|\})/gi, () => formatCurrencyArs(lastTurno.valorSeña))
+          .replace(/(?:\$\s*)?(\[|\{)Saldo(\]|\})/gi, () => formatCurrencyArs(Math.max(0, Number(lastTurno.valorTotal || 0) - Number(lastTurno.valorSeña || 0))));
 
         items.push({
           id: lastTurno.id,
@@ -512,8 +514,9 @@ export async function POST(request) {
           .replaceAll('[Fecha]', new Date(t.fecha).toLocaleDateString('es-AR'))
           .replaceAll('[Zonas]', zonesText)
           .replaceAll('{zonas}', zonesText)
-          .replaceAll('[ValorTotal]', (t.valorTotal || 0).toLocaleString('es-AR'))
-          .replaceAll('{valor}', (t.valorTotal || 0).toLocaleString('es-AR'))
+          .replace(/(?:\$\s*)?(\[|\{)(ValorTotal|Valor|Total)(\]|\})/gi, () => formatCurrencyArs(t.valorTotal))
+          .replace(/(?:\$\s*)?(\[|\{)(Seña|Sena)(\]|\})/gi, () => formatCurrencyArs(t.valorSeña))
+          .replace(/(?:\$\s*)?(\[|\{)Saldo(\]|\})/gi, () => formatCurrencyArs(Math.max(0, Number(t.valorTotal || 0) - Number(t.valorSeña || 0))))
           .replaceAll('[Direccion]', address)
           .replaceAll('{direccion}', address);
       } else {

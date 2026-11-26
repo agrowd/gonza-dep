@@ -1923,9 +1923,9 @@ function ClientesPageContent() {
                                 <div className={styles.paperZonas}>Zonas: {zonas}</div>
                                 {currentUserRole !== 'OPERADOR' && (
                                   <div className={styles.paperMeta}>
-                                    <span><strong>Costo:</strong> ${t.valorTotal.toLocaleString('es-ES')}</span>
-                                    <span><strong>Seña:</strong> ${t.valorSeña.toLocaleString('es-ES')}</span>
-                                    <span><strong>Saldo:</strong> ${t.saldoPendiente.toLocaleString('es-ES')}</span>
+                                    <span><strong>Costo:</strong> ${t.valorTotal.toLocaleString('es-AR')}</span>
+                                    <span><strong>Seña:</strong> ${t.valorSeña.toLocaleString('es-AR')}</span>
+                                    <span><strong>Saldo:</strong> ${t.saldoPendiente.toLocaleString('es-AR')}</span>
                                   </div>
                                 )}
                                 {Boolean(t.notasGonzalo && t.notasGonzalo.trim()) && (
