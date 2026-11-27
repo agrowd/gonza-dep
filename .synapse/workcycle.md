@@ -3572,3 +3572,28 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
    - *Causa*: En `src/app/api/admin/notificaciones/route.js` (categoría `va_a_avisar`), la consulta filtraba `where: { estado: 'ACTIVO' }` y luego la línea 86 descartaba `if (cl.estado === 'ACTIVO') continue;` (copia accidental de la guarda D-140 de Mantenimiento), vaciando el 100% de los 16 clientes con etiqueta `VA_A_AVISAR`.
    - *Solución*: Eliminada esa guarda errónea de `va_a_avisar` (conservada en `mantenimiento`), y añadidos `filterBy`, `startDate` y `endDate` al `useEffect` de `src/app/admin/notificaciones/page.js` para recarga automática inmediata.
 
+
+
+## 📅 Sesión: 26-27 de Noviembre de 2026 (Continuación — D-193: 7 Mejoras de Configuración, Comisiones, Boxes Inactivos y Fecha de Excepción)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Eliminar `➡️ Ir a Usuarios y Operadores` y `➡️ Ir a Bloqueos de Agenda y Feriados` del desplegable de `/admin/configuracion`.
+- [x] Agregar selector de Servicio en el modal de Promociones (igual que Cupones) para evitar zonas mezcladas.
+- [x] Agregar columna `Turno.comisionGestion` (`RECUPERADO` / `ALTA_POR_REDES`) y selector `"Gestión"` en Turno Comisionable (Nuevo, Editar y Detalle).
+- [x] Garantizar que al agendar Siguiente Turno no se arrastre la comisión del turno anterior (`comisionUsuarioId`, `comisionPorcentaje`, `comisionGestion` reseteados).
+- [x] Quitar bloque `🎯 Comisiones a Pagar` de la cabecera de Agenda y enriquecer `/admin/estadisticas` (Comisiones) con resumen clicable por Recepcionista y columna/badge de Gestión.
+- [x] Ocultar boxes inactivos (`activo === false`) en los filtros y selectores de Agenda, y hacer scroll/enfoque automático al crear/editar Box en Configuración.
+- [x] Agregar columna `Cliente.excepcionSenaFecha`, guardarla al activar `🛡️ Excepción de seña aplicada` (y limpiarla al desactivar), y mostrar la fecha debajo del checkbox en Agenda y Clientes.
+- [ ] Compilar con `npx prisma generate` + `npm run build`, pushear a `main` y `staging`, y desplegar Producción (`:3006`) + Staging (`:3008`).
+
+### 📝 Notas / Bitácora
+- **Archivos modificados**:
+  - `prisma/schema.prisma` (`Cliente.excepcionSenaFecha`, `Turno.comisionGestion`)
+  - `src/app/api/admin/clientes/[id]/route.js`
+  - `src/app/api/admin/turnos/route.js`
+  - `src/app/api/admin/turnos/[id]/route.js`
+  - `src/app/api/admin/estadisticas/route.js`
+  - `src/app/admin/configuracion/page.js`
+  - `src/app/admin/agenda/page.js`
+  - `src/app/admin/clientes/page.js`
+  - `src/app/admin/estadisticas/page.js`

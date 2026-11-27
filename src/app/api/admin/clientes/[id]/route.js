@@ -165,7 +165,21 @@ export async function PUT(request, { params }) {
     }
     if (recibioResena !== undefined) updateData.recibioResena = Boolean(recibioResena);
     if (permitirReprogramacionCorta !== undefined) updateData.permitirReprogramacionCorta = Boolean(permitirReprogramacionCorta);
-    if (excepcionSena !== undefined) updateData.excepcionSena = Boolean(excepcionSena);
+    if (excepcionSena !== undefined) {
+      const nextExc = Boolean(excepcionSena);
+      updateData.excepcionSena = nextExc;
+      if (nextExc) {
+        const currentCli = await prisma.cliente.findUnique({
+          where: { id },
+          select: { excepcionSena: true, excepcionSenaFecha: true }
+        });
+        if (!currentCli?.excepcionSena || !currentCli?.excepcionSenaFecha) {
+          updateData.excepcionSenaFecha = new Date();
+        }
+      } else {
+        updateData.excepcionSenaFecha = null;
+      }
+    }
     if (notifWhatsapp !== undefined) updateData.notifWhatsapp = Boolean(notifWhatsapp);
     if (notifEmail !== undefined) updateData.notifEmail = Boolean(notifEmail);
     if (notifAltaTurno !== undefined) updateData.notifAltaTurno = Boolean(notifAltaTurno);

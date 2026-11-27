@@ -145,6 +145,7 @@ export default function ConfiguracionPage() {
     fechaFin: '',
     activo: true
   });
+  const [promoSelectedServicioId, setPromoSelectedServicioId] = useState('');
 
   // Cupones State
   const [cupones, setCupones] = useState([]);
@@ -257,6 +258,15 @@ export default function ConfiguracionPage() {
       activo: true
     });
     setIsBoxModalOpen(true);
+    setTimeout(() => {
+      const overlay = document.getElementById('boxFormSection');
+      const card = document.getElementById('boxModalContent');
+      if (card) card.scrollTop = 0;
+      if (overlay) {
+        overlay.scrollTop = 0;
+        overlay.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
   };
 
   const handleOpenEditBox = (b) => {
@@ -272,6 +282,15 @@ export default function ConfiguracionPage() {
       activo: b.activo !== false
     });
     setIsBoxModalOpen(true);
+    setTimeout(() => {
+      const overlay = document.getElementById('boxFormSection');
+      const card = document.getElementById('boxModalContent');
+      if (card) card.scrollTop = 0;
+      if (overlay) {
+        overlay.scrollTop = 0;
+        overlay.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
   };
 
   const handleSaveBox = async (e) => {
@@ -1124,6 +1143,10 @@ export default function ConfiguracionPage() {
   // --- PROMOCIONES HANDLERS ---
   const handleOpenNewPromo = () => {
     setEditingPromo(null);
+    const defaultServiceId = (servicios && servicios.length > 0)
+      ? (servicios.find(s => s.nombre?.toLowerCase().includes('depilaci'))?.id || servicios[0].id)
+      : '';
+    setPromoSelectedServicioId(defaultServiceId);
     setPromoForm({
       nombre: '',
       tipo: 'POR_ZONAS',
@@ -1149,6 +1172,17 @@ export default function ConfiguracionPage() {
     } catch {
       parsedZonas = [];
     }
+    let detectedServicioId = '';
+    if (parsedZonas.length > 0 && Array.isArray(zones)) {
+      const matchZ = zones.find(z => parsedZonas.includes(z.nombre));
+      if (matchZ) {
+        detectedServicioId = matchZ.servicioId || matchZ.servicio?.id || '';
+      }
+    }
+    if (!detectedServicioId && servicios && servicios.length > 0) {
+      detectedServicioId = servicios.find(s => s.nombre?.toLowerCase().includes('depilaci'))?.id || servicios[0].id;
+    }
+    setPromoSelectedServicioId(detectedServicioId);
     setPromoForm({
       nombre: promo.nombre || '',
       tipo: promo.tipo || 'POR_ZONAS',
@@ -2066,8 +2100,6 @@ export default function ConfiguracionPage() {
           <option value="parametros">Parámetros Operativos (Seña, Notificaciones, Canales)</option>
           <option value="promos">Promociones y Cupones</option>
           <option value="boxes">Boxes y Cabinas (Agendas Paralelas)</option>
-          <option value="users">➡️ Ir a Usuarios y Operadores</option>
-          <option value="bloqueos">➡️ Ir a Bloqueos de Agenda y Feriados</option>
         </select>
       </div>
 
@@ -4371,31 +4403,112 @@ export default function ConfiguracionPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                      Zonas Requeridas para Aplicar el Combo ({promoForm.zonas.length} seleccionadas)
-                    </label>
-                    <div className={styles.zoneSelectorGrid}>
-                      {zones.map(z => {
-                        const isSelected = promoForm.zonas.includes(z.nombre);
+                  <>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Servicio Asociado a la Promoción</label>
+                      <select
+                        className={styles.input}
+                        value={promoSelectedServicioId}
+                        onChange={(e) => {
+                          const nextServicioId = e.target.value;
+                          setPromoSelectedServicioId(nextServicioId);
+                          if (promoForm.zonas && promoForm.zonas.length > 0) {
+                            const allowedZoneNames = (zones || [])
+                              .filter(z => (z.servicioId === nextServicioId || z.servicio?.id === nextServicioId))
+                              .map(z => z.nombre);
+                            setPromoForm(prev => ({
+                              ...prev,
+                              zonas: (prev.zonas || []).filter(zName => allowedZoneNames.includes(zName))
+                            }));
+                          }
+                        }}
+                      >
+                        <option value="">-- Seleccionar un servicio para elegir sus zonas --</option>
+                        {(servicios && servicios.length > 0 ? servicios : [{ id: 'base', nombre: 'Depilación Láser' }]).map(s => (
+                          <option key={s.id} value={s.id}>{s.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        <label className={styles.label} style={{ margin: 0 }}>
+                          Zonas Requeridas para Aplicar el Combo
+                        </label>
+                        <span style={{ fontSize: '0.8rem', color: (promoForm.zonas || []).length > 0 ? '#166534' : '#64748b', fontWeight: 600 }}>
+                          {(promoForm.zonas || []).length} seleccionadas
+                        </span>
+                      </div>
+                      {(() => {
+                        if (!promoSelectedServicioId) {
+                          return (
+                            <div style={{ padding: '0.85rem', textAlign: 'center', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '0.85rem' }}>
+                              ℹ️ Selecciona un servicio arriba para ver y elegir sus zonas específicas.
+                            </div>
+                          );
+                        }
+
+                        const selectedServicio = (servicios || []).find(s => s.id === promoSelectedServicioId);
+                        const currentServiceZones = (selectedServicio?.zonas && selectedServicio.zonas.length > 0)
+                          ? selectedServicio.zonas
+                          : (zones || []).filter(z => z.servicioId === promoSelectedServicioId || z.servicio?.id === promoSelectedServicioId || (!z.servicioId && promoSelectedServicioId === 'base'));
+
+                        if (currentServiceZones.length === 0) {
+                          return (
+                            <div style={{ padding: '0.85rem', textAlign: 'center', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '0.85rem' }}>
+                              No hay zonas cargadas para este servicio.
+                            </div>
+                          );
+                        }
+
                         return (
-                          <div 
-                            key={z.id}
-                            className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
-                            onClick={() => togglePromoZone(z.nombre)}
-                          >
-                            <input 
-                              type="checkbox" 
-                              checked={isSelected}
-                              onChange={() => {}} 
-                              style={{ cursor: 'pointer' }}
-                            />
-                            <span>{z.nombre}</span>
+                          <div style={{
+                            border: '1.5px solid #e2e8f0',
+                            borderRadius: '10px',
+                            overflow: 'hidden',
+                            backgroundColor: '#f8fafc'
+                          }}>
+                            <div style={{
+                              padding: '0.45rem 0.75rem',
+                              backgroundColor: '#f1f5f9',
+                              borderBottom: '1px solid #e2e8f0',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '0.84rem',
+                              fontWeight: 700,
+                              color: '#1e293b'
+                            }}>
+                              <span>{selectedServicio?.nombre || 'Zonas del Servicio'}</span>
+                              <span style={{ fontSize: '0.74rem', color: (promoForm.zonas || []).length > 0 ? '#166534' : '#64748b', fontWeight: 600 }}>
+                                {(promoForm.zonas || []).length} de {currentServiceZones.length} seleccionadas
+                              </span>
+                            </div>
+                            <div className={styles.zoneSelectorGrid} style={{ padding: '0.65rem' }}>
+                              {currentServiceZones.map(z => {
+                                const isSelected = (promoForm.zonas || []).includes(z.nombre);
+                                return (
+                                  <div
+                                    key={z.id}
+                                    className={`${styles.zoneCheckItem} ${isSelected ? styles.zoneCheckItemActive : ''}`}
+                                    onClick={() => togglePromoZone(z.nombre)}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => {}}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>{z.nombre}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
-                      })}
+                      })()}
                     </div>
-                  </div>
+                  </>
                 )}
 
                 <div className={styles.formRow}>
@@ -5033,8 +5146,8 @@ export default function ConfiguracionPage() {
 
       {/* Modal para Crear / Editar Box (Fase 3) */}
       {isBoxModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsBoxModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+        <div className="modal-overlay" id="boxFormSection" onClick={() => setIsBoxModalOpen(false)}>
+          <div className="modal-content" id="boxModalContent" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-header">
               <h3>{editingBox ? 'Editar Box / Cabina' : 'Crear Nuevo Box / Cabina'}</h3>
               <button className="modal-close" onClick={() => setIsBoxModalOpen(false)}>&times;</button>

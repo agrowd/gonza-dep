@@ -191,7 +191,9 @@ function formatTurnoItem(t, extra = {}) {
     comisionUsuarioId: t.comisionUsuarioId || null,
     comisionUsuarioNombre: t.comisionUsuario?.nombre || null,
     comisionPorcentaje: Number(t.comisionPorcentaje || 0),
-    comisionMonto: Number(t.comisionMonto || 0)
+    comisionMonto: Number(t.comisionMonto || 0),
+    comisionGestion: t.comisionGestion || null,
+    comisionGestionLabel: t.comisionGestion === 'RECUPERADO' ? 'Recuperado' : (t.comisionGestion === 'ALTA_POR_REDES' ? 'Alta por Redes' : null)
   };
 }
 

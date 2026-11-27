@@ -101,6 +101,7 @@ function ClientesPageContent() {
     recibioResena: false,
     permitirReprogramacionCorta: false,
     excepcionSena: false,
+    excepcionSenaFecha: null,
     notifWhatsapp: true,
     notifEmail: true,
     notifAltaTurno: true,
@@ -131,6 +132,7 @@ function ClientesPageContent() {
     recibioResena: false,
     permitirReprogramacionCorta: false,
     excepcionSena: false,
+    excepcionSenaFecha: null,
     notifWhatsapp: true,
     notifEmail: true,
     notifAltaTurno: true,
@@ -801,6 +803,7 @@ function ClientesPageContent() {
             recibioResena: Boolean(data.recibioResena),
             permitirReprogramacionCorta: Boolean(data.permitirReprogramacionCorta),
             excepcionSena: Boolean(data.excepcionSena),
+            excepcionSenaFecha: data.excepcionSenaFecha || null,
             notifWhatsapp: data.notifWhatsapp !== false,
             notifEmail: data.notifEmail !== false,
             notifAltaTurno: data.notifAltaTurno !== false,
@@ -1187,6 +1190,7 @@ function ClientesPageContent() {
           recibioResena: data.recibioResena,
           permitirReprogramacionCorta: data.permitirReprogramacionCorta,
           excepcionSena: data.excepcionSena,
+          excepcionSenaFecha: data.excepcionSenaFecha || null,
           notifWhatsapp: data.notifWhatsapp,
           notifEmail: data.notifEmail,
           notifAltaTurno: data.notifAltaTurno,
@@ -1205,6 +1209,7 @@ function ClientesPageContent() {
           recibioResena: data.recibioResena,
           permitirReprogramacionCorta: data.permitirReprogramacionCorta,
           excepcionSena: data.excepcionSena !== undefined ? Boolean(data.excepcionSena) : prev.excepcionSena,
+          excepcionSenaFecha: data.excepcionSenaFecha !== undefined ? data.excepcionSenaFecha : prev.excepcionSenaFecha,
           notifWhatsapp: data.notifWhatsapp,
           notifEmail: data.notifEmail,
           notifAltaTurno: data.notifAltaTurno,
@@ -2586,17 +2591,33 @@ function ClientesPageContent() {
                     </div>
 
                     {/* Checkbox Excepción de seña aplicada */}
-                    <div className={styles.checkboxRow} style={{ marginTop: '0.65rem' }}>
-                      <input
-                        type="checkbox"
-                        id="excepcionSena"
-                        checked={Boolean(editNotes.excepcionSena)}
-                        onChange={(e) => setEditNotes({ ...editNotes, excepcionSena: e.target.checked })}
-                        style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#16a34a' }}
-                      />
-                      <label htmlFor="excepcionSena" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '600', color: 'var(--text-primary)' }}>
-                        🛡️ Excepción de seña aplicada
-                      </label>
+                    <div className={styles.checkboxRow} style={{ marginTop: '0.65rem', flexDirection: 'column', alignItems: 'flex-start', gap: '0.2rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                        <input
+                          type="checkbox"
+                          id="excepcionSena"
+                          checked={Boolean(editNotes.excepcionSena)}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setEditNotes(prev => ({
+                              ...prev,
+                              excepcionSena: checked,
+                              excepcionSenaFecha: checked ? (prev.excepcionSenaFecha || new Date().toISOString()) : null
+                            }));
+                          }}
+                          style={{ width: '1.2rem', height: '1.2rem', cursor: 'pointer', accentColor: '#16a34a' }}
+                        />
+                        <label htmlFor="excepcionSena" className={styles.inputLabel} style={{ marginBottom: 0, cursor: 'pointer', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          🛡️ Excepción de seña aplicada
+                        </label>
+                      </div>
+                      {Boolean(editNotes.excepcionSena) && (
+                        <div style={{ marginLeft: '1.75rem', fontSize: '0.78rem', fontWeight: 600, color: '#15803d' }}>
+                          📅 Fecha de excepción: {editNotes.excepcionSenaFecha
+                            ? new Date(editNotes.excepcionSenaFecha).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : new Date().toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

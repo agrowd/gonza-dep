@@ -476,7 +476,8 @@ export default function AgendaPage() {
     otrosTexto: '',
     otrosPrecio: '',
     comisionUsuarioId: '',
-    comisionPorcentaje: 0
+    comisionPorcentaje: 0,
+    comisionGestion: ''
   });
 
 
@@ -510,6 +511,7 @@ export default function AgendaPage() {
     otrosPrecio: '',
     comisionUsuarioId: '',
     comisionPorcentaje: 0,
+    comisionGestion: '',
     prevTurnoId: null,
     enviarNotificaciones: true,
     metodoPago: 'TRANSFERENCIA'
@@ -532,6 +534,7 @@ export default function AgendaPage() {
   const [tempClientFrecuencia, setTempClientFrecuencia] = useState(4);
   const [tempComisionUsuarioId, setTempComisionUsuarioId] = useState('');
   const [tempComisionPorcentaje, setTempComisionPorcentaje] = useState(0);
+  const [tempComisionGestion, setTempComisionGestion] = useState('');
   const [savingComision, setSavingComision] = useState(false);
   const [usuariosList, setUsuariosList] = useState([]);
   // Siguientes Turnos Agendados & Resumen de Zonas (D-162)
@@ -610,13 +613,18 @@ export default function AgendaPage() {
       .then(data => {
         if (Array.isArray(data)) {
           setBoxes(data);
-          const defaultBox = data.find(b => b.esPrincipal) || data[0];
+          const activeList = data.filter(b => b.activo !== false);
+          const defaultBox = activeList.find(b => b.esPrincipal) || activeList[0] || data[0];
           if (defaultBox) {
             setNewTurno(prev => ({
               ...prev,
               boxId: prev.boxId || defaultBox.id
             }));
           }
+          setSelectedBoxId(prev => {
+            if (prev === 'ALL') return 'ALL';
+            return activeList.some(b => b.id === prev) ? prev : 'ALL';
+          });
         }
       })
       .catch(err => console.error('Error fetching boxes:', err));
@@ -1203,6 +1211,7 @@ export default function AgendaPage() {
           ? selectedTurno.comisionPorcentaje
           : (selectedTurno.comisionUsuario?.comisionTurnoPct || 0)
       );
+      setTempComisionGestion(selectedTurno.comisionGestion || '');
       if (selectedTurno.cliente) {
         setTempClientObservaciones(selectedTurno.cliente.observaciones || '');
         setTempClientFrecuencia(selectedTurno.cliente.frecuencia || 4);
@@ -1307,6 +1316,7 @@ export default function AgendaPage() {
       setTempTurnoObservaciones('');
       setTempComisionUsuarioId('');
       setTempComisionPorcentaje(0);
+      setTempComisionGestion('');
       setTempClientObservaciones('');
       setTempClientFrecuencia(4);
       setTempClientNotasGonzalo('');
@@ -1637,7 +1647,8 @@ export default function AgendaPage() {
         credentials: 'include',
         body: JSON.stringify({
           comisionUsuarioId: tempComisionUsuarioId || null,
-          comisionPorcentaje: Number(tempComisionPorcentaje || 0)
+          comisionPorcentaje: Number(tempComisionPorcentaje || 0),
+          comisionGestion: tempComisionUsuarioId ? (tempComisionGestion || null) : null
         })
       });
       if (res.ok) {
@@ -1650,6 +1661,7 @@ export default function AgendaPage() {
             ...prev,
             comisionUsuarioId: tempComisionUsuarioId || null,
             comisionPorcentaje: Number(tempComisionPorcentaje || 0),
+            comisionGestion: tempComisionUsuarioId ? (tempComisionGestion || null) : null,
             comisionUsuario: usuariosList.find(u => String(u.id) === String(tempComisionUsuarioId)) || null
           } : null);
         }
@@ -1836,6 +1848,9 @@ export default function AgendaPage() {
           operadorId: operadorIdParam || prev.operadorId,
           boxId: boxIdParam || prev.boxId,
           solicitudId: solicitudIdParam || null,
+          comisionUsuarioId: '',
+          comisionPorcentaje: 0,
+          comisionGestion: '',
           ...(valorTotalParam ? { valorTotal: Number(valorTotalParam) } : {}),
           metodoPago: searchParams.get('metodoPago') || prev.metodoPago || 'TRANSFERENCIA'
         }));
@@ -1934,7 +1949,10 @@ export default function AgendaPage() {
                 frecuencia: initialFreq,
                 hasOtros: Boolean(finalHasOtros),
                 otrosTexto: finalOtrosTexto || '',
-                otrosPrecio: finalOtrosPrecio || ''
+                otrosPrecio: finalOtrosPrecio || '',
+                comisionUsuarioId: turno.comisionUsuarioId || '',
+                comisionPorcentaje: turno.comisionPorcentaje !== undefined && turno.comisionPorcentaje !== null ? turno.comisionPorcentaje : 0,
+                comisionGestion: turno.comisionGestion || ''
               });
               setIsEditing(true);
               setIsDetailsOpen(true);
@@ -2843,6 +2861,7 @@ export default function AgendaPage() {
           operadorId: editTurno.operadorId !== undefined ? (editTurno.operadorId || null) : undefined,
           comisionUsuarioId: editTurno.comisionUsuarioId || null,
           comisionPorcentaje: Number(editTurno.comisionPorcentaje || 0),
+          comisionGestion: editTurno.comisionUsuarioId ? (editTurno.comisionGestion || null) : null,
           hasOtros: editTurno.hasOtros,
           otrosTexto: (editTurno.otrosTexto || '').split(/,\s*/).map(s => s.trim()).filter(Boolean).join(', '),
           otrosPrecio: Number(editTurno.otrosPrecio || 0)
@@ -2931,7 +2950,10 @@ export default function AgendaPage() {
         horaFin: endTimeStr,
         autoHoraFin: endTimeStr,
         manualHoraFinOverride: Boolean(pendingNextScheduleData.inheritedDuration),
-        estado: 'SEÑADO'
+        estado: 'SEÑADO',
+        comisionUsuarioId: '',
+        comisionPorcentaje: 0,
+        comisionGestion: ''
       });
       setPendingNextScheduleData(null);
     } else {
@@ -2965,6 +2987,9 @@ export default function AgendaPage() {
         hasOtros: false,
         otrosTexto: '',
         otrosPrecio: '',
+        comisionUsuarioId: '',
+        comisionPorcentaje: 0,
+        comisionGestion: '',
         prevTurnoId: null,
         metodoPago: 'TRANSFERENCIA'
       });
@@ -3657,7 +3682,7 @@ export default function AgendaPage() {
         </div>
 
         {/* Selector de Box / Doble Agenda Paralela (Fase 3) */}
-        {boxes.length > 0 && currentUserRole !== 'OPERADOR' && (
+        {boxes.filter(b => b.activo !== false).length > 0 && currentUserRole !== 'OPERADOR' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '4px', maxWidth: '100%' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
               📦 Box:
@@ -3685,7 +3710,7 @@ export default function AgendaPage() {
               <span>Todos</span>
             </button>
 
-            {boxes.map(b => {
+            {boxes.filter(b => b.activo !== false).map(b => {
               const isSelected = selectedBoxId === b.id;
               const boxColor = b.color || '#7a1f1e';
               return (
@@ -3790,11 +3815,18 @@ export default function AgendaPage() {
                     ? selectedOperadorId
                     : (lastTurnoAssignment.current.operadorId || (operadores[0]?.id || ''));
                   const chosenOpObj = operadores.find(op => op.id === defaultOpId);
-                  const defaultBoxId = (chosenOpObj?.boxPredeterminadoId)
+                  const activeBoxesList = boxes.filter(b => b.activo !== false);
+                  const opDefaultBoxActive = chosenOpObj?.boxPredeterminadoId && activeBoxesList.some(b => b.id === chosenOpObj.boxPredeterminadoId)
                     ? chosenOpObj.boxPredeterminadoId
-                    : ((selectedBoxId && selectedBoxId !== 'ALL')
-                      ? selectedBoxId
-                      : (lastTurnoAssignment.current.boxId || boxes.find(b => b.esPrincipal)?.id || (boxes[0]?.id || '')));
+                    : null;
+                  const lastBoxActive = lastTurnoAssignment.current.boxId && activeBoxesList.some(b => b.id === lastTurnoAssignment.current.boxId)
+                    ? lastTurnoAssignment.current.boxId
+                    : null;
+                  const defaultBoxId = opDefaultBoxActive
+                    || ((selectedBoxId && selectedBoxId !== 'ALL' && activeBoxesList.some(b => b.id === selectedBoxId)) ? selectedBoxId : null)
+                    || lastBoxActive
+                    || activeBoxesList.find(b => b.esPrincipal)?.id
+                    || (activeBoxesList[0]?.id || '');
                   setNewTurno({
                     nombreCompleto: '',
                     nombre: '',
@@ -3816,6 +3848,9 @@ export default function AgendaPage() {
                     clienteId: null,
                     operadorId: defaultOpId,
                     boxId: defaultBoxId,
+                    comisionUsuarioId: '',
+                    comisionPorcentaje: 0,
+                    comisionGestion: '',
                     metodoPago: 'TRANSFERENCIA'
                   });
                   setIsNewOpen(true);
@@ -4209,11 +4244,6 @@ export default function AgendaPage() {
               const payableOperators = opPayouts.filter(p => p.rol === 'OPERADOR' || p.comisionValor > 0);
               const totalPagarOperadores = payableOperators.reduce((sum, p) => sum + p.montoPagar, 0);
 
-              // Suma de comisiones de captadores/promotores del día (D-182)
-              const totalComisionesDia = dayApps
-                .filter(t => t.estado !== 'CANCELADO' && Number(t.comisionMonto || 0) > 0)
-                .reduce((sum, t) => sum + Number(t.comisionMonto || 0), 0);
-
               return (
                 <>
                   <div className={styles.neocitaDayHeaderCard}>
@@ -4259,12 +4289,6 @@ export default function AgendaPage() {
                               <div className={styles.dayCardStatItem} style={{ marginTop: '0.2rem' }}>
                                 <span className={styles.dayCardStatLabel} style={{ color: '#2563eb' }}>A Pagar Operadores</span>
                                 <span style={{ fontWeight: 800, color: '#2563eb', fontSize: '1rem' }}>-${totalPagarOperadores.toLocaleString('es-AR')}</span>
-                              </div>
-                            )}
-                            {totalComisionesDia > 0 && (
-                              <div className={styles.dayCardStatItem} style={{ marginTop: '0.2rem' }}>
-                                <span className={styles.dayCardStatLabel} style={{ color: '#7c3aed' }}>🎯 Comisiones a Pagar</span>
-                                <span style={{ fontWeight: 800, color: '#7c3aed', fontSize: '1rem' }}>${totalComisionesDia.toLocaleString('es-AR')}</span>
                               </div>
                             )}
                           </div>
@@ -4427,7 +4451,7 @@ export default function AgendaPage() {
                                 nombreCompleto: '', nombre: '', apellido: '', whatsapp: '', email: '', dni: '',
                                 fechaStr: dateStr, horaInicio: config.alta_turno_work_start || config.work_start, horaFin: addMinutesToTime(config.alta_turno_work_start || config.work_start, 30),
                                 selectedZoneIds: [], valorTotal: '', valorSeña: '', descuentoTipo: 'NINGUNO', descuentoValor: '',
-                                bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null, operadorId: '', metodoPago: 'TRANSFERENCIA'
+                                bonificacion: 0, estado: 'SEÑADO', observaciones: '', clienteId: null, operadorId: '', comisionUsuarioId: '', comisionPorcentaje: 0, comisionGestion: '', metodoPago: 'TRANSFERENCIA'
                               });
                               setIsNewOpen(true);
                             }}
@@ -4525,6 +4549,9 @@ export default function AgendaPage() {
                                     observaciones: '',
                                     clienteId: null,
                                     operadorId: '',
+                                    comisionUsuarioId: '',
+                                    comisionPorcentaje: 0,
+                                    comisionGestion: '',
                                     metodoPago: 'TRANSFERENCIA'
                                   });
                                   setIsNewOpen(true);
@@ -5018,9 +5045,9 @@ export default function AgendaPage() {
                       value={editTurno.boxId || ''}
                       onChange={(e) => setEditTurno(prev => ({ ...prev, boxId: e.target.value }))}
                     >
-                      {boxes.map(b => (
+                      {boxes.filter(b => b.activo !== false || b.id === editTurno.boxId).map(b => (
                         <option key={b.id} value={b.id}>
-                          {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
+                          {b.nombre} {b.esPrincipal ? '(Principal)' : ''}{b.activo === false ? ' (Inactivo)' : ''}
                         </option>
                       ))}
                     </select>
@@ -5620,7 +5647,8 @@ export default function AgendaPage() {
                           setEditTurno(prev => ({
                             ...prev,
                             comisionUsuarioId: val,
-                            comisionPorcentaje: val && picked ? (picked.comisionTurnoPct || 0) : (val ? prev.comisionPorcentaje : 0)
+                            comisionPorcentaje: val && picked ? (picked.comisionTurnoPct || 0) : (val ? prev.comisionPorcentaje : 0),
+                            comisionGestion: val ? prev.comisionGestion : ''
                           }));
                         }}
                         className={styles.input}
@@ -5651,6 +5679,22 @@ export default function AgendaPage() {
                         />
                         <span style={{ position: 'absolute', right: '0.55rem', fontWeight: 800, color: 'var(--color-gold)', pointerEvents: 'none' }}>%</span>
                       </div>
+                    </div>
+                    <div style={{ marginTop: '0.55rem' }}>
+                      <label className={styles.inputLabel} style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 700, marginBottom: '0.25rem', display: 'block' }}>
+                        🏷️ Gestión
+                      </label>
+                      <select
+                        disabled={!editTurno.comisionUsuarioId}
+                        value={editTurno.comisionGestion || ''}
+                        onChange={(e) => setEditTurno(prev => ({ ...prev, comisionGestion: e.target.value }))}
+                        className={styles.input}
+                        style={{ fontWeight: 600, backgroundColor: editTurno.comisionUsuarioId ? '#ffffff' : '#f1f5f9' }}
+                      >
+                        <option value="">-- Seleccionar gestión --</option>
+                        <option value="RECUPERADO">🔄 Recuperado</option>
+                        <option value="ALTA_POR_REDES">📱 Alta por Redes</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -5814,9 +5858,9 @@ export default function AgendaPage() {
                             boxSizing: 'border-box'
                           }}
                         >
-                          {boxes.map(b => (
+                          {boxes.filter(b => b.activo !== false || b.id === selectedTurno.boxId).map(b => (
                             <option key={b.id} value={b.id}>
-                              {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
+                              {b.nombre} {b.esPrincipal ? '(Principal)' : ''}{b.activo === false ? ' (Inactivo)' : ''}
                             </option>
                           ))}
                         </select>
@@ -6924,38 +6968,63 @@ export default function AgendaPage() {
                           <span>🔄 Reprogramar &lt; 72hs Autogestión</span>
                         </label>
 
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(selectedTurno.cliente?.excepcionSena)}
-                            onChange={async (e) => {
-                              const nextVal = e.target.checked;
-                              setSelectedTurno(prev => ({
-                                ...prev,
-                                cliente: { ...prev.cliente, excepcionSena: nextVal }
-                              }));
-                              setAppointments(prevList => prevList.map(t => {
-                                if (t.cliente?.id === selectedTurno.cliente?.id) {
-                                  return { ...t, cliente: { ...t.cliente, excepcionSena: nextVal } };
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(selectedTurno.cliente?.excepcionSena)}
+                              onChange={async (e) => {
+                                const nextVal = e.target.checked;
+                                const optimisticDate = nextVal
+                                  ? (selectedTurno.cliente?.excepcionSenaFecha || new Date().toISOString())
+                                  : null;
+                                setSelectedTurno(prev => ({
+                                  ...prev,
+                                  cliente: { ...prev.cliente, excepcionSena: nextVal, excepcionSenaFecha: optimisticDate }
+                                }));
+                                setAppointments(prevList => prevList.map(t => {
+                                  if (t.cliente?.id === selectedTurno.cliente?.id) {
+                                    return { ...t, cliente: { ...t.cliente, excepcionSena: nextVal, excepcionSenaFecha: optimisticDate } };
+                                  }
+                                  return t;
+                                }));
+                                try {
+                                  const res = await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ excepcionSena: nextVal })
+                                  });
+                                  const updatedCl = res.ok ? await res.json().catch(() => null) : null;
+                                  if (updatedCl && updatedCl.excepcionSenaFecha !== undefined) {
+                                    setSelectedTurno(prev => prev ? ({
+                                      ...prev,
+                                      cliente: { ...prev.cliente, excepcionSena: Boolean(updatedCl.excepcionSena), excepcionSenaFecha: updatedCl.excepcionSenaFecha }
+                                    }) : null);
+                                    setAppointments(prevList => prevList.map(t => {
+                                      if (t.cliente?.id === selectedTurno.cliente?.id) {
+                                        return { ...t, cliente: { ...t.cliente, excepcionSena: Boolean(updatedCl.excepcionSena), excepcionSenaFecha: updatedCl.excepcionSenaFecha } };
+                                      }
+                                      return t;
+                                    }));
+                                  }
+                                  showToast(nextVal ? 'Marcado: Excepción de seña aplicada activada para este cliente.' : 'Marcado: Excepción de seña desactivada.');
+                                } catch (err) {
+                                  console.error('Error toggling excepcionSena in agenda modal:', err);
                                 }
-                                return t;
-                              }));
-                              try {
-                                await fetch(`/api/admin/clientes/${selectedTurno.cliente.id}`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                  body: JSON.stringify({ excepcionSena: nextVal })
-                                });
-                                showToast(nextVal ? 'Marcado: Excepción de seña aplicada activada para este cliente.' : 'Marcado: Excepción de seña desactivada.');
-                              } catch (err) {
-                                console.error('Error toggling excepcionSena in agenda modal:', err);
-                              }
-                            }}
-                            style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#16a34a' }}
-                          />
-                          <span>🛡️ Excepción de seña aplicada</span>
-                        </label>
+                              }}
+                              style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer', accentColor: '#16a34a' }}
+                            />
+                            <span>🛡️ Excepción de seña aplicada</span>
+                          </label>
+                          {Boolean(selectedTurno.cliente?.excepcionSena) && (
+                            <div style={{ marginLeft: '1.55rem', fontSize: '0.76rem', fontWeight: 600, color: '#15803d' }}>
+                              📅 Fecha de excepción: {selectedTurno.cliente?.excepcionSenaFecha
+                                ? new Date(selectedTurno.cliente.excepcionSenaFecha).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' })
+                                : new Date().toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -7206,6 +7275,7 @@ export default function AgendaPage() {
                               setTempComisionPorcentaje(picked ? (picked.comisionTurnoPct || 0) : 0);
                             } else {
                               setTempComisionPorcentaje(0);
+                              setTempComisionGestion('');
                             }
                           }}
                           style={{
@@ -7254,7 +7324,32 @@ export default function AgendaPage() {
                       </div>
                     </div>
 
-                    {(tempComisionUsuarioId !== (selectedTurno.comisionUsuarioId || '') || Number(tempComisionPorcentaje || 0) !== Number(selectedTurno.comisionPorcentaje || 0)) && (
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
+                        🏷️ Gestión
+                      </label>
+                      <select
+                        disabled={!tempComisionUsuarioId}
+                        value={tempComisionGestion}
+                        onChange={(e) => setTempComisionGestion(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.45rem 0.6rem',
+                          borderRadius: '7px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '0.86rem',
+                          fontWeight: 600,
+                          backgroundColor: tempComisionUsuarioId ? '#ffffff' : '#f1f5f9',
+                          color: '#1e293b'
+                        }}
+                      >
+                        <option value="">-- Seleccionar gestión --</option>
+                        <option value="RECUPERADO">🔄 Recuperado</option>
+                        <option value="ALTA_POR_REDES">📱 Alta por Redes</option>
+                      </select>
+                    </div>
+
+                    {(tempComisionUsuarioId !== (selectedTurno.comisionUsuarioId || '') || Number(tempComisionPorcentaje || 0) !== Number(selectedTurno.comisionPorcentaje || 0) || (tempComisionGestion || '') !== (selectedTurno.comisionGestion || '')) && (
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
                         <button
                           type="button"
@@ -7361,7 +7456,8 @@ export default function AgendaPage() {
                             otrosTexto: otrosTexto || '',
                             otrosPrecio: otrosPrecio || '',
                             comisionUsuarioId: selectedTurno.comisionUsuarioId || '',
-                            comisionPorcentaje: selectedTurno.comisionPorcentaje !== undefined && selectedTurno.comisionPorcentaje !== null ? selectedTurno.comisionPorcentaje : 0
+                            comisionPorcentaje: selectedTurno.comisionPorcentaje !== undefined && selectedTurno.comisionPorcentaje !== null ? selectedTurno.comisionPorcentaje : 0,
+                            comisionGestion: selectedTurno.comisionGestion || ''
                           });
                           setIsEditing(true);
                         }}
@@ -8479,7 +8575,7 @@ export default function AgendaPage() {
                     value={newTurno.boxId || ''}
                     onChange={(e) => setNewTurno(prev => ({ ...prev, boxId: e.target.value }))}
                   >
-                    {boxes.map(b => (
+                    {boxes.filter(b => b.activo !== false).map(b => (
                       <option key={b.id} value={b.id}>
                         {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
                       </option>
@@ -8573,7 +8669,8 @@ export default function AgendaPage() {
                         setNewTurno(prev => ({
                           ...prev,
                           comisionUsuarioId: val,
-                          comisionPorcentaje: val && picked ? (picked.comisionTurnoPct || 0) : (val ? prev.comisionPorcentaje : 0)
+                          comisionPorcentaje: val && picked ? (picked.comisionTurnoPct || 0) : (val ? prev.comisionPorcentaje : 0),
+                          comisionGestion: val ? prev.comisionGestion : ''
                         }));
                       }}
                       className={styles.input}
@@ -8604,6 +8701,22 @@ export default function AgendaPage() {
                       />
                       <span style={{ position: 'absolute', right: '0.55rem', fontWeight: 800, color: 'var(--color-gold)', pointerEvents: 'none' }}>%</span>
                     </div>
+                  </div>
+                  <div style={{ marginTop: '0.55rem' }}>
+                    <label className={styles.inputLabel} style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 700, marginBottom: '0.25rem', display: 'block' }}>
+                      🏷️ Gestión
+                    </label>
+                    <select
+                      disabled={!newTurno.comisionUsuarioId}
+                      value={newTurno.comisionGestion || ''}
+                      onChange={(e) => setNewTurno(prev => ({ ...prev, comisionGestion: e.target.value }))}
+                      className={styles.input}
+                      style={{ fontWeight: 600, backgroundColor: newTurno.comisionUsuarioId ? '#ffffff' : '#f1f5f9' }}
+                    >
+                      <option value="">-- Seleccionar gestión --</option>
+                      <option value="RECUPERADO">🔄 Recuperado</option>
+                      <option value="ALTA_POR_REDES">📱 Alta por Redes</option>
+                    </select>
                   </div>
                 </div>
 
@@ -8905,7 +9018,7 @@ export default function AgendaPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
-              {boxes.length > 0 && (
+              {boxes.filter(b => b.activo !== false).length > 0 && (
                 <div className={styles.inputGroup}>
                   <label className={styles.inputLabel}>📦 Agenda / Box a Bloquear</label>
                   <select
@@ -8913,7 +9026,7 @@ export default function AgendaPage() {
                     onChange={(e) => setBlockForm({ ...blockForm, boxId: e.target.value })}
                   >
                     <option value="">🌐 Bloquear en Todas las Agendas / Boxes</option>
-                    {boxes.map(b => (
+                    {boxes.filter(b => b.activo !== false).map(b => (
                       <option key={b.id} value={b.id}>
                         {b.nombre} {b.esPrincipal ? '(Principal)' : ''}
                       </option>

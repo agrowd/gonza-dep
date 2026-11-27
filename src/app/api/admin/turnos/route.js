@@ -261,6 +261,7 @@ export async function POST(request) {
       boxId,
       comisionUsuarioId,
       comisionPorcentaje,
+      comisionGestion,
       nombreCompleto,
       whatsapp,
       email,
@@ -528,6 +529,7 @@ export async function POST(request) {
     const comisionUser = comisionUsuarioId ? String(comisionUsuarioId) : null;
     const comisionPct = comisionUser && comisionPorcentaje !== undefined && comisionPorcentaje !== null ? Number(comisionPorcentaje) : 0;
     const calcComisionMonto = comisionUser && comisionPct > 0 ? Math.round((finalValorTotal * comisionPct) / 100) : 0;
+    const finalComisionGestion = comisionUser && comisionGestion ? String(comisionGestion) : null;
 
     // Create appointment
     const newTurno = await prisma.turno.create({
@@ -537,6 +539,7 @@ export async function POST(request) {
         comisionUsuarioId: comisionUser,
         comisionPorcentaje: comisionUser ? comisionPct : 0,
         comisionMonto: calcComisionMonto,
+        comisionGestion: finalComisionGestion,
         boxId: finalBoxId,
         fecha: targetDate,
         horaInicio,

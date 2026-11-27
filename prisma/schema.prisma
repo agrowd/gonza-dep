@@ -57,6 +57,7 @@ model Cliente {
   recibioResena        Boolean        @default(false)
   permitirReprogramacionCorta Boolean @default(false)
   excepcionSena        Boolean        @default(false)
+  excepcionSenaFecha   DateTime?
   notifWhatsapp        Boolean        @default(true)
   notifEmail           Boolean        @default(true)
   notifAltaTurno       Boolean        @default(true)
@@ -80,6 +81,7 @@ model Turno {
   comisionUsuario   Usuario? @relation("TurnoComisionUsuario", fields: [comisionUsuarioId], references: [id], onDelete: SetNull)
   comisionPorcentaje Float?  @default(0)
   comisionMonto      Float?  @default(0)
+  comisionGestion    String? // "RECUPERADO", "ALTA_POR_REDES"
   fecha            DateTime
   horaInicio       String   // "10:10"
   horaFin          String   // "10:40"

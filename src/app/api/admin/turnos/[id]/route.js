@@ -696,6 +696,9 @@ export async function PUT(request, { params }) {
     if (comisionPorcentaje !== undefined) {
       updateData.comisionPorcentaje = comisionPorcentaje !== '' && comisionPorcentaje !== null ? Number(comisionPorcentaje) : 0;
     }
+    if (body.comisionGestion !== undefined) {
+      updateData.comisionGestion = body.comisionGestion ? String(body.comisionGestion) : null;
+    }
     // Calculate or recalculate comisionMonto
     const effectiveComisionUser = updateData.comisionUsuarioId !== undefined ? updateData.comisionUsuarioId : oldTurn.comisionUsuarioId;
     const effectiveComisionPct = updateData.comisionPorcentaje !== undefined ? updateData.comisionPorcentaje : Number(oldTurn.comisionPorcentaje || 0);
@@ -707,6 +710,7 @@ export async function PUT(request, { params }) {
       updateData.comisionMonto = 0;
       if (!effectiveComisionUser) {
         updateData.comisionPorcentaje = 0;
+        updateData.comisionGestion = null;
       }
     }
     if (body.boxId !== undefined) {

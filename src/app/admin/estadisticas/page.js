@@ -212,6 +212,8 @@ export default function EstadisticasPage() {
 
   // Filtro de seguimiento para re-agendados (Cancelados, Ausentes, Va a avisar, Mantenimiento)
   const [followUpFilter, setFollowUpFilter] = useState('ALL'); // 'ALL' | 'WITHOUT_FUTURE' | 'WITH_FUTURE'
+  // Filtro por Recepcionista / Captador en Comisiones (D-193)
+  const [selectedComisionUser, setSelectedComisionUser] = useState('ALL');
 
   // Consolidado Mensual State (D-157)
   const [selectedConsolidadoMonth, setSelectedConsolidadoMonth] = useState(() => {
@@ -281,6 +283,7 @@ export default function EstadisticasPage() {
     setSelectedZonesFilter([]);
     setSelectedCanalesFilter([]);
     setFollowUpFilter('ALL');
+    setSelectedComisionUser('ALL');
   };
 
   const toggleExcludeId = (id) => {
@@ -406,7 +409,10 @@ export default function EstadisticasPage() {
     } else if (selectedMetric === 'cumpleanos') {
       rawItems = Array.isArray(av.cumpleanos?.items) ? av.cumpleanos.items : [];
     } else if (selectedMetric === 'comisiones') {
-      rawItems = Array.isArray(av.comisiones?.items) ? av.comisiones.items : [];
+      const baseComItems = Array.isArray(av.comisiones?.items) ? av.comisiones.items : [];
+      rawItems = selectedComisionUser !== 'ALL'
+        ? baseComItems.filter(i => (i.comisionUsuarioNombre || 'Sin asignar') === selectedComisionUser)
+        : baseComItems;
     } else {
       const metricObj = av[selectedMetric];
       rawItems = Array.isArray(metricObj?.items) ? metricObj.items : (Array.isArray(metricObj) ? metricObj : []);
@@ -458,7 +464,7 @@ export default function EstadisticasPage() {
       avgTicket,
       followUpCounts
     };
-  }, [data, selectedMetric, excludedIds, selectedZonesFilter, selectedCanalesFilter, followUpFilter]);
+  }, [data, selectedMetric, excludedIds, selectedZonesFilter, selectedCanalesFilter, followUpFilter, selectedComisionUser]);
 
   // ==========================================
   // CÁLCULO DE RESÚMENES PARA EL INFORME EXCEL (MODELOS A y B)
@@ -686,7 +692,8 @@ export default function EstadisticasPage() {
                   <th className={styles.th}>Fecha y Hora</th>
                   <th className={styles.th}>Cliente</th>
                   <th className={styles.th}>Zonas</th>
-                  <th className={styles.th}>Promotor / Captador</th>
+                  <th className={styles.th}>Recepcionista</th>
+                  <th className={styles.th}>Gestión</th>
                   <th className={styles.th}>% Comisión</th>
                   <th className={styles.th} style={{ textAlign: 'right' }}>Comisión a Pagar</th>
                   <th className={styles.th} style={{ textAlign: 'right' }}>Valor Turno</th>
@@ -864,8 +871,27 @@ export default function EstadisticasPage() {
                       <td className={styles.td} style={{ fontSize: '0.85rem' }}>{item.zonasTexto || '—'}</td>
                       <td className={styles.td}>
                         <span style={{ fontWeight: 700, color: '#7c3aed', backgroundColor: '#f5f3ff', padding: '0.2rem 0.55rem', borderRadius: '6px', border: '1px solid #ddd6fe', display: 'inline-block' }}>
-                          🎯 {item.comisionUsuarioNombre || 'Sin asignar'}
+                          👤 {item.comisionUsuarioNombre || 'Sin asignar'}
                         </span>
+                      </td>
+                      <td className={styles.td}>
+                        {item.comisionGestionLabel ? (
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '0.78rem',
+                            color: item.comisionGestion === 'ALTA_POR_REDES' ? '#0369a1' : '#b45309',
+                            backgroundColor: item.comisionGestion === 'ALTA_POR_REDES' ? '#e0f2fe' : '#fef3c7',
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '6px',
+                            border: `1px solid ${item.comisionGestion === 'ALTA_POR_REDES' ? '#bae6fd' : '#fde68a'}`,
+                            display: 'inline-block',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {item.comisionGestion === 'ALTA_POR_REDES' ? '📱 ' : '🔄 '}{item.comisionGestionLabel}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>—</span>
+                        )}
                       </td>
                       <td className={styles.td} style={{ textAlign: 'center', fontWeight: 700, color: '#7c3aed', fontSize: '0.95rem' }}>
                         {item.comisionPorcentaje}%
@@ -1154,7 +1180,15 @@ export default function EstadisticasPage() {
                   </div>
                   <div className={styles.mobileCardSenaVal}>
                     {isComision ? (
-                      `🎯 ${item.comisionUsuarioNombre || 'Sin promotor'} (${item.comisionPorcentaje}%) · Valor turno: ${formatMoney(item.valorTotal)}`
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                        <span>👤 {item.comisionUsuarioNombre || 'Sin asignar'} ({item.comisionPorcentaje}%)</span>
+                        {item.comisionGestionLabel && (
+                          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: item.comisionGestion === 'ALTA_POR_REDES' ? '#0369a1' : '#b45309' }}>
+                            {item.comisionGestion === 'ALTA_POR_REDES' ? '📱 ' : '🔄 '}{item.comisionGestionLabel}
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.74rem', opacity: 0.85 }}>Valor turno: {formatMoney(item.valorTotal)}</span>
+                      </div>
                     ) : isGN ? (
                       item.subtipoGanancia?.includes('sin siguiente')
                         ? `Saldo cobrado: ${formatMoney(item.saldoCobradoPeriodo ?? item.ingresoCobradoPeriodo)}`
@@ -1804,6 +1838,81 @@ export default function EstadisticasPage() {
               </div>
             </div>
           )}
+
+          {/* DESGLOSE DE COMISIONES POR RECEPCIONISTA / CAPTADOR (D-193) */}
+          {selectedMetric === 'comisiones' && Array.isArray(data.avanzadas?.comisiones?.items) && data.avanzadas.comisiones.items.length > 0 && (() => {
+            const allComItems = data.avanzadas.comisiones.items.filter(item => !excludedIds.has(item.id));
+            const byRecep = new Map();
+            allComItems.forEach(item => {
+              const uName = item.comisionUsuarioNombre || 'Sin asignar';
+              if (!byRecep.has(uName)) {
+                byRecep.set(uName, { nombre: uName, totalComision: 0, turnosCount: 0, recuperados: 0, redes: 0 });
+              }
+              const entry = byRecep.get(uName);
+              entry.totalComision += Number(item.comisionMonto || 0);
+              entry.turnosCount += 1;
+              if (item.comisionGestion === 'RECUPERADO') entry.recuperados += 1;
+              if (item.comisionGestion === 'ALTA_POR_REDES') entry.redes += 1;
+            });
+            const recepList = Array.from(byRecep.values()).sort((a, b) => b.totalComision - a.totalComision);
+            if (recepList.length === 0) return null;
+
+            return (
+              <div className={styles.filtersCard} style={{ marginTop: '0.5rem' }}>
+                <div className={styles.filtersHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span>🎯 Comisiones por Recepcionista (tocá uno para filtrar el listado):</span>
+                  {selectedComisionUser !== 'ALL' && (
+                    <button
+                      type="button"
+                      className={styles.pillBtn}
+                      onClick={() => setSelectedComisionUser('ALL')}
+                      style={{ fontSize: '0.78rem', padding: '0.25rem 0.65rem' }}
+                    >
+                      ✕ Ver todos ({allComItems.length})
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem', marginTop: '0.65rem' }}>
+                  {recepList.map(u => {
+                    const isSelected = selectedComisionUser === u.nombre;
+                    return (
+                      <button
+                        key={u.nombre}
+                        type="button"
+                        onClick={() => setSelectedComisionUser(isSelected ? 'ALL' : u.nombre)}
+                        style={{
+                          textAlign: 'left',
+                          padding: '0.85rem 1rem',
+                          borderRadius: '10px',
+                          border: isSelected ? '2px solid #7c3aed' : '1px solid #ddd6fe',
+                          backgroundColor: isSelected ? '#f5f3ff' : '#ffffff',
+                          cursor: 'pointer',
+                          boxShadow: isSelected ? '0 3px 10px rgba(124, 58, 237, 0.18)' : '0 1px 3px rgba(0,0,0,0.04)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.92rem' }}>👤 {u.nombre}</span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6d28d9', backgroundColor: '#ede9fe', padding: '0.15rem 0.45rem', borderRadius: '999px' }}>
+                            {u.turnosCount} {u.turnosCount === 1 ? 'turno' : 'turnos'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#7c3aed', marginTop: '0.3rem' }}>
+                          {formatMoney(u.totalComision)}
+                        </div>
+                        {(u.recuperados > 0 || u.redes > 0) && (
+                          <div style={{ fontSize: '0.74rem', color: '#475569', marginTop: '0.25rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {u.recuperados > 0 && <span>🔄 Recuperado: {u.recuperados}</span>}
+                            {u.redes > 0 && <span>📱 Alta por Redes: {u.redes}</span>}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* SECCIÓN ESPECIAL: ZONAS (FILTROS PÍLDORA + HISTOGRAMA LEGIBLE) */}
           {selectedMetric === 'zonas' && data.avanzadas?.zonas && (

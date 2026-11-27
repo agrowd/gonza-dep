@@ -2520,3 +2520,21 @@
 
 
 
+
+
+---
+
+## Sesión: 26-27 de Noviembre de 2026 (Continuación — D-193: 7 Mejoras de Configuración, Comisiones, Boxes y Excepción de Seña)
+
+### Solicitud del Usuario (6 capturas de Gonzalo Siri):
+1. Quitar `"➡️ Ir a Usuarios y Operadores"` y `"➡️ Ir a Bloqueos de Agenda y Feriados"` del desplegable de Configuración.
+2. En Promociones agregar selector de Servicios (como en Cupones) para que no se junten las zonas de todos los servicios.
+3. En Turno comisionable agregar selector `"Gestión"` con opciones `"Recuperado"` y `"Alta por Redes"`; al hacer Siguiente Turno borrar/no arrastrar la comisión.
+4. En Estadísticas mostrar de qué Recepcionista es cada comisión (con desglose para múltiples personas) y quitar el bloque de comisión de la vista de Agenda.
+5. Ocultar boxes inhabilitados (`activo === false`, ej. Box 2) en las opciones de Agenda y asegurar scroll automático al crear/modificar un Box en Configuración.
+6. Al encender el check `🛡️ Excepción de seña aplicada`, guardar y mostrar debajo la fecha en la cual se aplicó la excepción.
+
+### Implementación (D-193):
+- Schema Prisma (`prisma/schema.prisma`): añadidas columnas nullable `Cliente.excepcionSenaFecha DateTime?` y `Turno.comisionGestion String?`.
+- APIs actualizadas: `clientes/[id]/route.js`, `turnos/route.js`, `turnos/[id]/route.js`, `estadisticas/route.js`.
+- UI actualizada: `configuracion/page.js`, `agenda/page.js`, `clientes/page.js`, `estadisticas/page.js`.
