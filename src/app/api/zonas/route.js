@@ -22,7 +22,25 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const isAutogestion = searchParams.get('autogestion') === 'true' || searchParams.get('public') === 'true' || !isAdmin;
+    const referer = request.headers.get('referer') || '';
+    let isRefererFromAdmin = false;
+    try {
+      if (referer) {
+        const refUrl = new URL(referer);
+        isRefererFromAdmin = refUrl.pathname.startsWith('/admin');
+      }
+    } catch {
+      isRefererFromAdmin = referer.includes('/admin/');
+    }
+
+    const explicitAutogestion = searchParams.get('autogestion') === 'true' || searchParams.get('public') === 'true';
+    const explicitAdminCatalog = searchParams.get('admin') === 'true' || searchParams.get('includeAll') === 'true';
+
+    // Por seguridad (D-194 / ERR-77), GET /api/zonas filtra servicios inactivos o deshabilitados para autogestión POR DEFECTO,
+    // incluso si el navegador tiene cookie de sesión admin (ej. iPhone/iOS WebKit ejecutando HTML/JS cacheado viejo en `/`).
+    // Solo devuelve el catálogo completo si está autenticado como admin Y solicita explícitamente `?admin=true` o viene de `/admin/*`.
+    const allowFullAdminCatalog = isAdmin && !explicitAutogestion && (explicitAdminCatalog || isRefererFromAdmin);
+    const isAutogestion = !allowFullAdminCatalog;
 
     const where = isAutogestion ? {
       servicio: {
@@ -43,7 +61,10 @@ export async function GET(request) {
 
     return NextResponse.json(zonas, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Vary': 'Cookie, Referer'
       }
     });
   } catch (error) {

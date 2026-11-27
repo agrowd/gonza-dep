@@ -97,13 +97,19 @@ export default function Home() {
   const [bookingSuccess, setBookingSuccess] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // 1. Fetch Zones catalog on mount
-  useEffect(() => {
-    fetch(`/api/zonas?autogestion=true&_t=${Date.now()}`, { cache: 'no-store' })
+  // 1. Fetch Zones catalog (anti-cache + iOS WebKit BFCache / visibility / Step 2 refresh - D-194)
+  const fetchAutogestionZones = useCallback(() => {
+    fetch(`/api/zonas?autogestion=true&_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          // Strictly filter only zones belonging to active, autogestion-enabled services (D-182)
+          // Strictly filter only zones belonging to active, autogestion-enabled services (D-182 / D-194)
           const filtered = data.filter(z => {
             if (!z.servicio) return false;
             if (z.servicio.activo === false) return false;
@@ -111,10 +117,36 @@ export default function Home() {
             return true;
           });
           setZones(filtered);
+          const validIds = new Set(filtered.map(z => z.id));
+          setSelectedZoneIds(prev => prev.filter(id => validIds.has(id)));
         }
       })
       .catch(err => console.error('Error fetching zones:', err));
   }, []);
+
+  useEffect(() => {
+    fetchAutogestionZones();
+    const handlePageShow = () => {
+      fetchAutogestionZones();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAutogestionZones();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchAutogestionZones]);
+
+  useEffect(() => {
+    if (step === 2) {
+      fetchAutogestionZones();
+    }
+  }, [step, fetchAutogestionZones]);
 
   // Agrupamiento de zonas por servicio / disciplina para visualización organizada (D-182)
   const serviceGroups = useMemo(() => {

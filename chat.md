@@ -2538,3 +2538,22 @@
 - Schema Prisma (`prisma/schema.prisma`): añadidas columnas nullable `Cliente.excepcionSenaFecha DateTime?` y `Turno.comisionGestion String?`.
 - APIs actualizadas: `clientes/[id]/route.js`, `turnos/route.js`, `turnos/[id]/route.js`, `estadisticas/route.js`.
 - UI actualizada: `configuracion/page.js`, `agenda/page.js`, `clientes/page.js`, `estadisticas/page.js`.
+
+
+---
+
+## Sesión: 27 de Noviembre de 2026 (D-194 / ERR-77 — Fix Servicios Desactivados en Autogestión en iPhone)
+
+### Solicitud del Usuario (`media_1795735967850_826fbf00.png`):
+- *"lo que te paso Gonza que en autogestion se ven las zonas de los servicios desactivados, lo estuvimos revisando, y solo está pasando en iPhone, en android se ve bien, así que puede ser ese el problema para ver cómo corregirlo"*.
+
+### Diagnóstico Exacto en Logs de Producción:
+- En `/var/log/nginx/access.log` se encontró el request exacto del iPhone de Gonzalo (`186.131.31.1`, CriOS/WebKit): `"GET /api/zonas HTTP/1.1" 200 6518 "https://agenda.depilacionparahombres.com/"`.
+- Dos causas combinadas:
+  1. `/` era estática (`Cache-Control: s-maxage=31536000`, 1 año), haciendo que iOS WebKit conservara un HTML/JS antiguo que llamaba a `/api/zonas` sin `?autogestion=true`.
+  2. Como el iPhone tenía cookie de sesión admin y `/api/zonas` usaba `isAutogestion = ... || !isAdmin`, devolvía las 15 zonas (incluyendo Masajes y Faciales) en vez de las 9 activas para autogestión.
+
+### Corrección en 3 Capas (D-194 / ERR-77):
+- `src/app/api/zonas/route.js`: seguro por defecto (filtra siempre servicios deshabilitados salvo que `isAdmin && !explicitAutogestion && (explicitAdminCatalog || isRefererFromAdmin)`), con `Vary: Cookie, Referer` y headers `no-store`.
+- `agenda/page.js`, `alta-turno/page.js`, `configuracion/page.js`: llaman a `/api/zonas?admin=true` con `cache: 'no-store'`.
+- `src/app/layout.js` (`export const dynamic = 'force-dynamic'`), `next.config.mjs` (`headers()` `no-store` en `/` y `/admin/:path*`) y `src/app/page.js` (refresco automático en `pageshow`, `visibilitychange` y paso 2).

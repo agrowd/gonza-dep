@@ -2280,7 +2280,7 @@ export default function AgendaPage() {
 
   // 4. Fetch zones and promotions for the appointment modals
   useEffect(() => {
-    fetch('/api/zonas')
+    fetch('/api/zonas?admin=true', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {

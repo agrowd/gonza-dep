@@ -557,7 +557,7 @@ export default function ConfiguracionPage() {
   // 1. Fetch zones
   const fetchZones = () => {
     setLoadingZones(true);
-    fetch('/api/zonas')
+    fetch('/api/zonas?admin=true', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {

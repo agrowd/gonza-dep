@@ -3597,3 +3597,13 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
   - `src/app/admin/agenda/page.js`
   - `src/app/admin/clientes/page.js`
   - `src/app/admin/estadisticas/page.js`
+
+
+## 📅 Sesión: 27 de Noviembre de 2026 (D-194 / ERR-77 — Fix Servicios Desactivados en Autogestión en iPhone)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Diagnosticar en logs de Nginx y headers HTTP por qué solo en iPhone aparecían zonas de servicios desactivados en autogestión (`GET /api/zonas 200 6518` desde iPhone con cookie admin + HTML `/` cacheado con `s-maxage=31536000`).
+- [x] Invertir seguridad por defecto en `src/app/api/zonas/route.js` (filtrar autogestión por defecto salvo `?admin=true` o `Referer: /admin/*` con sesión admin).
+- [x] Actualizar llamadores admin (`agenda/page.js`, `alta-turno/page.js`, `configuracion/page.js`) a `/api/zonas?admin=true`.
+- [x] Eliminar `s-maxage=31536000` en `/` mediante `dynamic = 'force-dynamic'` en `src/app/layout.js`, `headers()` `no-store` en `next.config.mjs`, y recarga `pageshow`/`visibilitychange`/step 2 en `src/app/page.js`.
+- [ ] Compilar, pushear a `main` y `staging`, desplegar Producción (`:3006`) y Staging (`:3008`), y verificar con `curl` tanto headers `Cache-Control` en `/` como respuesta de `/api/zonas` con cookie admin desde `Referer: /`.

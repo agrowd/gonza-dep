@@ -173,7 +173,7 @@ function AltaTurnoContent() {
 
   // Fetch zones catalog
   useEffect(() => {
-    fetch('/api/zonas')
+    fetch('/api/zonas?admin=true', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {

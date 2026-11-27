@@ -1,5 +1,7 @@
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Gonzalo | Depilación Láser Masculina",
   description: "Agenda de turnos y reserva online para depilación definitiva de hombres con tecnología Soprano ICE.",
