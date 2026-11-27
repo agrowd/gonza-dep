@@ -2557,3 +2557,17 @@
 - `src/app/api/zonas/route.js`: seguro por defecto (filtra siempre servicios deshabilitados salvo que `isAdmin && !explicitAutogestion && (explicitAdminCatalog || isRefererFromAdmin)`), con `Vary: Cookie, Referer` y headers `no-store`.
 - `agenda/page.js`, `alta-turno/page.js`, `configuracion/page.js`: llaman a `/api/zonas?admin=true` con `cache: 'no-store'`.
 - `src/app/layout.js` (`export const dynamic = 'force-dynamic'`), `next.config.mjs` (`headers()` `no-store` en `/` y `/admin/:path*`) y `src/app/page.js` (refresco automático en `pageshow`, `visibilitychange` y paso 2).
+
+
+---
+
+## Sesión: 27 de Noviembre de 2026 (D-195 — Ocupación de Agenda Dinámica + Filtro de Servicios y Zonas Otros en Estadísticas)
+
+### Solicitud del Usuario (`media_1795782211976_22721b86.png` y `media_1795782226739_27acf0ea.png`):
+1. En Estadísticas, el `% Ocupación de Agenda` debe tomar los días y horario configurados en **2. Elegir Turno (Alta de Turno / Siguiente Turno)** dentro de Horarios Laborales (en vez de `14:00 a 22:00` fijos).
+2. En Estadísticas → **Zonas más demandadas**, agregar filtro por **Servicios** para no mezclar zonas de distintos servicios, e incorporar en **Depilación Láser** las estadísticas de las zonas del listado oficial de **Otros** (Configuración → Servicios).
+
+### Implementación (D-195):
+- `src/app/api/admin/estadisticas/route.js` y `src/app/api/admin/estadisticas/consolidado-mensual/route.js`: lectura de `alta_turno_work_start`, `alta_turno_work_end` y `alta_turno_work_days` para calcular capacidad diaria, días laborales y recorte de bloqueos en `% Ocupación de Agenda`.
+- `src/app/api/admin/estadisticas/route.js`: histograma de zonas enriquecido con `servicioId`, `servicioNombre`, `esOtros`, lista de `servicios` y `defaultServicioId` (Depilación Láser), sumando subzonas de `Otros:` que coincidan estrictamente con `zonas_otros_lista`.
+- `src/app/admin/estadisticas/page.js`: subtítulo dinámico de horario en tarjeta de ocupación, barra `🏷️ Filtrar por Servicio` (default Depilación Láser), y visualización de zonas `Otros` con badge identificatorio en píldoras e histograma.

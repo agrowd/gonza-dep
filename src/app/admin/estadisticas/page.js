@@ -208,6 +208,7 @@ export default function EstadisticasPage() {
 
   // Filtros multi-selección para Zonas y Canales
   const [selectedZonesFilter, setSelectedZonesFilter] = useState([]);
+  const [selectedZonasServicioId, setSelectedZonasServicioId] = useState('');
   const [selectedCanalesFilter, setSelectedCanalesFilter] = useState([]);
 
   // Filtro de seguimiento para re-agendados (Cancelados, Ausentes, Va a avisar, Mantenimiento)
@@ -281,6 +282,7 @@ export default function EstadisticasPage() {
     setSelectedMetric(newMetric);
     setExcludedIds(new Set());
     setSelectedZonesFilter([]);
+    setSelectedZonasServicioId('');
     setSelectedCanalesFilter([]);
     setFollowUpFilter('ALL');
     setSelectedComisionUser('ALL');
@@ -387,9 +389,16 @@ export default function EstadisticasPage() {
     const av = data.avanzadas;
     let rawItems = [];
 
+    const effectiveZonasServicioId = selectedZonasServicioId || av.zonas?.defaultServicioId || 'ALL';
+
     if (selectedMetric === 'zonas') {
       const seenTurnoIds = new Set();
-      const hist = (av.zonas?.histograma || []).filter(z => !z.nombre.toLowerCase().startsWith('otros'));
+      const hist = (av.zonas?.histograma || []).filter(z => {
+        if (effectiveZonasServicioId !== 'ALL' && z.servicioId && z.servicioId !== effectiveZonasServicioId) {
+          return false;
+        }
+        return true;
+      });
       hist.forEach(zGroup => {
         if (selectedZonesFilter.length > 0 && !selectedZonesFilter.includes(zGroup.nombre)) {
           return;
@@ -464,7 +473,7 @@ export default function EstadisticasPage() {
       avgTicket,
       followUpCounts
     };
-  }, [data, selectedMetric, excludedIds, selectedZonesFilter, selectedCanalesFilter, followUpFilter, selectedComisionUser]);
+  }, [data, selectedMetric, excludedIds, selectedZonesFilter, selectedZonasServicioId, selectedCanalesFilter, followUpFilter, selectedComisionUser]);
 
   // ==========================================
   // CÁLCULO DE RESÚMENES PARA EL INFORME EXCEL (MODELOS A y B)
@@ -1797,8 +1806,8 @@ export default function EstadisticasPage() {
                 </div>
                 <div className={styles.kpiSub}>
                   {data?.ocupacionAgenda?.minutosDisponibles > 0
-                    ? `${data.ocupacionAgenda.minutosOcupados} min de ${data.ocupacionAgenda.minutosDisponibles} min (${data.ocupacionAgenda.horasOcupadas} hs de ${data.ocupacionAgenda.horasDisponibles} hs)`
-                    : 'Calculado en horario 14 a 22 hs · Lunes a Viernes'}
+                    ? `${data.ocupacionAgenda.minutosOcupados} min de ${data.ocupacionAgenda.minutosDisponibles} min (${data.ocupacionAgenda.horasOcupadas} hs de ${data.ocupacionAgenda.horasDisponibles} hs) · ${data.ocupacionAgenda.horarioInicio || '15:00'} a ${data.ocupacionAgenda.horarioFin || '22:00'} hs`
+                    : `Calculado en horario ${data?.ocupacionAgenda?.horarioInicio || '15:00'} a ${data?.ocupacionAgenda?.horarioFin || '22:00'} hs · ${data?.ocupacionAgenda?.diasLaboralesLabel || 'Lunes a Viernes'}`}
                 </div>
               </div>
             )}
@@ -1914,55 +1923,111 @@ export default function EstadisticasPage() {
             );
           })()}
 
-          {/* SECCIÓN ESPECIAL: ZONAS (FILTROS PÍLDORA + HISTOGRAMA LEGIBLE) */}
-          {selectedMetric === 'zonas' && data.avanzadas?.zonas && (
-            <>
-              <div className={styles.filtersCard}>
-                <div className={styles.filtersHeader}>
-                   Filtrar Zonas (Seleccioná una o varias para recalcular):
-                </div>
-                <div className={styles.pillsRow}>
-                  <button
-                    type="button"
-                    className={`${styles.pillBtn} ${selectedZonesFilter.length === 0 ? styles.pillBtnActive : ''}`}
-                    onClick={() => setSelectedZonesFilter([])}
-                  >
-                    Todas las Zonas
-                  </button>
-                  {(data.avanzadas.zonas.histograma || [])
-                    .filter(z => !z.nombre.toLowerCase().startsWith('otros'))
-                    .map(z => (
+          {/* SECCIÓN ESPECIAL: ZONAS (FILTRO POR SERVICIO + ZONAS OTROS + HISTOGRAMA LEGIBLE - D-195) */}
+          {selectedMetric === 'zonas' && data.avanzadas?.zonas && (() => {
+            const serviciosZonas = data.avanzadas.zonas.servicios || [];
+            const effectiveZonasServicioId = selectedZonasServicioId || data.avanzadas.zonas.defaultServicioId || 'ALL';
+            const serviceHistograma = (data.avanzadas.zonas.histograma || []).filter(z => {
+              if (effectiveZonasServicioId !== 'ALL' && z.servicioId && z.servicioId !== effectiveZonasServicioId) {
+                return false;
+              }
+              return true;
+            });
+            const activeServicioObj = serviciosZonas.find(s => s.id === effectiveZonasServicioId);
+            const maxCount = Math.max(1, ...serviceHistograma.map(i => i.total));
+
+            return (
+              <>
+                {serviciosZonas.length > 0 && (
+                  <div className={styles.filtersCard}>
+                    <div className={styles.filtersHeader}>
+                      🏷️ Filtrar por Servicio:
+                    </div>
+                    <div className={styles.pillsRow}>
+                      {serviciosZonas.map(s => (
+                        <button
+                          type="button"
+                          key={s.id}
+                          className={`${styles.pillBtn} ${effectiveZonasServicioId === s.id ? styles.pillBtnActive : ''}`}
+                          onClick={() => {
+                            setSelectedZonasServicioId(s.id);
+                            setSelectedZonesFilter([]);
+                          }}
+                        >
+                          {s.icono ? `${s.icono} ` : ''}{s.nombre}
+                        </button>
+                      ))}
                       <button
                         type="button"
-                        key={z.nombre}
+                        className={`${styles.pillBtn} ${effectiveZonasServicioId === 'ALL' ? styles.pillBtnActive : ''}`}
+                        onClick={() => {
+                          setSelectedZonasServicioId('ALL');
+                          setSelectedZonesFilter([]);
+                        }}
+                      >
+                        🌐 Todos los Servicios
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.filtersCard}>
+                  <div className={styles.filtersHeader}>
+                    Filtrar Zonas{activeServicioObj ? ` (${activeServicioObj.nombre})` : ''} (Seleccioná una o varias para recalcular):
+                  </div>
+                  <div className={styles.pillsRow}>
+                    <button
+                      type="button"
+                      className={`${styles.pillBtn} ${selectedZonesFilter.length === 0 ? styles.pillBtnActive : ''}`}
+                      onClick={() => setSelectedZonesFilter([])}
+                    >
+                      Todas las Zonas
+                    </button>
+                    {serviceHistograma.map(z => (
+                      <button
+                        type="button"
+                        key={`${z.servicioId || 's'}-${z.nombre}`}
                         className={`${styles.pillBtn} ${selectedZonesFilter.includes(z.nombre) ? styles.pillBtnActive : ''}`}
                         onClick={() => toggleZoneFilter(z.nombre)}
                       >
-                        {z.nombre} ({z.total})
+                        {z.nombre}{z.esOtros ? ' [Otros]' : ''} ({z.total})
                       </button>
                     ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className={styles.histogramCard}>
-                <div className={styles.histogramTitle}>
-                  <span>📊 Histograma de Demanda por Zona</span>
-                  <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
-                    Turnos agendados / realizados en el período
-                  </span>
-                </div>
-                <div className={styles.barsContainer}>
-                  {(() => {
-                    const list = (data.avanzadas.zonas.histograma || [])
-                      .filter(z => !z.nombre.toLowerCase().startsWith('otros'));
-                    const maxCount = Math.max(1, ...list.map(i => i.total));
-                    return list
+                <div className={styles.histogramCard}>
+                  <div className={styles.histogramTitle}>
+                    <span>📊 Histograma de Demanda por Zona{activeServicioObj ? ` · ${activeServicioObj.nombre}` : ''}</span>
+                    <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
+                      Turnos agendados / realizados en el período
+                    </span>
+                  </div>
+                  <div className={styles.barsContainer}>
+                    {serviceHistograma
                       .filter(z => selectedZonesFilter.length === 0 || selectedZonesFilter.includes(z.nombre))
                       .map(z => {
                         const pct = Math.round((z.total / maxCount) * 100);
                         return (
-                          <div key={z.nombre} className={styles.barRow}>
-                            <div className={styles.barName} title={z.nombre}>{z.nombre}</div>
+                          <div key={`${z.servicioId || 's'}-${z.nombre}`} className={styles.barRow}>
+                            <div className={styles.barName} title={z.nombre}>
+                              <span>{z.nombre}</span>
+                              {z.esOtros && (
+                                <span style={{
+                                  marginLeft: '0.35rem',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  color: '#92400e',
+                                  backgroundColor: '#fef3c7',
+                                  border: '1px solid #fde68a',
+                                  padding: '0.05rem 0.35rem',
+                                  borderRadius: '4px',
+                                  verticalAlign: 'middle'
+                                }}>
+                                  Otros
+                                </span>
+                              )}
+                            </div>
                             <div className={styles.barTrack}>
                               <div className={styles.barFill} style={{ width: `${pct}%` }} />
                             </div>
@@ -1972,12 +2037,12 @@ export default function EstadisticasPage() {
                             </div>
                           </div>
                         );
-                      });
-                  })()}
+                      })}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
 
           {/* SECCIÓN ESPECIAL: CLIENTES NUEVOS (FILTROS POR CANAL + GRÁFICO DE BARRAS) */}
           {selectedMetric === 'nuevos' && data.avanzadas?.nuevos?.canales && (

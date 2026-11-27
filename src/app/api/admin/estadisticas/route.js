@@ -2,9 +2,41 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth.js';
 import prisma from '@/lib/db.js';
+import { parseZonasOtrosLista } from '@/lib/zonasOtros.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+function normalizeZoneKey(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\(\s*bonificad[oa]\s*\)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function parseAllowedWorkDays(rawDays) {
+  const raw = String(rawDays || '1,2,3,4,5');
+  const parsed = raw
+    .split(',')
+    .map(d => parseInt(d.trim(), 10))
+    .filter(d => !isNaN(d) && d >= 0 && d <= 7);
+  const uniqueIso = [...new Set(parsed.map(d => (d === 0 ? 7 : d)))].sort((a, b) => a - b);
+  const finalIso = uniqueIso.length > 0 ? uniqueIso : [1, 2, 3, 4, 5];
+  const jsDaysSet = new Set(finalIso.map(d => (d === 7 ? 0 : d)));
+  const key = finalIso.join(',');
+  let label = 'Lunes a Viernes';
+  if (key === '1,2,3,4,5') label = 'Lunes a Viernes';
+  else if (key === '1,2,3,4,5,6') label = 'Lunes a Sábado';
+  else if (key === '1,2,3,4,5,6,7') label = 'Lunes a Domingo';
+  else {
+    const names = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom' };
+    label = finalIso.map(d => names[d]).filter(Boolean).join(', ');
+  }
+  return { jsDaysSet, label };
+}
 
 function parseTurnoZonas(zonasRaw) {
   if (!zonasRaw) return [];
@@ -290,6 +322,8 @@ export async function GET(request) {
       turnosSemanaCreated,
       allClients,
       zonasCatalog,
+      serviciosList,
+      configRows,
       bloqueosPeriodo
     ] = await Promise.all([
       prisma.turno.findMany({
@@ -327,7 +361,18 @@ export async function GET(request) {
         }
       }),
       prisma.zona.findMany({
+        include: { servicio: true },
         orderBy: { nombre: 'asc' }
+      }),
+      prisma.servicio.findMany({
+        orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }]
+      }),
+      prisma.configuracion.findMany({
+        where: {
+          key: {
+            in: ['alta_turno_work_start', 'alta_turno_work_end', 'alta_turno_work_days', 'zonas_otros_lista']
+          }
+        }
       }),
       prisma.bloqueo.findMany({
         where: {
@@ -339,6 +384,15 @@ export async function GET(request) {
         }
       })
     ]);
+
+    const cfgMap = {};
+    (configRows || []).forEach(c => { cfgMap[c.key] = c.value; });
+    const altaWorkStartStr = cfgMap.alta_turno_work_start || '15:00';
+    const altaWorkEndStr = cfgMap.alta_turno_work_end || '22:00';
+    const altaWorkStartMin = timeToMinutes(altaWorkStartStr) || 900;
+    const altaWorkEndMin = timeToMinutes(altaWorkEndStr) || 1320;
+    const dailyCapacityMin = Math.max(60, altaWorkEndMin - altaWorkStartMin);
+    const { jsDaysSet: altaWorkDaysSet, label: altaWorkDaysLabel } = parseAllowedWorkDays(cfgMap.alta_turno_work_days);
 
     // ==========================================
     // REVENUE & CASHFLOW ACCOUNTING (GONZALO RULE)
@@ -473,9 +527,9 @@ export async function GET(request) {
     while (currentCursor.getTime() <= endCursor.getTime()) {
       const dateStr = currentCursor.toISOString().split('T')[0];
       const dayOfWeek = currentCursor.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
-      const isWeekday = (dayOfWeek >= 1 && dayOfWeek <= 5);
+      const isWorkingDay = altaWorkDaysSet.has(dayOfWeek);
 
-      if (isWeekday) {
+      if (isWorkingDay) {
         const dayBlocks = bloqueosByDate.get(dateStr) || [];
         let isFullDayBlocked = false;
         const clampedBlockIntervals = [];
@@ -487,8 +541,8 @@ export async function GET(request) {
           }
           const bStart = timeToMinutes(b.horaInicio);
           const bEnd = timeToMinutes(b.horaFin);
-          const overlapStart = Math.max(840, bStart); // 14:00 = 840 min
-          const overlapEnd = Math.min(1320, bEnd);    // 22:00 = 1320 min
+          const overlapStart = Math.max(altaWorkStartMin, bStart);
+          const overlapEnd = Math.min(altaWorkEndMin, bEnd);
           if (overlapEnd > overlapStart) {
             clampedBlockIntervals.push([overlapStart, overlapEnd]);
           }
@@ -496,13 +550,13 @@ export async function GET(request) {
 
         let minutosBloqueados = 0;
         if (isFullDayBlocked) {
-          minutosBloqueados = 480;
+          minutosBloqueados = dailyCapacityMin;
         } else {
           const mergedBlocks = mergeIntervals(clampedBlockIntervals);
           minutosBloqueados = mergedBlocks.reduce((acc, [s, e]) => acc + (e - s), 0);
         }
 
-        const availableDay = Math.max(0, 480 - minutosBloqueados);
+        const availableDay = Math.max(0, dailyCapacityMin - minutosBloqueados);
         totalMinutosDisponibles += availableDay;
       }
 
@@ -544,7 +598,10 @@ export async function GET(request) {
       minutosOcupados: totalMinutosOcupados,
       minutosDisponibles: totalMinutosDisponibles,
       horasOcupadas: Math.round((totalMinutosOcupados / 60) * 10) / 10,
-      horasDisponibles: Math.round((totalMinutosDisponibles / 60) * 10) / 10
+      horasDisponibles: Math.round((totalMinutosDisponibles / 60) * 10) / 10,
+      horarioInicio: altaWorkStartStr,
+      horarioFin: altaWorkEndStr,
+      diasLaboralesLabel: altaWorkDaysLabel
     };
 
     // ==========================================
@@ -861,11 +918,33 @@ export async function GET(request) {
       }
     });
 
-    // 10. Zonas (Histograma y desglose)
+    // 10. Zonas (Histograma y desglose por Servicio + zonas Otros configuradas en Depilación Láser - D-195)
+    const depilacionServicio = (serviciosList || []).find(s => (s.nombre || '').toLowerCase().includes('depilaci'))
+      || (serviciosList && serviciosList[0])
+      || { id: 'depilacion', nombre: 'Depilación Láser', icono: '⚡' };
+
+    const zonasOtrosConfigured = parseZonasOtrosLista(cfgMap.zonas_otros_lista);
+    const otrosNormToCanonical = new Map();
+    zonasOtrosConfigured.forEach(oName => {
+      const clean = String(oName || '').trim();
+      if (!clean) return;
+      const norm = normalizeZoneKey(clean);
+      if (norm && !otrosNormToCanonical.has(norm)) {
+        otrosNormToCanonical.set(norm, clean);
+      }
+    });
+
     const zonasMap = {};
+    const catalogKeyByNorm = new Map();
+
     zonasCatalog.forEach(z => {
+      const sId = z.servicio?.id || z.servicioId || depilacionServicio.id;
+      const sName = z.servicio?.nombre || depilacionServicio.nombre;
       zonasMap[z.nombre] = {
         nombre: z.nombre,
+        servicioId: sId,
+        servicioNombre: sName,
+        esOtros: false,
         realizados: 0,
         senados: 0,
         cancelados: 0,
@@ -873,17 +952,103 @@ export async function GET(request) {
         ingresos: 0,
         items: []
       };
+      const norm = normalizeZoneKey(z.nombre);
+      if (norm && !catalogKeyByNorm.has(norm)) {
+        catalogKeyByNorm.set(norm, z.nombre);
+      }
     });
+
+    // Incorporar las zonas configuradas en el listado de Otros (Configuración -> Servicios) dentro de Depilación Láser
+    zonasOtrosConfigured.forEach(oName => {
+      const clean = String(oName || '').trim();
+      if (!clean) return;
+      const norm = normalizeZoneKey(clean);
+      const existingCatalogKey = catalogKeyByNorm.get(norm);
+      if (!existingCatalogKey && !zonasMap[clean]) {
+        zonasMap[clean] = {
+          nombre: clean,
+          servicioId: depilacionServicio.id,
+          servicioNombre: depilacionServicio.nombre,
+          esOtros: true,
+          realizados: 0,
+          senados: 0,
+          cancelados: 0,
+          total: 0,
+          ingresos: 0,
+          items: []
+        };
+      }
+    });
+
+    const registerZoneHit = (targetKey, t, item, ingresoToAdd, countedInTurno) => {
+      const entry = zonasMap[targetKey];
+      if (!entry) return;
+      if (!countedInTurno.has(targetKey)) {
+        countedInTurno.add(targetKey);
+        entry.total++;
+        entry.items.push(item);
+        if (isCompletedSession(t)) {
+          entry.realizados++;
+        } else if (t.estado === 'SEÑADO') {
+          entry.senados++;
+        } else if (t.estado === 'CANCELADO') {
+          entry.cancelados++;
+        }
+      }
+      if (isCompletedSession(t) && ingresoToAdd > 0) {
+        entry.ingresos += ingresoToAdd;
+      }
+    };
 
     turnosPeriodo.forEach(t => {
       const parsedZ = parseTurnoZonas(t.zonas);
       const item = formatTurnoItem(t);
+      const countedInTurno = new Set();
+
       parsedZ.forEach(pz => {
-        const zName = typeof pz === 'string' ? pz : (pz.nombre || pz.name || '');
+        const zName = (typeof pz === 'string' ? pz : (pz.nombre || pz.name || '')).trim();
         if (!zName) return;
-        if (!zonasMap[zName]) {
-          zonasMap[zName] = {
-            nombre: zName,
+
+        // Caso A: Zona extra "Otros: ..." -> contabilizar SOLO subzonas presentes en zonas_otros_lista
+        if (/^otros\b/i.test(zName)) {
+          const stripped = zName.replace(/^otros\s*:\s*/i, '').trim();
+          if (!stripped) return;
+          const rawParts = stripped.split(',').map(s => s.trim()).filter(Boolean);
+          const matchedParts = [];
+          rawParts.forEach(part => {
+            const isBonif = /\(\s*bonificad[oa]\s*\)/i.test(part);
+            const normPart = normalizeZoneKey(part);
+            const canonicalOtros = otrosNormToCanonical.get(normPart);
+            if (!canonicalOtros) return; // Ignorar texto libre que NO esté en el listado oficial de Otros
+            const targetKey = catalogKeyByNorm.get(normPart) || canonicalOtros;
+            matchedParts.push({ targetKey, isBonif });
+          });
+
+          const paidCount = matchedParts.filter(m => !m.isBonif).length;
+          const rawOtrosPrecio = (typeof pz === 'object' && pz !== null && pz.precio !== undefined && pz.precio !== null && pz.precio !== '')
+            ? Math.max(0, Number(pz.precio) || 0)
+            : 0;
+
+          matchedParts.forEach(({ targetKey, isBonif }) => {
+            const ingresoSub = (!isBonif && paidCount > 0 && rawOtrosPrecio > 0)
+              ? Math.round(rawOtrosPrecio / paidCount)
+              : 0;
+            registerZoneHit(targetKey, t, item, ingresoSub, countedInTurno);
+          });
+          return;
+        }
+
+        // Caso B: Zona de catálogo estándar
+        const normName = normalizeZoneKey(zName);
+        const matchedCatalogKey = zonasMap[zName] ? zName : catalogKeyByNorm.get(normName);
+        const targetKey = matchedCatalogKey || zName;
+
+        if (!zonasMap[targetKey]) {
+          zonasMap[targetKey] = {
+            nombre: targetKey,
+            servicioId: depilacionServicio.id,
+            servicioNombre: depilacionServicio.nombre,
+            esOtros: false,
             realizados: 0,
             senados: 0,
             cancelados: 0,
@@ -892,20 +1057,23 @@ export async function GET(request) {
             items: []
           };
         }
-        zonasMap[zName].total++;
-        zonasMap[zName].items.push(item);
-        if (isCompletedSession(t)) {
-          zonasMap[zName].realizados++;
-          zonasMap[zName].ingresos += (pz.precio || (t.valorTotal / (parsedZ.length || 1)));
-        } else if (t.estado === 'SEÑADO') {
-          zonasMap[zName].senados++;
-        } else if (t.estado === 'CANCELADO') {
-          zonasMap[zName].cancelados++;
-        }
+
+        const pzPrecio = (typeof pz === 'object' && pz !== null && pz.precio !== undefined && pz.precio !== null && pz.precio !== '')
+          ? Number(pz.precio)
+          : null;
+        const ingresoZona = pzPrecio !== null
+          ? Math.max(0, pzPrecio)
+          : Math.round(Number(t.valorTotal || 0) / (parsedZ.length || 1));
+
+        registerZoneHit(targetKey, t, item, ingresoZona, countedInTurno);
       });
     });
 
-    const histogramaZonas = Object.values(zonasMap).sort((a, b) => b.total - a.total);
+    const histogramaZonas = Object.values(zonasMap).sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total;
+      if (a.esOtros !== b.esOtros) return a.esOtros ? 1 : -1;
+      return a.nombre.localeCompare(b.nombre, 'es');
+    });
 
     // 11. Operador (Gonzalo Siri)
     const itemsOperador = turnosPeriodo.map(t => formatTurnoItem(t));
@@ -1162,6 +1330,13 @@ export async function GET(request) {
         },
         zonas: {
           histograma: histogramaZonas,
+          servicios: (serviciosList || []).map(s => ({
+            id: s.id,
+            nombre: s.nombre,
+            icono: s.icono || '✨'
+          })),
+          defaultServicioId: depilacionServicio.id,
+          zonasOtrosConfigured,
           catalog: zonasCatalog.map(z => z.nombre)
         },
         operador: operadorData,

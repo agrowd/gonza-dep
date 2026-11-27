@@ -98,8 +98,8 @@ export async function GET(request) {
     const lastDayNewest = new Date(newestMonth.year, newestMonth.month, 0).getDate();
     const rangeEnd = new Date(Date.UTC(newestMonth.year, newestMonth.month - 1, lastDayNewest, 23, 59, 59, 999) + 48 * 3600 * 1000);
 
-    // Fetch all turnos and gastos in this 13-month window
-    const [allTurnos13, allGastos13, allBloqueos13, allClientes] = await Promise.all([
+    // Fetch all turnos, gastos, bloqueos, clientes y configuración horaria de Alta de Turno (D-195)
+    const [allTurnos13, allGastos13, allBloqueos13, allClientes, configRows] = await Promise.all([
       prisma.turno.findMany({
         where: {
           fecha: {
@@ -148,8 +148,27 @@ export async function GET(request) {
           fechaAlta: true,
           fechaPrimerTurno: true
         }
+      }),
+      prisma.configuracion.findMany({
+        where: {
+          key: {
+            in: ['alta_turno_work_start', 'alta_turno_work_end', 'alta_turno_work_days']
+          }
+        }
       })
     ]);
+
+    const cfgMap = {};
+    (configRows || []).forEach(c => { cfgMap[c.key] = c.value; });
+    const altaWorkStartMin = timeToMinutes(cfgMap.alta_turno_work_start || '15:00') || 900;
+    const altaWorkEndMin = timeToMinutes(cfgMap.alta_turno_work_end || '22:00') || 1320;
+    const dailyCapacityMin = Math.max(60, altaWorkEndMin - altaWorkStartMin);
+    const parsedDays = String(cfgMap.alta_turno_work_days || '1,2,3,4,5')
+      .split(',')
+      .map(d => parseInt(d.trim(), 10))
+      .filter(d => !isNaN(d) && d >= 0 && d <= 7)
+      .map(d => (d === 7 ? 0 : d));
+    const altaWorkDaysSet = new Set(parsedDays.length > 0 ? parsedDays : [1, 2, 3, 4, 5]);
 
     // Map each client's first appointment date across history to accurately detect "Clientes Nuevos"
     const clientFirstTurnoMap = new Map();
@@ -254,10 +273,10 @@ export async function GET(request) {
       for (let day = 1; day <= lastDay; day++) {
         const dayDate = new Date(Date.UTC(mInfo.year, mInfo.month - 1, day, 12, 0, 0));
         const dayOfWeek = dayDate.getUTCDay();
-        const isWeekday = (dayOfWeek >= 1 && dayOfWeek <= 5);
+        const isWorkingDay = altaWorkDaysSet.has(dayOfWeek);
         const dateStr = dayDate.toISOString().split('T')[0];
 
-        if (isWeekday) {
+        if (isWorkingDay) {
           const dayBlocks = bloqueosByDate.get(dateStr) || [];
           let isFullDayBlocked = false;
           const clampedBlockIntervals = [];
@@ -269,8 +288,8 @@ export async function GET(request) {
             }
             const bStart = timeToMinutes(b.horaInicio);
             const bEnd = timeToMinutes(b.horaFin);
-            const overlapStart = Math.max(840, bStart);
-            const overlapEnd = Math.min(1320, bEnd);
+            const overlapStart = Math.max(altaWorkStartMin, bStart);
+            const overlapEnd = Math.min(altaWorkEndMin, bEnd);
             if (overlapEnd > overlapStart) {
               clampedBlockIntervals.push([overlapStart, overlapEnd]);
             }
@@ -278,13 +297,13 @@ export async function GET(request) {
 
           let minBloqueados = 0;
           if (isFullDayBlocked) {
-            minBloqueados = 480;
+            minBloqueados = dailyCapacityMin;
           } else {
             const merged = mergeIntervals(clampedBlockIntervals);
             minBloqueados = merged.reduce((acc, [s, e]) => acc + (e - s), 0);
           }
 
-          minutosDisponibles += Math.max(0, 480 - minBloqueados);
+          minutosDisponibles += Math.max(0, dailyCapacityMin - minBloqueados);
         }
 
         const dayTurnos = turnosByDate.get(dateStr) || [];

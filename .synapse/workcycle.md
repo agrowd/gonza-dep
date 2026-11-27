@@ -3607,3 +3607,12 @@ Gonzalo Siri reportó en WhatsApp (`media_1794880228474_3af04c0b.jpg`): *"Turnos
 - [x] Actualizar llamadores admin (`agenda/page.js`, `alta-turno/page.js`, `configuracion/page.js`) a `/api/zonas?admin=true`.
 - [x] Eliminar `s-maxage=31536000` en `/` mediante `dynamic = 'force-dynamic'` en `src/app/layout.js`, `headers()` `no-store` en `next.config.mjs`, y recarga `pageshow`/`visibilitychange`/step 2 en `src/app/page.js`.
 - [ ] Compilar, pushear a `main` y `staging`, desplegar Producción (`:3006`) y Staging (`:3008`), y verificar con `curl` tanto headers `Cache-Control` en `/` como respuesta de `/api/zonas` con cookie admin desde `Referer: /`.
+
+
+## 📅 Sesión: 27 de Noviembre de 2026 (D-195 — Ocupación de Agenda con Horarios de Elegir Turno + Filtro de Servicios y Zonas Otros en Zonas Más Demandadas)
+
+### 🎯 Tareas en curso / Objetivos
+- [x] Leer dinámicamente `alta_turno_work_start`, `alta_turno_work_end` y `alta_turno_work_days` para calcular `% Ocupación de Agenda` tanto en `/api/admin/estadisticas` como en `/api/admin/estadisticas/consolidado-mensual`, actualizando el subtítulo de la tarjeta KPI.
+- [x] Agregar filtro por Servicio en Estadísticas → Zonas Más Demandadas (por defecto Depilación Láser + resto de servicios + Todos).
+- [x] Incluir dentro de Depilación Láser las estadísticas de zonas `Otros` configuradas en `zonas_otros_lista` (solo las del listado oficial de Configuración → Servicios), ignorando texto libre no listado.
+- [ ] Compilar (`npm run build`), pushear a `main` y `staging`, y desplegar en Producción (`:3006`) y Staging (`:3008`).
